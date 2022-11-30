@@ -21,6 +21,12 @@ typedef struct {
   Uint16 event[16];
 } ElementDef;
 
+typedef struct {
+  Uint8 step[4];
+  Uint8 mode;
+  // Maybe this will be changed to something else entirely?
+} Animation;
+
 // Index into event array; 8-15 are user-defined events
 #define EV_FRAME 0
 #define EV_STAT 1
@@ -72,10 +78,29 @@ typedef struct {
 #define AP_MISC2 0x06 // Stat misc2 (or app[1] if no stat)
 #define AP_MISC3 0x07 // Stat misc3 (or app[1] if no stat)
 #define AP_LINES 0x08 // Line joining; low nybble of app[1] is which line classes, high nybble is appearance_mapping offset, high bit=edge join
+#define AP_ANIMATE 0x09 // Animation without using tile parameter
 
 // If bit5 of app[0] is set then it has a different meaning.
+//  app[0] bit2-bit0 = Shift amount of tile parameter
+//  app[0] bit4-bit3 = How many bits (1-4) of tile parameter to use
+//  app[1] bit0      = Animation select (ignored unless bit7 is set)
+//  app[1] bit6-bit1 = Offset of appearance_mapping
+//  app[1] bit7      = Animation enable
+
+// AP_ANIMATE:
+//  app[1] bit1-bit0 = Animation select
+//  app[1] bit6-bit2 = Offset of appearance_mapping
+//  app[1] bit7      = Clear for space only (ignore time)
+
+// Animation:mode
+#define AM_X1 0x01
+#define AM_X2 0x02
+#define AM_Y1 0x04
+#define AM_Y2 0x08
+#define AM_SLOW 0x80
 
 extern Uint8 appearance_mapping[128];
+extern Animation animation[4];
 
 // === Board/stats ===
 
@@ -115,6 +140,11 @@ typedef struct {
 #define BF_PERSIST 0x0010  // save board state before going to another board
 #define BF_NO_GLOBAL 0x0020  // suspend execution of global scripts
 #define BF_OVERLAY 0x0040  // display overlay
+
+extern BoardInfo board_info;
+extern Tile*b_under;
+extern Tile*b_main;
+extern Tile*b_over;
 
 // === Screens ===
 
@@ -174,7 +204,7 @@ typedef struct {
 #define SC_INDICATOR 0x50
 #define SC_TEXT 0x60
 #define SC_ITEM 0x70
-#define SC_BITS_0_LO 0x80
+#define SC_BITS_0_LO 0x80  // low 16-bits of global variable 0; parameter character if set, space if clear
 #define SC_BITS_0_HI 0x90
 #define SC_BITS_1_LO 0xA0
 #define SC_BITS_1_HI 0xB0
@@ -190,7 +220,7 @@ typedef struct {
 #define SC_SPEC_TEXT_SCROLL_PERCENT 0x34
 #define SC_SPEC_TEXT_LINE_NUMBER 0x35
 #define SC_SPEC_TEXT_LINE_COUNT 0x36
-#define SC_SPEC_BOARD_NUMBER 0x37
+#define SC_SPEC_CURRENT_BOARD 0x37
 #define SC_SPEC_EXIT_N 0x38
 #define SC_SPEC_EXIT_S 0x39
 #define SC_SPEC_EXIT_E 0x3A
