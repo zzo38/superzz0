@@ -5,6 +5,13 @@
 #include <string.h>
 #include <unistd.h>
 
+// === Miscellaneous ===
+
+#define DIR_N 0
+#define DIR_S 1
+#define DIR_E 2
+#define DIR_W 3
+
 // === Game definitions ===
 
 typedef struct {
@@ -20,7 +27,7 @@ typedef struct {
 #define EV_PUSH 2
 #define EV_TRANSPORT 3
 
-// attrib
+// ElementDef:attrib
 #define A_CLASS1 0x00000001 // class number
 #define A_CLASS2 0x00000002
 #define A_CLASS4 0x00000004
@@ -64,10 +71,11 @@ typedef struct {
 #define AP_MISC1 0x05 // Stat misc1 (or app[1] if no stat)
 #define AP_MISC2 0x06 // Stat misc2 (or app[1] if no stat)
 #define AP_MISC3 0x07 // Stat misc3 (or app[1] if no stat)
-#define AP_LINES_3 0x0C // Join to line class 3; app[1] is base offset of appearance mapping
-#define AP_LINES_1_3 0x0D
-#define AP_LINES_2_3 0x0E
-#define AP_LINES_1_2_3 0x0F
+#define AP_LINES 0x08 // Line joining; low nybble of app[1] is which line classes, high nybble is appearance_mapping offset, high bit=edge join
+
+// If bit5 of app[0] is set then it has a different meaning.
+
+extern Uint8 appearance_mapping[128];
 
 // === Board/stats ===
 
@@ -79,7 +87,7 @@ typedef struct {
   Uint16 x,y;
   Sint16 instptr;
   Uint8 layer,delay;
-  // Layer: low 2-bits (1=under, 2=main, 3=overlay), bit7=lock
+  // Layer: low 2-bits (1=under, 2=main, 3=overlay), bit6=user, bit7=lock
 } StatXY;
 
 typedef struct {
@@ -91,14 +99,123 @@ typedef struct {
   Uint8 speed,timer;
 } Stat;
 
+typedef struct {
+  Uint16 width,height;
+  Uint16 screen;
+  Uint16 exits[4];
+  Uint16 userdata;
+  Uint16 flag;
+} BoardInfo;
+
+// BoardInfo:flag
+#define BF_USER0 0x0001
+#define BF_USER1 0x0002
+#define BF_USER2 0x0004
+#define BF_USER3 0x0008
+#define BF_PERSIST 0x0010  // save board state before going to another board
+#define BF_NO_GLOBAL 0x0020  // suspend execution of global scripts
+#define BF_OVERLAY 0x0040  // display overlay
+
 // === Screens ===
+
+typedef struct {
+  Uint8 code;
+  Uint8 lead; // character code
+  Uint8 mark; // character code
+  Uint8 div;
+} NumericFormat;
+
+// NumericFormat:code
+#define NF_DECIMAL 'd'
+#define NF_HEX_UPPER 'X'
+#define NF_HEX_LOWER 'x'
+#define NF_OCTAL 'o'
+#define NF_COMMA ','
+#define NF_ROMAN 'R'
+#define NF_LSD_MONEY 'L'
+#define NF_METER 'm'
+#define NF_METER_HALF 'h'
+#define NF_METER_EXT 'M'
+#define NF_METER_HALF_EXT 'H'
+#define NF_BINARY 'b'
+#define NF_BINARY_EXT 'B'
+#define NF_SCIENTIFIC_GIGA '0'
+#define NF_SCIENTIFIC_MEGA '1'
+#define NF_SCIENTIFIC_KILO '2'
+#define NF_SCIENTIFIC '3'
+#define NF_SCIENTIFIC_MILLI '4'
+#define NF_SCIENTIFIC_MICRO '5'
+#define NF_SCIENTIFIC_NANO '6'
+#define NF_CHARACTER 'c'
+#define NF_APPEARANCE '?'
+#define NF_NONZERO '!'
+#define NF_BOARD_NAME 'n'
+#define NF_BOARD_NAME_EXT 'N'
 
 typedef struct {
   Uint8 command[80*25];
   Uint8 color[80*25];
   Uint8 parameter[80*25];
-  Sint8 view_x,view_y;
+  Uint8 view_x,view_y;  // coordinates of centre of viewport
+  Uint8 message_x,message_y;
+  Uint8 message_l,message_r;
+  Uint8 flag;
+  Uint8 soft_edge[4];
+  Uint8 hard_edge[4];
+  Uint8 border[4];  // character codes for default borders; 0=none
 } Screen;
+
+// Screen:command (high nybble)
+#define SC_BACKGROUND 0x00  // bit0=display character (parameter); bit1=display colour; clear bits mean show previous screen
+#define SC_BOARD 0x10  // show board; use color/parameter if out of range
+#define SC_NUMERIC 0x20  // command low nybble=variable index; parameter: low nybble=digit position, high nybble=format index
+#define SC_NUMERIC_SPECIAL 0x30
+#define SC_MEMORY 0x40
+#define SC_INDICATOR 0x50
+#define SC_TEXT 0x60
+#define SC_ITEM 0x70
+#define SC_BITS_0_LO 0x80
+#define SC_BITS_0_HI 0x90
+#define SC_BITS_1_LO 0xA0
+#define SC_BITS_1_HI 0xB0
+#define SC_BITS_2_LO 0xC0
+#define SC_BITS_2_HI 0xD0
+#define SC_BITS_3_LO 0xE0
+#define SC_BITS_3_HI 0xF0
+
+#define SC_SPEC_PLAYER_X 0x30
+#define SC_SPEC_PLAYER_Y 0x31
+#define SC_SPEC_CAMERA_X 0x32
+#define SC_SPEC_CAMERA_Y 0x33
+#define SC_SPEC_TEXT_SCROLL_PERCENT 0x34
+#define SC_SPEC_TEXT_LINE_NUMBER 0x35
+#define SC_SPEC_TEXT_LINE_COUNT 0x36
+#define SC_SPEC_BOARD_NUMBER 0x37
+#define SC_SPEC_EXIT_N 0x38
+#define SC_SPEC_EXIT_S 0x39
+#define SC_SPEC_EXIT_E 0x3A
+#define SC_SPEC_EXIT_W 0x3B
+#define SC_SPEC_WIDTH 0x3C
+#define SC_SPEC_HEIGHT 0x3D
+#define SC_SPEC_USERDATA 0x3E
+
+#define SC_IND_CURSOR 0x51
+#define SC_IND_SCROLL 0x52
+#define SC_IND_EXIT_N 0x58
+#define SC_IND_EXIT_S 0x59
+#define SC_IND_EXIT_E 0x5A
+#define SC_IND_EXIT_W 0x5B
+#define SC_IND_USER0 0x5C
+#define SC_IND_USER1 0x5D
+#define SC_IND_USER2 0x5E
+#define SC_IND_USER3 0x5F
+
+// Screen:flag
+#define SF_LEFT_ALIGN_MESSAGE 0x01
+#define SF_NO_SCROLL 0x02
+
+extern NumericFormat num_format[16];
+extern Screen cur_screen;
 
 // === File access (Hamster archives) ===
 
