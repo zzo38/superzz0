@@ -5,6 +5,20 @@
 #include <string.h>
 #include <unistd.h>
 
+// === Display ===
+
+extern Uint8 v_color[80*25];
+extern Uint8 v_char[80*25];
+extern Uint8 v_status[82];
+extern SDL_Event event;
+
+void init_display(void);
+void redisplay(void);
+void display_title(const char*);
+void set_timer(Uint32);
+void draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n);
+int next_event(void);
+
 // === Miscellaneous ===
 
 #define DIR_N 0
@@ -193,6 +207,7 @@ typedef struct {
   Uint8 soft_edge[4];
   Uint8 hard_edge[4];
   Uint8 border[4];  // character codes for default borders; 0=none
+  Uint8 border_color;  // 0=same colour
 } Screen;
 
 // Screen:command (high nybble)
@@ -243,6 +258,9 @@ typedef struct {
 // Screen:flag
 #define SF_LEFT_ALIGN_MESSAGE 0x01
 #define SF_NO_SCROLL 0x02
+#define SF_EXIT_BORDER 0x04
+#define SF_USER_BORDER 0x08
+#define SF_SCROLL_INDICATOR_IF_EXIT 0x10
 
 extern NumericFormat num_format[16];
 extern Screen cur_screen;
