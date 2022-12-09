@@ -21,10 +21,16 @@ int next_event(void);
 
 // === Miscellaneous ===
 
+#define SUPER_ZZ_ZERO_VERSION 1
+
 #define DIR_N 0
 #define DIR_S 1
 #define DIR_E 2
 #define DIR_W 3
+
+extern Uint8 editor;
+
+const char*init_world(void);
 
 // === Game definitions ===
 
@@ -113,6 +119,7 @@ typedef struct {
 #define AM_Y2 0x08
 #define AM_SLOW 0x80
 
+extern ElementDef elem_def[256];
 extern Uint8 appearance_mapping[128];
 extern Animation animation[4];
 
@@ -135,7 +142,7 @@ typedef struct {
   Uint16 length;
   Uint16 count;
   StatXY*xy;
-  Uint8 speed,timer;
+  Uint8 speed;
 } Stat;
 
 typedef struct {
@@ -155,6 +162,13 @@ typedef struct {
 #define BF_NO_GLOBAL 0x0020  // suspend execution of global scripts
 #define BF_OVERLAY 0x0040  // display overlay
 
+// Overlay kind bits (the low nybble has user-defined meanings)
+#define OVER_SOLID 0x10  // affects movement of stats in overlay
+#define OVER_RESERVED 0x20  // reserved for future use (possibly wide characters)
+#define OVER_BG_THRU 0x40  // show through background colour
+#define OVER_VISIBLE 0x80  // overlay is visible (if not set, it is transparent)
+
+extern Uint16 cur_board_id;
 extern BoardInfo board_info;
 extern Tile*b_under;
 extern Tile*b_main;
@@ -264,6 +278,61 @@ typedef struct {
 
 extern NumericFormat num_format[16];
 extern Screen cur_screen;
+extern Uint16 cur_screen_id;
+
+// === Program memory / instructions ===
+
+// Instruction format:
+//   bit15-bit12 = Input operand
+//   bit11-bit9 = Output operand or extra operand
+//   bit8-bit0 = Opcode
+// Output operand:
+//   0-7 = Registers A-H (if opcode bit8 and bit7 are set, then S-Z instead)
+// Input operand:
+//   0-1 = Short immediate
+//   2 = Immediate (unsigned 16-bits)
+//   3 = Extension
+//   4-7 = Registers W-Z
+//   8-15 = Registers A-H
+// Extension format:
+//   bit15-bit12 = Source
+//   bit11-bit8 = Type
+//   bit7-bit0 = Value
+// Extension source:
+//   0 = Zero
+//   1 = Immediate 32-bits
+//   2 = Absolute 16-bits
+//   3 = (reserved)
+//   4-7 = Registers W-Z
+//   8-15 = Registers A-H
+// Special outputs:
+//   S = Return value from subroutine
+//   T = Set condition flag to true if nonzero, or false if zero
+//   U = (reserved)
+//   V = (reserved)
+
+#define XOP_ADD 0x0000 // source+value
+#define XOP_ADD_NEG 0x0100 // source+value-256
+#define XOP_ADD_INDIRECT 0x0200 // [source+value]
+#define XOP_ADD_NEG_INDIRECT 0x0300 // [source+value-256]
+#define XOP_LEFT_SHIFT 0x0400 // source<<value
+#define XOP_SIGNED_RIGHT_SHIFT 0x0500 // source>>value
+#define XOP_UNSIGNED_RIGHT_SHIFT 0x0600 // source>>value
+#define XOP_EXTRACT_BITS 0x0700 // (source>>(value&15))&~((-1)<<((value>>4)&15))
+#define XOP_SUBTRACT 0x0800 // value-source
+#define XOP_SUBTRACT_NEG 0x0900 // value-source-256
+#define XOP_XDIR 0x0A00 // bit7-bit4=direction register, bit3=reverse, bit2-bit0=shift amount of direction register
+#define XOP_YDIR 0x0B00 // source=the original X or Y coordinate
+#define XOP_RANDOM 0x0C00 // random 0 to source+value-1
+#define XOP_EVENT 0x0D00 // event (value&15) of element (source)
+
+extern Uint16*memory;
+extern Uint8**gtext;
+extern Uint16 ngtext;
+
+// === Game state ===
+
+extern Sint32 status_vars[16];
 
 // === File access (Hamster archives) ===
 
@@ -280,3 +349,29 @@ int save_world(const char*name); // set name to null to overwrite the current fi
 int save_game(FILE*fp);
 int restore_game(FILE*fp);
 
+// === File access (data) ===
+
+#ifdef USING_RW_DATA
+
+static inline Uint8 read8(FILE*fp) {
+  int c=fgetc(fp);
+  return c==EOF?0:c;
+}
+
+static inline Uint16 read16(FILE*fp) {
+  int c=fgetc(fp);
+  if(c==EOF) return 0;
+  return c|(fgetc(fp)<<8);
+}
+
+static inline Uint32 read32(FILE*fp) {
+  Uint32 r=0;
+  int c=fgetc(fp);
+  if(c==EOF) return 0;
+  r=c|(fgetc(fp)<<8);
+  r|=fgetc(fp)<<16;
+  r|=fgetc(fp)<<24;
+  return r;
+}
+
+#endif

@@ -1,0 +1,535 @@
+Format: [hex name] (if hex>=0x100 then first operand can be A-H or S-Z)
+
+Jump destination: if 0 or 1, then returns that value from this subroutine
+instead of jumping to that address. The same is true for calls, etc.
+
+Where coordinates are expected, they can be nonzero for packed coordinates
+or zero to use the X and Y registers instead. (Packed coordinates are:
+(Y*board_width+X+1).)
+
+In the below, usually 32-bit numbers are treated as signed, and 16-bit
+numbers are treated as unsigned.
+
+
+[000 ADD]
+  Add second operand to first, storing result in the first.
+
+[001 SUB]
+  Subtract second operand from first, storing result in the first.
+
+[002 RSUB]
+  Subtract first operand from second, storing result in the first.
+
+[003 MUL]
+  
+
+[004 DIV]
+  Divide first by second, storing the quotient in the first, and the
+  condition flag is true. In case of division by zero, the first operand
+  is unchanged, and the condition flag is false.
+
+[005 MOD]
+  Divide first by second, storing the remainder in the first, and the
+  condition flag is true. In case of division by zero, the first operand
+  is unchanged, and the condition flag is false.
+
+[006 ASUB]
+  Store the absolute value of the difference of operands in the first.
+
+[007 ANDN]
+  
+
+[008 AND]
+  
+
+[009 OR]
+  
+
+[00A XOR]
+  
+
+[00B XORN]
+  
+
+[00C LSH]
+  Shift left first operand by number of bits specified by second operand.
+  The shift amount is treated as unsigned; if it is out of range, then all
+  bits are shifted out.
+
+[00D RSH]
+  Shift right first operand by number of bits specified by second operand,
+  with sign extension. The shift amount is treated as unsigned; if it is
+  out of range, then all bits are shifted out.
+
+[00E URSH]
+  Shift right first operand by number of bits specified by second operand,
+  with zero extension. The shift amount is treated as unsigned; if it is
+  out of range, then all bits are shifted out.
+
+[00F GOTO]
+  Unconditionally jump to second operand.
+
+[010 JZ]
+  Jump to second operand if first operand is zero.
+
+[011 JNZ]
+  Jump to second operand if first operand is nonzero.
+
+[012 JF]
+  Jump to second operand if condition flag is false
+
+[013 JT]
+  Jump to second operand if condition flag is true.
+
+[014 JNEG]
+  Jump to second operand if first operand is less than zero.
+
+[015 JPOS]
+  Jump to second operand if first operand is greater than or equal to zero.
+
+[016 JEV]
+  Jump to second operand if first operand is even.
+
+[017 JOD]
+  Jump to second operand if first operand is odd.
+
+[018 LOOP]
+  If first operand is nonzero, decrement it and jump to second operand.
+
+[019 RBTS]
+  Like BTST but the operands are reversed.
+
+[01A MAX]
+  If the second operand is greater than the first, then copy the second
+  operand to the first.
+
+[01B MIN]
+  If the second operand is less than the first, then copy the second
+  operand to the first.
+
+[01C EQ]
+  Condition is true if operands are equal, or false if unequal.
+
+[01D BTST]
+  Condition is true if bit whose position is specified by second operand
+  (only the low 5-bits are used) is set in the first operand, or is false
+  if that bit is clear.
+
+[01E LESS]
+  Condition is true if first operand is less than second, else false.
+
+[01F GRTR]
+  Condition is true if first operand is greater than second, else false.
+
+[020 PEEK]
+  Second operand is the address; read the unsigned 16-bit value at that
+  address and store it in the first operand.
+
+[021 POKE]
+  Second operand is the address; write the low 16-bits of the first operand
+  into memory at that address.
+
+[022 EXCH]
+  Second operand is the address; the value there is exchanged with the low
+  16-bits of the first operand.
+
+[023 UPTO]
+  If the first operand is less than the second, increment it and then the
+  condition flag is true; otherwise, leave the first operand unchanged and
+  the condition flag is false.
+
+[024 VGET]
+  Low 16-bits of second operand tells which global status variable to
+  access; its value is copied into the first operand.
+
+[025 VPUT]
+  Low 16-bits of second operand tells which global status variable to
+  access; the first operand is written to it.
+
+[028 PEER]
+  Adds together the operands to make the address in memory to read a 16-bit
+  number from, and store that in the first operand.
+
+[029 CASE]
+  Adds together the operands to make the address in memory to read a 16-bit
+  number from, and jumps to the address which is the 16-bit number which has
+  been read from that address.
+
+[030 UNPC]
+  Unpack coordinates in second operand to X and Y. (If second operand is
+  zero, then X and Y are unchanged.)
+
+[031 DIR]
+  Low 2-bits of second operand is direction to adjust the packed
+  coordinates stored by the register specified by the first operand. If
+  the new coordinates are in range, then they are adjusted and the
+  condition flag is true, otherwise it is false.
+
+[032 FORW]
+  Low 2-bits of second operand is direction to adjust X and Y coordinates.
+  The condition flag is true if they were successfully adjusted, or false
+  if they were unchanged because the new values would be out of range.
+
+[033 BACK]
+  Low 2-bits of second operand is the opposite of the direction to adjust
+  X and Y coordinates; otherwise it is like FORW.
+
+[034 EMAT]
+  The low 8-bits of the second operand is the element number, and the first
+  operand selects which of the high 8-bits of the attribute bits of that
+  element to test (A for bit24, up to H for bit31); the condition flag is
+  true if that bit is set or false if that bit is clear.
+
+[035 TMAT]
+  Similar to EMAT, but uses the second operand as coordinates instead, and
+  uses the attributes of the element at the main layer. If coordinates are
+  out of range, then the condition flag is not changed.
+
+[036 UMAT]
+  Similar to TMAT but using the under layer instead of the main layer.
+
+[038 MOVE]
+  
+
+[039 SMOV]
+  
+
+[03A GMOV]
+  
+
+[03B OMOV]
+  
+
+[040 TEXT]
+  Affects the text buffer, depending on the first operand:
+  B = Append the board title of the board with the specified number.
+  C = Append a single character (if zero, then no effect).
+  D = Appends a number in decimal notation.
+  E = Replace the text buffer with a global text string (0=empty).
+  G = Append a global text string.
+  H = Appends a number in eight character uppercase hex.
+
+[041 MESS]
+  Has the same effect as the TEXT instruction, and then replaces the
+  message line text with the contents of the text buffer.
+
+[043 HELP]
+  
+
+[044 WARP]
+  Set the warp. The first operand is the target board number, and the
+  second operand is the address of a subroutine to execute after the warp
+  occurs (before anything else). W will be the previous board number.
+
+[045 EXIT]
+  The low 2-bits of the second operand tells which direction of board exit
+  to access. The target board number is written to the first operand, and
+  the condition flag will be true if it is nonzero or false otherwise.
+
+[050 SEND]
+  If the first operand is the stat XY list number (same as for LOCK, PSD),
+  and if it is nonzero then the second operand is the global string number
+  of the label name to send to that stat (if it is not locked). If the
+  second operand is zero, then use the text made by TEXT instruction as
+  the label name. If the first operand is zero, then send to all stats that
+  are not locked.
+
+[051 PM1]
+  Set misc1 of stat specified by second operand to first operand.
+
+[052 PM2]
+  Set misc2 of stat specified by second operand to first operand.
+
+[053 PM3]
+  Set misc3 of stat specified by second operand to first operand.
+
+[054 TELE]
+  
+
+[055 PSPD]
+  Set speed of stat specified by second operand to the first operand.
+
+[056 LOCK]
+  The low 16-bits of the second operand are the stat number, and the high
+  16-bits are the index into the XY list of that stat. Sets the layer/lock
+  flag to the first operand; however, the low 2-bits are not used.
+
+[057 PSD]
+  The low 16-bits of the second operand are the stat number, and the high
+  16-bits are the index into the XY list of that stat. The first operand
+  is copied to the delay amount for that stat.
+
+[060 MTIL]
+  Second operand is coordinates. If they are valid, then the tile at the
+  main layer at that coordinates is written to the first operand, with
+  the kind in the low byte, and then colour, and then parameter, and then
+  finally the stat number in the high byte. In this case, the condition
+  flag will be true. If the coordinates are not valid, then the condition
+  flag is false and the first operand is left unchanged.
+
+[061 UTIL]
+  Same as MTIL but for the under layer instead of the main layer.
+
+[062 CLAM]
+  Second operand is coordinates. If they are valid, then the class number
+  of the element of the tile in the main layer at that coordinates is
+  written to the first operand, and the condition flag is true; if the
+  coordinates are not valid, then the first operand is unchanged and the
+  condition flag is false.
+
+[063 CLAU]
+  Second operand is coordinates. If they are valid, then the class number
+  of the element of the tile in the under layer at that coordinates is
+  written to the first operand, and the condition flag is true; if the
+  coordinates are not valid, then the first operand is unchanged and the
+  condition flag is false.
+
+[064 GTUK]
+  Second operand is coordinates. If they are valid, then the kind of the
+  tile in the under layer at the specified coordinates is written to the
+  first operand, and the condition flag is true; if it is not valid, then
+  the first operand is unchanged and the condition flag is false.
+
+[065 GTUC]
+  
+
+[066 GTUP]
+  
+
+[067 GTUS]
+  
+
+[068 GTMK]
+  
+
+[069 GTMC]
+  
+
+[06A GTMP]
+  
+
+[06B GTMS]
+  
+
+[06C GTOK]
+  
+
+[06D GTOC]
+  
+
+[06E GTOP]
+  
+
+[06F GTOS]
+  
+
+[070 PTM]
+  Write a tile with the same format as MTIL to the main layer at the
+  coordinates specified by the second operand; the condition flag will
+  be true if the coordinates are valid or false otherwise. This instruction
+  will also update the stat XY lists for the specified coordinates if the
+  stat number of the tile has been changed.
+
+[071 PTU]
+  Like PTM but for the under layer instead of the main layer.
+
+[072 FLOA]
+  Second operand is coordinates; if valid then the condition flag is true
+  but otherwise it is false. Moves the under layer at the specified
+  coordinates to the main layer and sets the under layer to zero; this
+  will update the stat XY record if applicable.
+
+[073 SINK]
+  This is like FLOA but moves the main layer to the under layer and sets
+  the main layer to zero, instead of the other way around.
+
+[074 PTUK]
+  Second operand is coordinates. If they are valid, then the kind of the
+  tile in the under layer at the specified coordinates is set to the low
+  8-bits of the first operand, and the condition flag is true; if it is
+  not valid, then the condition flag is false, and the board is unchanged.
+
+[075 PTUC]
+  
+
+[076 PTUP]
+  
+
+[077 PTUS]
+  
+
+[078 PTMK]
+  
+
+[079 PTMC]
+  
+
+[07A PTMP]
+  
+
+[07B PTMS]
+  
+
+[07C PTOK]
+  
+
+[07D PTOC]
+  
+
+[07E PTOP]
+  
+
+[07F PTOS]
+  
+
+[100 LET]
+  Copy second operand to first.
+
+[101 INC]
+  Copy second operand plus one to first.
+
+[102 DEC]
+  Copy second operand minus one to first.
+
+[103 NEG]
+  Copy zero minus second operand to first.
+
+[104 NOT]
+  Copy bitwise complement of second operand to first.
+
+[106 FLET]
+  Copy second operand to first if condition flag is false.
+
+[107 TLET]
+  Copy second operand to first if condition flag is true.
+
+[108 FINC]
+  
+
+[109 TINC]
+  
+
+[10A FDEC]
+  
+
+[10B TDEC]
+  
+
+[10E ZEX]
+  
+
+[10F SEX]
+  
+
+[110 CALL]
+  Call a subroutine, with address given by second operand. The current
+  values of W, X, Y, Z registers are the inputs of the subroutine, and then
+  the return value is written to the first operand of this instruction. (If
+  the first operand is S, then it is implemented as a tail call.)
+
+[111 GO]
+  Unconditionally jump to second operand, storing the address that the
+  next instruction (as if it didn't jump) would be in the first operand.
+  (If the first operand is S, then the second operand is ignored.)
+
+[120 GIVE]
+  The first operand tells which status variable to access, where A-H are
+  the first eight and S-Z are the last eight. Adds the second operand to
+  that value and stores in the status variable.
+
+[121 TAKE]
+  The first operand tells which status variable to access, where A-H are
+  the first eight and S-Z are the last eight. If the second operand is
+  greater than or equal to that value, then the status variable is updated
+  with the difference and the condition flag is now true; otherwise, the
+  condition flag is now false.
+
+[122 ROB]
+  The first operand tells which status variable to access, where A-H are
+  the first eight and S-Z are the last eight. Subtracts the second operand
+  to that value. If the total is positive, then it is stored in the status
+  variable and the condition flag is true. If zero or negative, then it
+  will set the status variable to zero and the condition flag is false.
+
+[123 VSET]
+  Set the value of the specified status variable (by the first operand)
+  to the value of the second operand.
+
+[124 BGIV]
+  Similar to GIVE, but the second operand is the bit position (0 to 31) of
+  the bit to set. The condition flag is true if that bit was previously
+  clear, or false if it was already set (and therefore unchanged).
+
+[125 BTAK]
+  Similar to GIVE, but the second operand is the bit position (0 to 31) of
+  the bit to clear. The condition flag is true if that bit was previously
+  set, or false if it was already clear (and therefore unchanged).
+
+[12C EAP0]
+  The second operand is the element number; write the major appearance code
+  of that element definition to the first operand.
+
+[12D EAP1]
+  The second operand is the element number; write the minor appearance code
+  of that element definition to the first operand.
+
+[12E EATT]
+  The second operand is the element number; write the attribute of that
+  element definition to the first operand.
+
+[12F EJMP]
+  Jump to the event of the element number specified by the second operand;
+  the first operand selects the event (A for event 0, Z for event 15).
+
+[130 PACK]
+  If the X and Y coordinates are in range, then pack them into the first
+  operand, and the condition flag is true. If not in range, then the
+  condition flag is false, and if the second operand is nonzero then it
+  is copied to the first operand.
+
+[150 SIXY]
+  The low 16-bits of the second operand are the stat number, and the high
+  16-bits are the index into the XY list of that stat. The first operand
+  will then be the packed coordinates of that record, and the condition
+  flag will be true. If there is no such record, then the condition flag
+  is false and the result is zero.
+
+[151 GM1]
+  Read misc1 of stat specified by second operand into first operand.
+
+[152 GM2]
+  Read misc2 of stat specified by second operand into first operand.
+
+[153 GM3]
+  Read misc3 of stat specified by second operand into first operand.
+
+[154 GCOU]
+  Read number of XY entries of stat specified by second operand into the
+  first operand.
+
+[155 GSPD]
+  Read speed of stat specified by second operand into the first operand.
+
+[156 LAY]
+  The low 16-bits of the second operand are the stat number, and the high
+  16-bits are the index into the XY list of that stat. The first operand
+  will then be the layer/lock flag of that stat. The condition flag will
+  be false if it is locked or no such record, or true if unlocked.
+
+[157 GSD]
+  The low 16-bits of the second operand are the stat number, and the high
+  16-bits are the index into the XY list of that stat. The first operand
+  is then a copy of the delay amount for that stat.
+
+[159 SIU]
+  Second operand is packed coordinates, and the first operand is the index
+  (in the same format as SIXY) of the record for the stat at that location
+  in the under layer, or zero if there isn't any. Condition flag is true
+  if the result is nonzero or false if zero.
+
+[15A SIM]
+  Same as SIU but the main layer instead of the under layer.
+
+[15B SIO]
+  Same as SIU but the over layer instead of the under layer.
+
