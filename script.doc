@@ -1,0 +1,362 @@
+
+=== Command syntax ===
+
+@name
+  Only allowed on the first line of the program. This will be the name
+  which it can receive messages.
+
+@name=kind
+  Same as @name but you can specify the default kind (see below); this
+  default kind cannot start with a at sign.
+
+:label
+  Make a label.
+
+'comment
+  Make a zapped label or a comment.
+
+#command
+  A standard command, or a user-defined command.
+
+text
+  Add text for a text window to be displayed. If there is only one line,
+  then it is displayed in the message line instead.
+
+$text
+  Add centered text for a text window.
+
+!label;text
+  Link which, when selected will go to that label, and execute the code
+  at that label.
+
+!-help;text
+  Link to a help file.
+
+/dir
+  Direction must be one letter, and it is possible for further commands on
+  the same line (except labels). Otherwise works like the #GO command.
+
+?dir
+  Direction must be one letter, and it is possible for further commands on
+  the same line. Otherwise works like the #TRY command, but you cannot
+  specify a command to do if it fails to move.
+
+
+=== Standard messages ===
+
+:ENTERED
+  Received by everything when entering a board.
+
+:KEY_x
+  Received by everything when a key is pushed, according to which key is
+  pushed, which can be any letter or digit, or SPACE, RETURN, UP, DOWN,
+  LEFT, RIGHT, or BACKSPACE.
+
+
+=== Standard commands ===
+
+Where another command is expected in these commands, the initial # is
+optional, but it can start with a different sign if it is a command that
+would ordinarily start with that other sign (e.g. a text box link), or
+in this specific case it can start with = as a shortcut for #SEND, or
+with " in which case it is normal text and " is ignored; however, : and '
+are not allowed in this case.
+
+#=[name:]label
+  An abbrevation for #SEND.
+
+#BECOME kind
+  
+
+#BIND name
+  Changes this object to the stat of the specified name. On its turn, it
+  will start executing from the beginning. (This works even if that stat
+  currently has no XY records; this command will add one.)
+
+#CHANGE kind kind
+  
+
+#CLEAR flag
+  Clear a flag.
+
+#CLEARALL
+  Clear all named flags.
+
+#CLONE dir [label]
+  
+
+#COLOR number
+  Set this object's tile colour.
+
+#CYCLE number
+  Change the speed of this stat.
+
+#DIE
+  Delete this object and stop executing.
+
+#DIEITEM
+  Delete this object and stop executing, but also move the tile denoted by
+  the first XY record of stat 1 to this object's location.
+
+#END
+  Stop executing this object.
+
+#ERASE kind
+  Erases everything in main and under layer matching that kind. If erasing
+  something in the main layer, then whatever is in the under layer at that
+  coordinates will be moved to the main layer.
+
+#ESCAPE OFF
+  Cancels a previous #ESCAPE ON; this is implied at the beginning of each
+  (single line or multi line) text message.
+
+#ESCAPE ON
+  Allows further lines of this text message to contain {} which can be
+  used 
+
+#GIVE status_var number
+  
+
+#GO dir
+  Attempt to move in the specified direction. If it cannot move, then it
+  will wait until it is able to move, and then move.
+
+#HELP help_name
+  Display a help file, given the name of the lump without ".HLP" suffix.
+
+#IDLE
+  Skip a turn. (You can also use /I to mean the same thing.)
+
+#IF condition command
+  Execute the command only if the condition is true.
+
+#IFNOT condition command
+  Execute the command only if the condition is false.
+
+#LOCK
+  Lock the program from receiving messages.
+
+#MISC1 number
+  Set this stat's misc1 value.
+
+#MISC2 number
+  Set this stat's misc2 value.
+
+#MISC3 number
+  Set this stat's misc3 value.
+
+#MUSIC bgm_name
+  
+
+#PARAMETER number
+  Set this object's tile parameter.
+
+#PLAY sfx_music
+  
+
+#PUSH dir
+  
+
+#PUT dir kind
+  
+
+#PUTAT number number kind
+  
+
+#RESTART
+  Restart the program from the beginning.
+
+#RESTORE label
+  Changes all lines 'label into :label so that they will work.
+
+#SEND [name:]label
+  Go to the specified label, if it exists. If a name is specified, then
+  affects all stats matching that name; in this case, it will not send
+  to anything which is locked.
+
+#SENDALL label
+  Like "#SEND name" but sends to everything that isn't locked.
+
+#SET flag
+  Set a flag.
+
+#SHIFT dir kind
+  
+
+#SHOW
+  Show the text now, instead of waiting to accumulate further text.
+
+#TAKE status_var number [command]
+  
+
+#TRY dir [command]
+  Try to move in the direction; if it cannot go, then it will execute the
+  specified command (or do nothing).
+
+#WAIT number
+  Wait for the specified number of turns (ignoring this stat's speed).
+
+#WARP number
+  Set a warp to the specified board (ends the turn).
+
+#WHEN condition
+  
+
+#WHENNOT condition
+  
+
+#UNLOCK
+  Unlock the program to allow it to receive messages.
+
+#ZAP label
+  Finds the first :label and comments it out by changing it to 'label
+  instead, so that it cannot receive messages. If there is more than one,
+  then only the first one with a colon is effective, so this command can
+  be used to change which one is effective.
+
+
+=== Conditions/flags ===
+
+Some of these can be used with #SET and #CLEAR and #IF, while some are only
+allowed for #IF.
+
+name
+  Any name not with a punctuation sign represents a global named flag. The
+  name can be up to fifteen characters long, and up to sixteen such flags
+  can be set at once.
+
+#ALIGN
+  True if this object is aligned with the player, either horizontally or
+  vertically (not diagonally).
+
+#ANY:kind
+  Same as @kind.
+
+#AT:number:number:kind
+  True if specified kind at specified coordinates, in the main layer or the
+  under layer.
+
+#BENEATH:kind
+  Same as B@kind.
+
+#BLOCKED:dir
+  True if blocked in the specified direction (i.e. it is the board edge or
+  it is not a UNDER element).
+
+#CONTACT
+  True if this object is next to the player (not diagonally), or in the
+  same cell (but different layer) of the player. (For this purpose, the
+  "player" means any tile belonging to stat 1.)
+
+#FULL
+  True if no more named flags can be set.
+
+#LOCKED
+  True if this object is locked from receiving messages.
+
+#MAIN:kind
+  
+
+#PLAYER:kind
+  
+
+#RANDOM
+  There is a 50% chance to be true.
+
+#UNDER:kind
+  
+
+#USER
+  The user bit of this stat XY record.
+
+@kind
+  True if anything of the specified kind in the main or under layer.
+
+B@kind
+  True if a tile of the specified kind is directly beneath this object (in
+  the under layer).
+
+M@kind
+  True if anything of the specified kind in the main layer.
+
+P@kind
+  True if any tile on the main layer belonging to stat 1 has the specified
+  kind in the under layer.
+
+U@kind
+  True if anything of the specified kind in the under layer.
+
+number comparison number
+  True if the comparison between the numbers is correct. Do not put spaces
+  in between; the above is only for explanation. The valid comparisons can
+  be one of: = <> < > <= >=
+
+
+=== Numbers ===
+
+A number can be given in decimal notation (which must be a nonnegative
+integer), or you can have an expression in parentheses. The expression is
+alternating operators and operands. Operators are always left to right.
+
+The valid operators are:
+
++ add
+- subtract
+* multiply
+/ divide
+% modulo
+& bitwise AND
+| bitwise OR
+^ bitwise XOR
+< left shift
+> right shift
+? random number in range
+
+Operands can be a number, or it can be one of the following:
+
+#A to #H or #S to #Z accesses a status variable
+X or Y are the coordinates of this object
+XX or YY are the coordinates of the player
+M1 or M2 or M3 are the misc values of this stat
+P is the parameter of this object
+@name is how many objects (stat XY records) having the specified name
+
+A number inside or outside of an expression can also be hexadecimal if
+it has $ at first.
+
+
+=== Kind ===
+
+Where a "kind" is expected, it can be the name of a kind of element, and
+can optionally be preceded and/or followed by <> with two hex digits in
+between (the preceding is the colour and the following is the parameter),
+and optionally followed by ! to mean only if it is a stat.
+
+Instead of the kind of element, you may also instead use @name which is
+the name of a program, if that program uses the @name=kind form, which
+will create a XY record for that stat and use the kind specified there.
+If the colour and/or parameter are specified here, they override those
+specified in the other stat's program.
+
+If the @name form is used for a match instead of creation, then it does
+not need to have the @name=kind form (although it is still allowed); it
+matches tiles corresponding to stats with that name.
+
+
+=== Directions ===
+
+It can be:
+
+I or IDLE (don't move)
+E or EAST
+N or NORTH
+W or WEST
+S or SOUTH
+CW dir
+CCW dir
+OPP dir
+RANDOM (any of four directions at random)
+SEEK (toward the player; random of two ways if not aligned)
+SEEKNS (toward the player; north or south if not aligned)
+SEEKEW (toward the player; east or west if not aligned)
+

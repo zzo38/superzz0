@@ -1,0 +1,150 @@
+
+=== Syntax ===
+
+Each line can be blank, or a comment, or it can be an optional label
+followed by one or more spaces/tabs and then the instruction, which
+can also optionally be followed by a comment.
+
+A label may be a numbered label, which is a digit 0 to 9 followed by H
+in which case it is possible to have more than one with the same number
+and codes like 1F and 2B etc can reference them.
+
+A normal instruction consists of the name, a space, the first operand,
+a comma, and the second operand. The first operand must be A to H or S
+to Z (although some only allow A to H). The second operand can be one
+of the following:
+
+* One of the registers A to H or W to Z.
+
+* A numeric expression.
+
+* An extension operand; see below.
+
+A pseudo instruction is the name, space, and then the arguments (which
+depend on the specific pseudo).
+
+Extension operands contain a "source" and a "value".
+
+The kinds of extension operands are:
+
+* "source" or "source-number" or "source+number"; the number must be in
+range -256 to +255.
+
+* "[source]" or "[source-number]" or "[source+number]", which is the same
+as above but accesses a value in memory.
+
+* "source<<number" or "source>>number" or "source>>>number" for bit shifts,
+where ">>" is signed and ">>>" is unsigned. The number can be 0 to 31.
+
+* "source[number,number]", which extracts the specified bits from the
+source value; the bit range are both bit positions 0 to 15.
+
+* "source+xyD(register>>shift)" or "source-xyD(register>>shift)", where
+"xy" is "X" or "Y", "register" is A to H or W to Z, and ">>shift" is
+optional, and must be a nubmer 0 to 7. (The low 2-bits of the register
+after the shift, is used.)
+
+* "number-source" or "-number-source"; the number must be in range -256
+to +255.
+
+* "source..letter" or "source..number" for an event of an element. The
+letter can be A to H or S to Z, or a number 0 to 15; the letters will just
+represent the same numbers 0 to 15, not the values in those registers.
+(Only the low 8-bits of the source value are used.)
+
+* "@A" to "@Z" or "@number", for a status variable (the number must be 0
+to 15, or else a letter representing such a number, not the register).
+Can optionally be followed by "+source" or "-source".
+
+* "BW" or "BW+source" or "BW+number" or "BW+source+number" or "BW-number"
+or "BW+source-number" for the board width, plus/minus specified amount.
+The number must be in range -8 to +7 (unless source is omitted).
+
+* "BH" or "BH+source" or "BH+number" or "BH+source+number" or "BH-number"
+or "BH+source-number" for the board height, plus/minus specified amount.
+The number must be in range -8 to +7 (unless source is omitted).
+
+* "PX" or "PY" or "PX-source" or "PY-source" or any of the preceding with
+optionally "+number" or "-number" in range -8 to +7; represents the X and
+Y coordinate of the first XY record of stat 1.
+
+* "BRD" for the current board number.
+
+* "SCR" for the current screen number.
+
+The "source" of an extension operand can be one of the following:
+
+* One of the registers A to H or W to Z.
+
+* A numeric expression.
+
+* A numeric expression in square brackets, representing accessing the
+unsigned 16-bit number at that address.
+
+A comment starts by a semicolon, and ends at the end of the line. (A
+semicolon inside of a string or character literal is not a comment.)
+
+
+=== Numeric expressions ===
+
+It can be one of:
+
+* A decimal integer.
+
+* A hexadecimal integer with $ at first.
+
+* A quoted string; enters it into the global string table (merging
+duplicates) and represents its index into the table.
+
+* A character literal in the format like C programming language.
+
+* A label name, for that label's address (or its value, if the IS or ISNT
+pseudo is used).
+
+* The sign # to mean the current address of this instruction.
+
+* A digit 0 to 9 followed by B or F to find the closest numbered label
+in the specified direction (B for backward, F for forward) with the
+specified number.
+
+* One of the above followed by + or - and another of the above. You can
+optionally start the entire expression with - or + without preceding by
+another of the above items, in which case zero is assumed.
+
+In characters and strings, the valid escaping is:
+  \xXX where XX are two hex digits, for that character code
+  \\ or \" or \' to represent a literal \ or " or '
+  \r for a carriage return
+  \n for a line feed
+
+
+=== Pseudos ===
+
+In the below, [] denotes optional items and ... means you can have more
+items if desired.
+
+AT number
+  Write further code at the specified address.
+
+COM string
+  Make a user-defined script command.
+
+DATA number[,number...]
+  One or more numeric expressions, entered as data.
+
+EV event,number[,number]
+  Define an event. The first argument will be the letter or number of the
+  event, and then the element number, and then optionally the value to
+  use for the event (if not specified, use the current address).
+
+FILL number,number
+  The first number is how many memory cells to fill, and the second number
+  is the value to fill it with. If the second number is a expression which
+  contains # then it will be recalculated for each cell.
+
+IS number
+  Makes the label value the specified number, instead of the address.
+
+ISNT number
+  Same as IS but uses the bitwise complement.
+

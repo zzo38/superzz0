@@ -96,7 +96,7 @@ numbers are treated as unsigned.
 [018 LOOP]
   If first operand is nonzero, decrement it and jump to second operand.
 
-[019 RBTS]
+[019 TSTB]
   Like BTST but the operands are reversed.
 
 [01A MAX]
@@ -189,16 +189,66 @@ numbers are treated as unsigned.
   Similar to TMAT but using the under layer instead of the main layer.
 
 [038 MOVE]
-  
+  Attempt to move the contents of a tile. The first operand is the packed
+  coordinates of that tile, or zero to use X and Y coordinates. If the move
+  is successful, the new coordinates are written to the first operand if it
+  is nonzero, or to X and Y if it is zero. The condition flag is true if
+  the move is successful or false if not. The second operand is the flags,
+  which are as follows (only the low 16-bits are used):
+  bit0-bit2 = Select register containing direction (A to H).
+  bit3 = Do not actually move anything, but check if it can move.
+  bit4 = Allow pushing (and indirect crushing).
+  bit5 = Allow direct crushing.
+  bit6 = Allow transporting.
+  bit7 = Override move classes; can go on class 0 but not 1-7.
+  bit8-bit15 = Specify if it can move on classes 8-15.
 
 [039 SMOV]
-  
+  Similar to MOVE, but the first operand is a stat XY entry number, and it
+  is not written to. (If there is no such stat, the move always fails.)
 
 [03A GMOV]
-  
+  Similar to MOVE or SMOV, but the second operand is the address of a
+  structure with the move parameters, which are:
+  First = Flags (see below).
+  Second = Which move classes it can move to.
+  Third = X step (signed), or target X coordinate.
+  Fourth = Y step (signed), or target Y coordinate.
+  bit0 = Set for absolute, clear for relative.
+  bit1 = Set for over layer, clear for main layer.
+  bit2 = How first operand is treated: set like SMOV, clear like MOVE.
+  bit3-bit6 = Same as for MOVE.
+  bit7 = Set if the low octet of the move classes value should be used.
+  bit8-bit10 = Register for Y step (A to H) if bit15 is set.
+  bit11 = If set, X/Y steps are direction codes (low 2-bits).
+  bit12-bit14 = Register for X step (A to H) if bit15 is set.
+  bit15 = If set, use specified registers instead of memory fields.
 
 [03B OMOV]
-  
+  Similar to MOVE, but applies to the overlay. It can move to any cell
+  if the SOLID bit is clear in the over kind field of that cell, which
+  overwrites the previous data and sets all fields in the over layer at
+  the place it came from to zero. The second operand is the direction
+  code (only the low 2-bits are used).
+
+[03C PUSH]
+  Similar to MOVE, but the first operand is not written to, and it can
+  only move if that tile is allowed to be pushed in that direction.
+
+[03D GPUS]
+  Similar to PUSH, treating the second operand like GMOV.
+
+[03E CWOE]
+  The low 8-bits of the first operand is a element number. The low 16-bits
+  of the second operand define which classes you can go on (the low bit for
+  class 0, etc). If the bit corresponding to the class of that element is
+  set, and that element has the UNDER attribute, then the condition flag
+  will be true, otherwise the condition flag will be false.
+
+[03F CWOT]
+  Like CWOE but the first operand is instead the coordinates of the tile,
+  the kind at the main layer at that coordinates is used. If invalid
+  coordinates are specified then the condition flag will be false.
 
 [040 TEXT]
   Affects the text buffer, depending on the first operand:
@@ -213,18 +263,74 @@ numbers are treated as unsigned.
   Has the same effect as the TEXT instruction, and then replaces the
   message line text with the contents of the text buffer.
 
-[043 HELP]
-  
+[042 HELP]
+  Display a help file. The second operand is the number of the help file
+  to be displayed (it is a lump named by four hex digits and then ".HLP");
+  if it is negative, then the text buffer followed by ".HLP" is used. If
+  a command is selected, then the condition flag is true and the first
+  operand will be the command code; otherwise, the condition flag will be
+  false and the first operand is not affected.
 
 [044 WARP]
   Set the warp. The first operand is the target board number, and the
   second operand is the address of a subroutine to execute after the warp
-  occurs (before anything else). W will be the previous board number.
+  occurs (before anything else). W will be the previous board number, and
+  X,Y,Z will be the same as the current value of X,Y,Z.
 
 [045 EXIT]
   The low 2-bits of the second operand tells which direction of board exit
   to access. The target board number is written to the first operand, and
   the condition flag will be true if it is nonzero or false otherwise.
+
+[046 BSCR]
+  Define the default screen number to use for text windows. If the second
+  operand is nonnegative, then it sets it; if negative then it is left
+  unchanged. Either way, the old default screen number of text windows is
+  written into the first operand.
+
+[047 REVB]
+  Revert the board number specified by the second operand to the board
+  stored in the world file with that number. This does not affect the
+  current board, although you clear the persist flag and then warp, then
+  it will revert the current board, too.
+
+[048 GBF]
+  Read board flag of current board, bitwise AND NOT with the second
+  operand, into first operand.
+
+[049 PBF]
+  Set board flag to value of second operand.
+
+[04A GBU]
+  Read board user data of current board, bitwise AND NOT with the second
+  operand, into first operand.
+
+[04B PBU]
+  Set board user data to value of second operand.
+
+[04C SCAN]
+  Looks in the main layer for a tile whose kind is the low 8-bits of the
+  second operand. It starts looking after (not on) the coordinates of the
+  first operand. The condition flag is true if found, or false if it had
+  to wrap around or was not found. If the first operand is zero then the
+  new coordinates are written to X and Y, otherwise to the first operand.
+  If the coordinate is negative, or zero and Y is negative, then it will
+  start from the beginning.
+
+[04D LITE]
+  Define the shape and radius of light, which suppresses the overlay around
+  the player (the first XY record of stat 1). The second operand is the
+  radius, and the first operand selects the light shape:
+  A = no light
+  B = box
+  C = circle
+  D = diamond
+
+[04E SFX]
+  
+
+[04F BGM]
+  
 
 [050 SEND]
   If the first operand is the stat XY list number (same as for LOCK, PSD),
@@ -232,7 +338,9 @@ numbers are treated as unsigned.
   of the label name to send to that stat (if it is not locked). If the
   second operand is zero, then use the text made by TEXT instruction as
   the label name. If the first operand is zero, then send to all stats that
-  are not locked.
+  are not locked. If the label name contains a colon, then ignore the first
+  operand and instead, it will send to everything whose name matches the
+  part before the colon.
 
 [051 PM1]
   Set misc1 of stat specified by second operand to first operand.
@@ -244,7 +352,11 @@ numbers are treated as unsigned.
   Set misc3 of stat specified by second operand to first operand.
 
 [054 TELE]
-  
+  Teleport the stat XY list record specified by first operand to the
+  coordinates specified by the second operand; the condition flag is true
+  if successful, or false if it cannot (coordinates are out of range, or
+  there is no such stat, or the target tile isn't UNDER). (The class of
+  the target tile is ignored.)
 
 [055 PSPD]
   Set speed of stat specified by second operand to the first operand.
@@ -415,11 +527,20 @@ numbers are treated as unsigned.
 [10B TDEC]
   
 
+[10C SGN]
+  The first operand will be -1 if the second operand is negative, or 0 if
+  the second operand is zero, or 1 if the second operand is positive.
+
+[10D ABS]
+  Copy absolute value of second operand to first operand.
+
 [10E ZEX]
-  
+  Copy low 16-bits of second operand to first operand; the high 16-bits of
+  the first operand will then be clear.
 
 [10F SEX]
-  
+  Copy low 16-bits of second operand to first operand; the high 16-bits of
+  the first operand will then be all the same as bit15.
 
 [110 CALL]
   Call a subroutine, with address given by second operand. The current
@@ -487,6 +608,10 @@ numbers are treated as unsigned.
   condition flag is false, and if the second operand is nonzero then it
   is copied to the first operand.
 
+[131 BIT]
+  Set first operand to a value with a single bit set; the bit to be set
+  will be specified by the low 5-bits of the second operand.
+
 [150 SIXY]
   The low 16-bits of the second operand are the stat number, and the high
   16-bits are the index into the XY list of that stat. The first operand
@@ -521,6 +646,14 @@ numbers are treated as unsigned.
   16-bits are the index into the XY list of that stat. The first operand
   is then a copy of the delay amount for that stat.
 
+[158 SIN]
+  The second operand is in the same format as the result of SIXY, SIU, SIM,
+  etc. The first operand will be the next XY record for the same stat, and
+  the condition flag is true. If there are no more records for that stat,
+  then the condition flag is false, and the first operand will be the first
+  record, or zero if the stat number is not valid, or if there are no XY
+  records for that stat number.
+
 [159 SIU]
   Second operand is packed coordinates, and the first operand is the index
   (in the same format as SIXY) of the record for the stat at that location
@@ -532,4 +665,16 @@ numbers are treated as unsigned.
 
 [15B SIO]
   Same as SIU but the over layer instead of the under layer.
+
+[15D UNEW]
+  Create a new XY record for the stat at the coordinates specified by the
+  second operand, according to the stat number of the tile in the under
+  layer at that coordinates, and create it in the under layer. The first
+  operand will be the stat number and XY record number.
+
+[15E MNEW]
+  Same as UNEW but the main layer instead of the under layer.
+
+[15F ONEW]
+  Same as UNEW but the over layer instead of the under layer.
 

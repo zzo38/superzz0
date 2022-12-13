@@ -23,10 +23,10 @@ int next_event(void);
 
 #define SUPER_ZZ_ZERO_VERSION 1
 
-#define DIR_N 0
-#define DIR_S 1
-#define DIR_E 2
-#define DIR_W 3
+#define DIR_E 0
+#define DIR_N 1
+#define DIR_W 2
+#define DIR_S 3
 
 extern Uint8 editor;
 
@@ -131,7 +131,7 @@ typedef struct {
 
 typedef struct {
   Uint16 x,y;
-  Sint16 instptr;
+  Uint16 instptr; // if 65535 then stop
   Uint8 layer,delay;
   // Layer: low 2-bits (1=under, 2=main, 3=overlay), bit6=user, bit7=lock
 } StatXY;
@@ -322,9 +322,19 @@ extern Uint16 cur_screen_id;
 #define XOP_SUBTRACT 0x0800 // value-source
 #define XOP_SUBTRACT_NEG 0x0900 // value-source-256
 #define XOP_XDIR 0x0A00 // bit7-bit4=direction register, bit3=reverse, bit2-bit0=shift amount of direction register
-#define XOP_YDIR 0x0B00 // source=the original X or Y coordinate
+#define XOP_YDIR 0x0B00 // source=the original X or Y coordinate (OK to go out of range, in this case)
 #define XOP_RANDOM 0x0C00 // random 0 to source+value-1
-#define XOP_EVENT 0x0D00 // event (value&15) of element (source)
+#define XOP_SPECIAL 0x0D00 // one of XOP_S_ based on bit7-bit4 of value
+
+#define XOP_S_EVENT 0x0D10 // event (value&15) of element (source)
+#define XOP_S_STATUS_PLUS 0x0D20 // status variable (value&15), plus (source)
+#define XOP_S_STATUS_MINUS 0x0D30 // status variable (value&15), minus (source)
+#define XOP_S_WIDTH 0x0D40 // board width plus (source+(value&15)-8)
+#define XOP_S_HEIGHT 0x0D50 // board height plus (source+(value&15)-8)
+#define XOP_S_PLAYER_X 0x0D60 // X coordinate of first XY record of stat 1, plus ((value&15)-8-source)
+#define XOP_S_PLAYER_Y 0x0D70 // Y coordinate of first XY record of stat 1, plus ((value&15)-8-source)
+#define XOP_S_BOARD_ID 0xD80 // current board number
+#define XOP_S_SCREEN_ID 0xD90 // current screen number
 
 extern Uint16*memory;
 extern Uint8**gtext;
