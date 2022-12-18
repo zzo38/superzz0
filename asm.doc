@@ -52,7 +52,7 @@ letter can be A to H or S to Z, or a number 0 to 15; the letters will just
 represent the same numbers 0 to 15, not the values in those registers.
 (Only the low 8-bits of the source value are used.)
 
-* "@A" to "@Z" or "@number", for a status variable (the number must be 0
+* "#A" to "#Z" or "#number", for a status variable (the number must be 0
 to 15, or else a letter representing such a number, not the register).
 Can optionally be followed by "+source" or "-source".
 
@@ -71,6 +71,10 @@ Y coordinate of the first XY record of stat 1.
 * "BRD" for the current board number.
 
 * "SCR" for the current screen number.
+
+Note in the above: any + and - which is followed by a number is actually
+a part of the expression that follows; so, for example, "A-2-3" is the same
+as "A-5" and is not the same as "A+1".
 
 The "source" of an extension operand can be one of the following:
 
@@ -101,7 +105,7 @@ duplicates) and represents its index into the table.
 * A label name, for that label's address (or its value, if the IS or ISNT
 pseudo is used).
 
-* The sign # to mean the current address of this instruction.
+* The sign @ to mean the current address of this instruction.
 
 * A digit 0 to 9 followed by B or F to find the closest numbered label
 in the specified direction (B for backward, F for forward) with the
@@ -124,10 +128,12 @@ In the below, [] denotes optional items and ... means you can have more
 items if desired.
 
 AT number
-  Write further code at the specified address.
+  Write further code at the specified address. (If not specified, then the
+  default starting address is 256.)
 
 COM string
-  Make a user-defined script command.
+  Make a user-defined script command. (It will override a built-in script
+  command of the same name if there is one.)
 
 DATA number[,number...]
   One or more numeric expressions, entered as data.
@@ -137,14 +143,21 @@ EV event,number[,number]
   event, and then the element number, and then optionally the value to
   use for the event (if not specified, use the current address).
 
-FILL number,number
+FILL number[,number]
   The first number is how many memory cells to fill, and the second number
   is the value to fill it with. If the second number is a expression which
-  contains # then it will be recalculated for each cell.
+  contains @ then it will be recalculated for each cell, and if the second
+  number is omitted then zero is used.
 
 IS number
   Makes the label value the specified number, instead of the address.
 
 ISNT number
   Same as IS but uses the bitwise complement.
+
+PT string
+  Null-terminated packed text; packs two characters in one byte.
+
+TA number
+  Write the current address at the specified address.
 

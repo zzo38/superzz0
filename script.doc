@@ -1,3 +1,5 @@
+Most commands, arguments, etc are case-insensitive.
+
 
 === Command syntax ===
 
@@ -27,7 +29,9 @@ $text
 
 !label;text
   Link which, when selected will go to that label, and execute the code
-  at that label.
+  at that label. Both kinds of ! commands can optionally be !<x> where x
+  is any letter A to Z or digit 0 to 9, to define a shortcut key to
+  select that option.
 
 !-help;text
   Link to a help file.
@@ -152,7 +156,7 @@ are not allowed in this case.
   Set this object's tile parameter.
 
 #PLAY sfx_music
-  
+  See the below section about sound effects.
 
 #PUSH dir
   
@@ -161,6 +165,9 @@ are not allowed in this case.
   
 
 #PUTAT number number kind
+  
+
+#PUTBELOW kind
   
 
 #RESTART
@@ -177,6 +184,11 @@ are not allowed in this case.
 #SENDALL label
   Like "#SEND name" but sends to everything that isn't locked.
 
+#SENDDIR dir label
+  Like "#SEND name" but sends to whatever is adjacent in the given
+  direction (or to itself if the direction is IDLE), if the target is
+  not locked.
+
 #SET flag
   Set a flag.
 
@@ -188,6 +200,9 @@ are not allowed in this case.
 
 #TAKE status_var number [command]
   
+
+#TELEPORT number number
+  Move this object to the specified coordinates (ends the turn).
 
 #TRY dir [command]
   Try to move in the direction; if it cannot go, then it will execute the
@@ -243,6 +258,9 @@ name
   True if blocked in the specified direction (i.e. it is the board edge or
   it is not a UNDER element).
 
+#BLOCKEDAT:number:number
+  True if specified coordinates are blocked.
+
 #CONTACT
   True if this object is next to the player (not diagonally), or in the
   same cell (but different layer) of the player. (For this purpose, the
@@ -257,6 +275,12 @@ name
 #MAIN:kind
   
 
+#OVERLAY
+  The board overlay flag.
+
+#PERSIST
+  The board persist flag.
+
 #PLAYER:kind
   
 
@@ -268,6 +292,10 @@ name
 
 #USER
   The user bit of this stat XY record.
+
+#VISIBLE
+  True if this tile is visible, due to being in range of the viewport and
+  not obscured by overlays.
 
 @kind
   True if anything of the specified kind in the main or under layer.
@@ -290,6 +318,9 @@ number comparison number
   True if the comparison between the numbers is correct. Do not put spaces
   in between; the above is only for explanation. The valid comparisons can
   be one of: = <> < > <= >=
+
+!condition
+  Inverts the condition.
 
 
 === Numbers ===
@@ -336,7 +367,8 @@ Instead of the kind of element, you may also instead use @name which is
 the name of a program, if that program uses the @name=kind form, which
 will create a XY record for that stat and use the kind specified there.
 If the colour and/or parameter are specified here, they override those
-specified in the other stat's program.
+specified in the other stat's program. You can also use @name:label to
+set the new record's instruction pointer to point to that label.
 
 If the @name form is used for a match instead of creation, then it does
 not need to have the @name=kind form (although it is still allowed); it
@@ -356,7 +388,77 @@ CW dir
 CCW dir
 OPP dir
 RANDOM (any of four directions at random)
+RNDP dir (random perpendicular to direction)
+RNDNS (random north or south)
+RNDNE (random north or east)
 SEEK (toward the player; random of two ways if not aligned)
 SEEKNS (toward the player; north or south if not aligned)
 SEEKEW (toward the player; east or west if not aligned)
+
+
+=== Sound effects ===
+
+A B C D E F G
+  Notes. Can optionally follow any number of - for flat, + for sharp,
+  ' for high octave, , for low octave. Can also optionally follow by
+  the length number. You can also use # instead of + for sharp, too.
+
+H
+  Same as L2.
+
+I
+  Same as L8.
+
+K
+  Allows specifying a note outside of the 12-TET scale.
+
+L
+  Set default note length. If followed by = then it will be in 64th
+  notes instead of as the denominator of the fraction (this is possible
+  anywhere note lengths are allowed).
+
+O
+  Set a specific octave.
+
+Q
+  Same as L4.
+
+R
+  Rest; can optionally follow by length number.
+
+S
+  Same as L16.
+
+T
+  Same as L32 (default).
+
+W
+  Same as L1.
+
+X
+  Same as R.
+
+Z
+  Same as L64.
+
+! $ % ^ & * / ? \ ` ~ : ;
+  Percussion notes. (Can optionally specify note length.)
+
+<
+  Low octave.
+
+>
+  High octave.
+
+@
+  Specify priority. If higher than the existing priority, or if equal and
+  even, then it interrupts it, but otherwise it skips playing this sound.
+  If the priority is not specified, then it is queued.
+
+Any command HIKQSTWZ, or L or a letter A to G, or percussion notes, can be
+followed by any number of dots to lengthen the length; for commands that
+play notes, it affects only for that note; for others, it affects all
+following notes until the length is changed.
+
+(Numeric expressions and hexadecimal cannot be used in sound effects.)
 

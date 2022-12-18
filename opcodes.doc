@@ -252,6 +252,7 @@ numbers are treated as unsigned.
 
 [040 TEXT]
   Affects the text buffer, depending on the first operand:
+  A = Append a packed string from the specified address.
   B = Append the board title of the board with the specified number.
   C = Append a single character (if zero, then no effect).
   D = Appends a number in decimal notation.
@@ -370,6 +371,34 @@ numbers are treated as unsigned.
   The low 16-bits of the second operand are the stat number, and the high
   16-bits are the index into the XY list of that stat. The first operand
   is copied to the delay amount for that stat.
+
+[058 RUN]
+  The first operand specifies the stat XY record to use (like SEND, TELE,
+  etc). It will run its script immediately instead of waiting for its
+  turn; if the second operand is zero then it starts from the beginning
+  of the code but if nonzero then it executes from the current position
+  in the script. If the second operand is negative then it is treated as
+  a command given as an argument to another command (such as #IF), so if
+  it does not start with a punctuation then # is assumed.
+
+[059 SKL]
+  Skips the rest of the current line of text of the script denoted by the
+  second operand (the stat XY record index, like LOCK, PSD, etc).
+
+[50A GIP]
+  
+
+[50B PIP]
+  
+
+[05C FNT]
+  The first opcode is coordinates. Looks beyond those coordinates in the
+  direction specified by low 2-bits of the second operand, for a tile
+  whose main layer has the TRANSPORTER attribute, and if it is found then
+  the condition flag is true and the coordinates of the tile it found are
+  written to the first operand, or to X and Y instead if the first operand
+  is zero. If nothing is found, sets the condition flag false and the first
+  operand is unchanged.
 
 [060 MTIL]
   Second operand is coordinates. If they are valid, then the tile at the
@@ -493,6 +522,33 @@ numbers are treated as unsigned.
 
 [07F PTOS]
   
+
+[080 PARN]
+  Reads a number or numeric expression (optionally preceded by spaces) from
+  a script selected from the second operand. If successful, skips past it,
+  and the condition flag is true, and the first operand will be the number.
+  If unsuccessful, condition flag is false.
+
+[081 PARG]
+  Reads a letter (optionally preceded by spaces) from a script selected
+  from the second operand. If successful, skips past it, and the condition
+  flag is true, and the first operand will be a number 0 to 15 based on
+  the letter A to H or S to Z. If unsuccessful, condition flag is false.
+
+[082 PARD]
+  Reads a direction (optionally preceded by spaces) from a script selected
+  from the second operand. If successful, skips past it, and the condition
+  flag is true, and the first operand will be a number 0 to 3 which denotes
+  the direction, otherwise it will be false. Direction IDLE will be -1.
+
+[083 PARK]
+  
+
+[084 PARC]
+  Reads a condition (optionally preceded by spaces) from a script selected
+  from the second operand. If successful, skips past it, and the condition
+  flag is set or clear according to the result of the condition. If not
+  successful, does not skip, and the condition flag is unchanged.
 
 [100 LET]
   Copy second operand to first.

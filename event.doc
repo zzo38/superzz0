@@ -1,0 +1,92 @@
+
+=== Global events ===
+
+Memory addresses $00E0 to $00FF are the system area, some of which are used
+for global events.
+
+$00E0
+  Keyboard event at the beginning of each frame, if any key is pushed.
+  Number pad are treated as numbers or arrows depending on num lock, but
+  will set the direction even if num lock is on, unlike top row numbers.
+
+  A key code can be a printable ASCII character or one of the following:
+    8 = BACKSPACE
+    9 = TAB
+    13 = ENTER or RETURN
+    16 = SHIFT+RIGHT
+    17 = SHIFT+LEFT
+    24 = UP
+    25 = DOWN
+    26 = RIGHT
+    27 = LEFT
+    30 = SHIFT+UP
+    31 = SHIFT+DOWN
+
+  W = ASCII code of key pushed
+  X = X delta of direction (0 if not applicable)
+  Y = Y delta of direction (0 if not applicable)
+  Z = Direction (-1 if not applicable)
+
+  Return = Unused.
+
+$00E1
+  Event called at each frame, after key (if any) but before everything else
+  happens during this frame.
+
+  W,X,Y,Z = Zero
+
+  Return = Nonzero to skip the rest of the current turn (freeze time).
+
+
+=== Script command events ===
+
+A script command event uses the following registers:
+
+W = Script XY record index
+X = X coordinate
+Y = Y coordinate
+Z = Stat's speed
+
+The return value is the new delay value; if it is zero then it will
+continue executing the script.
+
+
+=== Element events ===
+
+In all cases, X and Y are the coordinates of the tile the event is for.
+
+EV_FRAME (0)
+  Called during each frame, on the scan of the board; this should not be
+  used to move things around (use EV_STAT instead), but can be used for
+  animation, changing this tile itself, etc.
+
+  W = Kind
+  Z = Parameter
+
+  Return = Unused.
+
+EV_STAT (1)
+  Called whenever a stat's turn to be executed, before scripts.
+
+  W = Stat XY index
+  Z = Parameter
+
+  Return = Nonzero to prevent scripts/delay.
+
+EV_PUSH (2)
+  Called when this stat would be pushed.
+
+  W = Direction
+  Z = Parameter
+
+  Return = Nonzero to prevent pushing.
+
+EV_TRANSPORT (3)
+  Called when this tile is hit by something attempting to be transported
+  through it; only if A_TRANSPORT attribute is set.
+
+  W = Direction
+  Z = Previously attempted target coordinates, or zero if none
+
+  Return = Target coordinates; zero to prevent transport.
+

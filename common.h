@@ -68,8 +68,8 @@ typedef struct {
 #define A_AUTO_STAT 0x00000800 // automatically add a stat by default when adding this element to the board
 #define A_LIGHT 0x00001000 // suppress overlay
 #define A_SPECIAL 0x00002000 // ???
-#define A_TRANSPORT0 0x00004000
-#define A_TRANSPORT1 0x00008000
+#define A_TRANSPORTER 0x00004000
+#define A_TRANSPORTABLE 0x00008000
 #define A_MOVE_C0 0x00010000 // allow movement on class 0
 #define A_MOVE_C1 0x00020000
 #define A_MOVE_C2 0x00040000
@@ -149,6 +149,7 @@ typedef struct {
   Uint16 width,height;
   Uint16 screen;
   Uint16 exits[4];
+  Uint16 music; // 0=quiet, 65535=continue
   Uint16 userdata;
   Uint16 flag;
 } BoardInfo;
@@ -338,6 +339,7 @@ extern Uint16 cur_screen_id;
 
 extern Uint16*memory;
 extern Uint8**gtext;
+extern Uint8*vgtext;
 extern Uint16 ngtext;
 
 // === Game state ===
