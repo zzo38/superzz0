@@ -74,7 +74,7 @@ EV_STAT (1)
   Return = Nonzero to prevent scripts/delay.
 
 EV_PUSH (2)
-  Called when this stat would be pushed.
+  Called when this object would be pushed.
 
   W = Direction
   Z = Parameter
@@ -83,7 +83,9 @@ EV_PUSH (2)
 
 EV_TRANSPORT (3)
   Called when this tile is hit by something attempting to be transported
-  through it; only if A_TRANSPORT attribute is set.
+  through it; only if A_TRANSPORTER attribute is set for this tile, and
+  A_TRANSPORTABLE attribute is set for the object that is trying to be
+  transported through it.
 
   W = Direction
   Z = Previously attempted target coordinates, or zero if none

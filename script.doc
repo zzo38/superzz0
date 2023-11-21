@@ -87,7 +87,8 @@ are not allowed in this case.
   Clear all named flags.
 
 #CLONE dir [label]
-  
+  Make a copy of this object in the specified direction. It will start
+  executing at the specified label, or at the beginning if not specified.
 
 #COLOR number
   Set this object's tile colour.
@@ -119,7 +120,8 @@ are not allowed in this case.
   used 
 
 #GIVE status_var number
-  
+  Increase the specified status variable (a letter A to H or S to Z) by the
+  specified number.
 
 #GO dir
   Attempt to move in the specified direction. If it cannot move, then it
@@ -193,13 +195,15 @@ are not allowed in this case.
   Set a flag.
 
 #SHIFT dir kind
-  
+  Move everything of the specified kind in the specified direction.
 
 #SHOW
   Show the text now, instead of waiting to accumulate further text.
 
 #TAKE status_var number [command]
-  
+  Decrease the specified status variable (a letter A to H or S to Z) by the
+  specified number. If the current value is less than the number, then it
+  will leave it unchanged and will instead execute the specified command.
 
 #TELEPORT number number
   Move this object to the specified coordinates (ends the turn).
@@ -215,10 +219,10 @@ are not allowed in this case.
   Set a warp to the specified board (ends the turn).
 
 #WHEN condition
-  
+  Wait until the specified condition is true.
 
 #WHENNOT condition
-  
+  Wait until the specified condition is not true.
 
 #UNLOCK
   Unlock the program to allow it to receive messages.

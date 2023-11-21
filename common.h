@@ -251,20 +251,20 @@ typedef struct {
 #define SC_SPEC_TEXT_LINE_NUMBER 0x35
 #define SC_SPEC_TEXT_LINE_COUNT 0x36
 #define SC_SPEC_CURRENT_BOARD 0x37
-#define SC_SPEC_EXIT_N 0x38
-#define SC_SPEC_EXIT_S 0x39
-#define SC_SPEC_EXIT_E 0x3A
-#define SC_SPEC_EXIT_W 0x3B
+#define SC_SPEC_EXIT_E 0x38
+#define SC_SPEC_EXIT_N 0x39
+#define SC_SPEC_EXIT_W 0x3A
+#define SC_SPEC_EXIT_S 0x3B
 #define SC_SPEC_WIDTH 0x3C
 #define SC_SPEC_HEIGHT 0x3D
 #define SC_SPEC_USERDATA 0x3E
 
 #define SC_IND_CURSOR 0x51
 #define SC_IND_SCROLL 0x52
-#define SC_IND_EXIT_N 0x58
-#define SC_IND_EXIT_S 0x59
-#define SC_IND_EXIT_E 0x5A
-#define SC_IND_EXIT_W 0x5B
+#define SC_IND_EXIT_E 0x58
+#define SC_IND_EXIT_N 0x59
+#define SC_IND_EXIT_W 0x5A
+#define SC_IND_EXIT_S 0x5B
 #define SC_IND_USER0 0x5C
 #define SC_IND_USER1 0x5D
 #define SC_IND_USER2 0x5E
@@ -272,10 +272,9 @@ typedef struct {
 
 // Screen:flag
 #define SF_LEFT_ALIGN_MESSAGE 0x01
-#define SF_NO_SCROLL 0x02
+#define SF_FLASHY_MESSAGE 0x02
 #define SF_EXIT_BORDER 0x04
 #define SF_USER_BORDER 0x08
-#define SF_SCROLL_INDICATOR_IF_EXIT 0x10
 
 extern NumericFormat num_format[16];
 extern Screen cur_screen;
@@ -349,6 +348,7 @@ extern Sint32 status_vars[16];
 // === File access (Hamster archives) ===
 
 extern char*world_name;
+extern Uint32 lump_size;
 
 // Any of these functions with int return type will be: -1 for I/O error, 1 for other errors, 0 if successful
 FILE*open_lump(const char*name,const char*mode);

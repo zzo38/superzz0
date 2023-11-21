@@ -18,6 +18,7 @@ typedef struct {
 } Lump;
 
 char*world_name;
+Uint32 lump_size;
 
 static FILE*worldfile;
 static Lump*lumps;
@@ -118,6 +119,7 @@ FILE*open_lump(const char*name,const char*mode) {
   FILE*fp;
   Lump key;
   Lump*obj;
+  lump_size=0;
   convert_lump_name(name,key.name);
   if(strchr(mode,'x')) {
     if(bsearch(&key,lumps,nlumps,sizeof(Lump),compare_lump_name)) return 0;
@@ -149,7 +151,7 @@ FILE*open_lump(const char*name,const char*mode) {
     free(obj->data);
     obj->data=0;
   }
-  co->length=obj->length;
+  lump_size=co->length=obj->length;
   co->data=obj->data;
   co->pos=co->wlength=0;
   co->id=obj-lumps;

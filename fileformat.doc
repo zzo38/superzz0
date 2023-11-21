@@ -1,0 +1,530 @@
+All numbers are small-endian (except lump sizes, which are PDP-endian).
+
+
+=== *.BRD ===
+
+The definition of a board.
+
+The first part is the header, which is:
+
+* Encoding flags (2 bytes): Specifies which other fields are present.
+
+* Board flags (2 bytes if bit8 of encoding flags is set, or 1 byte if bit8
+of encoding flags is clear)
+
+* Screen number (2 bytes if bit9 of encoding flags is set, or 1 byte if
+bit8 of encoding flags is clear)
+
+* Exits: Two bytes per exit; the low four bits of the encoding flags
+specifies which ones are present (the non-present ones will be zero)
+
+* Width/height: If bit4 of encoding flags is set then these are two bytes
+each, but if clear then they are one byte each and you must add 1 to each.
+
+* User data (2 bytes if bit5 of encoding flags is set, zero if clear)
+
+* Max stat number (1 byte)
+
+The grid data then follows. This uses a sequence of commands. A command
+code is one byte; if less than forty then it is an exceptional code,
+otherwise you subtract forty and treat the result as a base six number
+having three digits, with the high digit for the kind, middle digit for
+for the colour, and low digit for the parameter.
+
+The order of the grid data is starting at the top left and going right,
+and starts with the main layer first. (Any layer whose data is not
+specified, or is incompletely specified, will have the rest of the data
+being set to zero.)
+
+Base six digits: Each of these has the next byte being the length (number
+of tiles) minus one, and then, for homogeneous and heterogeneous runs, the
+data of those runs.
+
+* 0 = The data is zero.
+
+* 1 = Copy the tile from the west.
+
+* 2 = Copy the tile from the north of each tile being added (so it is not
+necessarily the same for each one).
+
+* 3 = Homogeneous run: Follow by one data byte, which is used for all of
+the tiles in this run. If multiple digits are homogeneous runs, then they
+are in the order of kind, colour, parameter.
+
+* 4 = Heterogeneous run: Follow by one data byte for each tile in this
+run. If multiple digits are heterogeneous runs, then each tile will have
+multiple data bytes in the order kind, colour, parameter. If the run is
+both homogeneous and heterogeneous, then the bytes for the homogeneous
+data always comes first, before any bytes of heterogeneous data.
+
+* 5 = Copy the tile to the north of the first tile being added, or if its
+kind, colour, and parameter all match the tile to the west, then copy the
+tile to the northwest instead; this copies the same data for all of the
+tiles, unlike 2 which copies each one individually.
+
+Exceptional codes: These codes are given in decimal notation, and (C)
+means it is followed by another command code, and (L) means it is followed
+by a length (like that for the base six codes).
+
+* 0-19 (C) = Long length: The next command must have a length; it will add
+256 times this number to that length.
+
+* 20-29 (L) = MRU: Tiles are entered into the MRU if at least one digit
+specifies homogeneous and none of the digits specify heterogenous; some of
+the exceptional commands (mentioned below) will also enter into MRU. The
+first MRU it enters is 20, and then 21, etc, and after 29 the next MRU to
+enter will be 20 again. The MRU (and which one to enter next) is retained
+across layers in the same board.
+
+* 30 = End the grid and do layer inversion. Each tile where the kind of the
+under layer and the tile of the main layer are both nonzero, will exchange
+the under layer with the main layer.
+
+* 31 = Begin the under layer.
+
+* 32 = Begin the over layer.
+
+* 33 = End the grid. The stat data follows.
+
+* 34 = Fill the over layer, with all tiles being the data of the next
+three bytes, in the order of kind, colour, parameter.
+
+* 38 = Follow by two bytes for colour and kind of one tile; the parameter
+will be zero. It is entered into the MRU.
+
+* 39 = Follow by three bytes for colour and kind and parameter of one tile.
+It is entered into the MRU.
+
+Each stat is then encoded as follows:
+
+* Encoding flags (1 byte).
+
+* Misc1 (2 bytes, if bit0 of encoding flag is set)
+
+* Misc2 (2 bytes, if bit1 of encoding flag is set)
+
+* Misc3 (2 bytes, if bit2 of encoding flag is set)
+
+* Speed: The bit4 and bit5 of the encoding flags are a 2-bit number which
+is the speed, but if it is 3 then one byte is added here which will be the
+actual speed value.
+
+* Text length (2 bytes, if bit3 of encoding flag is set). This is the
+uncompressed length of the text.
+
+* Text (if bit3 of encoding flag is set): This is stored in a somewhat
+compressed format explained below.
+
+* XY records (see below).
+
+The text compression is:
+
+* 0x00 represents 0x0A (a line feed).
+
+* 0x01 is followed by one byte which is literally.
+
+* 0x02 is followed by two bytes which are literally.
+
+* 0x03 to 0x1F are the length of a back-reference (from 3 to 31 bytes);
+this is followed by one byte being the distance of the back-reference,
+where 0 means the immediately byte (of uncompressed text) before this one.
+
+* Any other byte is literally.
+
+The dictionary for back-references is initially ending with "\n#END\n:"
+just before the beginning of the stat's text.
+
+Each XY record starts with the command byte and then the parameters; a
+command byte of 0 terminates the list of XY records for this stat. The
+possible commands are:
+
+* If at least one of the low 2-bits is set, then the high 2-bits and low
+2-bits are the layer byte of this XY item. This is followed by the X and
+Y coordinates (each is 1 byte or 2 bytes according to the maximum allowed
+coordinate for this board). If bit2 is set then a 1-byte delay follows,
+otherwise the delay is zero. Bit5 and bit4 are a 2-bit number which will
+specify the instruction pointer: 0 means 0, 1 means stop (65535), 2 means
+a 8-bit number follows, and 3 means a 16-bit number follows.
+
+* If bit2 is set but the lower bits are clear, then it is a command to copy
+the previous item but with different coordinates. The high 5-bits make a
+base five number. The low digit then corresponds to the X coordinate and
+the high digit to the Y coordinate, where: 0 means -1, 1 means +0, 2 means
++1, 3 means a relative coordinate follows, and 4 means an absolute
+coordinate follows. Absolute coordinates are one or two bytes according to
+the valid range. Relative coordinates are one byte and subtract 127, but if
+X and Y are both relative and neither board width nor height exceed 256,
+then they are packed into a single byte, with the low nybble for X and the
+high nybble for Y, where 0 to 15 means -9 to -2 and +2 to +9.
+
+* If the low three bits are clear but at least one other bit is set, then
+divide by 8 and that is how many more XY items to add, which are copies of
+the previous one but each one will be different coordinates, according to
+going to the right from the current position to find a tile in the same
+layer that has the same kind, colour, parameter.
+
+* If it is zero, then this is the end of the XY list of this stat; the
+next stat (or the end of the file) follows.
+
+The stat numbers in the board grid is then filled in automatically.
+
+
+=== *.HLP ===
+
+A help file.
+
+This has the format of the script file but the set of commands is limited:
+  : ' $ ! !- #END #ESCAPE #IF
+(normal text is also allowed)
+
+Any ! command can have, if not a label name in this help file and not the
+name of another help file, a command number which is the return value. This
+may be either decimal, or hexadecimal with $ at front.
+
+Line breaks are LF only. The text is not compressed.
+
+
+=== *.SCR ===
+
+Screen definitions.
+
+The header is (each coordinate, etc are one byte each):
+
+* Flags.
+
+* The border colour.
+
+* Character codes for the four default borders (E, N, W, S); zero means no
+default character code for the border.
+
+* Coordinates of the four soft edges (only one byte per edge). These are
+the inner edges beyond which it may scroll if the cursor or player moves
+beyond these edges, unless doing so would violate the hard edges.
+
+* Coordinates of the four hard edges (only one byte per edge). These are
+the inner edges in which the edge of the board or text window must fit; the
+outside of the board cannot be beyond them unless the board is too small.
+
+* X and Y coordinates of centre of viewport.
+
+* X and Y coordinates of message text or popup text window title. If the Y
+coordinate is 255 then the message text is not displayed.
+
+* Left and right edges of message text.
+
+The flags are:
+
+* bit0 = Set to left align message text, or clear for centre. Left
+alignment will be at the X coordinate if possible, moving to the left up
+to the left message edge if it is needed in order to fit. Centre alignment
+is centred at the specified message X coordinate.
+
+* bit1 = If set, then message text is flashy like in ZZT; if clear, then it
+will instead use the colour defined in the screen where the text is written
+(which may be multiple colours if they are not all the same in all of the
+places where the characters of the message text are written).
+
+* bit2 = If set, then the EXIT indicators will display the border character
+instead of blank.
+
+* bit3 = If set, then the USER indicators will display the border character
+instead of blank.
+
+After the header is the screen grid data. This is stored in the same way as
+the board grid data, although the exceptional codes have different meanings
+which are described below:
+
+* 0-19 (C) = Long length
+
+* 20-29 (L) = MRU
+
+* 30 (L) = Copy tile from west, but with decreasing parameter values
+
+* 31 (L) = Copy tile from west, but with increasing parameter values
+
+* 32 (L) = Copy tile from north, but with decreasing parameter values
+
+* 33 (L) = Copy tile from north, but with increasing parameter values
+
+* 34 (L) = A shortcut for the case in which colour is homogeneous, kind is
+always 0x03, and parameter is heterogeneous.
+
+* 39 = Follow by three bytes for colour and kind and parameter of one tile.
+It is entered into the MRU.
+
+The end grid code is not needed since nothing follows the grid.
+
+The kinds are:
+
+* SC_BACKGROUND = Display a fixed colour and character (parameter). If bit0
+is set then uses the character, if bit1 is set then uses the colour; clear
+bits mean to display what was previously displayed on the screen instead.
+
+* SC_BOARD = Display the contents of the board. If it is out of range, then
+it is treated like SC_BACKGROUND, except that if the border character is
+nonzero and it is exactly one step beyond the edge of the board, then it
+will display the border colour and character instead. If bit2 of the kind
+is set then the overlay is suppressed. Clearing bit0 and bit1 will cause it
+to display the tile of the nearest edge.
+
+* SC_NUMERIC = Display the value of a status variable. The low nybble of
+the kind specifies which variable. The high nybble of the parameter means
+which numeric format to use (defined in the NUMFORM lump), and the low
+nybble of the parameter means the digit position (0 for the rightmost).
+
+* SC_NUMERIC_SPECIAL = Same as SC_NUMERIC but one of the special values
+below instead of a general-purpose status variable.
+
+* SC_MEMORY = The colour is the high byte and the parameter is the low byte
+of a memory address; the low byte of the value at that address is the
+character to display, and the high byte is the colour to display.
+
+* SC_INDICATOR = One of the indicators. The parameter means the character
+to display if the indicator is set; most indicators will be a blank space
+if the indicator is clear but there are some exceptions. See below for the
+list of valid indicators.
+
+* SC_TEXT = Text in the text window. The left hard edge is the left edge of
+the text, and the viewport X is used for centred text.
+
+* SC_ITEM = (Reserved for future use.)
+
+* SC_BITS_0_LO = The low 16-bits of status variable 0; shows the parameter
+character if set, or a blank space if clear. The low nybble of the kind
+means which bit to use.
+
+* SC_BITS_0_HI = Same as SC_BITS_0_LO but the high 16-bits instead.
+
+* SC_BITS_1_LO = These and more, up to SC_BITS_3_HI, are like the above
+two kinds but for status variables numbered 1 to 3 instead.
+
+Special values for SC_NUMERIC_SPECIAL:
+
+* SC_SPEC_PLAYER_X = X coordinate of first XY record of stat 1.
+
+* SC_SPEC_PLAYER_Y = Y coordinate of first XY record of stat 1.
+
+* SC_SPEC_CAMERA_X = X coordinate of centre of viewport.
+
+* SC_SPEC_CAMERA_Y = Y coordinate of centre of viewport.
+
+* SC_SPEC_TEXT_SCROLL_PERCENT = If this is a text window, a number from 0
+to 100 indicating how far down scrolled it is from the top.
+
+* SC_SPEC_TEXT_LINE_NUMBER = If this is a text window, the 1-based line
+number of the cursor.
+
+* SC_SPEC_TEXT_LINE_COUNT = If this is a text window, the total number of
+lines of text.
+
+* SC_SPEC_CURRENT_BOARD = The current board number.
+
+* SC_SPEC_EXIT_E = The east exit of the current board.
+
+* SC_SPEC_EXIT_N = The north exit of the current board.
+
+* SC_SPEC_EXIT_W = The west exit of the current board.
+
+* SC_SPEC_EXIT_S = The south exit of the current board.
+
+* SC_SPEC_WIDTH = The width of the current board.
+
+* SC_SPEC_HEIGHT = The height of the current board.
+
+* SC_SPEC_USERDATA = The user data field of the current board.
+
+Indicators for SC_INDICATOR:
+
+* SC_IND_CURSOR = The cursor position or player position. Displayed if
+either the X or Y coordinate is aligned with the indicator.
+
+* SC_IND_SCROLL = Displayed if it is possible to scroll in the direction
+where this is relative to the nearest hard edge.
+
+* SC_IND_EXIT_E = Displayed if the east exit is nonzero.
+
+* SC_IND_EXIT_N = Displayed if the north exit is nonzero.
+
+* SC_IND_EXIT_W = Displayed if the west exit is nonzero.
+
+* SC_IND_EXIT_S = Displayed if the south exit is nonzero.
+
+* SC_IND_USER0 = Displayed if the user0 flag of the board is set.
+
+* SC_IND_USER1 = Displayed if the user1 flag of the board is set.
+
+* SC_IND_USER2 = Displayed if the user2 flag of the board is set.
+
+* SC_IND_USER3 = Displayed if the user3 flag of the board is set.
+
+
+=== CURRENT.BRD ===
+
+Same as the *.BRD format; used only in save game files, which contains the
+current state of the current board.
+
+
+=== ELEMENT ===
+
+This starts with the 128 bytes for the appearance mapping.
+
+After that will be four animation specifications, which are:
+
+* Mode (1 byte).
+
+* Steps (4 bytes): They will be the offset of appearance mapping, adding to
+the offsets specified by the elements.
+
+After that is element definitions. Each element definition consists of:
+
+* Flag byte. The low nybble is the number of bytes of the name length; if
+it is zero, then the high nybble is how many definitions to be skipped (in
+addition to the current one).
+
+* The name of this element.
+
+* If flag bit7 is set, the major appearance code (one byte).
+
+* If flag bit6 is set, the minor appearance code (one byte).
+
+* If flag bit5 is set, the attributes (four bytes); otherwise it will have
+the same attributes as the previous definition.
+
+* If flag bit4 is set, then it has events; there is a 16-bit number with
+a bit which is set means an event is present, and then it is followed by
+the 16-bit event addresses for each event from 0 to 15.
+
+If neither flag bit7 nor bit6 is set, then the major appearance code will
+be AP_PARAM and the minor code will be zero. Otherwise, whichever code is
+not set will be zero (if it is the major code, zero is AP_FIXED).
+
+
+=== FEATURE.OPT ===
+
+Same as FEATURE.REQ but it means it uses those features optionally; if the
+feature is not available then it will still be loaded and it will not use
+that feature.
+
+
+=== FEATURE.REQ ===
+
+A sequence of 32-bit numbers, each of which denotes a required feature. If
+it is not available, then it is an error and the world cannot be loaded.
+
+
+=== GLOBAL ===
+
+An uncompressed global script, which runs on all boards that it is not
+suppressed by. This is optional.
+
+
+=== MEMORY ===
+
+This lump is mandatory.
+
+The initial state of the program memory (not compressed). If it is too
+small then the rest will be zero.
+
+
+=== NUMFORM ===
+
+The numeric formats. There are sixteen records, each of which contains:
+
+* The format type (1 byte): One of the NF_ constants in common.h.
+
+* The leading character (1 byte): Used mainly for leading zeros, or for
+blank space in some other format types.
+
+* The mark character (1 byte): Not used for all format types. Some types
+use it for the nonblank character.
+
+* The division amount (1 byte): Amount to divide the value by before being
+converted into the numeric format. (This is mostly useful with meters, but
+can be used with any format type.)
+
+If this lump is not present, then only formats 0 and 1 are defined, both of
+which are decimal numeric formats, where format 0 means leading spaces and
+format 1 means leading zeros.
+
+Format types:
+
+* NF_DECIMAL 'd' = Decimal.
+
+* NF_HEX_UPPER 'X' = Uppercase hexadecimal.
+
+* NF_HEX_LOWER 'x' = Lowercase hexadecimal.
+
+* NF_OCTAL 'o' = Octal.
+
+* NF_COMMA ',' = Display the mark character if this digit position would be
+nonblank if it was using a decimal format.
+
+* NF_ROMAN 'R' = Roman numerals. The mark character is the code of the
+letter 'A'; you can switch this to 'a' for lowercase. In this case, it is
+left-aligned and digit position 0 is the leftmost letter. If the division
+amount is 2 then it will display the letter 'S' to mean half. The leading
+character is used for all positions if the value is zero.
+
+* NF_LSD_MONEY 'L' = Display currency amount by predecimal English money.
+Digit position 0 is for farthings, which is blank unless the division
+amount is 2 or 4 in which case it is the number of farthings (from 0 to 3).
+Positions 1 and 2 are for pence, 3 and 4 for shillings, and 5 and the rest
+are for pounds.
+
+* NF_METER 'm' = Display the mark character if the value is greater than
+the digit position, or the leading character otherwise.
+
+* NF_METER_HALF 'h' = Display character code 219 if the value is greater
+than twice the digit position, the leading character if less or equal, or
+the mark character if it is exactly one less than twice the position.
+
+* NF_METER_EXT 'M' = Like NF_METER but for additional positions.
+
+* NF_METER_HALF_EXT 'H' = Like NF_METER_HALF but for additional positions.
+
+* NF_BINARY 'b' = Display the mark character if a bit is set or the leading
+character if a bit is clear.
+
+* NF_BINARY_EXT 'B' = Like NF_BINARY but for additional positions.
+
+* NF_CHARACTER 'c' = The display will be the character whose code is the
+low 8-bits of the value. If the digit position is nonzero then it will
+correspond to the next 8-bits, etc.
+
+* NF_NONZERO '!' = Display the mark character if the value is nonzero or
+the leading character if the value is zero (or if it is less than one after
+the division is made).
+
+* NF_BOARD_NAME 'n' = The first half of the board name.
+
+* NF_BOARD_NAME_EXT 'N' = The last half of the board name.
+
+
+=== START ===
+
+This lump is mandatory.
+
+It contains:
+
+* Version number (16-bits): Must be 1.
+
+* Starting board number (16-bits).
+
+* ??? (32-bits).
+
+* ??? (32-bits).
+
+* Status variables (sixteen, of 32-bits each).
+
+
+=== TEMPLATE.BRD ===
+
+Same format as the *.BRD lumps, but it is only used in the editor, when
+adding new boards they will copy the template initially.
+
+
+=== TEXT ===
+
+Contains null-terminated global text strings, starting with string 1 (with
+no other data).
+

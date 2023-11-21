@@ -21,7 +21,7 @@ numbers are treated as unsigned.
   Subtract first operand from second, storing result in the first.
 
 [003 MUL]
-  
+  Multiply the two operands and store the result in the first.
 
 [004 DIV]
   Divide first by second, storing the quotient in the first, and the
@@ -37,19 +37,19 @@ numbers are treated as unsigned.
   Store the absolute value of the difference of operands in the first.
 
 [007 ANDN]
-  
+  Bitwise AND NOT of both operands, storing result in the first.
 
 [008 AND]
-  
+  Bitwise AND of both operands, storing result in the first.
 
 [009 OR]
-  
+  Bitwise OR of both operands, storing result in the first.
 
 [00A XOR]
-  
+  Bitwise XOR of both operands, storing result in the first.
 
 [00B XORN]
-  
+  Bitwise XOR NOT of both operands, storing result in the first.
 
 [00C LSH]
   Shift left first operand by number of bits specified by second operand.
@@ -76,7 +76,7 @@ numbers are treated as unsigned.
   Jump to second operand if first operand is nonzero.
 
 [012 JF]
-  Jump to second operand if condition flag is false
+  Jump to second operand if condition flag is false.
 
 [013 JT]
   Jump to second operand if condition flag is true.
@@ -154,6 +154,14 @@ numbers are treated as unsigned.
   Adds together the operands to make the address in memory to read a 16-bit
   number from, and jumps to the address which is the 16-bit number which has
   been read from that address.
+
+[02C REGS]
+  Save registers. The second operand is the memory address, and the first
+  operand is the last register to be saved. It uses two cells per register.
+
+[02D REGL]
+  Load registers. The second operand is the memory address, and the first
+  operand is the last register to be loaded.
 
 [030 UNPC]
   Unpack coordinates in second operand to X and Y. (If second operand is
@@ -242,7 +250,7 @@ numbers are treated as unsigned.
   The low 8-bits of the first operand is a element number. The low 16-bits
   of the second operand define which classes you can go on (the low bit for
   class 0, etc). If the bit corresponding to the class of that element is
-  set, and that element has the UNDER attribute, then the condition flag
+  set, and that element has the A_FLOOR attribute, then the condition flag
   will be true, otherwise the condition flag will be false.
 
 [03F CWOT]
@@ -292,8 +300,8 @@ numbers are treated as unsigned.
 [047 REVB]
   Revert the board number specified by the second operand to the board
   stored in the world file with that number. This does not affect the
-  current board, although you clear the persist flag and then warp, then
-  it will revert the current board, too.
+  current board, although if you clear the persist flag and then warp,
+  then it will revert the current board, too.
 
 [048 GBF]
   Read board flag of current board, bitwise AND NOT with the second
@@ -328,10 +336,11 @@ numbers are treated as unsigned.
   D = diamond
 
 [04E SFX]
-  
+  The second operand is a global text string number of a sound effect to be
+  played; if it is negative then the text buffer is used instead.
 
 [04F BGM]
-  
+  (Currently unused.)
 
 [050 SEND]
   If the first operand is the stat XY list number (same as for LOCK, PSD),
@@ -385,11 +394,13 @@ numbers are treated as unsigned.
   Skips the rest of the current line of text of the script denoted by the
   second operand (the stat XY record index, like LOCK, PSD, etc).
 
-[50A GIP]
-  
+[05A GIP]
+  The second operand specifies the stat XY record to use; the instruction
+  pointer of that record is written into the first operand.
 
-[50B PIP]
-  
+[05B PIP]
+  The second operand specifies the stat XY record to use; the first operand
+  value is copied into the instruction pointer of that record.
 
 [05C FNT]
   The first opcode is coordinates. Looks beyond those coordinates in the
@@ -432,37 +443,37 @@ numbers are treated as unsigned.
   the first operand is unchanged and the condition flag is false.
 
 [065 GTUC]
-  
+  Like GTUK but the colour instead of the kind.
 
 [066 GTUP]
-  
+  Like GTUK but the parameter instead of the kind.
 
 [067 GTUS]
-  
+  Like GTUK but the stat number instead of the kind.
 
 [068 GTMK]
-  
+  Like GTUK but the main layer instead of the under layer.
 
 [069 GTMC]
-  
+  Like GTUC but the main layer instead of the under layer.
 
 [06A GTMP]
-  
+  Like GTUP but the main layer instead of the under layer.
 
 [06B GTMS]
-  
+  Like GTUS but the main layer instead of the under layer.
 
 [06C GTOK]
-  
+  Like GTUK but the over layer instead of the under layer.
 
 [06D GTOC]
-  
+  Like GTUC but the over layer instead of the under layer.
 
 [06E GTOP]
-  
+  Like GTUP but the over layer instead of the under layer.
 
 [06F GTOS]
-  
+  Like GTUS but the over layer instead of the under layer.
 
 [070 PTM]
   Write a tile with the same format as MTIL to the main layer at the
@@ -491,7 +502,7 @@ numbers are treated as unsigned.
   not valid, then the condition flag is false, and the board is unchanged.
 
 [075 PTUC]
-  
+  Like PTUK but the colour instead of the kind.
 
 [076 PTUP]
   
@@ -572,16 +583,16 @@ numbers are treated as unsigned.
   Copy second operand to first if condition flag is true.
 
 [108 FINC]
-  
+  Acts like INC if the condition flag is false, or no effect if true.
 
 [109 TINC]
-  
+  Acts like INC if the condition flag is true, or no effect if false.
 
 [10A FDEC]
-  
+  Acts like DEC if the condition flag is false, or no effect if true.
 
 [10B TDEC]
-  
+  Acts like DEC if the condition flag is true, or no effect if false.
 
 [10C SGN]
   The first operand will be -1 if the second operand is negative, or 0 if
