@@ -1,4 +1,10 @@
 
+=== Command-line switches ===
+
+-d
+  Emit debugging information.
+
+
 === Syntax ===
 
 Each line can be blank, or a comment, or it can be an optional label
@@ -8,6 +14,10 @@ can also optionally be followed by a comment.
 A label may be a numbered label, which is a digit 0 to 9 followed by H
 in which case it is possible to have more than one with the same number
 and codes like 1F and 2B etc can reference them.
+
+A label name consists only of letters, digits, underscore, and question
+mark, and must start with a letter or underscore. Some names are
+reserved and cannot be used for label names.
 
 A normal instruction consists of the name, a space, the first operand,
 a comma, and the second operand. The first operand must be A to H or S
