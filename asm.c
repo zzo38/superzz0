@@ -198,7 +198,7 @@ static Sint32 parse_numeric(char e) {
           if(linept[1]=='B' && !nhlabel[i]) errx(1,"Improper backward reference on line %d",linenum);
           if(!hlabel[i]) errx(1,"Undefined name '%c%c' on line %d",linept[0],linept[1],linenum);
           if(linept[1]=='F' && pass && nhlabel[i]>=mhlabel[i]-(chlabel==i?1:0)) errx(1,"Undefined name '%c%c' on line %d",linept[0],linept[1],linenum);
-          num=hlabel[i][nhlabel[i]+(linept[1]=='F'?(chlabel==i?2:1):0)];
+          num=hlabel[i][nhlabel[i]+(linept[1]=='F'?(chlabel==i?1:0):-1)];
         }
         linept+=2;
       } else {
@@ -269,12 +269,12 @@ static void do_pass(void) {
     ++linenum;
     if(s=strchr(line,'\r')) *s=0; else if(s=strchr(line,'\n')) *s=0;
     if(*line==';' || !*line) continue;
+    chlabel=-1;
     if(*line!=' ' && *line!='\t') {
       if(*line>='0' && *line<='9' && line[1]=='H') {
         chlabel=*line-'0';
         wlabel=&wflabel;
       } else {
-        chlabel=-1;
         linept=line;
         read_name();
         if(*strbuf && !strbuf[1]) errx(1,"Reserved label name '%s' on line %d",strbuf,linenum);
@@ -360,20 +360,23 @@ static void do_pass(void) {
           if(addr && v>addr_end) addr_end=v;
           break;
         case 9: // ????
-          fprintf(stderr,"%lX\n",(long)parse_numeric(0));
+          for(i=0;i<10;i++) fprintf(stderr,"[%d]%d/%d ",i,nhlabel[i],mhlabel[i]);
+          fprintf(stderr,"{%d}\n",chlabel);
           break;
       }
     }
     while(*linept==' ' || *linept=='\t') ++linept;
     if(*linept && *linept!=';') errx(1,"Extra text on line %d",linenum);
-    if(chlabel!=-1 && !pass) {
-      if(!flabel[chlabel]) {
-        flabel[chlabel]=open_memstream((char**)(hlabel+chlabel),flabels+chlabel);
-        if(!flabel[chlabel]) err(1,"Error with open_memstream");
+    if(chlabel!=-1) {
+      if(!pass) {
+        if(!flabel[chlabel]) {
+          flabel[chlabel]=open_memstream((char**)(hlabel+chlabel),flabels+chlabel);
+          if(!flabel[chlabel]) err(1,"Error with open_memstream");
+        }
+        fwrite(&wflabel,1,sizeof(Sint32),flabel[chlabel]);
+        ++mhlabel[chlabel];
       }
-      fwrite(&wflabel,1,sizeof(Sint32),flabel[chlabel]);
       ++nhlabel[chlabel];
-      ++mhlabel[chlabel];
     }
   }
 }
