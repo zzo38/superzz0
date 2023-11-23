@@ -299,10 +299,9 @@ extern Uint16 cur_screen_id;
 //   bit11-bit8 = Type
 //   bit7-bit0 = Value
 // Extension source:
-//   0 = Zero
-//   1 = Immediate 32-bits
-//   2 = Absolute 16-bits
-//   3 = (reserved)
+//   0-1 = Short immediate
+//   2 = Immediate 32-bits (PDP-endian)
+//   3 = Absolute 16-bits
 //   4-7 = Registers W-Z
 //   8-15 = Registers A-H
 // Special outputs:

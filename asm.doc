@@ -16,8 +16,8 @@ in which case it is possible to have more than one with the same number
 and codes like 1F and 2B etc can reference them.
 
 A label name consists only of letters, digits, underscore, and question
-mark, and must start with a letter or underscore. Some names are
-reserved and cannot be used for label names.
+mark, and must start with a letter or underscore. It must contain more
+than one character; single character names are reserved.
 
 A normal instruction consists of the name, a space, the first operand,
 a comma, and the second operand. The first operand must be A to H or S
@@ -28,72 +28,80 @@ of the following:
 
 * A numeric expression.
 
+* A memory operand, consisting of * and a 8-bit number being the address
+to read from.
+
 * An extension operand; see below.
 
 A pseudo instruction is the name, space, and then the arguments (which
 depend on the specific pseudo).
 
-Extension operands contain a "source" and a "value".
+Extension operands are written as three parts with commas in between; the
+first is the kind which is % and zero to three more letters, and the
+second is the source (see below), and the third is the value (normally
+must be in range 0 to 255, but sometimes -256 to +255 is allowed).
 
-The kinds of extension operands are:
-
-* "source" or "source-number" or "source+number"; the number must be in
-range -256 to +255.
-
-* "[source]" or "[source-number]" or "[source+number]", which is the same
-as above but accesses a value in memory.
-
-* "source<<number" or "source>>number" or "source>>>number" for bit shifts,
-where ">>" is signed and ">>>" is unsigned. The number can be 0 to 31.
-
-* "source[number,number]", which extracts the specified bits from the
-source value; the bit range are both bit positions 0 to 15.
-
-* "source+xyD(register>>shift)" or "source-xyD(register>>shift)", where
-"xy" is "X" or "Y", "register" is A to H or W to Z, and ">>shift" is
-optional, and must be a nubmer 0 to 7. (The low 2-bits of the register
-after the shift, is used.)
-
-* "number-source" or "-number-source"; the number must be in range -256
-to +255.
-
-* "source..letter" or "source..number" for an event of an element. The
-letter can be A to H or S to Z, or a number 0 to 15; the letters will just
-represent the same numbers 0 to 15, not the values in those registers.
-(Only the low 8-bits of the source value are used.)
-
-* "#A" to "#Z" or "#number", for a status variable (the number must be 0
-to 15, or else a letter representing such a number, not the register).
-Can optionally be followed by "+source" or "-source".
-
-* "BW" or "BW+source" or "BW+number" or "BW+source+number" or "BW-number"
-or "BW+source-number" for the board width, plus/minus specified amount.
-The number must be in range -8 to +7 (unless source is omitted).
-
-* "BH" or "BH+source" or "BH+number" or "BH+source+number" or "BH-number"
-or "BH+source-number" for the board height, plus/minus specified amount.
-The number must be in range -8 to +7 (unless source is omitted).
-
-* "PX" or "PY" or "PX-source" or "PY-source" or any of the preceding with
-optionally "+number" or "-number" in range -8 to +7; represents the X and
-Y coordinate of the first XY record of stat 1.
-
-* "BRD" for the current board number.
-
-* "SCR" for the current screen number.
-
-Note in the above: any + and - which is followed by a number is actually
-a part of the expression that follows; so, for example, "A-2-3" is the same
-as "A-5" and is not the same as "A+1".
-
-The "source" of an extension operand can be one of the following:
+The source of an extension operand can be one of the following:
 
 * One of the registers A to H or W to Z.
 
 * A numeric expression.
 
-* A numeric expression in square brackets, representing accessing the
-unsigned 16-bit number at that address.
+* A numeric expression with an asterisk in front, representing accessing
+the unsigned 16-bit number at that address.
+
+* Empty, which is the same as zero.
+
+The kinds of extension operands are:
+
+* % = Add together the source and value. The value can be -256 to +255.
+
+* %B = Extract bits from the source. The value is a 8-bit number, where
+the high nybble is the lowest bit to extract and the low nybble is the
+number of bits to extract; the value is unsigned shifted right.
+
+* %BRD = The current board ID. Source and value are not used.
+
+* %E = The event, where the source is the element number (in the low
+8-bits) and the value is the event number (in range 0 to 15).
+
+* %H = Board height plus source plus value (in range -8 to +7).
+
+* %I = Add together the source and value, and treat it as an address to
+read a 16-bit number from. The value can be -256 to +255.
+
+* %L = Left shift the source by the value (in range 0 to 31).
+
+* %M = Subtract the source from the value. The value can be -256 to +255.
+
+* %R = A random number from 0 up to source+value-1. The value can be in
+range 0 to 255.
+
+* %SCR = The current screen ID. Source and value are not used.
+
+* %SM = A status variable indicated by the value (0 to 15), minus the
+source value.
+
+* %SP = A status variable indicated by the value (0 to 15), plus the
+source value.
+
+* %SR = Signed right shift the source by the value (in range 0 to 31).
+
+* %UR = Unsigned right shift the source by the value (in range 0 to 31).
+
+* %W = Board width plus source plus value (in range -8 to +7).
+
+* %X = The source is the packed coordinates (or zero to use the X register
+instead). The value has a special format: It must be + or - and then a
+register name (A to H or W to Z) and then a comma and then the shift
+amount (from 0 to 7). The result is the new coordinate value, which will
+ignore the limits of the board coordinates.
+
+* %XP = Player X plus value (in range -8 to +7) minus source.
+
+* %Y = Similar than %X but for Y coordinates instead of X coordinates.
+
+* %YP = Player Y plus value (in range -8 to +7) minus source.
 
 A comment starts by a semicolon, and ends at the end of the line. (A
 semicolon inside of a string or character literal is not a comment.)

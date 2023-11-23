@@ -425,6 +425,18 @@ This lump is mandatory.
 The initial state of the program memory (not compressed). If it is too
 small then the rest will be zero.
 
+The addresses from 0xD0 to 0xFF (which are twice as much as the actual
+address in the file) have special meanings:
+
+* 0xE0 = Keyboard event
+
+* 0xE1 = Frame event
+
+* 0xE2 = If nonzero, it references a record with two cells being the
+address of the next record and the global string number which is the
+name of a custom script command, and then after that will be the code
+which is executed for that custom script command.
+
 
 === NUMFORM ===
 

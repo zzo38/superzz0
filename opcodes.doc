@@ -553,7 +553,7 @@ numbers are treated as unsigned.
   the direction, otherwise it will be false. Direction IDLE will be -1.
 
 [083 PARK]
-  
+  (Currently unused.)
 
 [084 PARC]
   Reads a condition (optionally preceded by spaces) from a script selected
