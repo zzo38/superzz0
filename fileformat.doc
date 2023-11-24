@@ -438,6 +438,63 @@ name of a custom script command, and then after that will be the code
 which is executed for that custom script command.
 
 
+=== METADATA ===
+
+Contains a sequence of null-terminated metadata strings. Each metadata
+string consists of three characters being the key, and then the value.
+
+The third character of the key is the type (although it still counts as
+a part of the key, too):
+
+* B = Boolean, must be exactly 0 (false) or 1 (true), with no other
+characters in the value.
+
+* D = Date/time, given as uppercase hexadecimal number of seconds
+(excluding leap seconds) since January 1, 1985, 00:00:00 UTC.
+
+* H = Hash, given as two uppercase hexadecimal strings with a slash
+in between; the first is the multicodec number identifying the hash
+algorithm to use, and afterward is the hash value.
+
+* M = Multi line, being text in PC character encoding, with line feeds
+only as the line breaks.
+
+* N = Numeric, unsigned 32-bit integer, in decimal notation. Leading
+zeros are allowed.
+
+* R = Right-to-left text encoded as TRON-8.
+
+* S = Single line, being text in PC character encoding.
+
+* T = Left-to-right text encoded as TRON-8.
+
+Possible keys are listed below. Any one with * after the name does not
+mean that the name actually has * on it but rather that such a key should
+not occur in embedded metadata and is only valid for external metadata.
+
+* AUS = Author name.
+
+* DEM = Long description.
+
+* DES = Short description.
+
+* PUD = Publication date.
+
+* PVH = Hash of previous version of the world file.
+
+* TIS = Title of the game world.
+
+* WXH = Hash of the world file excluding the METADATA lump. (This can be
+used to detect if any part of the world has been changed since the metadata
+has been changed.)
+
+* ZZH* = Hash of world file.
+
+* ZZN* = Total size of the world file, in bytes.
+
+Metadata is used by external programs and is not for Super ZZ Zero itself.
+
+
 === NUMFORM ===
 
 The numeric formats. There are sixteen records, each of which contains:
@@ -538,5 +595,5 @@ adding new boards they will copy the template initially.
 === TEXT ===
 
 Contains null-terminated global text strings, starting with string 1 (with
-no other data).
+no other data). (String 0 is always blank.)
 

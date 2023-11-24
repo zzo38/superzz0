@@ -1,3 +1,6 @@
+(NOTE: The below is currently just the plan of the design; when it is
+actually implemented, it may be changed.)
+
 Format: [hex name] (if hex>=0x100 then first operand can be A-H or S-Z)
 
 Jump destination: if 0 or 1, then returns that value from this subroutine
@@ -162,6 +165,12 @@ numbers are treated as unsigned.
 [02D REGL]
   Load registers. The second operand is the memory address, and the first
   operand is the last register to be loaded.
+
+[02E WEEK]
+  Like PEEK but read a PDP-endian 32-bit number instead of 16-bits.
+
+[02F WOKE]
+  Like POKE but write a PDP-endian 32-bit number instead of 16-bits.
 
 [030 UNPC]
   Unpack coordinates in second operand to X and Y. (If second operand is
@@ -411,6 +420,46 @@ numbers are treated as unsigned.
   is zero. If nothing is found, sets the condition flag false and the first
   operand is unchanged.
 
+[05F COUN]
+  Count the number of tiles matching a pattern, and store in the first
+  operand. The second operand is the address of a structure which is like
+  that of CHA, but only five fields instead of nine, and only the low three
+  bits of the flags is used (the other bits are ignored).
+
+[05E CHA]
+  Changes all of one tile into another. The second operand is the address
+  of a structure with the parameters, and the first operand is used for a
+  value which may substitute one or more of the fields. The structure is:
+  First = Flags (see below).
+  Second = Kind to match. High 8-bits are a mask; set bits mean don't care.
+  Third = Colour to match. (Mask is like above)
+  Fourth = Parameter to match. (Mask is like above)
+  Fifth = Stat number to match. (Mask is like above)
+  Sixth = Kind to replace with. Any bits of high byte set means XOR value.
+  Seventh = Colour to replace with. (XOR mask like above)
+  Eighth = Parameter to replace with. (XOR mask like above)
+  Ninth = Stat number to replace with; automatically adjusts stat XY lists.
+  bit0 = Affect under layer.
+  bit1 = Affect main layer.
+  bit2 = Affect over layer.
+  bit5-bit3 = Mode of use of first operand to add to one of the parameters.
+  bit6 = If set, clears the user bit of changed stats.
+  bit7 = If set, clears the lock bit of changed stats.
+  bit14-bit8 = New delay value.
+  bit15 = Set to change delay values of changed stats.
+  Mode 0 = Kind to match.
+  Mode 1 = Colour to match.
+  Mode 2 = Parameter to match.
+  Mode 3 = Stat number to match, if fifth field is zero.
+  Mode 4 = Kind to replace with.
+  Mode 5 = Colour to replace with.
+  Mode 6 = Parameter to replace with.
+  Mode 7 = Stat number to replace with, if ninth field is zero.
+
+[05F CHAX]
+  Like CHA but treats second to fifth and sixth to ninth both as matching
+  and replacing with each other.
+
 [060 MTIL]
   Second operand is coordinates. If they are valid, then the tile at the
   main layer at that coordinates is written to the first operand, with
@@ -505,34 +554,36 @@ numbers are treated as unsigned.
   Like PTUK but the colour instead of the kind.
 
 [076 PTUP]
-  
+  Like PTUK but the parameter instead of the kind.
 
 [077 PTUS]
-  
+  Like PTUK but the stat number instead of the kind. (Note that changing
+  the stat number in this way will not update the stat data, and is
+  unlikely to produce the intended behaviour.)
 
 [078 PTMK]
-  
+  Like PTUK but the main layer instead of the under layer.
 
 [079 PTMC]
-  
+  Like PTUC but the main layer instead of the under layer.
 
 [07A PTMP]
-  
+  Like PTUP but the main layer instead of the under layer.
 
 [07B PTMS]
-  
+  Like PTUS but the main layer instead of the under layer.
 
 [07C PTOK]
-  
+  Like PTUK but the over layer instead of the under layer.
 
 [07D PTOC]
-  
+  Like PTUC but the over layer instead of the under layer.
 
 [07E PTOP]
-  
+  Like PTUP but the over layer instead of the under layer.
 
 [07F PTOS]
-  
+  Like PTUS but the over layer instead of the under layer.
 
 [080 PARN]
   Reads a number or numeric expression (optionally preceded by spaces) from
