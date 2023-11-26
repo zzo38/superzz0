@@ -5,6 +5,21 @@
 #include <string.h>
 #include <unistd.h>
 
+// === Configuration ===
+
+#define B(n,t,d) t n;
+#define F(n,t,d) t n;
+#define I(n,t,d) t n;
+#define S(n,t,d) t n;
+typedef struct {
+#include "config.inc"
+} Config;
+#undef B
+#undef F
+#undef I
+#undef S
+extern Config config;
+
 // === Display ===
 
 extern Uint8 v_color[80*25];
@@ -16,7 +31,7 @@ void init_display(void);
 void redisplay(void);
 void display_title(const char*);
 void set_timer(Uint32);
-void draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n);
+Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n);
 int next_event(void);
 
 // === Miscellaneous ===
@@ -149,7 +164,7 @@ typedef struct {
   Uint16 width,height;
   Uint16 screen;
   Uint16 exits[4];
-  Uint16 music; // 0=quiet, 65535=continue
+  //Uint16 music; // 0=quiet, 65535=continue
   Uint16 userdata;
   Uint16 flag;
 } BoardInfo;

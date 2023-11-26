@@ -366,10 +366,11 @@ void init_display(void) {
   if(scrn) goto clear;
   if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO)) errx(1,"SDL error: %s",SDL_GetError());
   atexit(SDL_Quit);
-  scrn=SDL_SetVideoMode(81*8,26*14+8,8,SDL_SWSURFACE);
+  scrn=SDL_SetVideoMode(81*8,(config.show_status?26:25)*14+8,8,SDL_SWSURFACE|(config.full_screen?SDL_FULLSCREEN:0));
   if(!scrn) errx(1,"SDL error: %s",SDL_GetError());
   SDL_SetColors(scrn,palet,0,18);
   SDL_EnableUNICODE(1);
+  SDL_EnableKeyRepeat(config.key_repeat_delay,config.key_repeat_interval);
   clear:
   memset(v_color,7,80*25);
   memset(v_char,32,80*25);
@@ -393,13 +394,15 @@ void redisplay(void) {
       p+=r;
     }
   }
-  p=scrn->pixels+(14*25+8)*r;
-  for(a=0;a<14;a++) {
-    for(x=0;x<81;x++) {
-      c=font[14*v_status[x]+a];
-      for(b=0;b<8;b++) p[b+(x<<3)]=(c&128?17:16),c<<=1;
+  if(config.show_status) {
+    p=scrn->pixels+(14*25+8)*r;
+    for(a=0;a<14;a++) {
+      for(x=0;x<81;x++) {
+        c=font[14*v_status[x]+a];
+        for(b=0;b<8;b++) p[b+(x<<3)]=(c&128?17:16),c<<=1;
+      }
+      p+=r;
     }
-    p+=r;
   }
   SDL_UnlockSurface(scrn);
   SDL_Flip(scrn);
@@ -409,16 +412,25 @@ void display_title(const char*t) {
   if(scrn) SDL_WM_SetCaption(t,t);
 }
 
-void set_timer(Uint32 x) {
-  
+static Uint32 timer_callback(Uint32 x) {
+  SDL_Event ev;
+  ev.type=SDL_USEREVENT;
+  SDL_PushEvent(&ev);
+  return x;
 }
 
-void draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
+void set_timer(Uint32 x) {
+  SDL_SetTimer(0,0);
+  if(x) SDL_SetTimer(x,timer_callback);
+}
+
+Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
   while(*t && n-- && x<80 && y<25) {
     v_color[y*80+x]=c;
     v_char[y*80+x]=*t++;
     x++;
   }
+  return x;
 }
 
 int next_event(void) {
