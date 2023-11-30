@@ -19,6 +19,7 @@ Uint8 maxstat;
 NumericFormat num_format[16];
 Screen cur_screen;
 Uint16 cur_screen_id;
+Sint32 scroll_x,scroll_y; // relative to screen(0,0)
 Uint16*memory;
 Sint32 regs[8];
 Uint8 condflag;
@@ -26,6 +27,52 @@ Uint8**gtext;
 Uint8*vgtext;
 Uint16 ngtext;
 Sint32 status_vars[16];
+
+static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint8 sx,Uint8 sy,Uint8 h) {
+  
+}
+
+void update_screen(void) {
+  int i;
+  Uint32 v;
+  Uint8 cmd,col,par;
+  for(i=0;i<80*25;i++) {
+    cmd=cur_screen.command[i];
+    col=cur_screen.color[i];
+    par=cur_screen.param[i];
+    switch(cmd&0xF0) {
+      case SC_BACKGROUND:
+        if(cmd&1) v_char[i]=chr;
+        if(cmd&2) v_color[i]=col;
+        break;
+      case SC_BOARD:
+        
+        break;
+      case SC_NUMERIC:
+        v=status_vars[cmd&15];
+        
+        break;
+      case SC_NUMERIC_SPECIAL:
+        
+        break;
+      case SC_MEMORY:
+        v_char[i]=memory[(col<<8)|chr];
+        v_color[i]=memory[(col<<8)|chr]>>8;
+        break;
+      case SC_INDICATOR:
+        
+        break;
+      case SC_TEXT:
+        
+        break;
+      case SC_BITS_0_LO ... SC_BITS_3_HI:
+        v_color[i]=col;
+        v=status_vars[(cmd-SC_BITS_0_LO)>>5];
+        v_char[i]=(v&(1UL<<(cmd&0x1F))?chr:32);
+        break;
+    }
+  }
+}
 
 StatXY*add_statxy(int n) {
   Stat*s=stats+n;

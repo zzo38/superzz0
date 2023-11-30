@@ -306,6 +306,9 @@ typedef struct {
 extern NumericFormat num_format[16];
 extern Screen cur_screen;
 extern Uint16 cur_screen_id;
+extern Sint32 scroll_x,scroll_y;
+
+const char*load_screen(FILE*fp);
 
 // === Program memory / instructions ===
 

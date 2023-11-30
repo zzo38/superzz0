@@ -243,9 +243,9 @@ which are described below:
 
 * 31 (L) = Copy tile from west, but with increasing parameter values
 
-* 32 (L) = Copy tile from north, but with decreasing parameter values
+* 32 (L) = Copy tiles from north, but with decreasing parameter values
 
-* 33 (L) = Copy tile from north, but with increasing parameter values
+* 33 (L) = Copy tiles from north, but with increasing parameter values
 
 * 34 (L) = A shortcut for the case in which colour is homogeneous, kind is
 always 0x03, and parameter is heterogeneous.
@@ -609,6 +609,8 @@ It contains:
 * Current board number (16-bits).
 
 * Current screen number (16-bits).
+
+* Scroll position (two numbers, of 16-bits each).
 
 * Status variables (sixteen, of 32-bits each).
 

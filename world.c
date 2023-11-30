@@ -238,7 +238,7 @@ const char*load_board(FILE*fp) {
   pt=b_main;
   n=nn=0;
   for(;;) {
-    c=read8(fp);
+    c=fgetc(fp);
     if(c<40) {
       switch(c) {
         case 0 ... 19: nn=(c+1)<<8; break;
@@ -257,7 +257,7 @@ const char*load_board(FILE*fp) {
       mk=(c/36)%6; mc=(c/6)%6; mp=c%6;
     }
     dotile:
-    n=fgetc(fp)+1+nn;
+    n=read8(fp)+1+nn;
     nn=0;
 #define YY(bb) ({ Tile tt=pt[-board_info.width]; tt.kind==pt[-1].kind && tt.color==pt[-1].color && tt.param==pt[-1].param; })
 #define ZZ(aa,bb) t.bb=(aa==0?0:aa==1?(pt==b_under?0:pt[-1].bb):aa==3?read8(fp):aa==5?(pt<b_under+board_info.width?0:pt[-board_info.width-YY(bb)].bb):t.bb)
@@ -575,6 +575,75 @@ const char*save_board(FILE*fp,int m) {
         while(pt<end && !pt->stat) pt++,m++;
         write16(fp,m);
       }
+    }
+  }
+  return 0;
+}
+
+const char*load_screen(FILE*fp) {
+  Tile mru[10];
+  Tile t;
+  Uint8 nmru=0;
+  Uint8 mk,mc,mp;
+  Uint32 at=0;
+  int c,i,n,nn;
+  memset(&cur_screen,0,sizeof(Screen));
+  cur_screen.flag=fgetc(fp);
+  cur_screen.border_color=fgetc(fp);
+  fread(cur_screen.border,1,4,fp);
+  fread(cur_screen.soft_edge,1,4,fp);
+  fread(cur_screen.hard_edge,1,4,fp);
+  cur_screen.view_x=fgetc(fp);
+  cur_screen.view_y=fgetc(fp);
+  cur_screen.message_x=fgetc(fp);
+  cur_screen.message_y=fgetc(fp);
+  cur_screen.message_l=fgetc(fp);
+  cur_screen.message_r=fgetc(fp);
+  n=nn=0;
+  while(at<80*25) {
+    c=fgetc(fp);
+    if(c==EOF) break;
+    if(c<40) {
+      switch(c) {
+        case 0 ... 19: nn=(c+1)<<8; break;
+        case 20 ... 29: t=mru[c-20]; mk=mc=mp=6; goto dotile;
+        case 30 ... 33:
+          i=(c<32?1:80);
+          if(at<i) return "Invalid copy code";
+          n=read8(fp)+1+nn; nn=0;
+          while(n-- && at<80*25) {
+            cur_screen.command[at]=cur_screen.command[at-i];
+            cur_screen.color[at]=cur_screen.color[at-i];
+            cur_screen.parameter[at]=cur_screen.parameter[at-i]+(c&1?1:-1);
+            at++;
+          }
+          break;
+        case 34: t.color=fgetc(fp); t.kind=0x03; mk=mc=3; mp=4; goto dotile;
+        case 39: t.kind=fgetc(fp); t.color=fgetc(fp); t.param=fgetc(fp); n=1; mk=mc=mp=3; goto dotile1;
+      }
+      continue;
+    } else {
+      c-=40;
+      mk=(c/36)%6; mc=(c/6)%6; mp=c%6;
+    }
+    dotile:
+    n=read8(fp)+1+nn;
+    nn=0;
+#define YY(cc) ({ cur_screen.command[at-1]==cur_screen.command[at-80] && cur_screen.color[at-1]==cur_screen.color[at-80] && cur_screen.parameter[at-1]==cur_screen.parameter[at-80]; })
+#define ZZ(aa,bb,cc) t.bb=(aa==0?0:aa==1?(at?cc[at-1]:0):aa==3?read8(fp):aa==5?(at<80?0:cc[at-80-YY(cc)]):t.bb)
+    ZZ(mk,kind,cur_screen.command); ZZ(mc,color,cur_screen.color); ZZ(mc,param,cur_screen.parameter);
+#undef YY
+#undef ZZ
+    dotile1:
+    if((mk==3 || mc==3 || mp==3) && mk!=4 && mc!=4 && mp!=4) {
+      mru[nmru++]=t;
+      if(nmru==10) nmru=0;
+    }
+    while(n-- && at<80*25) {
+#define ZZ(aa,bb,cc) if(aa==2 && at>=80) t.bb=cc[at-80]; else if(aa==4) t.bb=read8(fp); cc[at]=t.bb;
+      ZZ(mk,kind,cur_screen.command); ZZ(mc,color,cur_screen.color); ZZ(mc,param,cur_screen.parameter);
+#undef ZZ
+      at++;
     }
   }
   return 0;
