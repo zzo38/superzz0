@@ -67,7 +67,7 @@ means it is followed by another command code, and (L) means it is followed
 by a length (like that for the base six codes).
 
 * 0-19 (C) = Long length: The next command must have a length; it will add
-256 times this number to that length.
+256 times (one more than) this number to that length.
 
 * 20-29 (L) = MRU: Tiles are entered into the MRU if at least one digit
 specifies homogeneous and none of the digits specify heterogenous; some of
@@ -84,16 +84,17 @@ the under layer with the main layer.
 
 * 32 = Begin the over layer.
 
-* 33 = End the grid. The stat data follows.
+* 33 = End the grid. The stat data follows. (If the grid is not complete,
+then the remaining data will be zero.)
 
 * 34 = Fill the over layer, with all tiles being the data of the next
 three bytes, in the order of kind, colour, parameter.
 
 * 38 = Follow by two bytes for colour and kind of one tile; the parameter
-will be zero. It is entered into the MRU.
+will be zero. It is entered into the MRU (and into the board grid).
 
 * 39 = Follow by three bytes for colour and kind and parameter of one tile.
-It is entered into the MRU.
+It is entered into the MRU (and into the board grid).
 
 Each stat is then encoded as follows:
 
@@ -250,7 +251,7 @@ which are described below:
 always 0x03, and parameter is heterogeneous.
 
 * 39 = Follow by three bytes for colour and kind and parameter of one tile.
-It is entered into the MRU.
+It is entered into the MRU (and into the screen grid).
 
 The end grid code is not needed since nothing follows the grid.
 
@@ -363,6 +364,12 @@ where this is relative to the nearest hard edge.
 Same as the *.BRD format; used only in save game files, which contains the
 current state of the current board.
 
+However, if bit15 of the encoding flags is set (which is only the case for
+the CURRENT.BRD lump), then additional data follows after the stats, which
+is stat index numbers stored in the board grid. They are in order by the
+under layer, main layer, over layer. There is one byte per tile, but if it
+is zero then a 16-bit number of how many more zeros follow.
+
 
 === ELEMENT ===
 
@@ -418,6 +425,13 @@ An uncompressed global script, which runs on all boards that it is not
 suppressed by. This is optional.
 
 
+=== MACRO ===
+
+Only used in the editor. Contains editor macros.
+
+(TODO)
+
+
 === MEMORY ===
 
 This lump is mandatory.
@@ -436,6 +450,15 @@ address in the file) have special meanings:
 address of the next record and the global string number which is the
 name of a custom script command, and then after that will be the code
 which is executed for that custom script command.
+
+* 0xE3 = Shape and radius of light; the high byte is the shape and the
+low byte is the radius.
+
+* 0xE4 = Warp target
+
+* 0xE5 = Warp subroutine (0=no warp)
+
+* 0xE6 to 0xEB = Warp registers (X,Y,Z)
 
 
 === METADATA ===
@@ -478,6 +501,8 @@ not occur in embedded metadata and is only valid for external metadata.
 
 * DES = Short description.
 
+* NVH* = Hash of next version of the world file.
+
 * PUD = Publication date.
 
 * PVH = Hash of previous version of the world file.
@@ -487,6 +512,8 @@ not occur in embedded metadata and is only valid for external metadata.
 * WXH = Hash of the world file excluding the METADATA lump. (This can be
 used to detect if any part of the world has been changed since the metadata
 has been changed.)
+
+* ZCN* = Compressed size of world file.
 
 * ZZH* = Hash of world file.
 
@@ -569,6 +596,29 @@ the division is made).
 * NF_BOARD_NAME_EXT 'N' = The last half of the board name.
 
 
+=== SAVE ===
+
+This lump is only for save game files.
+
+It contains:
+
+* Version number (16-bits): Must be 1.
+
+* Flags (16-bits). Only the low bit is used and means condition flag.
+
+* Current board number (16-bits).
+
+* Current screen number (16-bits).
+
+* Status variables (sixteen, of 32-bits each).
+
+* Registers (eight, of 32-bits each).
+
+* Length of text buffer (one byte).
+
+* Text buffer.
+
+
 === START ===
 
 This lump is mandatory.
@@ -579,9 +629,9 @@ It contains:
 
 * Starting board number (16-bits).
 
-* ??? (32-bits).
+* Reserved (32-bits).
 
-* ??? (32-bits).
+* Reserved (32-bits).
 
 * Status variables (sixteen, of 32-bits each).
 

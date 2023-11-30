@@ -3,8 +3,8 @@ actually implemented, it may be changed.)
 
 Format: [hex name] (if hex>=0x100 then first operand can be A-H or S-Z)
 
-Jump destination: if 0 or 1, then returns that value from this subroutine
-instead of jumping to that address. The same is true for calls, etc.
+Jump destination: if less than 256, then returns that value from this
+subroutine instead of jumping to that address. The same is true for calls.
 
 Where coordinates are expected, they can be nonzero for packed coordinates
 or zero to use the X and Y registers instead. (Packed coordinates are:
@@ -142,11 +142,11 @@ numbers are treated as unsigned.
   the condition flag is false.
 
 [024 VGET]
-  Low 16-bits of second operand tells which global status variable to
+  Low 4-bits of second operand tells which global status variable to
   access; its value is copied into the first operand.
 
 [025 VPUT]
-  Low 16-bits of second operand tells which global status variable to
+  Low 4-bits of second operand tells which global status variable to
   access; the first operand is written to it.
 
 [028 PEER]
@@ -558,8 +558,8 @@ numbers are treated as unsigned.
 
 [077 PTUS]
   Like PTUK but the stat number instead of the kind. (Note that changing
-  the stat number in this way will not update the stat data, and is
-  unlikely to produce the intended behaviour.)
+  the stat number in this way will not update the stat data, unless you
+  then use UNEW to add the stat.)
 
 [078 PTMK]
   Like PTUK but the main layer instead of the under layer.
@@ -669,7 +669,8 @@ numbers are treated as unsigned.
 [111 GO]
   Unconditionally jump to second operand, storing the address that the
   next instruction (as if it didn't jump) would be in the first operand.
-  (If the first operand is S, then the second operand is ignored.)
+  (If the first operand is S, then the second operand is ignored.) This
+  instruction does not have a special treatment of addresses < 256.
 
 [120 GIVE]
   The first operand tells which status variable to access, where A-H are

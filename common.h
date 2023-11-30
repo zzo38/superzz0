@@ -1,3 +1,5 @@
+#undef _GNU_SOURCE
+#define _GNU_SOURCE
 #include "SDL.h"
 #include <err.h>
 #include <stdio.h>
@@ -140,8 +142,11 @@ extern Animation animation[4];
 
 // === Board/stats ===
 
-typedef struct {
-  Uint8 kind,color,param,stat;
+typedef union {
+  struct {
+    Uint8 kind,color,param,stat;
+  };
+  Uint8 values[4];
 } Tile;
 
 typedef struct {
@@ -189,6 +194,13 @@ extern BoardInfo board_info;
 extern Tile*b_under;
 extern Tile*b_main;
 extern Tile*b_over;
+extern Stat*stats;
+extern Uint8 maxstat;
+
+StatXY*add_statxy(int n);
+
+const char*load_board(FILE*fp);
+const char*save_board(FILE*fp,int m);
 
 // === Screens ===
 
@@ -351,6 +363,9 @@ extern Uint16 cur_screen_id;
 #define XOP_S_SCREEN_ID 0xD90 // current screen number
 
 extern Uint16*memory;
+extern Sint32 regs[8];
+extern Uint8 condflag;
+
 extern Uint8**gtext;
 extern Uint8*vgtext;
 extern Uint16 ngtext;
@@ -398,6 +413,22 @@ static inline Uint32 read32(FILE*fp) {
   r|=fgetc(fp)<<16;
   r|=fgetc(fp)<<24;
   return r;
+}
+
+static inline void write8(FILE*fp,Uint8 v) {
+  fputc(v,fp);
+}
+
+static inline void write16(FILE*fp,Uint16 v) {
+  fputc(v,fp);
+  fputc(v>>8,fp);
+}
+
+static inline void write32(FILE*fp,Uint32 v) {
+  fputc(v,fp);
+  fputc(v>>8,fp);
+  fputc(v>>16,fp);
+  fputc(v>>24,fp);
 }
 
 #endif
