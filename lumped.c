@@ -122,7 +122,10 @@ FILE*open_lump(const char*name,const char*mode) {
   lump_size=0;
   convert_lump_name(name,key.name);
   if(strchr(mode,'x')) {
-    if(bsearch(&key,lumps,nlumps,sizeof(Lump),compare_lump_name)) return 0;
+    if(obj=bsearch(&key,lumps,nlumps,sizeof(Lump),compare_lump_name)) {
+      if(!obj->length) goto found;
+      return 0;
+    }
     goto notfound;
   }
   try_again:
@@ -140,6 +143,7 @@ FILE*open_lump(const char*name,const char*mode) {
     qsort(lumps,nlumps,sizeof(Lump),compare_lump_name);
     goto try_again;
   }
+  found:
   if(obj->flag&2) return 0;
   if(obj->refcount && (*mode!='r' || strchr(mode,'+'))) return 0;
   ++obj->refcount;
@@ -292,8 +296,9 @@ int save_world(const char*name) {
   for(n=0;n<nlumps;n++) {
     if(lumps[n].flag&2) errx(1,"Trying to save world while lump '%s' is open for writing",lumps[n].name);
     if(!name) lumps[n].flag=0;
-    fwrite(lumps[n].name,1,strlen(lumps[n].name)+1,fp);
     o=lumps[n].length;
+    if(!o) continue; // omit empty lumps
+    fwrite(lumps[n].name,1,strlen(lumps[n].name)+1,fp);
     fputc(o>>16,fp); fputc(o>>24,fp); fputc(o>>0,fp); fputc(o>>8,fp);
     o=lumps[n].offset;
     if(!name) lumps[n].offset=ftell(fp);
@@ -326,6 +331,12 @@ int save_world(const char*name) {
     fclose(worldfile);
     worldfile=fopen(world_name,"r");
     if(!worldfile) err(1,"Cannot reopen world file '%s'",name);
+    if(flock(fileno(worldfile),LOCK_SH|LOCK_NB)) {
+      warn("Cannot lock file '%s'",world_name);
+      fclose(worldfile);
+      worldfile=0;
+      return -1;
+    }
   }
   return 0;
 }
