@@ -435,3 +435,28 @@ static inline void write32(FILE*fp,Uint32 v) {
 }
 
 #endif
+
+// === Window ===
+
+typedef struct {
+  Uint8 line,cur,state,ncur;
+} win_memo;
+
+#define win_form(xxx) for(win_memo win_mem=win_begin_();;win_step_(&win_mem,xxx))
+#define win_refresh() win_begin_()
+win_memo win_begin_(void);
+void win_step_(win_memo*,const char*);
+
+#define win_numeric(aaa,bbb,ccc,ddd,eee) if(win_numeric_(&win_mem,aaa,bbb,&(ccc),sizeof(ccc),ddd,eee))
+int win_numeric_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 lo,Uint32 hi);
+
+#define win_boolean(aaa,bbb,ccc,ddd) if(win_boolean_(&win_mem,aaa,bbb,&(ccc),sizeof(ccc),ddd))
+int win_boolean_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 b);
+
+#define win_command(aaa,bbb) if(win_command_(&win_mem,aaa,bbb))
+int win_command_(win_memo*wm,Uint8 key,const char*label);
+
+#define win_blank() win_heading_(&win_mem,0)
+#define win_heading(aaa) win_heading_(&win_mem,aaa)
+void win_heading_(win_memo*wm,const char*label);
+

@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -o ~/bin/superzz0 main.c display.o edit.o game.o lumped.o world.o `sdl-config --cflags --libs`
+gcc -s -O2 -o ~/bin/superzz0 main.c display.o edit.o game.o lumped.o window.o world.o `sdl-config --cflags --libs`
 exit
 #endif
 
@@ -87,8 +87,10 @@ int main(int argc,char**argv) {
   }
   if(optind>=argc) errx(1,"Too few arguments");
   for(i=optind+1;i<argc;i++) set_config(argv[i]);
-  if(open_world(argv[optind])) err(1,"Error opening world");
-  if(s=init_world()) errx(1,"Cannot initialize world settings: %s",s);
+  if(b!=-42) {
+    if(open_world(argv[optind])) err(1,"Error opening world");
+    if(s=init_world()) errx(1,"Cannot initialize world settings: %s",s);
+  }
   init_display();
   if(editor) run_editor(b); else run_game(b);
   return 0;

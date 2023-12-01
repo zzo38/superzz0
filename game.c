@@ -35,11 +35,11 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint8 sx,Uint8 sy,Uint8 h) {
 void update_screen(void) {
   int i;
   Uint32 v;
-  Uint8 cmd,col,par;
+  Uint8 cmd,col,chr;
   for(i=0;i<80*25;i++) {
     cmd=cur_screen.command[i];
     col=cur_screen.color[i];
-    par=cur_screen.param[i];
+    chr=cur_screen.parameter[i];
     switch(cmd&0xF0) {
       case SC_BACKGROUND:
         if(cmd&1) v_char[i]=chr;

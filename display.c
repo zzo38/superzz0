@@ -435,7 +435,7 @@ Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
 
 int next_event(void) {
   while(SDL_WaitEvent(&event)) switch(event.type) {
-    case SDL_KEYDOWN: case SDL_KEYUP: return 1;
+    case SDL_KEYDOWN: return 1;
     case SDL_QUIT: return 0;
     case SDL_VIDEOEXPOSE: redisplay(); break;
   }
