@@ -28,6 +28,76 @@ Uint8*vgtext;
 Uint16 ngtext;
 Sint32 status_vars[16];
 
+static Uint8 digit_of(Uint32 n,Uint8 f) {
+  NumericFormat*nf=num_format+(f>>4);
+  Uint8 d=nf->div;
+  int i;
+  f&=15;
+  switch(nf->code) {
+    case NF_DECIMAL: decimal:
+      n/=d;
+      for(i=0;i<f;i++) n/=10;
+      return n?(n%10+'0'):nf->lead;
+    case NF_HEX_UPPER:
+      n/=d;
+      n>>=4*f;
+      return n?((n&15)+((n&15)>9?'A'-10:'0')):nf->lead;
+    case NF_HEX_LOWER:
+      n/=d;
+      n>>=4*f;
+      return n?((n&15)+((n&15)>9?'a'-10:'0')):nf->lead;
+    case NF_OCTAL:
+      n/=d;
+      n>>=3*f;
+      return n?(n&7)+'0':nf->lead;
+    case NF_COMMA:
+      n/=d;
+      for(i=0;i<f;i++) n/=10;
+      return n?nf->mark:nf->lead;
+    case NF_ROMAN:
+      n+=n; n/=d;
+      
+    case NF_LSD_MONEY:
+      if(f>4) {
+        n/=240;
+        goto decimal;
+      }
+      if(!f) {
+        if(d==2) return n&1?nf->mark:nf->lead;
+        if(d==4) return n&3?(n&3)+'0':nf->lead;
+        return nf->lead;
+      }
+      n/=d;
+      if(f<3) n%=12; else n=(n/12)%20;
+      if(!(f&1)) n/=10;
+      return n?(n%10+'0'):nf->lead;
+    case NF_METER:
+      return n/d>f?nf->mark:nf->lead;
+    case NF_METER_HALF:
+      n/=d;
+      return n>=f+f?219:n==f+f-1?nf->mark:nf->lead;
+    case NF_METER_EXT:
+      return n/d>f+16?nf->mark:nf->lead;
+    case NF_METER_HALF_EXT:
+      n/=d;
+      return n>=f+f+32?219:n==f+f+31?nf->mark:nf->lead;
+    case NF_BINARY:
+      return ((n/d)>>f)&1?nf->mark:nf->lead;
+    case NF_BINARY_EXT:
+      return ((n/d)>>(f+16))&1?nf->mark:nf->lead;
+    case NF_CHARACTER:
+      return (n>>(8*f))?:nf->lead;
+    case NF_NONZERO:
+      return n>=d?nf->mark:nf->lead;
+    case NF_BOARD_NAME:
+      
+    case NF_BOARD_NAME_EXT:
+      
+      return nf->lead;
+  }
+  return '?';
+}
+
 static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint8 sx,Uint8 sy,Uint8 h) {
   
 }
@@ -49,11 +119,28 @@ void update_screen(void) {
         
         break;
       case SC_NUMERIC:
-        v=status_vars[cmd&15];
-        
+        v_char[i]=digit_of(status_vars[cmd&15],chr);
+        v_color[i]=col;
         break;
       case SC_NUMERIC_SPECIAL:
-        
+        switch(cmd) {
+          case SC_SPEC_PLAYER_X: v=stats->count?stats->xy->x:0; break;
+          case SC_SPEC_PLAYER_Y: v=stats->count?stats->xy->y:0; break;
+          case SC_SPEC_CAMERA_X: 
+          case SC_SPEC_CAMERA_Y: 
+          case SC_SPEC_TEXT_SCROLL_PERCENT: 
+          case SC_SPEC_TEXT_LINE_NUMBER: 
+          case SC_SPEC_TEXT_LINE_COUNT: 
+          case SC_SPEC_EXIT_E: v=board_info.exits[DIR_E]; break;
+          case SC_SPEC_EXIT_N: v=board_info.exits[DIR_N]; break;
+          case SC_SPEC_EXIT_W: v=board_info.exits[DIR_W]; break;
+          case SC_SPEC_EXIT_S: v=board_info.exits[DIR_S]; break;
+          case SC_SPEC_WIDTH: v=board_info.width; break;
+          case SC_SPEC_HEIGHT: v=board_info.height; break;
+          case SC_SPEC_USERDATA: v=board_info.userdata; break;
+        }
+        v_char[i]=digit_of(v,chr);
+        v_color[i]=col;
         break;
       case SC_MEMORY:
         v_char[i]=memory[(col<<8)|chr];
@@ -318,6 +405,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_XOR: regs[fo]^=so; break;
       case OP_XORN: regs[fo]^=~so; break;
       case OP_ZEX: so=(Uint16)so; goto store;
+      default: errx(1,"Unimplemented opcode $%X at $%X",op&0x1FF,pc-1);
     }
     continue;
     store:
