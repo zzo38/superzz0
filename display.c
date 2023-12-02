@@ -336,6 +336,8 @@ static const Uint8 font[3584]={
 
 Uint8 v_color[80*25];
 Uint8 v_char[80*25];
+Uint8 sv_color[80*25];
+Uint8 sv_char[80*25];
 Uint8 v_status[82];
 SDL_Event event;
 

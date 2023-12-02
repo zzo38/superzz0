@@ -26,6 +26,8 @@ extern Config config;
 
 extern Uint8 v_color[80*25];
 extern Uint8 v_char[80*25];
+extern Uint8 sv_color[80*25];
+extern Uint8 sv_char[80*25];
 extern Uint8 v_status[82];
 extern SDL_Event event;
 
@@ -438,8 +440,11 @@ static inline void write32(FILE*fp,Uint32 v) {
 
 // === Window ===
 
+Uint8 ask_color_char(Uint8 m,Uint8 v);
+
 typedef struct {
-  Uint8 line,cur,state,ncur;
+  Uint16 line,cur,ncur,scroll;
+  Uint8 state;
 } win_memo;
 
 #define win_form(xxx) for(win_memo win_mem=win_begin_();;win_step_(&win_mem,xxx))
@@ -459,4 +464,17 @@ int win_command_(win_memo*wm,Uint8 key,const char*label);
 #define win_blank() win_heading_(&win_mem,0)
 #define win_heading(aaa) win_heading_(&win_mem,aaa)
 void win_heading_(win_memo*wm,const char*label);
+
+#define win_picture(aaa) while(win_picture_(&win_mem,aaa))
+int win_picture_(win_memo*wm,int h);
+
+#define win_option(aaa,bbb,ccc,ddd) if(win_option_(&win_mem,aaa,bbb,&(ccc),sizeof(ccc),ddd))
+int win_option_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 b);
+
+#define win_text(aaa,bbb,ccc) if(win_text_(&win_mem,aaa,bbb,ccc,sizeof(ccc)))
+int win_text_(win_memo*wm,Uint8 key,const char*label,Uint8*v,size_t s);
+
+#define win_color(aaa,bbb,ccc) if(win_color_char_(&win_mem,aaa,bbb,&(ccc),sizeof(ccc),0))
+#define win_char(aaa,bbb,ccc) if(win_color_char_(&win_mem,aaa,bbb,&(ccc),sizeof(ccc),1))
+int win_color_char_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,int m);
 
