@@ -69,7 +69,7 @@ static inline int visible(void) {
 }
 
 win_memo win_begin_(void) {
-  win_memo w={1,0,0,0,1};
+  win_memo w={1,0,0,0,1,1};
   cwin=0;
   return w;
 }
@@ -236,22 +236,24 @@ int win_boolean_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 b
   return r;
 }
 
-int win_command_(win_memo*wm,Uint8 key,const char*label) {
+int win_command_(win_memo*wm,Uint8 key,const char*label,Uint8 esc) {
   int x;
   Uint32 n;
   int r=0;
   if(cwin!=wm) return 0;
   if(!wm->cur) wm->cur=wm->line;
   if(visible()) {
-    v_color[Y*80+1]=0x03;
+    v_color[Y*80+1]=(esc?6:3);
     v_char[Y*80+1]='<';
     x=draw_label(2,key,label);
-    v_color[Y*80+x]=0x03;
+    v_color[Y*80+x]=(esc?6:3);
     v_char[Y*80+x]='>';
   }
   if(event.type==SDL_KEYDOWN) {
     if(event.key.keysym.mod&(KMOD_ALT|KMOD_META)) {
       if(selected_key(key)) wm->ncur=wm->line,r=1;
+    } else if(esc && event.key.keysym.sym==SDLK_ESCAPE) {
+      r=1;
     } else if(wm->cur==wm->line) {
       if(event.key.keysym.sym==SDLK_DOWN || (event.key.keysym.sym==SDLK_TAB && !(event.key.keysym.mod&KMOD_SHIFT))) {
         wm->ncur=wm->line+1;
@@ -268,7 +270,7 @@ int win_command_(win_memo*wm,Uint8 key,const char*label) {
 
 void win_heading_(win_memo*wm,const char*label) {
   if(cwin!=wm) return;
-  if(label && visible()) draw_text(0,Y,label,0x0E,-1);
+  if(wm->state && label && visible()) draw_text(0,Y,label,0x0E,-1);
   if(wm->cur==wm->line) wm->cur++;
   if(wm->ncur==wm->line) wm->ncur++;
   wm->line++;
@@ -338,7 +340,7 @@ int win_option_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 b)
   return r;
 }
 
-int win_text_(win_memo*wm,Uint8 key,const char*label,Uint8*v,size_t s) {
+int win_text_(win_memo*wm,Uint8 key,const char*label,Uint8*v,size_t s,Uint8 q) {
   int r=0;
   int i,x;
   if(cwin!=wm) return 0;
@@ -355,12 +357,21 @@ int win_text_(win_memo*wm,Uint8 key,const char*label,Uint8*v,size_t s) {
           r=1;
           v[strlen(v)-1]=0;
         } else if(key>=0x20 && key<0x80) {
+          if(q) {
+            if(key>='0' && key<='9' && !*v) key=0;
+            if(key>='a' && key<='z') key+='A'-'a';
+            if((key<'A' || key>'Z') && (key<'0' || key>'9') && key!='_') key=0;
+          }
           r=1;
           i=strlen(v);
           if(i<s-1) v[i]=key,v[i+1]=0;
         } else if(key==0x15 && *v) {
           r=1;
           *v=0;
+        } else if(key==0x10 && *v && !q) {
+          r=1;
+          i=strlen(v);
+          if(i<s-1) v[i]=ask_color_char(1,128),v[i+1]=0;
         }
       }
     } else if(event.key.keysym.sym==SDLK_UP || (event.key.keysym.sym==SDLK_TAB && (event.key.keysym.mod&KMOD_SHIFT))) {
@@ -422,5 +433,59 @@ int win_color_char_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,int m
   }
   wm->line++;
   return r;
+}
+
+int win_list_(win_memo*wm,Uint16 n,void*u,void(*f)(Uint16,int,void*)) {
+  int r=-1;
+  Uint16 i,j;
+  if(cwin!=wm) return -1;
+  if(!wm->cur) wm->cur=wm->line;
+  for(i=(wm->line-wm->scroll<1?1:wm->line-wm->scroll);i<(wm->line+n-wm->scroll) && i<25;i++) {
+    v_char[i*80]=(i+wm->scroll==wm->cur?0x10:0xFA);
+    v_color[i*80]=(i+wm->scroll==wm->cur?0x0B:0x08);
+  }
+  if(wm->state) {
+    for(i=0;i<n;i++) {
+      if(visible()) f(i,Y,u);
+      wm->line++;
+    }
+  } else {
+    if(event.type==SDL_KEYDOWN) {
+      if(event.key.keysym.sym==SDLK_UP) {
+        if(wm->cur>wm->line) wm->ncur=(wm->cur<wm->line+n?wm->cur-1:wm->line+n-1);
+      } else if(event.key.keysym.sym==SDLK_TAB && (event.key.keysym.mod&KMOD_SHIFT)) {
+        if(wm->cur>=wm->line+n) wm->ncur=wm->line;
+      } else if(wm->cur>=wm->line && wm->cur<wm->line+n) {
+        if(event.key.keysym.sym==SDLK_DOWN) {
+          wm->ncur=wm->cur+1;
+        } else if(event.key.keysym.sym==SDLK_SPACE || event.key.keysym.sym==SDLK_RETURN) {
+          r=wm->cur-wm->line;
+        } else if(event.key.keysym.sym==SDLK_TAB) {
+          wm->ncur=wm->line+n;
+        } else if(event.key.keysym.sym==SDLK_HOME) {
+          wm->ncur=wm->line;
+        } else if(event.key.keysym.sym==SDLK_END) {
+          wm->ncur=wm->line+n-1;
+        } else if(i=event.key.keysym.unicode) {
+          if(i>='0' && i<='9') {
+            j=wm->cur-wm->line;
+            if(10*j+i-'0'<n) wm->ncur=wm->line+(10*j+i-'0');
+          } else if(i==8) {
+            j=wm->cur-wm->line;
+            wm->ncur=wm->line+j/10;
+          }
+        }
+      }
+    }
+    wm->line+=n;
+  }
+  return r;
+}
+
+void win_cursor_(win_memo*wm,int offset) {
+  if(wm==cwin && wm->ready) {
+    wm->ready=0;
+    wm->ncur=wm->line+offset;
+  }
 }
 

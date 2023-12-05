@@ -64,7 +64,7 @@ static ssize_t lump_write(void*cookie,const char*buf,size_t size) {
   if(!size) return 0;
   if(co->pos+size>co->length) co->length=co->pos+size;
   if(co->pos+size>co->wlength) {
-    if(co->wlength) co->wlength+=co->wlength>>1; else co->wlength=1024;
+    if(co->wlength>=1024) co->wlength+=co->wlength>>1; else co->wlength=1024;
     if(co->pos+size>co->wlength) co->wlength=co->pos+size;
     co->data=realloc(co->data,co->wlength);
     if(!co->data) err(1,"Allocation failed");
@@ -103,7 +103,10 @@ static int lump_close(void*cookie) {
     obj->data=co->data;
     obj->length=co->length;
   }
-  if(!obj->refcount && !obj->flag) free(obj->data);
+  if(!obj->refcount && !obj->flag) {
+    free(obj->data);
+    obj->data=0;
+  }
   free(co);
   return 0;
 }

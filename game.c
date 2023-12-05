@@ -28,6 +28,18 @@ Uint8*vgtext;
 Uint16 ngtext;
 Sint32 status_vars[16];
 
+const char*select_board(Uint16 b) {
+  FILE*fp=open_lump_by_number(b,"BRD","r");
+  const char*e;
+  if(fp) {
+    e=load_board(fp);
+    fclose(fp);
+    return e;
+  } else {
+    return "Cannot open lump";
+  }
+}
+
 static Uint8 digit_of(Uint32 n,Uint8 f) {
   NumericFormat*nf=num_format+(f>>4);
   Uint8 d=nf->div;
@@ -425,7 +437,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   }
 }
 
-int run_game(int bn) {
+int run_game(void) {
   //TODO
 }
 

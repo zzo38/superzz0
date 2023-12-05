@@ -460,6 +460,9 @@ low byte is the radius.
 
 * 0xE6 to 0xEB = Warp registers (X,Y,Z)
 
+* 0xE7 = Frame counter; auto incremented after each frame, and controls
+animations.
+
 
 === METADATA ===
 

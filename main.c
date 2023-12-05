@@ -90,9 +90,13 @@ int main(int argc,char**argv) {
   if(b!=-42) {
     if(open_world(argv[optind])) err(1,"Error opening world");
     if(s=init_world()) errx(1,"Cannot initialize world settings: %s",s);
+    if(b>=0) {
+      cur_board_id=b;
+      if(!editor && (s=select_board(b))) errx(1,"Cannot load board: %s",s);
+    }
   }
   init_display();
-  if(editor) run_editor(b); else run_game(b);
+  if(editor) run_editor(); else run_game();
   return 0;
 }
 

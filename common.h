@@ -50,6 +50,8 @@ int next_event(void);
 extern Uint8 editor;
 
 const char*init_world(void);
+int run_editor(void);
+int run_game(void);
 
 // === Game definitions ===
 
@@ -63,7 +65,6 @@ typedef struct {
 typedef struct {
   Uint8 step[4];
   Uint8 mode;
-  // Maybe this will be changed to something else entirely?
 } Animation;
 
 // Index into event array; 8-15 are user-defined events
@@ -84,9 +85,9 @@ typedef struct {
 #define A_CRUSH 0x00000100
 #define A_FLOOR 0x00000200
 #define A_UNDER_BGCOLOR 0x00000400 // if colour<15 then use background colour of under layer
-#define A_AUTO_STAT 0x00000800 // automatically add a stat by default when adding this element to the board
+#define A_UNKNOWN 0x00000800 // (reserved)
 #define A_LIGHT 0x00001000 // suppress overlay
-#define A_SPECIAL 0x00002000 // ???
+#define A_SPECIAL 0x00002000 // (reserved)
 #define A_TRANSPORTER 0x00004000
 #define A_TRANSPORTABLE 0x00008000
 #define A_MOVE_C0 0x00010000 // allow movement on class 0
@@ -200,6 +201,7 @@ extern Stat*stats;
 extern Uint8 maxstat;
 
 StatXY*add_statxy(int n);
+const char*select_board(Uint16 b);
 
 const char*load_board(FILE*fp);
 const char*save_board(FILE*fp,int m);
@@ -367,6 +369,20 @@ const char*load_screen(FILE*fp);
 #define XOP_S_BOARD_ID 0xD80 // current board number
 #define XOP_S_SCREEN_ID 0xD90 // current screen number
 
+#define MEM_KEY_EVENT 0xE0
+#define MEM_FRAME_EVENT 0xE1
+#define MEM_CUSTOM_COMMAND 0xE2
+#define MEM_LIGHT 0xE3
+#define MEM_WARP_TO 0xE4
+#define MEM_WARP_CALL 0xE5
+#define MEM_WARP_X_HI 0xE6
+#define MEM_WARP_X_LO 0xE7
+#define MEM_WARP_Y_HI 0xE8
+#define MEM_WARP_Y_LO 0xE9
+#define MEM_WARP_Z_HI 0xEA
+#define MEM_WARP_Z_LO 0xEB
+#define MEM_FRAME_COUNTER 0xEC
+
 extern Uint16*memory;
 extern Sint32 regs[8];
 extern Uint8 condflag;
@@ -444,7 +460,7 @@ Uint8 ask_color_char(Uint8 m,Uint8 v);
 
 typedef struct {
   Uint16 line,cur,ncur,scroll;
-  Uint8 state;
+  Uint8 state,ready;
 } win_memo;
 
 #define win_form(xxx) for(win_memo win_mem=win_begin_();;win_step_(&win_mem,xxx))
@@ -458,8 +474,9 @@ int win_numeric_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 l
 #define win_boolean(aaa,bbb,ccc,ddd) if(win_boolean_(&win_mem,aaa,bbb,&(ccc),sizeof(ccc),ddd))
 int win_boolean_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 b);
 
-#define win_command(aaa,bbb) if(win_command_(&win_mem,aaa,bbb))
-int win_command_(win_memo*wm,Uint8 key,const char*label);
+#define win_command(aaa,bbb) if(win_command_(&win_mem,aaa,bbb,0))
+#define win_command_esc(aaa,bbb) if(win_command_(&win_mem,aaa,bbb,1))
+int win_command_(win_memo*wm,Uint8 key,const char*label,Uint8 esc);
 
 #define win_blank() win_heading_(&win_mem,0)
 #define win_heading(aaa) win_heading_(&win_mem,aaa)
@@ -471,10 +488,17 @@ int win_picture_(win_memo*wm,int h);
 #define win_option(aaa,bbb,ccc,ddd) if(win_option_(&win_mem,aaa,bbb,&(ccc),sizeof(ccc),ddd))
 int win_option_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 b);
 
-#define win_text(aaa,bbb,ccc) if(win_text_(&win_mem,aaa,bbb,ccc,sizeof(ccc)))
-int win_text_(win_memo*wm,Uint8 key,const char*label,Uint8*v,size_t s);
+#define win_text(aaa,bbb,ccc) if(win_text_(&win_mem,aaa,bbb,ccc,sizeof(ccc),0))
+#define win_text_restrict(aaa,bbb,ccc) if(win_text_(&win_mem,aaa,bbb,ccc,sizeof(ccc),1))
+int win_text_(win_memo*wm,Uint8 key,const char*label,Uint8*v,size_t s,Uint8 q);
 
 #define win_color(aaa,bbb,ccc) if(win_color_char_(&win_mem,aaa,bbb,&(ccc),sizeof(ccc),0))
 #define win_char(aaa,bbb,ccc) if(win_color_char_(&win_mem,aaa,bbb,&(ccc),sizeof(ccc),1))
 int win_color_char_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,int m);
+
+#define win_list(aaa,bbb,ccc,ddd) if((ddd=win_list_(&win_mem,aaa,bbb,ccc))!=-1)
+int win_list_(win_memo*wm,Uint16 n,void*u,void(*f)(Uint16,int,void*));
+
+#define win_cursor(aaa) win_cursor_(&win_mem,aaa)
+void win_cursor_(win_memo*wm,int offset);
 
