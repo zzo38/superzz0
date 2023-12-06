@@ -346,7 +346,8 @@ numbers are treated as unsigned.
 
 [04E SFX]
   The second operand is a global text string number of a sound effect to be
-  played; if it is negative then the text buffer is used instead.
+  played; if it is negative then the text buffer is used instead. (See
+  script.doc for the format of the music string.)
 
 [04F BGM]
   (Currently unused.)

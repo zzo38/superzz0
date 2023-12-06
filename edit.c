@@ -6,6 +6,9 @@ exit
 #define USING_RW_DATA
 #include "common.h"
 
+Uint8**screennames;
+Uint16 maxscreen;
+
 static void write_start_lump(void) {
   int i;
   FILE*fp=open_lump("START","r+");
@@ -69,6 +72,30 @@ static void write_numform_lump(void) {
     fputc(num_format[i].div,fp);
   }
   fclose(fp);
+}
+
+static void board_list_callback(Uint16 n,int y,void*uz) {
+  FILE*fp=open_lump_by_number(n,"BRD","r");
+  char buf[80];
+  snprintf(buf,80,"%5d:",n);
+  draw_text(1,y,buf,fp?7:8,6);
+  v_color[80*y+6]=8;
+  if(n<=maxboard && boardnames[n]) draw_text(7,y,boardnames[n],15,61);
+  if(fp) {
+    n=read16(fp);
+    v_color[80*y+77]=v_color[80*y+78]=2;
+    v_char[80*y+77]="\xFA\x1A\x18=\x1B\x1D==\x19=\x12"[n&5];
+    v_char[80*y+78]="\xFA\x1A\x18=\x1B\x1D==\x19=\x12"[n&10];
+  }
+  fclose(fp);
+}
+
+static void screen_list_callback(Uint16 n,int y,void*uz) {
+  char buf[80];
+  snprintf(buf,80,"%5d:",n);
+  draw_text(1,y,buf,7,6);
+  v_color[80*y+6]=8;
+  if(n<=maxscreen && screennames[n]) draw_text(7,y,screennames[n],15,61);
 }
 
 static void element_list_callback(Uint16 n,int y,void*uz) {
@@ -182,7 +209,7 @@ void edit_element(Uint8 en) {
         win_option('2',"Misc2",m,AP_MISC2) win_refresh();
         win_option('3',"Misc3",m,AP_MISC3) win_refresh();
         win_option('e',"Over layer",m,AP_OVER) win_refresh();
-        win_option('u',"Under layer",m,AP_UNDER) win_refresh();
+        win_option('U',"Under layer",m,AP_UNDER) win_refresh();
         win_option('S',"Screen data",m,AP_SCREEN) win_refresh();
         win_heading("Character options:");
         switch(m) {
@@ -272,14 +299,63 @@ char edit_appearance_mapping(void) {
 int run_editor(void) {
   int i,n,lo,hi;
   char c,b;
+  Uint16 lbrd=cur_board_id;
+  Uint16 lscr=0;
   v_status[0]='E';
   win_form("Editor") {
     win_numeric('t',"Starting board: ",cur_board_id,0,65535);
     win_command('B',"Boards...") {
-      
+      boards_form:
+      win_form("Boards") {
+        win_cursor(lbrd);
+        if(boardnames) win_list(maxboard+1,0,board_list_callback,n) {
+          //edit_board(n);
+          win_refresh();
+        }
+        win_blank();
+        if(boardnames) win_command('F',"Find") {
+          char buf[61]="";
+          ask_text("Find:",buf,60);
+          b=strlen(buf);
+          for(n=0;n<=maxboard;n++) {
+            if(lbrd!=n && boardnames[n] && !strncmp(boardnames[n],buf,b)) {
+              lbrd=n;
+              goto boards_form;
+            }
+          }
+        }
+        if(maxboard!=65535) {
+          win_command('A',"Add new board") {
+            
+          }
+          win_command('C',"Copy board...") {
+            char buf[61]="";
+            n=lbrd;
+            win_form("Copy board") {
+              win_text('N',"Name: ",buf);
+              win_numeric('S',"Source: ",n,0,maxboard);
+              win_blank();
+              win_command('x',"Execute") {
+                
+              }
+              win_command_esc(0,"Cancel") break;
+            }
+          }
+        }
+        win_command_esc(0,"Done") break;
+      }
     }
     win_command('c',"Screens...") {
-      
+      win_cursor(lbrd);
+      win_form("Screens") {
+        if(screennames) win_list(maxscreen+1,0,screen_list_callback,n) {
+          //edit_screen(n);
+          win_refresh();
+        }
+        win_blank();
+        
+        win_command_esc(0,"Done") break;
+      }
     }
     win_command('v',"Status variables...") {
       win_form("Status variables") {
@@ -391,6 +467,9 @@ int run_editor(void) {
       if(c) write_numform_lump();
     }
     win_blank();
+    win_command('R',"Run") {
+      
+    }
     win_command('S',"Save") save_world(0);
     win_command('Q',"Quit") break;
   }

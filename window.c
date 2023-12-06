@@ -10,6 +10,38 @@ exit
 
 static win_memo*cwin;
 
+void draw_border(Uint8 c,Uint8 x0,Uint8 y0,Uint8 x1,Uint8 y1) {
+  Uint8 x,y;
+  for(y=y0;y<=y1;y++) {
+    memset(v_color+y*80+x0,c,x1+1-x0);
+    v_char[y*80+x0]=(y==y0?0xDA:y==y1?0xC0:0xB3);
+    memset(v_char+y*80+x0+1,y==y0?0xC4:y==y1?0xC4:0x00,x1-1-x0);
+    v_char[y*80+x1]=(y==y0?0xBF:y==y1?0xD9:0xB3);
+  }
+}
+
+void ask_text(const char*prompt,Uint8*buf,int len) {
+  int i,n;
+  cwin=0;
+  draw_border(0x2A,1,20,78,23);
+  draw_text(3,21,prompt,0x2E,-1);
+  for(;;) {
+    for(i=0;i<len && buf[i];i++) v_color[i+22*80+3]=0x1F,v_char[i+22*80+3]=buf[i];
+    n=i;
+    if(i<len) v_color[i+22*80+3]=0x13,v_char[i+22*80+3]=177;
+    for(i++;i<len;i++) v_color[i+22*80+3]=0x10,v_char[i+22*80+3]=0xFA;
+    redisplay();
+    if(!next_event()) break;
+    if(event.type!=SDL_KEYDOWN) continue;
+    if(event.key.keysym.sym==SDLK_RETURN) break;
+    i=event.key.keysym.unicode;
+    if(i==0x0D || i==0x0A) break;
+    if(n<len && i>=0x20 && i<0x7F) buf[n++]=i,buf[n]=0;
+    if(n && i==0x08) buf[n-1]=0;
+    if(i==0x15) *buf=0;
+  }
+}
+
 Uint8 ask_color_char(Uint8 m,Uint8 v) {
   int x;
   cwin=0;
@@ -435,9 +467,9 @@ int win_color_char_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,int m
   return r;
 }
 
-int win_list_(win_memo*wm,Uint16 n,void*u,void(*f)(Uint16,int,void*)) {
+int win_list_(win_memo*wm,int n,void*u,void(*f)(Uint16,int,void*)) {
   int r=-1;
-  Uint16 i,j;
+  int i,j;
   if(cwin!=wm) return -1;
   if(!wm->cur) wm->cur=wm->line;
   for(i=(wm->line-wm->scroll<1?1:wm->line-wm->scroll);i<(wm->line+n-wm->scroll) && i<25;i++) {

@@ -33,15 +33,17 @@ const char*init_world(void) {
     fclose(fp);
   }
   // "MEMORY"
-  fp=open_lump("MEMORY","r");
-  if(!fp) return "Cannot open MEMORY lump";
-  u=lump_size>>1;
-  if(u>0x10000) u=0x10000;
-  free(memory);
-  memory=calloc(0x10000,sizeof(Uint16));
-  if(!memory) err(1,"Allocation failed");
-  for(i=0;i<u;i++) memory[i]=read16(fp);
-  fclose(fp);
+  if(!editor) {
+    fp=open_lump("MEMORY","r");
+    if(!fp) return "Cannot open MEMORY lump";
+    u=lump_size>>1;
+    if(u>0x10000) u=0x10000;
+    free(memory);
+    memory=calloc(0x10000,sizeof(Uint16));
+    if(!memory) err(1,"Allocation failed");
+    for(i=0;i<u;i++) memory[i]=read16(fp);
+    fclose(fp);
+  }
   // "START"
   fp=open_lump("START","r");
   if(!fp) return "Cannot open START lump";
@@ -117,6 +119,55 @@ const char*init_world(void) {
     ngtext=1;
   }
   *gtext="";
+  // "BRD.NAM"
+  if(boardnames) {
+    free(*boardnames);
+    if(editor) for(u=1;u<=maxboard;u++) free(boardnames[u]);
+  }
+  free(boardnames),boardnames=0;
+  if(fp=open_lump("BRD.NAM","r")) {
+    Uint8*s;
+    Uint8*ss;
+    maxboard=read16(fp);
+    boardnames=calloc(maxboard+1,sizeof(Uint8*));
+    if(!boardnames) err(1,"Allocation failed");
+    if(editor) {
+      size_t z;
+      for(j=0;j<=maxboard;j++) {
+        s=0; z=0; if(getdelim((char**)&s,&z,0,fp)<=0) break;
+        boardnames[j]=s;
+      }
+    } else {
+      u=(lump_size<3?1:lump_size-2);
+      s=malloc(u+1);
+      if(!s) err(1,"Allocation failed");
+      fread(s,1,u,fp);
+      s[u]=0;
+      ss=s+u;
+      for(j=0;j<=maxboard && s<ss;j++) {
+        i=strlen(s);
+        boardnames[j]=s;
+        s+=i+1;
+      }
+    }
+    fclose(fp);
+  }
+  // "SCR.NAM"
+  if(screennames) {
+    free(*screennames);
+    if(editor) for(u=1;u<=maxboard;u++) free(screennames[u]);
+  }
+  free(screennames),screennames=0;
+  if(editor && (fp=open_lump("SCR.NAM","r"))) {
+    Uint8*s;
+    size_t z;
+    maxscreen=read16(fp);
+    for(j=0;j<=maxboard;j++) {
+      s=0; z=0; if(getdelim((char**)&s,&z,0,fp)<=0) break;
+      boardnames[j]=s;
+    }
+    fclose(fp);
+  }
   // done
   return 0;
 }

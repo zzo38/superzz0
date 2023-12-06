@@ -27,6 +27,8 @@ Uint8**gtext;
 Uint8*vgtext;
 Uint16 ngtext;
 Sint32 status_vars[16];
+Uint8**boardnames;
+Uint16 maxboard;
 
 const char*select_board(Uint16 b) {
   FILE*fp=open_lump_by_number(b,"BRD","r");

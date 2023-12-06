@@ -414,7 +414,9 @@ I
   Same as L8.
 
 K
-  Allows specifying a note outside of the 12-TET scale.
+  Allows specifying a note using the overtone scale. Follow by a number
+  being the overtone number; if you want to also specify a length, then
+  a comma is required before the length.
 
 L
   Set default note length. If followed by = then it will be in 64th
@@ -435,6 +437,9 @@ S
 
 T
   Same as L32 (default).
+
+U
+  Like K but uses the undertone scale instead of the overtone scale.
 
 W
   Same as L1.

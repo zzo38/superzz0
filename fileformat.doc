@@ -13,7 +13,7 @@ The first part is the header, which is:
 of encoding flags is clear)
 
 * Screen number (2 bytes if bit9 of encoding flags is set, or 1 byte if
-bit8 of encoding flags is clear)
+bit9 of encoding flags is clear)
 
 * Exits: Two bytes per exit; the low four bits of the encoding flags
 specifies which ones are present (the non-present ones will be zero)
@@ -359,6 +359,14 @@ where this is relative to the nearest hard edge.
 * SC_IND_USER3 = Displayed if the user3 flag of the board is set.
 
 
+=== BRD.NAM ===
+
+This lump starts with the 16-bit highest board number, and then it is
+followed by null-terminated strings being the board names (starting with
+board zero). (Note that it is possible for a board to have a name even
+though there is no such board, or to lack a name even if it exists.)
+
+
 === CURRENT.BRD ===
 
 Same as the *.BRD format; used only in save game files, which contains the
@@ -624,6 +632,12 @@ It contains:
 * Text buffer.
 
 
+=== SCR.NAM ===
+
+Same format as BRD.NAM but for screens instead of boards. (This is only
+used in the editor.)
+
+
 === START ===
 
 This lump is mandatory.
@@ -639,12 +653,6 @@ It contains:
 * Reserved (32-bits).
 
 * Status variables (sixteen, of 32-bits each).
-
-
-=== TEMPLATE.BRD ===
-
-Same format as the *.BRD lumps, but it is only used in the editor, when
-adding new boards they will copy the template initially.
 
 
 === TEXT ===

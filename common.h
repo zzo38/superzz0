@@ -200,6 +200,9 @@ extern Tile*b_over;
 extern Stat*stats;
 extern Uint8 maxstat;
 
+extern Uint8**boardnames;
+extern Uint16 maxboard;
+
 StatXY*add_statxy(int n);
 const char*select_board(Uint16 b);
 
@@ -311,6 +314,9 @@ extern NumericFormat num_format[16];
 extern Screen cur_screen;
 extern Uint16 cur_screen_id;
 extern Sint32 scroll_x,scroll_y;
+
+extern Uint8**screennames;
+extern Uint16 maxscreen;
 
 const char*load_screen(FILE*fp);
 
@@ -456,10 +462,12 @@ static inline void write32(FILE*fp,Uint32 v) {
 
 // === Window ===
 
+void draw_border(Uint8 c,Uint8 x0,Uint8 y0,Uint8 x1,Uint8 y1);
+void ask_text(const char*prompt,Uint8*buf,int len);
 Uint8 ask_color_char(Uint8 m,Uint8 v);
 
 typedef struct {
-  Uint16 line,cur,ncur,scroll;
+  int line,cur,ncur,scroll;
   Uint8 state,ready;
 } win_memo;
 
@@ -497,7 +505,7 @@ int win_text_(win_memo*wm,Uint8 key,const char*label,Uint8*v,size_t s,Uint8 q);
 int win_color_char_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,int m);
 
 #define win_list(aaa,bbb,ccc,ddd) if((ddd=win_list_(&win_mem,aaa,bbb,ccc))!=-1)
-int win_list_(win_memo*wm,Uint16 n,void*u,void(*f)(Uint16,int,void*));
+int win_list_(win_memo*wm,int n,void*u,void(*f)(Uint16,int,void*));
 
 #define win_cursor(aaa) win_cursor_(&win_mem,aaa)
 void win_cursor_(win_memo*wm,int offset);
