@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -o ~/bin/superzz0 main.c display.o edit.o game.o lumped.o window.o world.o `sdl-config --cflags --libs`
+gcc -s -O2 -o ~/bin/superzz0 main.c display.o edit.o editbrd.o editscr.o game.o lumped.o window.o world.o `sdl-config --cflags --libs`
 exit
 #endif
 

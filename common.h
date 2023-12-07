@@ -47,11 +47,16 @@ int next_event(void);
 #define DIR_W 2
 #define DIR_S 3
 
+const char*init_world(void);
+int run_game(void);
+
+// === Editor ===
+
 extern Uint8 editor;
 
-const char*init_world(void);
 int run_editor(void);
-int run_game(void);
+void edit_board(Uint16);
+void edit_screen(Uint16);
 
 // === Game definitions ===
 

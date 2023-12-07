@@ -433,13 +433,6 @@ An uncompressed global script, which runs on all boards that it is not
 suppressed by. This is optional.
 
 
-=== MACRO ===
-
-Only used in the editor. Contains editor macros.
-
-(TODO)
-
-
 === MEMORY ===
 
 This lump is mandatory.
