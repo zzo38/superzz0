@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -o ~/bin/superzz0 main.c display.o edit.o editbrd.o editscr.o game.o lumped.o window.o world.o `sdl-config --cflags --libs`
+gcc -s -O2 -o ~/bin/superzz0 -Wno-unused-result main.c display.o edit.o editbrd.o editscr.o game.o lumped.o window.o world.o `sdl-config --cflags --libs`
 exit
 #endif
 
@@ -76,24 +76,66 @@ static void set_config(const char*s) {
   }
 }
 
+static void combine_raw(void) {
+  FILE*fp;
+  char nam[16];
+  Uint8 buf[0x1000];
+  Uint32 len;
+  int c,i;
+  for(;;) {
+    i=0;
+    while((c=getchar())>0 && i<15) nam[i++]=(c>='a' && c<='z'?c+'A'-'a':c);
+    if(c<0) break;
+    nam[i]=0;
+    if(c) while((c=getchar())>0);
+    fread(buf,1,4,stdin);
+    len=(buf[0]<<16)|(buf[1]<<24)|(buf[2]<<0)|(buf[3]<<8);
+    fp=open_lump(nam,"w");
+    if(!fp) errx(1,"Cannot open %s lump for writing",nam);
+    while(len) {
+      if(len>0x1000) i=0x1000; else i=len;
+      fread(buf,1,i,stdin);
+      fwrite(buf,1,i,fp);
+      len-=i;
+    }
+    fclose(fp);
+  }
+}
+
 int main(int argc,char**argv) {
+  Uint8 o=0;
   int b=-1;
   int i;
   const char*s;
-  while((i=getopt(argc,argv,"+b:e"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+ab:er\xFE"))>0) switch(i) {
+    case 'a': case 'r': o=(o&0x80)|i; break;
     case 'b': b=strtol(optarg,0,10); break;
     case 'e': editor=1; break;
+    case '\xFE': o|=0x80; break;
     default: errx(1,"Wrong switches");
   }
   if(optind>=argc) errx(1,"Too few arguments");
   for(i=optind+1;i<argc;i++) set_config(argv[i]);
-  if(b!=-42) {
-    if(open_world(argv[optind])) err(1,"Error opening world");
-    if(s=init_world()) errx(1,"Cannot initialize world settings: %s",s);
-    if(b>=0) {
-      cur_board_id=b;
-      if(!editor && (s=select_board(b))) errx(1,"Cannot load board: %s",s);
-    }
+  if(o&0x80) {
+    fread(&b,1,sizeof(b),stdin);
+    fread(&config,1,sizeof(config),stdin);
+  }
+  if(open_world(argv[optind])) err(1,"Error opening world");
+  if(editor && o) switch(o&0x7F) {
+    case 'a':
+      if(s=init_world()) errx(1,"Cannot initialize world settings: %s",s);
+      combine_assembled();
+      save_world(0);
+      return 0;
+    case 'r':
+      combine_raw();
+      save_world(0);
+      return 0;
+  }
+  if(s=init_world()) errx(1,"Cannot initialize world settings: %s",s);
+  if(b>=0) {
+    cur_board_id=b;
+    if(!editor && (s=select_board(b))) errx(1,"Cannot load board: %s",s);
   }
   init_display();
   if(editor) run_editor(); else run_game();

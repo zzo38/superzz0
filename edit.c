@@ -61,6 +61,44 @@ static void write_element_lump(void) {
   fclose(fp);
 }
 
+void combine_assembled(void) {
+  FILE*fp;
+  char nam[16];
+  Uint8 buf[0x1000];
+  Uint32 len;
+  int c,i;
+  for(;;) {
+    i=0;
+    while((c=getchar())>0 && i<15) nam[i++]=(c>='a' && c<='z'?c+'A'-'a':c);
+    if(c<0) break;
+    nam[i]=0;
+    if(c) while((c=getchar())>0);
+    fread(buf,1,4,stdin);
+    len=(buf[0]<<16)|(buf[1]<<24)|(buf[2]<<0)|(buf[3]<<8);
+    if(!strcmp(nam,"MEMORY") || !strcmp(nam,"TEXT")) {
+      fp=open_lump(nam,"w");
+      if(!fp) errx(1,"Cannot open %s lump for writing",nam);
+      while(len) {
+        if(len>0x1000) i=0x1000; else i=len;
+        fread(buf,1,i,stdin);
+        fwrite(buf,1,i,fp);
+        len-=i;
+      }
+      fclose(fp);
+    } else if(!strcmp(nam,"EVENT")) {
+      if(len!=0x2000) errx(1,"Wrong length of EVENT lump from input");
+      for(c=0;c<16;c++) for(i=0;i<256;i++) elem_def[i].event[c]=read16(stdin);
+    } else {
+      while(len) {
+        if(len>0x1000) i=0x1000; else i=len;
+        fread(buf,1,i,stdin);
+        len-=i;
+      }
+    }
+  }
+  write_element_lump();
+}
+
 static void write_numform_lump(void) {
   int i;
   FILE*fp=open_lump("NUMFORM","w");

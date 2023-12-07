@@ -57,6 +57,7 @@ extern Uint8 editor;
 int run_editor(void);
 void edit_board(Uint16);
 void edit_screen(Uint16);
+void combine_assembled(void);
 
 // === Game definitions ===
 

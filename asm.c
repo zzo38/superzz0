@@ -569,7 +569,7 @@ static void begin_lump(const char*name,Uint32 len) {
 
 static void do_output(void) {
   int i;
-  outfile=fopen(outname,"w");
+  if(*outname=='-' && !outname[1]) outfile=stdout; else outfile=fopen(outname,"w");
   if(!outfile) err(1,"Cannot open output file");
   if(addr_end<256 || addr_end>0x10000) errx(1,"Output size exceeds maximum");
   begin_lump("MEMORY",addr_end<<1);
@@ -598,7 +598,7 @@ static void do_output(void) {
     fwrite(oo,1,os,outfile);
     free(oo);
   }
-  fclose(outfile);
+  if(*outname!='-' || outname[1]) fclose(outfile);
 }
 
 int main(int argc,char**argv) {
