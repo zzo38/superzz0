@@ -79,7 +79,7 @@ static void set_config(const char*s) {
 static void combine_raw(void) {
   FILE*fp;
   char nam[16];
-  Uint8 buf[0x1000];
+  Uint8 buf[4];
   Uint32 len;
   int c,i;
   for(;;) {
@@ -92,12 +92,7 @@ static void combine_raw(void) {
     len=(buf[0]<<16)|(buf[1]<<24)|(buf[2]<<0)|(buf[3]<<8);
     fp=open_lump(nam,"w");
     if(!fp) errx(1,"Cannot open %s lump for writing",nam);
-    while(len) {
-      if(len>0x1000) i=0x1000; else i=len;
-      fread(buf,1,i,stdin);
-      fwrite(buf,1,i,fp);
-      len-=i;
-    }
+    copy_stream(stdin,fp,len);
     fclose(fp);
   }
 }

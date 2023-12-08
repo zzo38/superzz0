@@ -58,6 +58,7 @@ int run_editor(void);
 void edit_board(Uint16);
 void edit_screen(Uint16);
 void combine_assembled(void);
+void set_board_name(Uint16 id,const char*name);
 
 // === Game definitions ===
 
@@ -422,6 +423,7 @@ void close_world(void);
 int save_world(const char*name); // set name to null to overwrite the current file (safely)
 int save_game(FILE*fp);
 int restore_game(FILE*fp);
+size_t copy_stream(FILE*in,FILE*out,size_t len);
 
 // === File access (data) ===
 

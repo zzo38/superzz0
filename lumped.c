@@ -404,3 +404,18 @@ int restore_game(FILE*fp) {
   return 0;
 }
 
+size_t copy_stream(FILE*in,FILE*out,size_t len) {
+  char buf[0x2000];
+  size_t t=0;
+  size_t n;
+  size_t s;
+  while(len) {
+    if(len>0x2000) n=0x2000; else n=len;
+    if(s=fread(buf,1,n,in)) fwrite(buf,1,s,out);
+    if(s<n) return s+t;
+    len-=n;
+    t+=s;
+  }
+  return t;
+}
+

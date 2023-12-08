@@ -9,6 +9,17 @@ exit
 static Uint16 brd_id;
 static Uint16 xcur,ycur;
 
+void set_board_name(Uint16 id,const char*name) {
+  if(maxboard<id) {
+    boardnames=realloc(boardnames,(id+1)*sizeof(Uint8*));
+    if(!boardnames) err(1,"Allocation failed");
+    while(maxboard<id) boardnames[++maxboard]=0;
+  }
+  free(boardnames[id]);
+  boardnames[id]=strdup(name);
+  if(!boardnames[id]) err(1,"Allocation failed");
+}
+
 static void goto_board(Uint16 id) {
   FILE*fp=open_lump_by_number(id,"BRD","r");
   char b=0;
