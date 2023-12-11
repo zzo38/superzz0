@@ -49,6 +49,7 @@ int next_event(void);
 
 const char*init_world(void);
 int run_game(void);
+void run_test_game(int);
 
 // === Editor ===
 
@@ -212,6 +213,7 @@ extern Uint16 maxboard;
 
 StatXY*add_statxy(int n);
 const char*select_board(Uint16 b);
+//Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h);
 
 const char*load_board(FILE*fp);
 const char*save_board(FILE*fp,int m);
@@ -395,6 +397,7 @@ const char*load_screen(FILE*fp);
 #define MEM_WARP_Z_HI 0xEA
 #define MEM_WARP_Z_LO 0xEB
 #define MEM_FRAME_COUNTER 0xEC
+#define MEM_TEXT_SCREEN 0xED
 
 extern Uint16*memory;
 extern Sint32 regs[8];
@@ -471,6 +474,7 @@ static inline void write32(FILE*fp,Uint32 v) {
 // === Window ===
 
 void draw_border(Uint8 c,Uint8 x0,Uint8 y0,Uint8 x1,Uint8 y1);
+void alert_text(const char*text);
 void ask_text(const char*prompt,Uint8*buf,int len);
 Uint8 ask_color_char(Uint8 m,Uint8 v);
 

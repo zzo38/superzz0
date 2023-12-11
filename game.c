@@ -45,6 +45,7 @@ const char*select_board(Uint16 b) {
 static Uint8 digit_of(Uint32 n,Uint8 f) {
   NumericFormat*nf=num_format+(f>>4);
   Uint8 d=nf->div;
+  const Uint8*b;
   int i;
   f&=15;
   switch(nf->code) {
@@ -104,21 +105,126 @@ static Uint8 digit_of(Uint32 n,Uint8 f) {
     case NF_NONZERO:
       return n>=d?nf->mark:nf->lead;
     case NF_BOARD_NAME:
-      
+      if(n>maxboard || !(b=boardnames[n])) return nf->lead;
+      for(i=0;i<f && b[i];i++);
+      return b[i]?:nf->lead;
     case NF_BOARD_NAME_EXT:
-      
-      return nf->lead;
+      if(n>maxboard || !(b=boardnames[n])) return nf->lead;
+      for(i=0;i<f+16 && b[i];i++);
+      return b[i]?:nf->lead;
   }
   return '?';
 }
 
-static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint8 sx,Uint8 sy,Uint8 h) {
-  
+static inline Uint8 line_class_of(Sint32 bx,Sint32 by,Uint32 xy) {
+  if(bx<0 || bx>=board_info.width || by<0 || by>=board_info.height) return 0x80;
+  return (1<<(elem_def[b_main[xy].kind].app[0]>>6))|(1<<(elem_def[b_under[xy].kind].app[0]>>6));
+}
+
+static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
+  Uint32 xy=by*board_info.width+bx;
+  Uint8 o=0;
+  Uint8 z,m,d;
+  ElementDef*e;
+  Tile*t;
+  if(bx>=0 && bx<board_info.width && by>=0 && by<board_info.height) {
+    tile:
+    t=b_main+xy;
+    e=elem_def+t->kind;
+    if(!(h&4) && !(e->attrib&A_LIGHT) && (b_over[xy].kind&OVER_VISIBLE)) {
+      //TODO: light shape
+      o=b_over[xy].kind;
+    }
+    if(o&OVER_VISIBLE) {
+      v_char[at]=b_over[xy].param;
+      v_color[at]=b_over[xy].color;
+      if(o&OVER_BG_THRU) v_color[at]|=t->color&0xF0;
+    } else {
+      if((e->app[0]&0x3F)==AP_UNDER) {
+        t=b_under+xy;
+        e=elem_def+t->kind;
+      }
+      switch(e->app[0]&0x3F) {
+        case AP_FIXED: v_char[at]=e->app[1]; break;
+        case AP_PARAM: v_char[at]=e->app[1]+t->param; break;
+        case AP_OVER: v_char[at]=b_over[xy].param; break;
+        case AP_UNDER: v_char[at]=e->app[1]; break;
+        case AP_SCREEN: v_char[at]=cur_screen.parameter[at]; break;
+        case AP_MISC1: v_char[at]=(t->stat && t->stat<=maxstat)?stats[t->stat-1].misc1:e->app[1]; break;
+        case AP_MISC2: v_char[at]=(t->stat && t->stat<=maxstat)?stats[t->stat-1].misc2:e->app[1]; break;
+        case AP_MISC3: v_char[at]=(t->stat && t->stat<=maxstat)?stats[t->stat-1].misc3:e->app[1]; break;
+        case AP_LINES:
+          m=e->app[1];
+          if(h&0x80) {
+            z=(m&0x80?15:0);
+          } else {
+            z=0;
+            if(m&line_class_of(bx+1,by,xy+1)) z|=1;
+            if(m&line_class_of(bx,by-1,xy-board_info.width)) z|=2;
+            if(m&line_class_of(bx-1,by,xy-1)) z|=4;
+            if(m&line_class_of(bx,by+1,xy+board_info.width)) z|=8;
+          }
+          v_char[at]=appearance_mapping[(m&0x70)+z];
+          break;
+        case AP_ANIMATE:
+          m=animation[e->app[1]&3].mode;
+          z=bx*(m&3)+by*((m>>2)&3);
+          if(e->app[1]&0x80) z+=memory[MEM_FRAME_COUNTER]>>(m&AM_SLOW?1:0);
+          d=animation[e->app[1]&3].step[z&3];
+          v_char[at]=appearance_mapping[((e->app[1]&0x7C)+d)&0x7F];
+          break;
+        default:
+          d=(t->param>>(e->app[0]&7))&~(0xFF<<(((e->app[0]>>3)&3)+1));
+          if(e->app[1]&0x80) {
+            m=animation[e->app[1]&1].mode;
+            z=memory[MEM_FRAME_COUNTER];
+            if(m&AM_SLOW) z>>=1;
+            z+=bx*(m&3)+by*((m>>2)&3);
+            d+=animation[e->app[1]&1].step[z&3];
+          }
+          v_char[at]=appearance_mapping[((e->app[1]&0x7E)+d)&0x7F];
+          break;
+      }
+      switch(e->attrib&(A_OVER_COLOR|A_UNDER_COLOR)) {
+        case 0: v_color[at]=b_main[xy].color; break;
+        case A_OVER_COLOR: v_color[at]=b_over[xy].color; break;
+        case A_UNDER_COLOR: v_color[at]=b_under[xy].color; break;
+        case A_OVER_COLOR|A_UNDER_COLOR: v_color[at]=cur_screen.color[at]; break;
+      }
+    }
+    if(v_color[at]<16 && (e->attrib&A_UNDER_BGCOLOR)) v_color[at]|=b_under[xy].color&0xF0;
+  } else if(h&2) {
+    if(bx==-1 && cur_screen.border[DIR_W] && by>=0 && by<board_info.height) {
+      v_char[at]=cur_screen.border[DIR_W];
+      v_color[at]=cur_screen.border_color;
+    } else if(bx==board_info.width && cur_screen.border[DIR_E] && by>=0 && by<board_info.height) {
+      v_char[at]=cur_screen.border[DIR_E];
+      v_color[at]=cur_screen.border_color;
+    } else if(by==board_info.height && cur_screen.border[DIR_S] && bx>=0 && bx<board_info.width) {
+      v_char[at]=cur_screen.border[DIR_S];
+      v_color[at]=cur_screen.border_color;
+    } else if(by==-1 && cur_screen.border[DIR_N] && bx>=0 && bx<board_info.width) {
+      v_char[at]=cur_screen.border[DIR_N];
+      v_color[at]=cur_screen.border_color;
+    } else {
+      goto noborder;
+    }
+  } else {
+    noborder:
+    if(h&1) {
+      v_char[at]=cur_screen.parameter[at];
+      v_color[at]=cur_screen.color[at];
+    } else {
+      h|=0x80;
+      xy=(by<0?0:by>=board_info.height?board_info.height-1:by)*board_info.width+(bx<0?0:bx>=board_info.width?board_info.width-1:bx);
+      goto tile;
+    }
+  }
 }
 
 void update_screen(void) {
   int i;
-  Uint32 v;
+  Uint32 v,x,y;
   Uint8 cmd,col,chr;
   for(i=0;i<80*25;i++) {
     cmd=cur_screen.command[i];
@@ -130,7 +236,7 @@ void update_screen(void) {
         if(cmd&2) v_color[i]=col;
         break;
       case SC_BOARD:
-        
+        draw_tile(x+scroll_x,y+scroll_y,i,cmd&0x0F);
         break;
       case SC_NUMERIC:
         v_char[i]=digit_of(status_vars[cmd&15],chr);
@@ -140,8 +246,8 @@ void update_screen(void) {
         switch(cmd) {
           case SC_SPEC_PLAYER_X: v=stats->count?stats->xy->x:0; break;
           case SC_SPEC_PLAYER_Y: v=stats->count?stats->xy->y:0; break;
-          case SC_SPEC_CAMERA_X: 
-          case SC_SPEC_CAMERA_Y: 
+          case SC_SPEC_CAMERA_X: v=scroll_x-cur_screen.view_x; break;
+          case SC_SPEC_CAMERA_Y: v=scroll_y-cur_screen.view_y; break;
           case SC_SPEC_TEXT_SCROLL_PERCENT: 
           case SC_SPEC_TEXT_LINE_NUMBER: 
           case SC_SPEC_TEXT_LINE_COUNT: 
@@ -161,7 +267,20 @@ void update_screen(void) {
         v_color[i]=memory[(col<<8)|chr]>>8;
         break;
       case SC_INDICATOR:
-        
+        v_color[i]=col;
+        x=i%80; y=i/80;
+        switch(cmd) {
+          case SC_IND_CURSOR: v_char[i]=(stats->count && (x+scroll_x==stats->xy->x || y+scroll_y==stats->xy->y))?chr:0; break;
+          case SC_IND_SCROLL: 
+          case SC_IND_EXIT_E: v_char[i]=board_info.exits[DIR_E]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_E]:0; break;
+          case SC_IND_EXIT_N: v_char[i]=board_info.exits[DIR_N]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_N]:0; break;
+          case SC_IND_EXIT_W: v_char[i]=board_info.exits[DIR_W]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_W]:0; break;
+          case SC_IND_EXIT_S: v_char[i]=board_info.exits[DIR_S]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_S]:0; break;
+          case SC_IND_USER0: v_char[i]=board_info.flag&BF_USER0?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[0]:0; break;
+          case SC_IND_USER1: v_char[i]=board_info.flag&BF_USER1?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[1]:0; break;
+          case SC_IND_USER2: v_char[i]=board_info.flag&BF_USER2?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[2]:0; break;
+          case SC_IND_USER3: v_char[i]=board_info.flag&BF_USER3?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[3]:0; break;
+        }
         break;
       case SC_TEXT:
         
@@ -197,8 +316,8 @@ static Sint32 xop_special(Sint32 so,Uint16 ex) {
     case XOP_S_STATUS_MINUS: return status_vars[ex&15]-so;
     case XOP_S_WIDTH: return board_info.width+so+(ex&15)-8;
     case XOP_S_HEIGHT: return board_info.height+so+(ex&15)-8;
-    case XOP_S_PLAYER_X: return stats->count?stats->xy->x:0;
-    case XOP_S_PLAYER_Y: return stats->count?stats->xy->y:0;
+    case XOP_S_PLAYER_X: return stats->count?stats->xy->x+(ex&15)-8-so:0;
+    case XOP_S_PLAYER_Y: return stats->count?stats->xy->y+(ex&15)-8-so:0;
     case XOP_S_BOARD_ID: return cur_board_id;
     case XOP_S_SCREEN_ID: return cur_screen_id;
     default: return 0;
@@ -305,7 +424,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_BIT: so=1<<(so&31); goto store;
       case OP_BTAK: condflag=(status_vars[fo]&(1<<(so&31))?1:0); status_vars[fo]&=~(1<<(so&31)); break;
       case OP_BTST: condflag=((1L<<(so&31))&regs[fo])?1:0; break;
-      case OP_CALL: if(fo==8) goto jump; so=run_program(so,w,x,y,z); goto store;
+      case OP_CALL: so=run_program(so,w,x,y,z); goto store;
       case OP_CASE: so=memory[(so+regs[fo])&0xFFFF]; goto jump;
       case OP_DEC: --so; goto store;
       case OP_DIR:
@@ -360,7 +479,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_JZ: if(!regs[fo]) goto jump; break;
       case OP_LESS: condflag=(regs[fo]<so?1:0); break;
       case OP_LET: goto store;
-      case OP_LITE: memory[0xE3]=(fo<<8)|(so<0?0:so>255?255:so); break;
+      case OP_LITE: memory[MEM_LIGHT]=(so<0?0:((fo<<8)|(so>255?255:so))); break;
       case OP_LOOP: if(!regs[fo]) break; --regs[fo]; goto jump;
       case OP_LSH: regs[fo]=(so&~31?0:regs[fo]<<so); break;
       case OP_MAX: if(so>regs[fo]) goto store; break;

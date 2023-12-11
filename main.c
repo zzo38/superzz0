@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -o ~/bin/superzz0 -Wno-unused-result main.c display.o edit.o editbrd.o editscr.o game.o lumped.o window.o world.o `sdl-config --cflags --libs`
+gcc -s -O2 -o ~/bin/superzz0 -Wno-unused-result main.c display.o edit.o editbrd.o editscr.o game.o lumped.o window.o world.o -lm `sdl-config --cflags --libs`
 exit
 #endif
 
@@ -95,6 +95,33 @@ static void combine_raw(void) {
     copy_stream(stdin,fp,len);
     fclose(fp);
   }
+}
+
+void run_test_game(int b) {
+  FILE*fp;
+  Uint8 r=*v_status;
+  memset(v_color,0,80*25);
+  *v_status='$';
+  redisplay();
+  unlink(".superzz0_testgame");
+  if(save_world(".superzz0_testgame")) {
+    alert_text("Unable to save temporary world file");
+    *v_status=r;
+    return;
+  }
+  fp=popen("/proc/self/exe -\xFE .superzz0_testgame","w");
+  if(!fp) {
+    warn(0);
+    alert_text("Cannot fork process");
+    *v_status=r;
+    return;
+  }
+  // This sequence of writes must match the sequence of reads below.
+    fwrite(&b,1,sizeof(b),stdin);
+    fwrite(&config,1,sizeof(config),stdin);
+  pclose(fp);
+  unlink(".superzz0_testgame");
+  *v_status=r;
 }
 
 int main(int argc,char**argv) {

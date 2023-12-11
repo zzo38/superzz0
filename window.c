@@ -20,6 +20,18 @@ void draw_border(Uint8 c,Uint8 x0,Uint8 y0,Uint8 x1,Uint8 y1) {
   }
 }
 
+void alert_text(const char*text) {
+  cwin=0;
+  draw_border(0x4E,1,20,78,23);
+  draw_text(3,21,text,0x4E,-1);
+  draw_text(3,22,"<Push return to continue>",0x47,-1);
+  for(;;) {
+    if(!next_event()) break;
+    if(event.type!=SDL_KEYDOWN) continue;
+    if(event.key.keysym.sym==SDLK_RETURN || event.key.keysym.sym==SDLK_ESCAPE) break;
+  }
+}
+
 void ask_text(const char*prompt,Uint8*buf,int len) {
   int i,n;
   cwin=0;

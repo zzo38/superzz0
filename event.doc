@@ -68,7 +68,7 @@ EV_FRAME (0)
 EV_STAT (1)
   Called whenever a stat's turn to be executed, before scripts.
 
-  W = Stat XY index
+  W = Stat number and stat XY index
   Z = Parameter
 
   Return = Nonzero to prevent scripts/delay.

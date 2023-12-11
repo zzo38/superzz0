@@ -1,5 +1,3 @@
-(NOTE: The below is currently just the plan of the design; when it is
-actually implemented, it may be changed.)
 
 Format: [hex name] (if hex>=0x100 then first operand can be A-H or S-Z)
 
@@ -300,12 +298,6 @@ numbers are treated as unsigned.
   to access. The target board number is written to the first operand, and
   the condition flag will be true if it is nonzero or false otherwise.
 
-[046 BSCR]
-  Define the default screen number to use for text windows. If the second
-  operand is nonnegative, then it sets it; if negative then it is left
-  unchanged. Either way, the old default screen number of text windows is
-  written into the first operand.
-
 [047 REVB]
   Revert the board number specified by the second operand to the board
   stored in the world file with that number. This does not affect the
@@ -421,7 +413,7 @@ numbers are treated as unsigned.
   is zero. If nothing is found, sets the condition flag false and the first
   operand is unchanged.
 
-[05F COUN]
+[05D COUN]
   Count the number of tiles matching a pattern, and store in the first
   operand. The second operand is the address of a structure which is like
   that of CHA, but only five fields instead of nine, and only the low three
@@ -448,14 +440,14 @@ numbers are treated as unsigned.
   bit7 = If set, clears the lock bit of changed stats.
   bit14-bit8 = New delay value.
   bit15 = Set to change delay values of changed stats.
-  Mode 0 = Kind to match.
+  Mode 0 = Ignored.
   Mode 1 = Colour to match.
   Mode 2 = Parameter to match.
-  Mode 3 = Stat number to match, if fifth field is zero.
-  Mode 4 = Kind to replace with.
+  Mode 3 = Stat number to match.
+  Mode 4 = Ignored.
   Mode 5 = Colour to replace with.
   Mode 6 = Parameter to replace with.
-  Mode 7 = Stat number to replace with, if ninth field is zero.
+  Mode 7 = Stat number to replace with.
 
 [05F CHAX]
   Like CHA but treats second to fifth and sixth to ninth both as matching
@@ -613,6 +605,22 @@ numbers are treated as unsigned.
   flag is set or clear according to the result of the condition. If not
   successful, does not skip, and the condition flag is unchanged.
 
+[090 PICK]
+  The second operand is the stat XY index in the same format as the SIXY
+  instruction. The under layer at its coordinates are copied into the main
+  layer, clearing the under layer; if what was previously in the under
+  layer has a stat then its record is updated. The XY record for what was
+  in the main layer is not changed. The first operand will store the tile
+  (in the same format as MTIL) that was previously in the main layer. The
+  X and Y registers are updated with the coordinates of the stat.
+
+[091 DROP]
+  The operands are as in PICK. It will place the tile from the first
+  operand at the coordinates specified by the X and Y registers, moving
+  what was there to the under layer (updating its stat XY record if it
+  is a stat), and updating the coordinates in the XY record of the stat
+  for the tile that was placed, to the coordinates it was placed at.
+
 [100 LET]
   Copy second operand to first.
 
@@ -664,8 +672,7 @@ numbers are treated as unsigned.
 [110 CALL]
   Call a subroutine, with address given by second operand. The current
   values of W, X, Y, Z registers are the inputs of the subroutine, and then
-  the return value is written to the first operand of this instruction. (If
-  the first operand is S, then it is implemented as a tail call.)
+  the return value is written to the first operand of this instruction.
 
 [111 GO]
   Unconditionally jump to second operand, storing the address that the

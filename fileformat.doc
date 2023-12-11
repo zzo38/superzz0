@@ -262,11 +262,12 @@ is set then uses the character, if bit1 is set then uses the colour; clear
 bits mean to display what was previously displayed on the screen instead.
 
 * SC_BOARD = Display the contents of the board. If it is out of range, then
-it is treated like SC_BACKGROUND, except that if the border character is
-nonzero and it is exactly one step beyond the edge of the board, then it
-will display the border colour and character instead. If bit2 of the kind
-is set then the overlay is suppressed. Clearing bit0 and bit1 will cause it
-to display the tile of the nearest edge.
+it displays the fixed colour and character (like SC_BACKGROUND) if bit0 is
+set, except that if the border character is nonzero and it is exactly one
+step beyond the edge of the board, and bit1 is set, then it will display
+the border colour and character instead. If bit2 of the kind is set then
+the overlay is suppressed. Clearing bit0 will cause it to display the tile
+of the nearest edge instead.
 
 * SC_NUMERIC = Display the value of a status variable. The low nybble of
 the kind specifies which variable. The high nybble of the parameter means
@@ -461,8 +462,10 @@ low byte is the radius.
 
 * 0xE6 to 0xEB = Warp registers (X,Y,Z)
 
-* 0xE7 = Frame counter; auto incremented after each frame, and controls
+* 0xEC = Frame counter; auto incremented after each frame, and controls
 animations.
+
+* 0xED = Screen number for text windows
 
 
 === METADATA ===
@@ -500,6 +503,9 @@ mean that the name actually has * on it but rather that such a key should
 not occur in embedded metadata and is only valid for external metadata.
 
 * AUS = Author name.
+
+* AUT = Author name. (Alternative of AUS, in case the name needs to include
+characters that are not in the PC character set.)
 
 * DEM = Long description.
 
