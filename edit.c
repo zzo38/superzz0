@@ -124,8 +124,8 @@ static void board_list_callback(Uint16 n,int y,void*uz) {
     v_color[80*y+77]=v_color[80*y+78]=2;
     v_char[80*y+77]="\xFA\x1A\x18=\x1B\x1D==\x19=\x12"[n&5];
     v_char[80*y+78]="\xFA\x1A\x18=\x1B\x1D==\x19=\x12"[n&10];
+    fclose(fp);
   }
-  fclose(fp);
 }
 
 static void screen_list_callback(Uint16 n,int y,void*uz) {
@@ -185,7 +185,7 @@ static void element_list_callback(Uint16 n,int y,void*uz) {
   }
 }
 
-void edit_element(Uint8 en) {
+static void edit_element(Uint8 en) {
   ElementDef*e=elem_def+en;
   char title[80];
   Uint8 cla=e->attrib&15;
@@ -296,7 +296,7 @@ void edit_element(Uint8 en) {
   e->attrib=(e->attrib&~(15|A_OVER_COLOR|A_UNDER_COLOR))|cla|(colo<<6);
 }
 
-char edit_appearance_mapping(void) {
+static char edit_appearance_mapping(void) {
   char c=0;
   int i;
   int n=0;
@@ -334,6 +334,22 @@ char edit_appearance_mapping(void) {
   }
 }
 
+static int copy_board(Uint16 inb,Uint16 outb) {
+  FILE*in=open_lump_by_number(inb,"BRD","r");
+  Uint32 s=lump_size;
+  FILE*out=open_lump_by_number(outb,"BRD","wx");
+  if(!in || !out) {
+    if(in) fclose(in);
+    if(out) fclose(out);
+    alert_text("Cannot copy board");
+    return 0;
+  }
+  copy_stream(in,out,s);
+  fclose(in);
+  fclose(out);
+  return 1;
+}
+
 int run_editor(void) {
   int i,n,lo,hi;
   char c,b;
@@ -347,7 +363,7 @@ int run_editor(void) {
       win_form("Boards") {
         win_cursor(lbrd);
         if(boardnames) win_list(maxboard+1,0,board_list_callback,n) {
-          //edit_board(n);
+          edit_board(lbrd=n);
           win_refresh();
         }
         win_blank();
@@ -364,7 +380,13 @@ int run_editor(void) {
         }
         if(maxboard!=65535) {
           win_command('A',"Add new board") {
-            
+            char buf[61]="";
+            ask_text("Add new board:",buf,60);
+            if(*buf) {
+              set_board_name(lbrd=maxboard+(boardnames?1:0),buf);
+              edit_board(lbrd);
+              goto boards_form;
+            }
           }
           win_command('C',"Copy board...") {
             char buf[61]="";
@@ -374,7 +396,13 @@ int run_editor(void) {
               win_numeric('S',"Source: ",n,0,maxboard);
               win_blank();
               win_command('x',"Execute") {
-                
+                if(*buf) {
+                  set_board_name(lbrd=maxboard+(boardnames?1:0),buf);
+                  if(copy_board(n,lbrd)) {
+                    edit_board(lbrd);
+                    goto boards_form;
+                  }
+                }
               }
               win_command_esc(0,"Cancel") break;
             }
@@ -391,7 +419,11 @@ int run_editor(void) {
           win_refresh();
         }
         win_blank();
-        
+        if(maxscreen!=65535) {
+          win_command('A',"Add new screen") {
+            
+          }
+        }
         win_command_esc(0,"Done") break;
       }
     }
@@ -506,7 +538,8 @@ int run_editor(void) {
     }
     win_blank();
     win_command('R',"Run") {
-      
+      run_test_game(-1);
+      win_refresh();
     }
     win_command('S',"Save") save_world(0);
     win_command('Q',"Quit") break;
