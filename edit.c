@@ -61,6 +61,15 @@ static void write_element_lump(void) {
   fclose(fp);
 }
 
+static void write_name_list(const char*lump,Uint8**data,Uint16 count) {
+  FILE*fp=open_lump(lump,"w");
+  int i;
+  if(!fp) return;
+  write16(fp,count);
+  for(i=0;i<=count;i++) if(data[i]) fwrite(data[i],1,strlen(data[i])+1,fp); else fputc(0,fp);
+  fclose(fp);
+}
+
 void combine_assembled(void) {
   FILE*fp;
   char nam[16];
@@ -410,6 +419,7 @@ int run_editor(void) {
         }
         win_command_esc(0,"Done") break;
       }
+      if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
     }
     win_command('c',"Screens...") {
       win_cursor(lbrd);
@@ -426,6 +436,7 @@ int run_editor(void) {
         }
         win_command_esc(0,"Done") break;
       }
+      if(screennames) write_name_list("SCR.NAM",screennames,maxscreen);
     }
     win_command('v',"Status variables...") {
       win_form("Status variables") {
