@@ -513,6 +513,18 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_SEX: so=(Sint16)so; goto store;
       case OP_SGN: so=(so<0?-1:so>0?1:0); goto store;
       case OP_SUB: regs[fo]-=so; break;
+      case OP_SWPA: t=regs[0]; regs[0]=so; so=t; goto store;
+      case OP_SWPB: t=regs[1]; regs[1]=so; so=t; goto store;
+      case OP_SWPC: t=regs[2]; regs[2]=so; so=t; goto store;
+      case OP_SWPD: t=regs[3]; regs[3]=so; so=t; goto store;
+      case OP_SWPE: t=regs[4]; regs[4]=so; so=t; goto store;
+      case OP_SWPF: t=regs[5]; regs[5]=so; so=t; goto store;
+      case OP_SWPG: t=regs[6]; regs[6]=so; so=t; goto store;
+      case OP_SWPH: t=regs[7]; regs[7]=so; so=t; goto store;
+      case OP_SWPW: t=w; w=so; so=t; goto store;
+      case OP_SWPX: t=x; x=so; so=t; goto store;
+      case OP_SWPY: t=y; y=so; so=t; goto store;
+      case OP_SWPZ: t=z; z=so; so=t; goto store;
       case OP_TAKE: if(status_vars[fo]>=so) status_vars[fo]-=so,condflag=1; else condflag=0; break;
       case OP_TDEC: --so; if(condflag) goto store; break;
       case OP_TINC: ++so; if(condflag) goto store; break;

@@ -612,14 +612,20 @@ numbers are treated as unsigned.
   layer has a stat then its record is updated. The XY record for what was
   in the main layer is not changed. The first operand will store the tile
   (in the same format as MTIL) that was previously in the main layer. The
-  X and Y registers are updated with the coordinates of the stat.
+  X and Y registers are updated with the coordinates of the stat. The
+  condition flag will be true if it was successful, or false if anything
+  is wrong (e.g. coordinates out of range, index out of range, the tile
+  at those coordinates is not that stat, etc).
 
 [091 DROP]
   The operands are as in PICK. It will place the tile from the first
   operand at the coordinates specified by the X and Y registers, moving
   what was there to the under layer (updating its stat XY record if it
   is a stat), and updating the coordinates in the XY record of the stat
-  for the tile that was placed, to the coordinates it was placed at.
+  for the tile that was placed, to the coordinates it was placed at. The
+  condition flag will be true if successful, or false if there is any
+  reason it doesn't work (coordinates out of range, index out of range,
+  there is already another stat in the under layer, etc).
 
 [100 LET]
   Copy second operand to first.
@@ -738,6 +744,42 @@ numbers are treated as unsigned.
 [131 BIT]
   Set first operand to a value with a single bit set; the bit to be set
   will be specified by the low 5-bits of the second operand.
+
+[140 SWPA]
+  Copy A register to first operand and then second operand to A register.
+
+[141 SWPB]
+  Copy B register to first operand and then second operand to B register.
+
+[142 SWPC]
+  Copy C register to first operand and then second operand to C register.
+
+[143 SWPD]
+  Copy D register to first operand and then second operand to D register.
+
+[144 SWPE]
+  Copy E register to first operand and then second operand to E register.
+
+[145 SWPF]
+  Copy F register to first operand and then second operand to F register.
+
+[146 SWPG]
+  Copy G register to first operand and then second operand to G register.
+
+[147 SWPH]
+  Copy H register to first operand and then second operand to H register.
+
+[14C SWPW]
+  Copy W register to first operand and then second operand to W register.
+
+[14D SWPX]
+  Copy X register to first operand and then second operand to X register.
+
+[14E SWPY]
+  Copy Y register to first operand and then second operand to Y register.
+
+[14F SWPZ]
+  Copy Z register to first operand and then second operand to Z register.
 
 [150 SIXY]
   The low 16-bits of the second operand are the stat number, and the high
