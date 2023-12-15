@@ -109,7 +109,7 @@ void run_test_game(int b) {
     *v_status=r;
     return;
   }
-  fp=popen("/proc/self/exe -\xFE .superzz0_testgame","w");
+  fp=popen("/proc/$PPID/exe -\\\\ .superzz0_testgame","w");
   if(!fp) {
     warn(0);
     alert_text("Cannot fork process");
@@ -129,11 +129,11 @@ int main(int argc,char**argv) {
   int b=-1;
   int i;
   const char*s;
-  while((i=getopt(argc,argv,"+ab:er\xFE"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+ab:er\\"))>0) switch(i) {
     case 'a': case 'r': o=(o&0x80)|i; break;
     case 'b': b=strtol(optarg,0,10); break;
     case 'e': editor=1; break;
-    case '\xFE': o|=0x80; break;
+    case '\\': o|=0x80; break;
     default: errx(1,"Wrong switches");
   }
   if(optind>=argc) errx(1,"Too few arguments");

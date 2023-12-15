@@ -236,7 +236,7 @@ void update_screen(void) {
         if(cmd&2) v_color[i]=col;
         break;
       case SC_BOARD:
-        draw_tile(x+scroll_x,y+scroll_y,i,cmd&0x0F);
+        draw_tile((i%80)+scroll_x,(i/80)+scroll_y,i,cmd&0x0F);
         break;
       case SC_NUMERIC:
         v_char[i]=digit_of(status_vars[cmd&15],chr);

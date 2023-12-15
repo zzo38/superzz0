@@ -61,7 +61,7 @@ static void write_element_lump(void) {
   fclose(fp);
 }
 
-static void write_name_list(const char*lump,Uint8**data,Uint16 count) {
+void write_name_list(const char*lump,Uint8**data,Uint16 count) {
   FILE*fp=open_lump(lump,"w");
   int i;
   if(!fp) return;
@@ -381,7 +381,7 @@ int run_editor(void) {
           ask_text("Find:",buf,60);
           b=strlen(buf);
           for(n=0;n<=maxboard;n++) {
-            if(lbrd!=n && boardnames[n] && !strncmp(boardnames[n],buf,b)) {
+            if(boardnames[n] && !strncmp(boardnames[n],buf,b)) {
               lbrd=n;
               goto boards_form;
             }
@@ -422,7 +422,8 @@ int run_editor(void) {
       if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
     }
     win_command('c',"Screens...") {
-      win_cursor(lbrd);
+      win_cursor(lscr);
+      screens_form:
       win_form("Screens") {
         if(screennames) win_list(maxscreen+1,0,screen_list_callback,n) {
           //edit_screen(n);
@@ -431,7 +432,12 @@ int run_editor(void) {
         win_blank();
         if(maxscreen!=65535) {
           win_command('A',"Add new screen") {
-            
+            char buf[61]="";
+            ask_text("Add new screen:",buf,60);
+            if(*buf) {
+              
+              goto screens_form;
+            }
           }
         }
         win_command_esc(0,"Done") break;

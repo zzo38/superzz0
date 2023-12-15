@@ -21,6 +21,7 @@ void draw_border(Uint8 c,Uint8 x0,Uint8 y0,Uint8 x1,Uint8 y1) {
 }
 
 void alert_text(const char*text) {
+  v_xcur=v_ycur=128;
   cwin=0;
   draw_border(0x4E,1,20,78,23);
   draw_text(3,21,text,0x4E,-1);
@@ -34,6 +35,7 @@ void alert_text(const char*text) {
 
 void ask_text(const char*prompt,Uint8*buf,int len) {
   int i,n;
+  v_xcur=v_ycur=128;
   cwin=0;
   draw_border(0x2A,1,20,78,23);
   draw_text(3,21,prompt,0x2E,-1);
@@ -48,6 +50,14 @@ void ask_text(const char*prompt,Uint8*buf,int len) {
     if(event.key.keysym.sym==SDLK_RETURN) break;
     i=event.key.keysym.unicode;
     if(i==0x0D || i==0x0A) break;
+    if(n<len && i==0x10) {
+      memcpy(sv_char,v_char,80*25);
+      memcpy(sv_color,v_color,80*25);
+      buf[n++]=ask_color_char(1,128);
+      buf[n]=0;
+      memcpy(v_char,sv_char,80*25);
+      memcpy(v_color,sv_color,80*25);
+    }
     if(n<len && i>=0x20 && i<0x7F) buf[n++]=i,buf[n]=0;
     if(n && i==0x08) buf[n-1]=0;
     if(i==0x15) *buf=0;
@@ -56,6 +66,7 @@ void ask_text(const char*prompt,Uint8*buf,int len) {
 
 Uint8 ask_color_char(Uint8 m,Uint8 v) {
   int x;
+  v_xcur=v_ycur=128;
   cwin=0;
   memset(v_color+2*80+29,0x1B,20);
   v_char[2*80+29]=0xDA;
@@ -122,6 +133,7 @@ win_memo win_begin_(void) {
 
 void win_step_(win_memo*wm,const char*title) {
   event.type=SDL_KEYUP;
+  v_xcur=v_ycur=128;
   restart:
   if(wm->cur && wm->scroll>wm->cur-1) {
     wm->scroll=wm->cur-1;
@@ -412,10 +424,13 @@ int win_text_(win_memo*wm,Uint8 key,const char*label,Uint8*v,size_t s,Uint8 q) {
         } else if(key==0x15 && *v) {
           r=1;
           *v=0;
-        } else if(key==0x10 && *v && !q) {
-          r=1;
+        } else if(key==0x10 && !q) {
           i=strlen(v);
-          if(i<s-1) v[i]=ask_color_char(1,128),v[i+1]=0;
+          if(i<s-1) {
+            v[i]=ask_color_char(1,128);
+            v[i+1]=0;
+            return 1;
+          }
         }
       }
     } else if(event.key.keysym.sym==SDLK_UP || (event.key.keysym.sym==SDLK_TAB && (event.key.keysym.mod&KMOD_SHIFT))) {

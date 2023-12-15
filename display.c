@@ -339,11 +339,14 @@ Uint8 v_char[80*25];
 Uint8 sv_color[80*25];
 Uint8 sv_char[80*25];
 Uint8 v_status[82];
+Uint8 v_xcur=128;
+Uint8 v_ycur=128;
 SDL_Event event;
 
 static SDL_Surface*scrn;
 
-static SDL_Color palet[18]={
+static SDL_Color palet[34]={
+  // PC
   {0x00,0x00,0x00},
   {0x00,0x00,0xAA},
   {0x00,0xAA,0x00},
@@ -360,8 +363,26 @@ static SDL_Color palet[18]={
   {0xFF,0x55,0xFF},
   {0xFF,0xFF,0x55},
   {0xFF,0xFF,0xFF},
-  {0x29,0x29,0x22},
-  {0xA4,0xBB,0xBB},
+  // cursor
+  {0x80,0x80,0x80},
+  {0x80,0x80,0x2A},
+  {0x80,0x2A,0x80},
+  {0x80,0x2A,0x2A},
+  {0x2A,0x80,0x80},
+  {0x2A,0x80,0x2A},
+  {0x2A,0xE6,0x80},
+  {0x2A,0x2A,0x2A},
+  {0xD5,0xD5,0xD5},
+  {0xD5,0xD5,0x7F},
+  {0xD5,0x7F,0xD5},
+  {0xD5,0x7F,0x7F},
+  {0x7F,0xD5,0xD5},
+  {0x7F,0xD5,0x7F},
+  {0x7F,0x7F,0xD5},
+  {0x7F,0x7F,0x7F},
+  // border/status
+  {0x2A,0x2A,0x22},
+  {0xA4,0xBD,0xBB},
 };
 
 void init_display(void) {
@@ -370,7 +391,7 @@ void init_display(void) {
   atexit(SDL_Quit);
   scrn=SDL_SetVideoMode(81*8,(config.show_status?26:25)*14+8,8,SDL_SWSURFACE|(config.full_screen?SDL_FULLSCREEN:0));
   if(!scrn) errx(1,"SDL error: %s",SDL_GetError());
-  SDL_SetColors(scrn,palet,0,18);
+  SDL_SetColors(scrn,palet,0,34);
   SDL_EnableUNICODE(1);
   SDL_EnableKeyRepeat(config.key_repeat_delay,config.key_repeat_interval);
   clear:
@@ -383,7 +404,7 @@ void redisplay(void) {
   Uint8*p;
   int a,b,c,r,x,y,z;
   if(!scrn) return;
-  SDL_FillRect(scrn,0,16);
+  SDL_FillRect(scrn,0,32);
   SDL_LockSurface(scrn);
   r=scrn->pitch;
   p=scrn->pixels+4*r+4;
@@ -401,8 +422,15 @@ void redisplay(void) {
     for(a=0;a<14;a++) {
       for(x=0;x<81;x++) {
         c=font[14*v_status[x]+a];
-        for(b=0;b<8;b++) p[b+(x<<3)]=(c&128?17:16),c<<=1;
+        for(b=0;b<8;b++) p[b+(x<<3)]=(c&128?33:32),c<<=1;
       }
+      p+=r;
+    }
+  }
+  if(v_xcur<80 && v_ycur<25) {
+    p=scrn->pixels+(4+14*v_ycur)*r+4+8*v_xcur;
+    for(y=0;y<14;y++) {
+      for(x=0;x<8;x++) p[x]^=((x==0 || x==7 || y==0 | y==13)?16:8);
       p+=r;
     }
   }

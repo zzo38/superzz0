@@ -8,6 +8,7 @@ exit
 
 static Uint16 brd_id;
 static Uint16 xcur,ycur;
+static Uint8 status_on=255;
 
 void set_board_name(Uint16 id,const char*name) {
   if(maxboard<id) {
@@ -111,7 +112,226 @@ static void edit_board_info(void) {
   if(*nam) set_board_name(brd_id,nam);
 }
 
-void edit_board(Uint16 id) {
-  goto_board(id);
-  
+static void clear_extra_stats(void) {
+  int i,j;
+  for(i=0;i<maxstat;i++) for(j=0;j<stats[i].count;) {
+    if(stats[i].xy[j].x>=board_info.width || stats[i].xy[j].y>=board_info.height) {
+      memmove(stats[i].xy+j,stats[i].xy+j+1,(stats[i].count-j-1)*sizeof(StatXY));
+      --stats[i].count;
+    } else {
+      j++;
+    }
+  }
 }
+
+static void edit_tile(void) {
+  char lay=1;
+  Tile*p;
+  win_form("Tile") {
+    win_numeric('X',"X: ",xcur,0,board_info.width-1) win_refresh();
+    win_numeric('Y',"Y: ",ycur,0,board_info.height-1) win_refresh();
+    win_option('U',"Under layer",lay,0) win_refresh();
+    win_option('M',"Main layer",lay,1) win_refresh();
+    win_option('O',"Over layer",lay,2) win_refresh();
+    win_blank();
+    p=(lay==0?b_under:lay==1?b_main:b_over)+xcur+ycur*board_info.width;
+    win_numeric('K',"Kind: ",p->kind,0,255);
+    win_color('C',"Color: ",p->color);
+    win_numeric('P',"Parameter: ",p->param,0,255);
+    win_char('h',"Character: ",p->param) win_refresh();
+    win_picture(1) {
+      char buf[40];
+      draw_text(0,0,buf,7,snprintf(buf,40,"Stat: %3d",p->stat));
+      if(!p->stat) v_color[8]=8;
+    }
+    win_blank();
+    win_command_esc(0,"Done") break;
+  }
+}
+
+static void resize_board(void) {
+  static Uint8 m=0;
+  static Uint8 b=0;
+  Uint16 w=board_info.width;
+  Uint16 h=board_info.height;
+  Tile*ku=b_under;
+  Tile*km=b_main;
+  Tile*ko=b_over;
+  Uint32 x,y,z;
+  Sint32 ox,oy;
+  win_form("Resize board") {
+    win_picture(1) {
+      char buf[40];
+      draw_text(1,0,buf,7,snprintf(buf,40,"Current: %dx%d",board_info.width,board_info.height));
+    }
+    win_numeric('W',"Width: ",w,1,9999);
+    win_numeric('H',"Height: ",h,1,9999);
+    win_heading("Do with existing grid:");
+    win_option('N',"Northwest",m,0);
+    win_option('o',"Northeast",m,1);
+    win_option('S',"Southwest",m,2);
+    win_option('u',"Southeast",m,3);
+    win_option('C',"Center",m,4);
+    win_option('T',"Tile",m,5);
+    win_option('d',"Tile with duplicate stats",m,6);
+    //win_boolean('F',"Fill",b,1);
+    win_blank();
+    win_command('x',"Execute") break;
+    win_command_esc(0,"Cancel") return;
+  }
+  if(w==board_info.width && h==board_info.height) return;
+  b_under=calloc(w*h,3*sizeof(Tile));
+  if(!b_under) err(1,"Allocation failed");
+  b_main=b_under+w*h;
+  b_over=b_main+w*h;
+  if(m>4) {
+    for(x=0;x<w;x++) for(y=0;y<h;y++) {
+      z=x%board_info.width+(y%board_info.height)*board_info.width;
+      b_under[x+y*w]=ku[z];
+      b_main[x+y*w]=km[z];
+      b_over[x+y*w]=ko[z];
+      if(m==5 && x>=board_info.width || y>=board_info.height) b_under[z].stat=b_main[z].stat=b_over[z].stat=0;
+    }
+    if(m==6) {
+      ox=(w/board_info.width)+(w%board_info.width?1:0);
+      oy=(h/board_info.height)+(h%board_info.height?1:0);
+      for(x=0;x<maxstat;x++) if(stats[x].count) {
+        z=stats[x].count;
+        stats[x].xy=realloc(stats[x].xy,(stats[x].count*=ox*oy)*sizeof(StatXY));
+        if(!stats[x].xy) err(1,"Allocation failed");
+        for(y=z;y<stats[x].count;y++) {
+          stats[x].xy[y]=stats[x].xy[y%z];
+          stats[x].xy[y].x+=board_info.width*((y/z)%ox);
+          stats[x].xy[y].y+=board_info.height*((y/z)/ox);
+        }
+      }
+    }
+  } else {
+    if(b&1) {
+      //TODO: fill
+    }
+    switch(m) {
+      case 0: ox=oy=0; break;
+      case 1: ox=w-board_info.width; oy=0; break;
+      case 2: ox=0; oy=h-board_info.height; break;
+      case 3: ox=w-board_info.width; oy=h-board_info.height; break;
+      case 4: ox=(w-board_info.width)/2; oy=(h-board_info.height)/2; break;
+    }
+    for(x=0;x<maxstat;x++) for(y=0;y<stats[x].count;y++) {
+      stats[x].xy[y].x+=ox;
+      stats[x].xy[y].y+=oy;
+    }
+    xcur+=ox; ycur+=oy;
+    if(xcur>=w) xcur=0;
+    if(ycur>=h) ycur=0;
+    ox=-ox; oy=-oy;
+    for(x=0;x<board_info.width;x++) for(y=0;y<board_info.height;y++) {
+      if(x+ox<0 || x+ox>=w || y+oy<0 || y+oy>=h) continue;
+      z=x+ox+(y+oy)*board_info.width;
+      b_under[x+y*w]=ku[z];
+      b_main[x+y*w]=km[z];
+      b_over[x+y*w]=ko[z];
+    }
+  }
+  board_info.width=w;
+  board_info.height=h;
+  free(ku);
+  clear_extra_stats();
+}
+
+static void set_board_editor_screen(void) {
+  memset(cur_screen.command,SC_BOARD+5,80*25);
+  memset(cur_screen.color,0x01,80*25);
+  memset(cur_screen.parameter,177,80*25);
+  cur_screen.view_x=39;
+  cur_screen.view_y=12;
+  cur_screen.message_x=cur_screen.message_y=180;
+  cur_screen.flag=0;
+  cur_screen.soft_edge[DIR_W]=cur_screen.hard_edge[DIR_W]=0;
+  cur_screen.soft_edge[DIR_N]=cur_screen.hard_edge[DIR_N]=0;
+  cur_screen.soft_edge[DIR_E]=cur_screen.hard_edge[DIR_E]=79;
+  cur_screen.soft_edge[DIR_S]=cur_screen.hard_edge[DIR_S]=24;
+}
+
+static void esave(void) {
+  FILE*fp=open_lump_by_number(brd_id,"BRD","w");
+  if(fp) {
+    save_board(fp,0);
+    fclose(fp);
+  }
+}
+
+static void escroll(void) {
+  if(xcur>scroll_x+79) {
+    scroll_x+=config.editor_scroll_x;
+    if(xcur>scroll_x+79) scroll_x=xcur-79;
+  } else if(xcur<scroll_x) {
+    scroll_x-=config.editor_scroll_x;
+    if(xcur<scroll_x) scroll_x=xcur;
+  }
+  if(ycur>scroll_y+24) {
+    scroll_y+=config.editor_scroll_y;
+    if(ycur>scroll_y+24) scroll_y=ycur-24;
+  } else if(ycur<scroll_y) {
+    scroll_y-=config.editor_scroll_y;
+    if(ycur<scroll_y) scroll_y=ycur;
+  }
+  if(scroll_x+79>board_info.width) scroll_x=board_info.width-79;
+  if(scroll_y+24>board_info.height) scroll_y=board_info.height-24;
+  if(scroll_x<0) scroll_x=0;
+  if(scroll_y<0) scroll_y=0;
+}
+
+static void estatus(void) {
+  char buf[80];
+  int y=24;
+  if(board_info.height>24 && v_ycur>12) y=0;
+  memset(v_color+y*80,0x11,80);
+  draw_text(0,y,buf,0x1B,snprintf(buf,80,"%5d",brd_id));
+  v_color[y*80+5]=v_color[y*80+6]=0x12;
+  v_char[y*80+5]="\xFA\x18\x19\x12"[(board_info.exits[DIR_N]?1:0)+(board_info.exits[DIR_S]?2:0)];
+  v_char[y*80+6]="\xFA\x1A\x1B\x1D"[(board_info.exits[DIR_E]?1:0)+(board_info.exits[DIR_W]?2:0)];
+  draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
+}
+
+static void cursor_move(Sint32 xd,Sint32 yd) {
+  if(xcur+xd>=0 && xcur+xd<board_info.width) xcur+=xd;
+  if(ycur+yd>=0 && ycur+yd<board_info.height) ycur+=yd;
+}
+
+void edit_board(Uint16 id) {
+  int i;
+  if(status_on==255) status_on=config.brd_edit_status;
+  set_board_editor_screen();
+  goto_board(id);
+  scroll_x=scroll_y=0;
+  v_status[1]='B';
+  for(;;) {
+    escroll();
+    update_screen();
+    v_xcur=xcur-scroll_x; v_ycur=ycur-scroll_y;
+    if(status_on) estatus();
+    redisplay();
+    do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
+    switch((!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym) {
+      case 0x1B: goto exit;
+      case -SDLK_i: edit_board_info(); break;
+      case -SDLK_r: resize_board(); break;
+      case -SDLK_t:
+        if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
+        run_test_game(brd_id);
+        break;
+      case SDLK_e: edit_tile(); break;
+      case SDLK_h: case -SDLK_LEFT: cursor_move(-1,0); break;
+      case SDLK_j: case -SDLK_DOWN: cursor_move(0,1); break;
+      case SDLK_k: case -SDLK_UP: cursor_move(0,-1); break;
+      case SDLK_l: case -SDLK_RIGHT: cursor_move(1,0); break;
+      case -SDLK_HOME: xcur=ycur=0; break;
+      case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
+    }
+  }
+  exit:
+  v_status[1]=0;
+  esave();
+}
+
