@@ -464,8 +464,22 @@ Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
 }
 
 int next_event(void) {
+  static const SDLKey numpad[11]={
+    SDLK_INSERT,
+    SDLK_END, SDLK_DOWN, SDLK_PAGEDOWN,
+    SDLK_LEFT, 0, SDLK_RIGHT,
+    SDLK_HOME, SDLK_UP, SDLK_PAGEUP,
+    SDLK_DELETE,
+  };
   while(SDL_WaitEvent(&event)) switch(event.type) {
-    case SDL_KEYDOWN: return 1;
+    case SDL_KEYDOWN:
+      if(event.key.keysym.sym>=300 && event.key.keysym.sym<=314) break;
+      if(event.key.keysym.sym==SDLK_KP_ENTER) event.key.keysym.sym=SDLK_RETURN;
+      if(event.key.keysym.sym>=256 && event.key.keysym.sym<=266 && !(event.key.keysym.mod&KMOD_NUM)) {
+        event.key.keysym.unicode=0;
+        event.key.keysym.sym=numpad[event.key.keysym.sym-256];
+      }
+      return 1;
     case SDL_QUIT: return 0;
     case SDL_VIDEOEXPOSE: redisplay(); break;
   }
