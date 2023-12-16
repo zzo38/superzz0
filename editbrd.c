@@ -9,6 +9,8 @@ exit
 static Uint16 brd_id;
 static Uint16 xcur,ycur;
 static Uint8 status_on=255;
+static Tile clip;
+static Uint8 apparent_clip;
 
 void set_board_name(Uint16 id,const char*name) {
   if(maxboard<id) {
@@ -282,6 +284,23 @@ static void escroll(void) {
   if(scroll_y<0) scroll_y=0;
 }
 
+static void set_apparent_clip(void) {
+  Uint8 c=elem_def[clip.kind].app[0];
+  Uint8 d=elem_def[clip.kind].app[1];
+  if(c&0x20) {
+    apparent_clip=appearance_mapping[((d&0x7E)+((clip.param>>(c&7))&"\x01\x03\x07\x0F"[(c>>3)&3]))&0x7F];
+  } else switch(c&0x1F) {
+    case AP_FIXED: case AP_UNDER: apparent_clip=d; break;
+    case AP_PARAM: apparent_clip=d+clip.param; break;
+    case AP_LINES: apparent_clip=appearance_mapping[(d&0x70)|0x0F]; break;
+    case AP_ANIMATE: apparent_clip=appearance_mapping[(animation[d&3].step[0]+(d&0x7C))&0x7F]; break;
+    case AP_MISC1: if(clip.stat && clip.stat<=maxstat) apparent_clip=stats[clip.stat-1].misc1; else apparent_clip=d; break;
+    case AP_MISC2: if(clip.stat && clip.stat<=maxstat) apparent_clip=stats[clip.stat-1].misc2; else apparent_clip=d; break;
+    case AP_MISC3: if(clip.stat && clip.stat<=maxstat) apparent_clip=stats[clip.stat-1].misc3; else apparent_clip=d; break;
+    default: apparent_clip='?';
+  }
+}
+
 static void estatus(void) {
   char buf[80];
   int y=24;
@@ -291,6 +310,14 @@ static void estatus(void) {
   v_color[y*80+5]=v_color[y*80+6]=0x12;
   v_char[y*80+5]="\xFA\x18\x19\x12"[(board_info.exits[DIR_N]?1:0)+(board_info.exits[DIR_S]?2:0)];
   v_char[y*80+6]="\xFA\x1A\x1B\x1D"[(board_info.exits[DIR_E]?1:0)+(board_info.exits[DIR_W]?2:0)];
+  draw_text(7,y,"<\xFE>",0x17,3);
+  v_color[y*80+8]=clip.color;
+  draw_text(10,y,elem_def[clip.kind].name,0x1B,-1);
+  draw_text(25,y,buf,0x17,snprintf(buf,80,"<%02X>",clip.param));
+  v_char[y*80+29]=(clip.stat?'s':' ');
+  v_color[y*80+29]=0x1A;
+  v_char[y*80+30]=apparent_clip;
+  v_color[y*80+30]=clip.color;
   draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
 }
 
@@ -302,6 +329,7 @@ static void cursor_move(Sint32 xd,Sint32 yd) {
 void edit_board(Uint16 id) {
   int i;
   if(status_on==255) status_on=config.brd_edit_status;
+  set_apparent_clip();
   set_board_editor_screen();
   goto_board(id);
   scroll_x=scroll_y=0;
@@ -328,6 +356,7 @@ void edit_board(Uint16 id) {
       case SDLK_l: case -SDLK_RIGHT: cursor_move(1,0); break;
       case -SDLK_HOME: xcur=ycur=0; break;
       case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
+      case -SDLK_INSERT: clip=(event.key.keysym.mod&KMOD_SHIFT?b_under:b_main)[xcur+ycur*board_info.width]; set_apparent_clip(); break;
     }
   }
   exit:
