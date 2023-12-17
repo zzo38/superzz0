@@ -176,8 +176,14 @@ static void resize_board(void) {
     win_option('C',"Center",m,4);
     win_option('T',"Tile",m,5);
     win_option('d',"Tile with duplicate stats",m,6);
-    //win_boolean('F',"Fill",b,1);
+    win_boolean('F',"Fill main with current",b,1);
+    win_boolean('v',"Fill overlay with (0,0)",b,2);
     win_blank();
+    win_command('p',"Use cursor position") {
+      w=xcur+1;
+      h=ycur+1;
+      win_refresh();
+    }
     win_command('x',"Execute") break;
     win_command_esc(0,"Cancel") return;
   }
@@ -209,9 +215,8 @@ static void resize_board(void) {
       }
     }
   } else {
-    if(b&1) {
-      //TODO: fill
-    }
+    if(b&1) for(x=0;x<w*h;x++) b_main[x]=clip,b_main[x].stat=0;
+    if(b&2) for(x=0;x<w*h;x++) b_over[x]=*ko,b_over[x].stat=0;
     switch(m) {
       case 0: ox=oy=0; break;
       case 1: ox=w-board_info.width; oy=0; break;
@@ -318,6 +323,9 @@ static void estatus(void) {
   v_color[y*80+29]=0x1A;
   v_char[y*80+30]=apparent_clip;
   v_color[y*80+30]=clip.color;
+  if(b_under[ycur*board_info.width+xcur].kind) v_char[y*80+31]='u',v_color[y*80+31]=0x13;
+  if(b_main[ycur*board_info.width+xcur].kind) v_char[y*80+32]='m',v_color[y*80+32]=0x13;
+  if(b_over[ycur*board_info.width+xcur].kind) v_char[y*80+33]='o',v_color[y*80+33]=0x13;
   draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
 }
 
