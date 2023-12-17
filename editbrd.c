@@ -11,6 +11,8 @@ static Uint16 xcur,ycur;
 static Uint8 status_on=255;
 static Tile clip;
 static Uint8 apparent_clip;
+static Uint16 numprefix;
+static Uint8 emode;
 
 void set_board_name(Uint16 id,const char*name) {
   if(maxboard<id) {
@@ -326,14 +328,20 @@ static void estatus(void) {
   if(b_under[ycur*board_info.width+xcur].kind) v_char[y*80+31]='u',v_color[y*80+31]=0x13;
   if(b_main[ycur*board_info.width+xcur].kind) v_char[y*80+32]='m',v_color[y*80+32]=0x13;
   if(b_over[ycur*board_info.width+xcur].kind) v_char[y*80+33]='o',v_color[y*80+33]=0x13;
+  if(numprefix) draw_text(34,y,buf,0x1E,snprintf(buf,80,"%5d",numprefix));
+  v_char[y*80+39]=emode;
+  v_color[y*80+39]=0x1C;
   draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
   v_char[y*80+69]="(\x11\x10\x04"[(scroll_x?1:0)+(scroll_x+80<board_info.width?2:0)];
   v_char[y*80+79]=")\x1E\x1F\x04"[(scroll_y?1:0)+(scroll_y+25<board_info.height?2:0)];
 }
 
 static void cursor_move(Sint32 xd,Sint32 yd) {
-  if(xcur+xd>=0 && xcur+xd<board_info.width) xcur+=xd;
-  if(ycur+yd>=0 && ycur+yd<board_info.height) ycur+=yd;
+  Sint32 x=xcur+xd*(numprefix?:1);
+  Sint32 y=ycur+yd*(numprefix?:1);
+  numprefix=0;
+  if(x<0) xcur=0; else if(x>=board_info.width) xcur=board_info.width-1; else xcur=x;
+  if(y<0) ycur=0; else if(y>=board_info.height) ycur=board_info.height-1; else ycur=y;
 }
 
 void edit_board(Uint16 id) {
@@ -352,7 +360,9 @@ void edit_board(Uint16 id) {
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
     switch((!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym) {
-      case 0x1B: goto exit;
+      case 0x08: numprefix/=10; break;
+      case 0x1B: if(numprefix) numprefix=0; else goto exit; break;
+      case '0' ... '9': if((i=numprefix*10+event.key.keysym.unicode-'0')<65536) numprefix=i; break;
       case -SDLK_i: edit_board_info(); break;
       case -SDLK_r: resize_board(); break;
       case -SDLK_t:
