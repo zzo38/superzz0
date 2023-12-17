@@ -327,6 +327,8 @@ static void estatus(void) {
   if(b_main[ycur*board_info.width+xcur].kind) v_char[y*80+32]='m',v_color[y*80+32]=0x13;
   if(b_over[ycur*board_info.width+xcur].kind) v_char[y*80+33]='o',v_color[y*80+33]=0x13;
   draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
+  v_char[y*80+69]="(\x11\x10\x04"[(scroll_x?1:0)+(scroll_x+80<board_info.width?2:0)];
+  v_char[y*80+79]=")\x1E\x1F\x04"[(scroll_y?1:0)+(scroll_y+25<board_info.height?2:0)];
 }
 
 static void cursor_move(Sint32 xd,Sint32 yd) {
