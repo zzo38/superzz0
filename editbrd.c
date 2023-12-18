@@ -270,6 +270,18 @@ static void esave(void) {
   }
 }
 
+static inline void switch_to_board(Sint32 id) {
+  FILE*fp;
+  if(id<0) return;
+  esave();
+  fp=open_lump_by_number(id,"BRD","r");
+  if(!fp) return;
+  load_board(fp);
+  fclose(fp);
+  if(xcur>=board_info.width || ycur>=board_info.height) xcur=ycur=0;
+  brd_id=id;
+}
+
 static void escroll(void) {
   if(xcur>scroll_x+79) {
     scroll_x+=config.editor_scroll_x;
@@ -336,16 +348,79 @@ static void estatus(void) {
   v_char[y*80+79]=")\x1E\x1F\x04"[(scroll_y?1:0)+(scroll_y+25<board_info.height?2:0)];
 }
 
+static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay) {
+  int i;
+  Stat*s;
+  if(!n || n>maxstat) return 0;
+  s=stats+n-1;
+  if(nlay && !lay) {
+    i=s->count;
+    s->xy=realloc(s->xy,++s->count*sizeof(StatXY));
+    if(!s->xy) err(1,"Allocation failed");
+    s->xy[i].x=x;
+    s->xy[i].y=y;
+    s->xy[i].instptr=0;
+    s->xy[i].layer=nlay;
+    s->xy[i].delay=0;
+    return s->xy+i;
+  }
+  for(i=0;i<s->count;i++) {
+    if(s->xy[i].x==x && s->xy[i].y==y && (s->xy[i].layer&3)==lay) {
+      if(nlay) {
+        s->xy[i].layer=(s->xy[i].layer&~3)|(nlay&3);
+      } else {
+        if(i!=s->count-1) memmove(s->xy+i,s->xy+i+1,(s->count-i-1)*sizeof(StatXY));
+        --s->count;
+        return 0;
+      }
+      break;
+    }
+  }
+  return 0;
+}
+
+static void delete_at(Uint16 x,Uint16 y) {
+  Uint32 at=y*board_info.width+x;
+  find_stat(x,y,b_main[at].stat,2,0);
+  b_main[at]=b_under[at];
+  b_under[at].kind=b_under[at].color=b_under[at].param=b_under[at].stat=0;
+  find_stat(x,y,b_main[at].stat,1,2);
+}
+
+static void place_at(Uint16 x,Uint16 y,Tile t) {
+  Uint32 at=y*board_info.width+x;
+  if(b_main[at].kind==t.kind && b_main[at].color==t.color && b_main[at].param==t.param) return;
+  if((elem_def[b_main[at].kind].attrib&~elem_def[t.kind].attrib)&A_FLOOR) {
+    if(b_under[at].stat && !config.overwrite_stats) return;
+    find_stat(x,y,b_under[at].stat,1,0);
+    b_under[at]=b_main[at];
+    find_stat(x,y,b_under[at].stat,2,1);
+  } else {
+    if(b_main[at].stat && !config.overwrite_stats) return;
+    find_stat(x,y,b_main[at].stat,2,0);
+  }
+  b_main[at]=t;
+  if(t.stat) find_stat(x,y,t.stat,0,2);
+}
+
 static void cursor_move(Sint32 xd,Sint32 yd) {
   Sint32 x=xcur+xd*(numprefix?:1);
   Sint32 y=ycur+yd*(numprefix?:1);
+  if(emode!='*') {
+    if(x<0) xcur=0; else if(x>=board_info.width) xcur=board_info.width-1; else xcur=x;
+    if(y<0) ycur=0; else if(y>=board_info.height) ycur=board_info.height-1; else ycur=y;
+  } else {
+    if(!numprefix) numprefix=1;
+    while(numprefix-- && xcur+xd>=0 && xcur+xd<board_info.width && ycur+yd>=0 && ycur+yd<board_info.height) {
+      place_at(xcur+=xd,ycur+=yd,clip);
+    }
+  }
   numprefix=0;
-  if(x<0) xcur=0; else if(x>=board_info.width) xcur=board_info.width-1; else xcur=x;
-  if(y<0) ycur=0; else if(y>=board_info.height) ycur=board_info.height-1; else ycur=y;
 }
 
-void edit_board(Uint16 id) {
+Uint16 edit_board(Uint16 id) {
   int i;
+  Sint32 k;
   if(status_on==255) status_on=config.brd_edit_status;
   set_apparent_clip();
   set_board_editor_screen();
@@ -359,28 +434,40 @@ void edit_board(Uint16 id) {
     if(status_on) estatus();
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
-    switch((!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym) {
-      case 0x08: numprefix/=10; break;
-      case 0x1B: if(numprefix) numprefix=0; else goto exit; break;
-      case '0' ... '9': if((i=numprefix*10+event.key.keysym.unicode-'0')<65536) numprefix=i; break;
-      case -SDLK_i: edit_board_info(); break;
-      case -SDLK_r: resize_board(); break;
-      case -SDLK_t:
-        if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
-        run_test_game(brd_id);
-        break;
-      case SDLK_e: edit_tile(); break;
-      case SDLK_h: case -SDLK_LEFT: cursor_move(-1,0); break;
-      case SDLK_j: case -SDLK_DOWN: cursor_move(0,1); break;
-      case SDLK_k: case -SDLK_UP: cursor_move(0,-1); break;
-      case SDLK_l: case -SDLK_RIGHT: cursor_move(1,0); break;
-      case -SDLK_HOME: xcur=ycur=0; break;
-      case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
-      case -SDLK_INSERT: clip=(event.key.keysym.mod&KMOD_SHIFT?b_under:b_main)[xcur+ycur*board_info.width]; set_apparent_clip(); break;
+    k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+    switch(emode) {
+      case 0: case '*': no_mode: switch(k) {
+        case 0x08: numprefix/=10; break;
+        case 0x09: if(emode=(emode?0:'*')) place_at(xcur,ycur,clip); break;
+        case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
+        case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
+        case -SDLK_i: edit_board_info(); break;
+        case -SDLK_r: resize_board(); break;
+        case -SDLK_t:
+          if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
+          run_test_game(brd_id);
+          break;
+        case ' ': place_at(xcur,ycur,clip); break;
+        case 'e': edit_tile(); break;
+        case 'h': case -SDLK_LEFT: cursor_move(-1,0); break;
+        case 'j': case -SDLK_DOWN: cursor_move(0,1); break;
+        case 'k': case -SDLK_UP: cursor_move(0,-1); break;
+        case 'l': case -SDLK_RIGHT: cursor_move(1,0); break;
+        case -SDLK_HOME: xcur=ycur=0; break;
+        case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
+        case -SDLK_INSERT: clip=(event.key.keysym.mod&KMOD_SHIFT?b_under:b_main)[xcur+ycur*board_info.width]; set_apparent_clip(); break;
+        case -SDLK_DELETE: delete_at(xcur,ycur); break;
+        case '[': switch_to_board(brd_id-(numprefix?:1)); numprefix=0; break;
+        case ']': switch_to_board(brd_id+(numprefix?:1)); numprefix=0; break;
+        case '{': switch_to_board(numprefix); numprefix=0; break;
+        case '}': switch_to_board(maxboard); numprefix=0; break;
+      } break;
+      default: emode=0;
     }
   }
   exit:
   v_status[1]=0;
   esave();
+  return brd_id;
 }
 

@@ -57,7 +57,7 @@ void run_test_game(int);
 extern Uint8 editor;
 
 int run_editor(void);
-void edit_board(Uint16);
+Uint16 edit_board(Uint16);
 void edit_screen(Uint16);
 void combine_assembled(void);
 void set_board_name(Uint16 id,const char*name);
