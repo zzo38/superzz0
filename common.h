@@ -384,8 +384,8 @@ void update_screen(void);
 #define XOP_S_HEIGHT 0x0D50 // board height plus (source+(value&15)-8)
 #define XOP_S_PLAYER_X 0x0D60 // X coordinate of first XY record of stat 1, plus ((value&15)-8-source)
 #define XOP_S_PLAYER_Y 0x0D70 // Y coordinate of first XY record of stat 1, plus ((value&15)-8-source)
-#define XOP_S_BOARD_ID 0xD80 // current board number
-#define XOP_S_SCREEN_ID 0xD90 // current screen number
+#define XOP_S_BOARD_ID 0x0D80 // current board number
+#define XOP_S_SCREEN_ID 0x0D90 // current screen number
 
 #define MEM_KEY_EVENT 0xE0
 #define MEM_FRAME_EVENT 0xE1

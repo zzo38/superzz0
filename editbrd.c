@@ -354,6 +354,7 @@ static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay) {
   if(!n || n>maxstat) return 0;
   s=stats+n-1;
   if(nlay && !lay) {
+    if(s->count>=0xFFFE) return 0;
     i=s->count;
     s->xy=realloc(s->xy,++s->count*sizeof(StatXY));
     if(!s->xy) err(1,"Allocation failed");
