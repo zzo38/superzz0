@@ -453,8 +453,9 @@ address of the next record and the global string number which is the
 name of a custom script command, and then after that will be the code
 which is executed for that custom script command.
 
-* 0xE3 = Shape and radius of light; the high byte is the shape and the
-low byte is the radius.
+* 0xE3 = Address of memory for light shape to suppress overlay. If this is
+at least 65488 then there is no light to suppress the overlay. It must be
+the address of a buffer of at least forty-nine cells in order to work.
 
 * 0xE4 = Warp target
 

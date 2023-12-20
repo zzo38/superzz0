@@ -5,6 +5,7 @@ exit
 
 #include "common.h"
 #include "opcodes.h"
+#include <math.h>
 
 ElementDef elem_def[256];
 Uint8 appearance_mapping[128];
@@ -305,6 +306,34 @@ StatXY*add_statxy(int n) {
   return r;
 }
 
+static inline void calc_light(Uint8 sh,Sint32 r) {
+  Uint16 a=memory[MEM_LIGHT];
+  int i,j;
+  if(a>=65488) return;
+  memset(memory+a,0,49);
+  // Data format: [a+24+vertical] ((Left+128)<<8)|(Right+128)
+  // where Left/Right is relative to player's X coordinate
+  switch(sh) {
+    case 1: // box / Chebyshev
+      if(r>24) r=24;
+      for(i=a+24-r;i<=a+24+r;i++) memory[i]=((128-r)<<8)|(128+r);
+      break;
+    case 2: // circle / Euclid
+      if(r>255) r=255;
+      r*=r;
+      for(i=0;i<49;i++) if((j=(24-i)*(24-i)-r)>0) {
+        j=sqrt(j)+0.5;
+        if(j>127) j=127;
+        memory[a+i]=((128-j)<<8)|(128+j);
+      }
+      break;
+    case 3: // diamond / Manhattan
+      if(r>127) r=127;
+      for(i=0;i<49;i++) if((j=abs(24-i))<=r) memory[a+i]=((128+j-r)<<8)|(128+r-j);
+      break;
+  }
+}
+
 static Uint32 dice(Uint32 n) {
   
 }
@@ -479,7 +508,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_JZ: if(!regs[fo]) goto jump; break;
       case OP_LESS: condflag=(regs[fo]<so?1:0); break;
       case OP_LET: goto store;
-      case OP_LITE: memory[MEM_LIGHT]=(so<0?0:((fo<<8)|(so>255?255:so))); break;
+      case OP_LITE: calc_light(fo,so); break;
       case OP_LOOP: if(!regs[fo]) break; --regs[fo]; goto jump;
       case OP_LSH: regs[fo]=(so&~31?0:regs[fo]<<so); break;
       case OP_MAX: if(so>regs[fo]) goto store; break;
