@@ -26,6 +26,7 @@ void alert_text(const char*text) {
   draw_border(0x4E,1,20,78,23);
   draw_text(3,21,text,0x4E,-1);
   draw_text(3,22,"<Push return to continue>",0x47,-1);
+  redisplay();
   for(;;) {
     if(!next_event()) break;
     if(event.type!=SDL_KEYDOWN) continue;
