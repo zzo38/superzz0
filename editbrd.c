@@ -13,6 +13,8 @@ static Tile clip;
 static Uint8 apparent_clip;
 static Uint16 numprefix;
 static Uint8 emode;
+static Uint8*markgrid;
+static Uint16 markwidth,markheight,markskip;
 
 void set_board_name(Uint16 id,const char*name) {
   if(maxboard<id) {
@@ -26,6 +28,37 @@ void set_board_name(Uint16 id,const char*name) {
   free(boardnames[id]);
   boardnames[id]=strdup(name);
   if(!boardnames[id]) err(1,"Allocation failed");
+}
+
+static Uint8 set_mark(Uint16 x,Uint16 y,Uint8 mask) {
+  Uint8*g0;
+  Uint16 w0,h0,s0;
+  Uint32 i;
+  if(x>=board_info.width || y>=board_info.height) return 0;
+  if(!markgrid || x>=markwidth || y>=markheight) {
+    if(g0=markgrid) {
+      w0=markwidth;
+      h0=markheight;
+      s0=markskip;
+    }
+    markwidth=board_info.width;
+    markheight=board_info.height;
+    markskip=(markwidth+7)>>3;
+    markgrid=calloc(markskip,markheight);
+    if(!markgrid) err(1,"Allocation failed");
+    if(g0) {
+      for(i=0;i<h0;i++) memcpy(markgrid+i*markskip,g0+i*s0,s0);
+      free(g0);
+    }
+  }
+  g0=markgrid+(x>>3)+y*markskip;
+  if(*g0&(1<<(x&7))) {
+    if(!(mask&2)) *g0&=~(1<<(x&7));
+    return 1;
+  } else {
+    if(mask&1) *g0|=1<<(x&7);
+    return 0;
+  }
 }
 
 static void goto_board(Uint16 id) {
@@ -341,8 +374,11 @@ static void estatus(void) {
   if(b_main[ycur*board_info.width+xcur].kind) v_char[y*80+32]='m',v_color[y*80+32]=0x13;
   if(b_over[ycur*board_info.width+xcur].kind) v_char[y*80+33]='o',v_color[y*80+33]=0x13;
   if(numprefix) draw_text(34,y,buf,0x1E,snprintf(buf,80,"%5d",numprefix));
-  v_char[y*80+39]=emode;
-  v_color[y*80+39]=0x1C;
+  if(markgrid && xcur<markwidth && ycur<markheight) {
+    if(markgrid[(xcur>>3)+ycur*markskip]&(1<<(xcur&7))) v_char[y*80+39]=7,v_color[y*80+39]=0x1A;
+  }
+  v_char[y*80+42]=emode;
+  v_color[y*80+42]=0x1C;
   draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
   v_char[y*80+69]="(\x11\x10\x04"[(scroll_x?1:0)+(scroll_x+80<board_info.width?2:0)];
   v_char[y*80+79]=")\x1E\x1F\x04"[(scroll_y?1:0)+(scroll_y+25<board_info.height?2:0)];
@@ -407,7 +443,7 @@ static void place_at(Uint16 x,Uint16 y,Tile t) {
 static void cursor_move(Sint32 xd,Sint32 yd) {
   Sint32 x=xcur+xd*(numprefix?:1);
   Sint32 y=ycur+yd*(numprefix?:1);
-  if(emode!='*') {
+  if(emode!=15) {
     if(x<0) xcur=0; else if(x>=board_info.width) xcur=board_info.width-1; else xcur=x;
     if(y<0) ycur=0; else if(y>=board_info.height) ycur=board_info.height-1; else ycur=y;
   } else {
@@ -417,6 +453,296 @@ static void cursor_move(Sint32 xd,Sint32 yd) {
     }
   }
   numprefix=0;
+}
+
+static Sint32 cctmp;
+static Tile cctile;
+static Uint8 ccerror;
+
+static Tile read_tile(const char*arg) {
+  int k;
+  const char*e;
+  Tile t={0,0,0,0};
+  if(*arg=='<') {
+    arg++;
+    if(*arg>='0' && *arg<='9') t.color=*arg-'0';
+    else if(*arg>='A' && *arg<='F') t.color=*arg+10-'A';
+    else if(*arg>='a' && *arg<='f') t.color=*arg+10-'a';
+    else goto error;
+    arg++;
+    t.color<<=4;
+    if(*arg>='0' && *arg<='9') t.color|=*arg-'0';
+    else if(*arg>='A' && *arg<='F') t.color|=*arg+10-'A';
+    else if(*arg>='a' && *arg<='f') t.color|=*arg+10-'a';
+    else goto error;
+    arg++;
+    if(*arg++!='>') goto error;
+  }
+  e=strchrnul(arg,'<');
+  for(k=0;k<256;k++) if(elem_def[k].name[0] && strlen(elem_def[k].name)==e-arg && !strncasecmp(elem_def[k].name,arg,e-arg)) break;
+  if(k==256) goto error;
+  t.kind=k;
+  arg=e;
+  if(*arg=='<') {
+    arg++;
+    if(*arg>='0' && *arg<='9') t.param=*arg-'0';
+    else if(*arg>='A' && *arg<='F') t.param=*arg+10-'A';
+    else if(*arg>='a' && *arg<='f') t.param=*arg+10-'a';
+    else goto error;
+    arg++;
+    t.param<<=4;
+    if(*arg>='0' && *arg<='9') t.param|=*arg-'0';
+    else if(*arg>='A' && *arg<='F') t.param|=*arg+10-'A';
+    else if(*arg>='a' && *arg<='f') t.param|=*arg+10-'a';
+    else goto error;
+    arg++;
+    if(*arg++!='>') goto error;
+  }
+  return t;
+  error:
+  alert_text("Improper tile specification");
+  ccerror=1;
+  t.kind=0;
+  return t;
+}
+
+static Uint16 read_coordinate(char**p,Uint16 c) {
+  Sint8 r=0;
+  Uint16 o=0;
+  if(**p=='+' || **p=='-') r=(**p=='-'?-1:1),++*p;
+  if(**p<'0' || **p>'9') return c+r;
+  while(**p>='0' && **p<='9') o=10*o+**p-'0',++*p;
+  return o+c*r;
+}
+
+typedef struct {
+  const char*name;
+  char range;
+  void(*full)(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg);
+  void(*begin)(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg);
+  void(*step)(Uint16 x,Uint16 y,const char*arg);
+  void(*end)(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg);
+} ColonCommand;
+
+static int compare_coloncommand(const void*a,const void*b) {
+  const ColonCommand*x=a;
+  const ColonCommand*y=b;
+  return strcmp(x->name,y->name);
+}
+
+static void cc_board(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  switch_to_board(strtol(arg,0,10));
+}
+
+static void cc_count_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  cctmp=0;
+}
+
+static void cc_count_step(Uint16 x,Uint16 y,const char*arg) {
+  ++cctmp;
+}
+
+static void cc_count_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  char buf[40];
+  snprintf(buf,40,"%ld",(long)cctmp);
+  alert_text(buf);
+}
+
+static void cc_delete_step(Uint16 x,Uint16 y,const char*arg) {
+  delete_at(x,y);
+}
+
+static void cc_exchangelayer_step(Uint16 x,Uint16 y,const char*arg) {
+  //TODO
+}
+
+static void cc_export(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  char buf[75];
+  const char*e;
+  FILE*fp;
+  if(!*arg) return;
+  if(*arg=='|') fp=popen(arg+1,"w"); else fp=fopen(arg,"wx");
+  if(fp) {
+    if(e=save_board(fp,0)) alert_text(e);
+    if(*arg=='|') pclose(fp); else fclose(fp);
+  } else {
+    snprintf(buf,75,"%m");
+    alert_text(buf);
+  }
+}
+
+static void cc_import(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  char buf[75];
+  const char*e;
+  FILE*fp;
+  if(!*arg) return;
+  if(*arg=='|') fp=popen(arg+1,"r"); else fp=fopen(arg,"r");
+  if(fp) {
+    if(e=load_board(fp)) alert_text(e);
+    if(*arg=='|') pclose(fp); else fclose(fp);
+  } else {
+    snprintf(buf,75,"%m");
+    alert_text(buf);
+  }
+}
+
+static void cc_mark_step(Uint16 x,Uint16 y,const char*arg) {
+  set_mark(x,y,3);
+}
+
+static void cc_place_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  if(*arg) cctile=read_tile(arg); else cctile=clip;
+}
+
+static void cc_place_step(Uint16 x,Uint16 y,const char*arg) {
+  place_at(x,y,cctile);
+}
+
+static void cc_status(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  if(*arg=='1') status_on=1;
+  if(*arg=='0') status_on=0;
+  if(!*arg) status_on=!status_on;
+}
+
+static void cc_toggle_step(Uint16 x,Uint16 y,const char*arg) {
+  set_mark(x,y,1);
+}
+
+static void cc_unmark_step(Uint16 x,Uint16 y,const char*arg) {
+  set_mark(x,y,0);
+}
+
+static void cc_unmark(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  Uint16 x,y;
+  if(!x0 && !y0 && x1>=markwidth && y1>=markheight) {
+    free(markgrid);
+    markwidth=markheight=markskip=0;
+    markgrid=0;
+  } else {
+    for(x=x0,y=y0;;) {
+      cc_unmark_step(x,y,0);
+      if(x==x1) {
+        x=x0;
+        if(y==y1) break;
+        if(y1>y) y++; else y--;
+      } else {
+        if(x1>x) x++; else x--;
+      }
+    }
+  }
+}
+
+static const ColonCommand colon_commands[]={
+  {"b",0,cc_board,0,0,0},
+  {"board",0,cc_board,0,0,0},
+  {"co",'%',0,cc_count_begin,cc_count_step,cc_count_end},
+  {"count",'%',0,cc_count_begin,cc_count_step,cc_count_end},
+  {"d",'.',0,0,cc_delete_step,0},
+  {"delete",'.',0,0,cc_delete_step,0},
+  {"ex",0,cc_export,0,0,0},
+  {"exchangelayer",'.',0,0,cc_exchangelayer_step,0},
+  {"export",0,cc_export,0,0,0},
+  {"im",0,cc_import,0,0,0},
+  {"import",0,cc_import,0,0,0},
+  {"m",'.',0,0,cc_mark_step,0},
+  {"mark",'.',0,0,cc_mark_step,0},
+  {"p",'.',0,cc_place_begin,cc_place_step,0},
+  {"place",'.',0,cc_place_begin,cc_place_step,0},
+  {"status",0,cc_status,0,0,0},
+  {"t",'.',0,0,cc_toggle_step,0},
+  {"toggle",'.',0,0,cc_toggle_step,0},
+  {"u",'.',cc_unmark,0,cc_unmark_step,0},
+  {"unmark",'.',cc_unmark,0,cc_unmark_step,0},
+  {"x",'.',0,0,cc_exchangelayer_step,0},
+};
+
+static void do_colon_command(char*text) {
+  ColonCommand key;
+  ColonCommand*found;
+  Uint8 ra=0;
+  Uint16 x0=xcur;
+  Uint16 y0=ycur;
+  Uint16 x1=xcur;
+  Uint16 y1=ycur;
+  Uint16 x,y;
+  int i;
+  if(*text=='~' && text[1]=='&') {
+    ra='~';
+    x0=y0=0;
+    x1=board_info.width-1;
+    y1=board_info.height-1;
+    text+=2;
+  } else if(*text=='&' || *text=='%') {
+    ra=*text++;
+    x0=y0=0;
+    x1=board_info.width-1;
+    y1=board_info.height-1;
+  } else if(*text=='.') {
+    ra='%';
+    text++;
+  }
+  if(x0>=board_info.width) x0=board_info.width-1;
+  if(y0>=board_info.height) y0=board_info.height-1;
+  if(x1>=board_info.width) x1=board_info.width-1;
+  if(y1>=board_info.height) y1=board_info.height-1;
+  if((*text>='0' && *text<='9') || *text=='-' || *text=='+' || *text==',') {
+    if(!ra) ra='%'; else if(ra=='%') { alert_text("Improper coordinates"); return; }
+    x0=read_coordinate(&text,xcur);
+    if(*text++!=',') goto syntax;
+    y0=read_coordinate(&text,ycur);
+    if(*text==':') {
+      text++;
+      x1=read_coordinate(&text,xcur);
+      if(*text++!=',') goto syntax;
+      y1=read_coordinate(&text,ycur);
+    } else {
+      x1=x0,y1=y0;
+    }
+  }
+  if(!*text) {
+    if(x0!=x1 || y0!=y1) goto syntax;
+    xcur=x0;
+    ycur=y0;
+    return;
+  }
+  //TODO: filters/displacements
+  key.name=text;
+  text=strchrnul(text,' ');
+  if(*text) *text++=0;
+  found=bsearch(&key,colon_commands,sizeof(colon_commands)/sizeof(ColonCommand),sizeof(ColonCommand),compare_coloncommand);
+  if(!found) { alert_text("Improper command"); return; }
+  if(ra && !found->range) { alert_text("Improper use of range"); return; }
+  if(!ra) {
+    ra=found->range;
+    if(ra=='.') ra='%'; else x0=y0=0,x1=board_info.width-1,y1=board_info.height-1;
+  }
+  ccerror=0;
+  if(found->full) {
+    found->full(x0,y0,x1,y1,text);
+  } else {
+    if(found->begin) found->begin(x0,y0,x1,y1,text);
+    for(x=x0,y=y0;;) {
+      if(ccerror) return;
+      found->step(x,y,text);
+      if(x==x1) {
+        x=x0;
+        if(y==y1) break;
+        if(y1>y) y++; else y--;
+      } else {
+        if(x1>x) x++; else x--;
+      }
+    }
+    if(ccerror) return;
+    if(found->end) found->end(x0,y0,x1,y1,text);
+  }
+  return;
+  syntax: alert_text("Syntax error"); return;
+}
+
+static void ask_colon_command(void) {
+  char text[75]="";
+  ask_text(":",text,74);
+  if(*text) do_colon_command(text);
 }
 
 Uint16 edit_board(Uint16 id) {
@@ -437,9 +763,9 @@ Uint16 edit_board(Uint16 id) {
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
     k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
     switch(emode) {
-      case 0: case '*': no_mode: switch(k) {
+      case 0: case 15: no_mode: switch(k) {
         case 0x08: numprefix/=10; break;
-        case 0x09: if(emode=(emode?0:'*')) place_at(xcur,ycur,clip); break;
+        case 0x09: if(emode=(emode?0:15)) place_at(xcur,ycur,clip); break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
         case -SDLK_i: edit_board_info(); break;
@@ -448,20 +774,22 @@ Uint16 edit_board(Uint16 id) {
           if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
           run_test_game(brd_id);
           break;
-        case ' ': place_at(xcur,ycur,clip); break;
+        case ' ': set_mark(xcur,ycur,1); break;
+        case 'd': case -SDLK_DELETE: delete_at(xcur,ycur); break;
         case 'e': edit_tile(); break;
         case 'h': case -SDLK_LEFT: cursor_move(-1,0); break;
         case 'j': case -SDLK_DOWN: cursor_move(0,1); break;
         case 'k': case -SDLK_UP: cursor_move(0,-1); break;
         case 'l': case -SDLK_RIGHT: cursor_move(1,0); break;
+        case 'p': place_at(xcur,ycur,clip); break;
+        case 'y': clip=(event.key.keysym.mod&KMOD_SHIFT?b_under:b_main)[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case -SDLK_HOME: xcur=ycur=0; break;
         case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
-        case -SDLK_INSERT: clip=(event.key.keysym.mod&KMOD_SHIFT?b_under:b_main)[xcur+ycur*board_info.width]; set_apparent_clip(); break;
-        case -SDLK_DELETE: delete_at(xcur,ycur); break;
         case '[': switch_to_board(brd_id-(numprefix?:1)); numprefix=0; break;
         case ']': switch_to_board(brd_id+(numprefix?:1)); numprefix=0; break;
         case '{': switch_to_board(numprefix); numprefix=0; break;
         case '}': switch_to_board(maxboard); numprefix=0; break;
+        case ':': ask_colon_command(); break;
       } break;
       default: emode=0;
     }
