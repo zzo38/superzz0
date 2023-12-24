@@ -212,7 +212,7 @@ static void resize_board(void) {
     win_option('T',"Tile",m,5);
     win_option('d',"Tile with duplicate stats",m,6);
     win_boolean('F',"Fill main with current",b,1);
-    win_boolean('v',"Fill overlay with (0,0)",b,2);
+    win_boolean('v',"Fill overlay with NW tile",b,2);
     win_blank();
     win_command('p',"Use cursor position") {
       w=xcur+1;
@@ -544,7 +544,8 @@ static void cc_count_step(Uint16 x,Uint16 y,const char*arg) {
 
 static void cc_count_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   char buf[40];
-  snprintf(buf,40,"%ld",(long)cctmp);
+  long n=(abs(x1-x0)+1)*(long)(abs(y1-y0)+1);
+  snprintf(buf,40,"%ld/%ld (%4.1f%%)",(long)cctmp,n,cctmp*100.0/n);
   alert_text(buf);
 }
 
@@ -553,7 +554,14 @@ static void cc_delete_step(Uint16 x,Uint16 y,const char*arg) {
 }
 
 static void cc_exchangelayer_step(Uint16 x,Uint16 y,const char*arg) {
-  //TODO
+  Tile*u=b_under+y*board_info.width+x;
+  Tile*m=b_main+y*board_info.width+x;
+  Tile t=*u;
+  *u=*m;
+  *m=t;
+  if(u->stat==m->stat) return;
+  if(u->stat && u->stat<=maxstat) find_stat(x,y,u->stat,2,1);
+  if(m->stat && m->stat<=maxstat) find_stat(x,y,u->stat,1,2);
 }
 
 static void cc_export(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
@@ -653,10 +661,61 @@ static const ColonCommand colon_commands[]={
   {"toggle",'.',0,0,cc_toggle_step,0},
   {"u",'.',cc_unmark,0,cc_unmark_step,0},
   {"unmark",'.',cc_unmark,0,cc_unmark_step,0},
-  {"x",'.',0,0,cc_exchangelayer_step,0},
+  {"xl",'.',0,0,cc_exchangelayer_step,0},
+};
+
+typedef struct {
+  Sint32 arg[12];
+  Tile tile;
+  Uint8 narg,kind,inv;
+} Filter;
+
+static int cf_mark(Uint16 x,Uint16 y,Filter*f) {
+  if(x>=markwidth || y>=markheight) return 0;
+  return (markgrid[y*markskip+(x>>3)]&(1<<(x&7)));
+}
+
+static int cf_modulo(Uint16 x,Uint16 y,Filter*f) {
+  Sint32 z=(x*f->arg[0]+y*f->arg[1])%(f->arg[2]?:1);
+  int i;
+  if(z<0) z+=f->arg[2];
+  for(i=3;i<f->narg;i++) if(z==f->arg[i]) return 1;
+  return 0;
+}
+
+static int cf_stat(Uint16 x,Uint16 y,Filter*f) {
+  Uint32 at=y*board_info.width+x;
+  if(f->narg) return (b_under[at].stat==f->arg[0] || b_main[at].stat==f->arg[0]);
+  return (b_under[at].stat || b_main[at].stat);
+}
+
+static int cf_tile(Uint16 x,Uint16 y,Filter*f) {
+  Uint32 at=y*board_info.width+x;
+  if((f->arg[0]&4) && b_main[at].kind==f->tile.kind) {
+    if((f->arg[0]&1) && b_main[at].color!=f->tile.color) return 0;
+    if((f->arg[0]&2) && b_main[at].param!=f->tile.param) return 0;
+    return 1;
+  } else if((f->arg[0]&8) && b_under[at].kind==f->tile.kind) {
+    if((f->arg[0]&1) && b_under[at].color!=f->tile.color) return 0;
+    if((f->arg[0]&2) && b_under[at].param!=f->tile.param) return 0;
+    return 1;
+  }
+  return 0;
+}
+
+typedef int(*FilterCode)(Uint16 x,Uint16 y,Filter*f);
+
+static const FilterCode filtcode[127]={
+  ['&']=cf_mark,
+  ['?']=cf_tile,
+  ['m']=cf_modulo,
+  ['s']=cf_stat,
 };
 
 static void do_colon_command(char*text) {
+  Filter fil[12];
+  Uint8 nfil=0;
+  char*nex;
   ColonCommand key;
   ColonCommand*found;
   Uint8 ra=0;
@@ -664,7 +723,7 @@ static void do_colon_command(char*text) {
   Uint16 y0=ycur;
   Uint16 x1=xcur;
   Uint16 y1=ycur;
-  Uint16 x,y;
+  Uint16 x,y,ox,oy;
   int i;
   if(*text=='~' && text[1]=='&') {
     ra='~';
@@ -705,7 +764,53 @@ static void do_colon_command(char*text) {
     ycur=y0;
     return;
   }
-  //TODO: filters/displacements
+  while(nfil<12) {
+    fil[nfil].narg=fil[nfil].kind=fil[nfil].inv=0;
+    if(*text=='~') ++text,fil[nfil].inv=1;
+    if(*text=='[') {
+      nex=strchr(text,']');
+      if(!nex) goto syntax;
+      *nex=0;
+      fil[nfil].arg[0]=12;
+      if(text[1]=='=') fil[nfil].arg[0]=4,text++;
+      if(text[1]=='_') fil[nfil].arg[0]=8,text++;
+      fil[nfil].tile=read_tile(text+1);
+      fil[nfil].narg=1;
+      fil[nfil].kind='?';
+      if(text[1]=='<') fil[nfil].arg[0]|=1;
+      if(nex[-1]=='>') fil[nfil].arg[0]|=2;
+      text=nex+1;
+    } else if(*text=='&') {
+      fil[nfil].kind=*text++;
+    } else if(*text=='+' || *text=='-') {
+      fil[nfil].kind='+';
+      fil[nfil].narg=2;
+      fil[nfil].arg[0]=strtol(text,&text,10);
+      if(*text!='+' && *text!='-') goto syntax;
+      fil[nfil].arg[1]=strtol(text,&text,10);
+    } else if(*text=='/') {
+      if((text[1]<'a' || text[1]>'z') && (text[1]<'A' || text[1]>'Z')) goto syntax;
+      fil[nfil].kind=text[1];
+      text+=2;
+      for(i=0;i<12;i++) {
+        if(*text!='-' && *text!='+' && (*text<'0' || *text>'9')) break;
+        fil[nfil].arg[i]=strtol(text,&text,10);
+        fil[nfil].narg=i+1;
+        if(*text!=',') break;
+        ++text;
+      }
+    } else {
+      break;
+    }
+    nfil++;
+  }
+  if(nfil && !ra) {
+    ra='%';
+    x0=y0=0;
+    x1=board_info.width-1;
+    y1=board_info.height-1;
+  }
+  if(*text==' ') ++text;
   key.name=text;
   text=strchrnul(text,' ');
   if(*text) *text++=0;
@@ -717,7 +822,42 @@ static void do_colon_command(char*text) {
     if(ra=='.') ra='%'; else x0=y0=0,x1=board_info.width-1,y1=board_info.height-1;
   }
   ccerror=0;
-  if(found->full) {
+  if(nfil || ra=='~' || ra=='&') {
+    if(found->begin) found->begin(x0,y0,x1,y1,text);
+    if(ra!='&' || markgrid) for(x=x0,y=y0;;) {
+      if(ccerror) return;
+      ox=x,oy=y;
+      if(ra=='&') {
+        if(x>=markwidth || y>=markheight) goto nomatch;
+        if(!(markgrid[y*markskip+(x>>3)]&(1<<(x&7)))) goto nomatch;
+      } else if(ra=='~' && x<markwidth && y<markheight) {
+        if(markgrid[y*markskip+(x>>3)]&(1<<(x&7))) goto nomatch;
+      }
+      for(i=0;i<nfil;i++) {
+        if(fil[i].kind=='+') {
+          if(((x+fil[i].arg[0])|(fil[i].arg[1]))&~0xFFFF) goto nomatch;
+          x+=fil[i].arg[0];
+          y+=fil[i].arg[1];
+        } else {
+          if(!filtcode[fil[i].kind]) { alert_text("Unknown filter type"); return; }
+          if((filtcode[fil[i].kind](x,y,fil+i)?0:1)^fil[i].inv) goto nomatch;
+        }
+      }
+      if(x>=board_info.width || y>=board_info.height) goto nomatch;
+      found->step(x,y,text);
+      nomatch:
+      x=ox,y=oy;
+      if(x==x1) {
+        x=x0;
+        if(y==y1) break;
+        if(y1>y) y++; else y--;
+      } else {
+        if(x1>x) x++; else x--;
+      }
+    }
+    if(ccerror) return;
+    if(found->end) found->end(x0,y0,x1,y1,text);
+  } else if(found->full) {
     found->full(x0,y0,x1,y1,text);
   } else {
     if(found->begin) found->begin(x0,y0,x1,y1,text);
@@ -745,6 +885,19 @@ static void ask_colon_command(void) {
   if(*text) do_colon_command(text);
 }
 
+static void show_marks(void) {
+  int x,y;
+  Uint8*g;
+  for(y=0;y<25;y++) {
+    if(y+scroll_y>=markheight) break;
+    g=markgrid+markskip*(y+scroll_y);
+    for(x=0;x<80;x++) {
+      if(x+scroll_x>=markwidth) break;
+      if(g[(x+scroll_x)>>3]&(1<<((x+scroll_x)&7))) v_color[y*80+x]=(config.mark_color?:~v_color[y*80+x]);
+    }
+  }
+}
+
 Uint16 edit_board(Uint16 id) {
   int i;
   Sint32 k;
@@ -758,6 +911,7 @@ Uint16 edit_board(Uint16 id) {
     escroll();
     update_screen();
     v_xcur=xcur-scroll_x; v_ycur=ycur-scroll_y;
+    if(markgrid) show_marks();
     if(status_on) estatus();
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
@@ -775,6 +929,7 @@ Uint16 edit_board(Uint16 id) {
           run_test_game(brd_id);
           break;
         case ' ': set_mark(xcur,ycur,1); break;
+        case 'c': clip.color=ask_color_char(0,clip.color); break;
         case 'd': case -SDLK_DELETE: delete_at(xcur,ycur); break;
         case 'e': edit_tile(); break;
         case 'h': case -SDLK_LEFT: cursor_move(-1,0); break;
