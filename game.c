@@ -6,6 +6,7 @@ exit
 #include "common.h"
 #include "opcodes.h"
 #include <math.h>
+#include <time.h>
 
 ElementDef elem_def[256];
 Uint8 appearance_mapping[128];
@@ -30,6 +31,29 @@ Uint16 ngtext;
 Sint32 status_vars[16];
 Uint8**boardnames;
 Uint16 maxboard;
+
+static uint64_t rseed;
+
+Uint32 dice(Uint32 n) {
+  Uint32 o;
+  Uint32 m=n-1;
+  m|=m>>1; m|=m>>2; m|=m>>4; m|=m>>8; m|=m>>16;
+  do {
+    rseed^=rseed>>12; rseed^=rseed<<25; rseed^=rseed>>27;
+    o=((rseed*0x2545F4914F6CDD1DULL)>>32)&m;
+  } while(o>=n);
+  return o;
+}
+
+Uint32 reseed(uint64_t n) {
+  rseed=n?:((uint64_t)time(0))?:(uint64_t)1;
+  rseed^=rseed>>12; rseed^=rseed<<25; rseed^=rseed>>27;
+  rseed^=rseed>>12; rseed^=rseed<<25; rseed^=rseed>>27;
+  rseed++;
+  if(!rseed) rseed=1;
+  rseed^=rseed>>12; rseed^=rseed<<25; rseed^=rseed>>27;
+  rseed^=rseed>>12; rseed^=rseed<<25; rseed^=rseed>>27;
+}
 
 const char*select_board(Uint16 b) {
   FILE*fp=open_lump_by_number(b,"BRD","r");
@@ -334,10 +358,6 @@ static inline void calc_light(Uint8 sh,Sint32 r) {
   }
 }
 
-static Uint32 dice(Uint32 n) {
-  
-}
-
 static Sint32 xop_special(Sint32 so,Uint16 ex) {
   switch(ex&0x0FF0) {
     case XOP_S_EVENT: return elem_def[so&255].event[ex&15];
@@ -438,7 +458,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           u&=3;
           so+=(u?(u==2?-1:0):1);
           break;
-        case XOP_RANDOM: so=dice(so+(ex&255)); break;
+        case XOP_RANDOM: so=dice((so+(ex&255))?:1); break;
         case XOP_SPECIAL: so=xop_special(so,ex); break;
       }
     }
@@ -600,6 +620,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
 }
 
 int run_game(void) {
+  reseed(0);
   //TODO
 }
 

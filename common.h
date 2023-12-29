@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #include "SDL.h"
 #include <err.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,6 +52,9 @@ int next_event(void);
 const char*init_world(void);
 int run_game(void);
 void run_test_game(int);
+
+Uint32 dice(Uint32 n);
+Uint32 reseed(uint64_t n);
 
 // === Editor ===
 
