@@ -7,7 +7,7 @@ exit
 #include "common.h"
 
 static Uint16 brd_id;
-static Uint16 xcur,ycur;
+static Uint16 xcur,ycur,xcur2,ycur2;
 static Uint8 status_on=255;
 static Tile clip;
 static Uint8 apparent_clip;
@@ -382,6 +382,9 @@ static void estatus(void) {
   draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
   v_char[y*80+69]="(\x11\x10\x04"[(scroll_x?1:0)+(scroll_x+80<board_info.width?2:0)];
   v_char[y*80+79]=")\x1E\x1F\x04"[(scroll_y?1:0)+(scroll_y+25<board_info.height?2:0)];
+  if(emode=='v') {
+    draw_text(59,y,buf,0x19,snprintf(buf,80,"%c%04d%c%04d",xcur2>xcur?'-':'+',abs(xcur2-xcur),ycur2>ycur?'-':'+',abs(ycur2-ycur)));
+  }
 }
 
 static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay) {
@@ -457,6 +460,7 @@ static void cursor_move(Sint32 xd,Sint32 yd) {
 
 static Sint32 cctmp;
 static Tile cctile;
+static Uint8*ccdata;
 static Uint8 ccerror;
 
 static Tile read_tile(const char*arg) {
@@ -598,6 +602,24 @@ static void cc_mark_step(Uint16 x,Uint16 y,const char*arg) {
   set_mark(x,y,3);
 }
 
+static void cc_markonly_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  cctmp=(board_info.width+7)>>3;
+  ccdata=calloc(cctmp,board_info.height);
+  if(!ccdata) err(1,"Allocation failed");
+}
+
+static void cc_markonly_step(Uint16 x,Uint16 y,const char*arg) {
+  ccdata[(x>>3)+y*cctmp]|=1<<(x&7);
+}
+
+static void cc_markonly_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  free(markgrid);
+  markwidth=board_info.width;
+  markheight=board_info.height;
+  markskip=cctmp;
+  markgrid=ccdata;
+}
+
 static void cc_place_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   if(*arg) cctile=read_tile(arg); else cctile=clip;
 }
@@ -628,7 +650,7 @@ static void cc_unmark(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
     markgrid=0;
   } else {
     for(x=x0,y=y0;;) {
-      cc_unmark_step(x,y,0);
+      set_mark(x,y,0);
       if(x==x1) {
         x=x0;
         if(y==y1) break;
@@ -654,6 +676,8 @@ static const ColonCommand colon_commands[]={
   {"import",0,cc_import,0,0,0},
   {"m",'.',0,0,cc_mark_step,0},
   {"mark",'.',0,0,cc_mark_step,0},
+  {"markonly",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
+  {"mo",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
   {"p",'.',0,cc_place_begin,cc_place_step,0},
   {"place",'.',0,cc_place_begin,cc_place_step,0},
   {"status",0,cc_status,0,0,0},
@@ -669,6 +693,16 @@ typedef struct {
   Tile tile;
   Uint8 narg,kind,inv;
 } Filter;
+
+static int cf_copy_color(Uint16 x,Uint16 y,Filter*f) {
+  Uint32 at=y*board_info.width+x;
+  cctile.color=b_main[at].color;
+}
+
+static int cf_copy_tile(Uint16 x,Uint16 y,Filter*f) {
+  Uint32 at=y*board_info.width+x;
+  cctile=b_main[at];
+}
 
 static int cf_mark(Uint16 x,Uint16 y,Filter*f) {
   if(x>=markwidth || y>=markheight) return 0;
@@ -708,6 +742,8 @@ typedef int(*FilterCode)(Uint16 x,Uint16 y,Filter*f);
 static const FilterCode filtcode[127]={
   ['&']=cf_mark,
   ['?']=cf_tile,
+  ['C']=cf_copy_color,
+  ['T']=cf_copy_tile,
   ['m']=cf_modulo,
   ['s']=cf_stat,
 };
@@ -749,14 +785,27 @@ static void do_colon_command(char*text) {
     x0=read_coordinate(&text,xcur);
     if(*text++!=',') goto syntax;
     y0=read_coordinate(&text,ycur);
+    xy1:
     if(*text==':') {
       text++;
-      x1=read_coordinate(&text,xcur);
-      if(*text++!=',') goto syntax;
-      y1=read_coordinate(&text,ycur);
+      if(emode=='v' && (*text=='<' || *text=='>')) {
+        if(*text=='<') x1=xcur2,y1=ycur2;
+        if(*text=='>') x1=xcur,y1=ycur;
+        text++;
+      } else {
+        x1=read_coordinate(&text,xcur);
+        if(*text++!=',') goto syntax;
+        y1=read_coordinate(&text,ycur);
+      }
     } else {
       x1=x0,y1=y0;
     }
+  } else if(emode=='v' && (*text=='<' || *text=='>')) {
+    if(!ra) ra='%'; else if(ra=='%') { alert_text("Improper coordinates"); return; }
+    if(*text=='<') x0=xcur2,y0=ycur2;
+    if(*text=='>') x0=xcur,y0=ycur;
+    text++;
+    goto xy1;
   }
   if(!*text) {
     if(x0!=x1 || y0!=y1) goto syntax;
@@ -881,8 +930,13 @@ static void do_colon_command(char*text) {
 
 static void ask_colon_command(void) {
   char text[75]="";
+  if(emode=='v') strcpy(text,"<:>");
+  if(emode=='m') strcpy(text,"&");
   ask_text(":",text,74);
-  if(*text) do_colon_command(text);
+  if(*text) {
+    do_colon_command(text);
+    if(emode=='v') emode=0;
+  }
 }
 
 static void show_marks(void) {
@@ -896,6 +950,21 @@ static void show_marks(void) {
       if(g[(x+scroll_x)>>3]&(1<<((x+scroll_x)&7))) v_color[y*80+x]=(config.mark_color?:~v_color[y*80+x]);
     }
   }
+}
+
+static void show_selection(void) {
+  Sint32 x0=xcur-scroll_x;
+  Sint32 y0=ycur-scroll_y;
+  Sint32 x1=xcur2-scroll_x;
+  Sint32 y1=ycur2-scroll_y;
+  Sint32 z,x;
+  if(x0>x1) z=x0,x0=x1,x1=z;
+  if(y0>y1) z=y0,y0=y1,y1=z;
+  if(x0<0) x0=0;
+  if(y0<0) y0=0;
+  if(x1>79) x1=79;
+  if(y1>24) y1=24;
+  for(z=y0*80;y0<=y1;y0++,z+=80) for(x=x0;x<=x1;x++) v_color[z+x]=(config.block_color?:~v_color[z+x]);
 }
 
 Uint16 edit_board(Uint16 id) {
@@ -912,6 +981,7 @@ Uint16 edit_board(Uint16 id) {
     update_screen();
     v_xcur=xcur-scroll_x; v_ycur=ycur-scroll_y;
     if(markgrid) show_marks();
+    if(emode=='v') show_selection();
     if(status_on) estatus();
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
@@ -937,6 +1007,7 @@ Uint16 edit_board(Uint16 id) {
         case 'k': case -SDLK_UP: cursor_move(0,-1); break;
         case 'l': case -SDLK_RIGHT: cursor_move(1,0); break;
         case 'p': place_at(xcur,ycur,clip); break;
+        case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
         case 'y': clip=(event.key.keysym.mod&KMOD_SHIFT?b_under:b_main)[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case -SDLK_HOME: xcur=ycur=0; break;
         case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
@@ -945,6 +1016,16 @@ Uint16 edit_board(Uint16 id) {
         case '{': switch_to_board(numprefix); numprefix=0; break;
         case '}': switch_to_board(maxboard); numprefix=0; break;
         case ':': ask_colon_command(); break;
+        case '\\': cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
+      } break;
+      case 'm': switch(k) {
+        default: goto no_mode;
+      } break;
+      case 'v': switch(k) {
+        case 0x0D: do_colon_command("<:>mark"); emode='m'; break;
+        case ' ': do_colon_command("<:>toggle"); emode=0; break;
+        case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
+        default: goto no_mode;
       } break;
       default: emode=0;
     }
