@@ -538,6 +538,15 @@ static void cc_board(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   switch_to_board(strtol(arg,0,10));
 }
 
+static void cc_color_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  if(*arg) cctmp=strtol(arg,0,16); else cctmp=clip.color;
+}
+
+static void cc_color_step(Uint16 x,Uint16 y,const char*arg) {
+  Uint32 at=y*board_info.width+x;
+  b_main[at].color=cctmp;
+}
+
 static void cc_count_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   cctmp=0;
 }
@@ -665,7 +674,9 @@ static void cc_unmark(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
 static const ColonCommand colon_commands[]={
   {"b",0,cc_board,0,0,0},
   {"board",0,cc_board,0,0,0},
+  {"c",'.',0,cc_color_begin,cc_color_step,0},
   {"co",'%',0,cc_count_begin,cc_count_step,cc_count_end},
+  {"color",'.',0,cc_color_begin,cc_color_step,0},
   {"count",'%',0,cc_count_begin,cc_count_step,cc_count_end},
   {"d",'.',0,0,cc_delete_step,0},
   {"delete",'.',0,0,cc_delete_step,0},
@@ -717,6 +728,10 @@ static int cf_modulo(Uint16 x,Uint16 y,Filter*f) {
   return 0;
 }
 
+static int cf_random(Uint16 x,Uint16 y,Filter*f) {
+  return dice(f->narg?(f->arg[0]?:2):2)<(f->narg>1?f->arg[1]:1);
+}
+
 static int cf_stat(Uint16 x,Uint16 y,Filter*f) {
   Uint32 at=y*board_info.width+x;
   if(f->narg) return (b_under[at].stat==f->arg[0] || b_main[at].stat==f->arg[0]);
@@ -745,6 +760,7 @@ static const FilterCode filtcode[127]={
   ['C']=cf_copy_color,
   ['T']=cf_copy_tile,
   ['m']=cf_modulo,
+  ['r']=cf_random,
   ['s']=cf_stat,
 };
 
@@ -970,7 +986,10 @@ static void show_selection(void) {
 Uint16 edit_board(Uint16 id) {
   int i;
   Sint32 k;
-  if(status_on==255) status_on=config.brd_edit_status;
+  if(status_on==255) {
+    status_on=config.brd_edit_status;
+    reseed(0);
+  }
   set_apparent_clip();
   set_board_editor_screen();
   goto_board(id);
@@ -1006,7 +1025,9 @@ Uint16 edit_board(Uint16 id) {
         case 'j': case -SDLK_DOWN: cursor_move(0,1); break;
         case 'k': case -SDLK_UP: cursor_move(0,-1); break;
         case 'l': case -SDLK_RIGHT: cursor_move(1,0); break;
+        case 'm': emode='m'; break;
         case 'p': place_at(xcur,ycur,clip); break;
+        case 'u': unmark: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
         case 'y': clip=(event.key.keysym.mod&KMOD_SHIFT?b_under:b_main)[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case -SDLK_HOME: xcur=ycur=0; break;
@@ -1016,13 +1037,18 @@ Uint16 edit_board(Uint16 id) {
         case '{': switch_to_board(numprefix); numprefix=0; break;
         case '}': switch_to_board(maxboard); numprefix=0; break;
         case ':': ask_colon_command(); break;
-        case '\\': cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
       } break;
       case 'm': switch(k) {
+        case 'c': do_colon_command("&color"); goto unmark;
+        case 'C': do_colon_command("&color"); emode=0; break;
+        case 'd': do_colon_command("&delete"); goto unmark;
+        case 'D': do_colon_command("&delete"); emode=0; break;
+        case 'p': do_colon_command("&place"); goto unmark;
+        case 'P': do_colon_command("&place"); emode=0; break;
         default: goto no_mode;
       } break;
       case 'v': switch(k) {
-        case 0x0D: do_colon_command("<:>mark"); emode='m'; break;
+        case 0x0D: case 'm': do_colon_command("<:>mark"); emode='m'; break;
         case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode;
