@@ -62,7 +62,7 @@ extern Uint8 editor;
 
 int run_editor(void);
 Uint16 edit_board(Uint16);
-void edit_screen(Uint16);
+Uint16 edit_screen(Uint16);
 void combine_assembled(void);
 void set_board_name(Uint16 id,const char*name);
 void write_name_list(const char*lump,Uint8**data,Uint16 count);
@@ -334,6 +334,7 @@ extern Uint8**screennames;
 extern Uint16 maxscreen;
 
 const char*load_screen(FILE*fp);
+const char*save_screen(FILE*fp);
 void update_screen(void);
 
 // === Program memory / instructions ===

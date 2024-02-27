@@ -189,59 +189,61 @@ static void layer_inversion(void) {
   }
 }
 
+static const Uint8*textmru[16];
+static Uint8 ntextmru=0;
+
 static const char*load_stat_text(Uint8*te,Uint16 len,FILE*fp) {
   int c,d;
   int at=0;
   while(at<len) {
     c=read8(fp);
-    if(c==0) {
-      te[at++]='\n';
-    } else if(c>=0x20) {
-      te[at++]=c;
-    } else if(c==0x01) {
+    if(!c) {
       te[at++]=read8(fp);
-    } else if(c==0x02) {
-      te[at++]=read8(fp);
-      te[at++]=read8(fp);
+    } else if(c<=0x08) {
+      te[at++]=0x0A;
+      if(at>=len) return "Improper abbreviation";
+      te[at++]="#!$/?:'#"[c-1];
+      if(at<len && c==0x08) te[at++]='=';
+    } else if(c>=0x10 && c<0x20) {
+      if(!textmru[c&15]) return "Invalid stat text MRU";
+      if(at && te[at-1]!=0x0A) te[at++]=0x0A;
+      d=strchrnul(textmru[c&15],0x0A)-(const char*)textmru[c&15];
+      if(textmru[c&15][d]==0x0A) d++;
+      if(d+at>len) return "Too long stat text MRU";
+      memcpy(te+at,textmru[c&15],d);
+      at+=d;
     } else {
-      if(at+c>len) return "Too long back-reference";
-      d=read8(fp)+1;
-      if(at-d<-7) return "Too far back-reference";
-      while(at-d<0 && c--) te[at]="\n#END\n:"[at-d+7],at++;
-      while(c--) te[at]=te[at-d],at++;
+      if(c==0x0A) textmru[ntextmru=(ntextmru+1)&15]=te+at+1;
+      te[at++]=c;
     }
   }
   return 0;
 }
 
 static void save_stat_text(const Uint8*te,Uint16 len,FILE*fp) {
-  int c,d;
+  int c,d,e;
   const Uint8*p;
   int at=0;
-  // TODO: Improve this, please.
   while(at<len) {
     c=te[at];
-    if(at>=len-3) goto nomatch;
-    if(at>2 && (p=memmem(at<256?te:te+at-256,at<256?at+2:257,te+at,3))) {
-      for(d=3;d<31 && at+d<len && te[at+d]==p[d];d++);
-      write8(fp,d);
-      write8(fp,p-te);
-      at+=d;
-      continue;
-    }
-    nomatch:
-    if(c<0x20 && c!='\n') {
-      if(at<len-1 && te[at+1]<0x20) {
-        write8(fp,2);
-        write8(fp,c);
-        write8(fp,te[++at]);
-      } else {
-        write8(fp,1);
-        write8(fp,c);
+    if(c==0x0A) {
+      textmru[ntextmru=(ntextmru+1)&15]=te+at+1;
+      if(at+1<len && strchr("#!$/?:'#",te[at+1])) {
+        switch(te[++at]) {
+          case '#': d=(te[at+1]=='='?0x08:0x01); if(te[at+1]=='=') at++; break;
+          case '!': d=0x02; break;
+          case '$': d=0x03; break;
+          case '/': d=0x04; break;
+          case '?': d=0x05; break;
+          case ':': d=0x06; break;
+          case '\'': d=0x07; break;
+        }
+        fputc(d,fp);
+        continue;
       }
-    } else {
-      write8(fp,c=='\n'?0:c);
     }
+    if(c!=0x0A && c<0x20) fputc(0x00,fp);
+    fputc(c,fp);
     at++;
   }
 }
@@ -257,6 +259,8 @@ const char*load_board(FILE*fp) {
   Tile t={0,0,0,0};
   Uint8 mk,mc,mp;
   StatXY*r;
+  memset(textmru,0,sizeof(textmru));
+  ntextmru=0;
   memset(mru,0,sizeof(mru));
   free(b_under);
   b_under=b_main=b_over=0;
@@ -438,6 +442,8 @@ const char*save_board(FILE*fp,int m) {
   Uint16 xf=0;
   StatXY*r;
   Stat*s;
+  memset(textmru,0,sizeof(textmru));
+  ntextmru=0;
   // Header
   if(m) ef|=0x8000;
   if(board_info.flag&~255) ef|=0x100;
@@ -697,6 +703,32 @@ const char*load_screen(FILE*fp) {
       at++;
     }
   }
+  return 0;
+}
+
+const char*save_screen(FILE*fp) {
+  Tile mru[10];
+  Tile t;
+  Uint8 nmru=0;
+  Uint8 mk,mc,mp;
+  Uint32 at=0;
+  int c,i,n,nn;
+  fputc(cur_screen.flag,fp);
+  fputc(cur_screen.border_color,fp);
+  fwrite(cur_screen.border,1,4,fp);
+  fwrite(cur_screen.soft_edge,1,4,fp);
+  fwrite(cur_screen.hard_edge,1,4,fp);
+  fputc(cur_screen.view_x,fp);
+  fputc(cur_screen.view_y,fp);
+  fputc(cur_screen.message_x,fp);
+  fputc(cur_screen.message_y,fp);
+  fputc(cur_screen.message_l,fp);
+  fputc(cur_screen.message_r,fp);
+  // Screen grid
+  for(at=0;at<80*25;) {
+    
+  }
+  
   return 0;
 }
 

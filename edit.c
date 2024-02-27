@@ -426,8 +426,8 @@ int run_editor(void) {
       screens_form:
       win_form("Screens") {
         if(screennames) win_list(maxscreen+1,0,screen_list_callback,n) {
-          //edit_screen(n);
-          win_refresh();
+          lscr=edit_screen(n);
+          goto screens_form;
         }
         win_blank();
         if(maxscreen!=65535) {

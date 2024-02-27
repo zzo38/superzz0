@@ -120,20 +120,22 @@ compressed format explained below.
 
 The text compression is:
 
-* 0x00 represents 0x0A (a line feed).
+* 0x00 is followed by a single byte to represent that byte itself.
 
-* 0x01 is followed by one byte which is literally.
+* 0x01 to 0x08 means a line break followed by another character; the other
+characters are "#", "!", "$", "/", "?", ":", "'", "#=".
 
-* 0x02 is followed by two bytes which are literally.
+* 0x0A represents itself.
 
-* 0x03 to 0x1F are the length of a back-reference (from 3 to 31 bytes);
-this is followed by one byte being the distance of the back-reference,
-where 0 means the immediately byte (of uncompressed text) before this one.
+* 0x10 to 0x1F are copying a text MRU line. Text MRU has the first entry
+numbered 1 and is a circular buffer. Each entry is one line of text, and
+the text MRU is retained across multiple stats in a single board. The
+copied line does not itself entered into the MRU (since it already is),
+and if the preceding character is not a line break then it will
+automaticaly add a line break. Text MRU copies up to and including the
+next line break.
 
-* Any other byte is literally.
-
-The dictionary for back-references is initially ending with "\n#END\n:"
-just before the beginning of the stat's text.
+* Any code in range 0x20 to 0xFF represents itself.
 
 Each XY record starts with the command byte and then the parameters; a
 command byte of 0 terminates the list of XY records for this stat. The
