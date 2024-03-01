@@ -402,6 +402,31 @@ static Sint32 convxy(Sint32 xy,Sint32 x,Sint32 y) {
   return -1;
 }
 
+static Sint32 scan_board(Sint32 xy,Uint8 k,Sint32 x,Sint32 y) {
+  Uint32 z;
+  condflag=1;
+  if(z=xy) {
+    if(xy<0) z=0; else if(z>=board_info.width*board_info.height) z=condflag=0;
+  } else {
+    if(x<0) x=0; else x++;
+    if(x>=board_info.width) y++,x=0;
+    if(y<0) x=y=0;
+    if(y>=board_info.height) x=y=0,condflag=0;
+    z=y*board_info.width+x;
+  }
+  again:
+  while(z<board_info.width*board_info.height) if(b_main[z++].kind==k) return z;
+  if(condflag) {
+    z=condflag=0;
+    goto again;
+  }
+  return 0;
+}
+
+static inline Uint32 pack_tile(const Tile*t) {
+  return t->kind|(t->color<<8)|(t->param<<16)|(t->stat<<24);
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   Uint16 op;
   Uint8 fo;
@@ -475,6 +500,10 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_BTST: condflag=((1L<<(so&31))&regs[fo])?1:0; break;
       case OP_CALL: so=run_program(so,w,x,y,z); goto store;
       case OP_CASE: so=memory[(so+regs[fo])&0xFFFF]; goto jump;
+      case OP_CLAM: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=elem_def[b_main[t].kind].attrib&15; else condflag=0; break;
+      case OP_CLAU: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=elem_def[b_under[t].kind].attrib&15; else condflag=0; break;
+      case OP_CWOE: t=regs[fo]&0xFF; cwoe: t=(elem_def[t].attrib); t=(t&A_FLOOR?t:0); condflag=((1<<(t&15))&so)?1:0; break;
+      case OP_CWOT: if((t=convxy(regs[fo],x,y))!=-1) { t=b_main[t].kind; goto cwoe; } else condflag=0; break;
       case OP_DEC: --so; goto store;
       case OP_DIR:
         if(regs[fo]) t=(regs[fo]-1)%board_info.width,u=(regs[fo]-1)/board_info.width; else t=x,u=y;
@@ -517,6 +546,18 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_GOTO: goto jump;
       case OP_GRTR: condflag=(regs[fo]>so?1:0); break;
       case OP_GSPD: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].speed); goto store;
+      case OP_GTMC: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_main[t].color; else condflag=0; break;
+      case OP_GTMK: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_main[t].kind; else condflag=0; break;
+      case OP_GTMP: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_main[t].param; else condflag=0; break;
+      case OP_GTMS: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_main[t].stat; else condflag=0; break;
+      case OP_GTOC: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_over[t].color; else condflag=0; break;
+      case OP_GTOK: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_over[t].kind; else condflag=0; break;
+      case OP_GTOP: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_over[t].param; else condflag=0; break;
+      case OP_GTOS: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_over[t].stat; else condflag=0; break;
+      case OP_GTUC: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].color; else condflag=0; break;
+      case OP_GTUK: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].kind; else condflag=0; break;
+      case OP_GTUP: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].param; else condflag=0; break;
+      case OP_GTUS: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].stat; else condflag=0; break;
       case OP_INC: ++so; goto store;
       case OP_JEV: if(!(regs[fo]&1)) goto jump; break;
       case OP_JF: if(!condflag) goto jump; break;
@@ -531,9 +572,10 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_LITE: calc_light(fo,so); break;
       case OP_LOOP: if(!regs[fo]) break; --regs[fo]; goto jump;
       case OP_LSH: regs[fo]=(so&~31?0:regs[fo]<<so); break;
-      case OP_MAX: if(so>regs[fo]) goto store; break;
-      case OP_MIN: if(so<regs[fo]) goto store; break;
+      case OP_MAX: if(so>regs[fo]) regs[fo]=so; break;
+      case OP_MIN: if(so<regs[fo]) regs[fo]=so; break;
       case OP_MOD: if(so) condflag=1,regs[fo]%=so; else condflag=0; break;
+      case OP_MTIL: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=pack_tile(b_main+t); else condflag=0; break;
       case OP_MUL: regs[fo]*=so; break;
       case OP_NEG: so=-so; goto store;
       case OP_NOT: so=~so; goto store;
@@ -553,12 +595,29 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PBU: board_info.userdata=so; break;
       case OP_PEEK: regs[fo]=memory[so&0xFFFF]; break;
       case OP_PEER: regs[fo]=memory[(so+regs[fo])&0xFFFF]; break;
+      case OP_PM1: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc1=regs[fo];
+      case OP_PM2: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc2=regs[fo];
+      case OP_PM3: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc3=regs[fo];
       case OP_POKE: memory[so&0xFFFF]=regs[fo]; break;
+      case OP_PTMC: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].color=regs[fo]; else condflag=0; break;
+      case OP_PTMK: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].kind=regs[fo]; else condflag=0; break;
+      case OP_PTMP: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].param=regs[fo]; else condflag=0; break;
+      case OP_PTMS: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].stat=regs[fo]; else condflag=0; break;
+      case OP_PTOC: if((t=convxy(so,x,y))!=-1) condflag=1,b_over[t].color=regs[fo]; else condflag=0; break;
+      case OP_PTOK: if((t=convxy(so,x,y))!=-1) condflag=1,b_over[t].kind=regs[fo]; else condflag=0; break;
+      case OP_PTOP: if((t=convxy(so,x,y))!=-1) condflag=1,b_over[t].param=regs[fo]; else condflag=0; break;
+      case OP_PTOS: if((t=convxy(so,x,y))!=-1) condflag=1,b_over[t].stat=regs[fo]; else condflag=0; break;
+      case OP_PTUC: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].color=regs[fo]; else condflag=0; break;
+      case OP_PTUK: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].kind=regs[fo]; else condflag=0; break;
+      case OP_PTUP: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].param=regs[fo]; else condflag=0; break;
+      case OP_PTUS: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].stat=regs[fo]; else condflag=0; break;
       case OP_REGL: load_registers(fo,so); break;
       case OP_REGS: save_registers(fo,so); break;
+      case OP_REVB: revert_lump_by_number(so,"BRD"); break;
       case OP_ROB: if(status_vars[fo]>so) status_vars[fo]-=so,condflag=1; else status_vars[fo]=0,condflag=0; break;
       case OP_RSH: regs[fo]=(so&~31?(regs[fo]<0?-1:0):regs[fo]>>so); break;
       case OP_RSUB: regs[fo]=so-regs[fo]; break;
+      case OP_SCAN: so=scan_board(regs[fo],so&0xFF,x,y); if(!so) break; if(regs[fo]) regs[fo]=so; else goto unpack0; break;
       case OP_SEX: so=(Sint16)so; goto store;
       case OP_SGN: so=(so<0?-1:so>0?1:0); goto store;
       case OP_SUB: regs[fo]-=so; break;
@@ -578,21 +637,22 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_TDEC: --so; if(condflag) goto store; break;
       case OP_TINC: ++so; if(condflag) goto store; break;
       case OP_TLET: if(condflag) goto store; break;
-      case OP_TMAT: if((t==convxy(so,x,y))!=-1) condflag=(elem_def[b_main[t].kind].attrib&(0x10000000UL<<fo)?1:0); break;
+      case OP_TMAT: if((t=convxy(so,x,y))!=-1) condflag=(elem_def[b_main[t].kind].attrib&(0x10000000UL<<fo)?1:0); break;
       case OP_TSTB: condflag=((1L<<(regs[fo]&31))&so)?1:0; break;
-      case OP_UMAT: if((t==convxy(so,x,y))!=-1) condflag=(elem_def[b_under[t].kind].attrib&(0x10000000UL<<fo)?1:0); break;
-      case OP_UNPC: if(!so--) break; x=so%board_info.width; y=so%board_info.height; break;
+      case OP_UMAT: if((t=convxy(so,x,y))!=-1) condflag=(elem_def[b_under[t].kind].attrib&(0x10000000UL<<fo)?1:0); break;
+      case OP_UNPC: unpack0: if(!so--) break; x=so%board_info.width; y=so%board_info.height; break;
       case OP_UPTO: condflag=(regs[fo]<so?1:0); regs[fo]+=condflag; break;
       case OP_URSH: regs[fo]=(so&~31?0:((Uint32)regs[fo])>>so); break;
+      case OP_UTIL: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=pack_tile(b_under+t); else condflag=0; break;
       case OP_VGET: so=status_vars[so&15]; goto store;
       case OP_VPUT: status_vars[so&15]=regs[fo]; break;
       case OP_VSET: status_vars[fo]=so; break;
       case OP_WARP:
-        memory[0xE4]=regs[fo];
-        memory[0xE5]=(so&0xFFFF?:1);
-        memory[0xE6]=x>>16; memory[0xE7]=x;
-        memory[0xE8]=y>>16; memory[0xE9]=y;
-        memory[0xEA]=z>>16; memory[0xEB]=z;
+        memory[MEM_WARP_TO]=regs[fo];
+        memory[MEM_WARP_CALL]=(so&0xFFFF?:1);
+        memory[MEM_WARP_X_HI]=x>>16; memory[MEM_WARP_X_LO]=x;
+        memory[MEM_WARP_Y_HI]=y>>16; memory[MEM_WARP_Y_LO]=y;
+        memory[MEM_WARP_Z_HI]=z>>16; memory[MEM_WARP_Z_LO]=z;
         break;
       case OP_WEEK: regs[fo]=(memory[so&0xFFFF]<<16)|memory[(so+1)&0xFFFF]; break;
       case OP_WOKE: memory[so&0xFFFF]=so>>16; memory[(so+1)&0xFFFF]=so; break;
