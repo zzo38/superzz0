@@ -68,10 +68,25 @@ const char*select_board(Uint16 b) {
 }
 
 static Uint8 digit_of(Uint32 n,Uint8 f) {
+  static const Uint8 roman1[10]={0,1,2,3,2,1,2,3,4,1};
+  static const Uint8 roman2[40]={
+    0,0,0,0,
+    0,0,0,0,
+    0,0,0,0,
+    0,0,0,0,
+    0,1,0,0,
+    1,0,0,0,
+    1,0,0,0,
+    1,0,0,0,
+    1,0,0,0,
+    0,2,0,0,
+  };
+  static const Uint8 roman3[7]={'I'-'A','V'-'A','X'-'A','L'-'A','C'-'A','D'-'A','M'-'A'};
   NumericFormat*nf=num_format+(f>>4);
   Uint8 d=nf->div;
   const Uint8*b;
   int i;
+  Uint32 q;
   f&=15;
   switch(nf->code) {
     case NF_DECIMAL: decimal:
@@ -96,7 +111,32 @@ static Uint8 digit_of(Uint32 n,Uint8 f) {
       return n?nf->mark:nf->lead;
     case NF_ROMAN:
       n+=n; n/=d;
-      
+      if(n>=2000) {
+        q=n/2000;
+        n%=2000;
+        if(f<q) return 'M'-'A'+nf->mark;
+        f-=q;
+      }
+      if(n>=200) {
+        q=n/200;
+        n%=200;
+        if(f<roman1[q]) return nf->mark+roman3[roman2[4*q+f]+4];
+        f-=roman1[q];
+      }
+      if(n>=20) {
+        q=n/20;
+        n%=20;
+        if(f<roman1[q]) return nf->mark+roman3[roman2[4*q+f]+2];
+        f-=roman1[q];
+      }
+      if(n>=2) {
+        q=n/2;
+        n%=2;
+        if(f<roman1[q]) return nf->mark+roman3[roman2[4*q+f]+0];
+        f-=roman1[q];
+      }
+      if(n && !f) return nf->mark+'S'-'A';
+      return nf->lead;
     case NF_LSD_MONEY:
       if(f>4) {
         n/=240;
