@@ -562,6 +562,23 @@ static void cc_count_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg)
   alert_text(buf);
 }
 
+static void cc_debug_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  printf("(%d,%d:%d,%d)BEGIN\"%s\"",x0,y0,x1,y1,arg);
+  printf("<%02X,%02X,%02X,%02X>#%d\n",cctile.color,cctile.kind,cctile.param,cctile.stat,cctmp);
+  cctmp=0;
+}
+
+static void cc_debug_step(Uint16 x,Uint16 y,const char*arg) {
+  printf("(%d,%d)\"%s\"",x,y,arg);
+  printf("<%02X,%02X,%02X,%02X>#%d\n",cctile.color,cctile.kind,cctile.param,cctile.stat,cctmp);
+  ++cctmp;
+}
+
+static void cc_debug_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  printf("(%d,%d:%d,%d)END\"%s\"",x0,y0,x1,y1,arg);
+  printf("<%02X,%02X,%02X,%02X>#%d\n",cctile.color,cctile.kind,cctile.param,cctile.stat,cctmp);
+}
+
 static void cc_delete_step(Uint16 x,Uint16 y,const char*arg) {
   delete_at(x,y);
 }
@@ -679,6 +696,7 @@ static const ColonCommand colon_commands[]={
   {"color",'.',0,cc_color_begin,cc_color_step,0},
   {"count",'%',0,cc_count_begin,cc_count_step,cc_count_end},
   {"d",'.',0,0,cc_delete_step,0},
+  {"debug",'.',0,cc_debug_begin,cc_debug_step,cc_debug_end},
   {"delete",'.',0,0,cc_delete_step,0},
   {"ex",0,cc_export,0,0,0},
   {"exchangelayer",'.',0,0,cc_exchangelayer_step,0},
@@ -708,11 +726,13 @@ typedef struct {
 static int cf_copy_color(Uint16 x,Uint16 y,Filter*f) {
   Uint32 at=y*board_info.width+x;
   cctile.color=b_main[at].color;
+  return 1;
 }
 
 static int cf_copy_tile(Uint16 x,Uint16 y,Filter*f) {
   Uint32 at=y*board_info.width+x;
   cctile=b_main[at];
+  return 1;
 }
 
 static int cf_mark(Uint16 x,Uint16 y,Filter*f) {
@@ -900,7 +920,7 @@ static void do_colon_command(char*text) {
       }
       for(i=0;i<nfil;i++) {
         if(fil[i].kind=='+') {
-          if(((x+fil[i].arg[0])|(fil[i].arg[1]))&~0xFFFF) goto nomatch;
+          if(((x+fil[i].arg[0])|(y+fil[i].arg[1]))&~0xFFFF) goto nomatch;
           x+=fil[i].arg[0];
           y+=fil[i].arg[1];
         } else {
@@ -1029,7 +1049,8 @@ Uint16 edit_board(Uint16 id) {
         case 'p': place_at(xcur,ycur,clip); break;
         case 'u': unmark: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
-        case 'y': clip=(event.key.keysym.mod&KMOD_SHIFT?b_under:b_main)[xcur+ycur*board_info.width]; set_apparent_clip(); break;
+        case 'y': clip=b_main[xcur+ycur*board_info.width]; set_apparent_clip(); break;
+        case 'Y': clip=b_under[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case -SDLK_HOME: xcur=ycur=0; break;
         case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
         case '[': switch_to_board(brd_id-(numprefix?:1)); numprefix=0; break;
