@@ -725,9 +725,9 @@ const char*save_screen(FILE*fp) {
   fputc(cur_screen.message_l,fp);
   fputc(cur_screen.message_r,fp);
   // Screen grid
-  for(at=0;at<80*25;) {
-    
-  }
+//  for(at=0;at<80*25;) {
+//    
+//  }
   
   return 0;
 }

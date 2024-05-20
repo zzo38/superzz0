@@ -422,9 +422,9 @@ int run_editor(void) {
       if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
     }
     win_command('c',"Screens...") {
-      win_cursor(lscr);
       screens_form:
       win_form("Screens") {
+        win_cursor(lscr);
         if(screennames) win_list(maxscreen+1,0,screen_list_callback,n) {
           lscr=edit_screen(n);
           goto screens_form;
@@ -435,7 +435,8 @@ int run_editor(void) {
             char buf[61]="";
             ask_text("Add new screen:",buf,60);
             if(*buf) {
-              
+              set_screen_name(lscr=maxscreen+(screennames?1:0),buf);
+              edit_screen(lscr);
               goto screens_form;
             }
           }
