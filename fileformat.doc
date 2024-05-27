@@ -25,151 +25,59 @@ each, but if clear then they are one byte each and you must add 1 to each.
 
 * Max stat number (1 byte)
 
-The grid data then follows. This uses a sequence of commands. A command
-code is one byte; if less than forty then it is an exceptional code,
-otherwise you subtract forty and treat the result as a base six number
-having three digits, with the high digit for the kind, middle digit for
-for the colour, and low digit for the parameter.
+Summary of encoding flags:
+  0001 = East exit
+  0002 = North exit
+  0004 = West exit
+  0008 = South exit
+  0010 = Large board
+  0020 = User data
+  0040 = (reserved)
+  0080 = (reserved)
+  0100 = Long flag
+  0200 = Long screen number
+  0400 = (reserved)
+  0800 = (reserved)
+  1000 = (reserved)
+  2000 = (reserved)
+  4000 = (reserved)
+  8000 = Save game
 
-The order of the grid data is starting at the top left and going right,
-and starts with the main layer first. (Any layer whose data is not
-specified, or is incompletely specified, will have the rest of the data
-being set to zero.)
+(TODO)
 
-Base six digits: Each of these has the next byte being the length (number
-of tiles) minus one, and then, for homogeneous and heterogeneous runs, the
-data of those runs.
+After the board grid is the stats (the first stat number is stat 1). Each
+stat is as follows:
 
-* 0 = The data is zero.
+* Misc1, Misc2, Misc3 (16-bits each)
 
-* 1 = Copy the tile from the west.
+* Length of text (16-bits) (zero if no text is present)
 
-* 2 = Copy the tile from the north of each tile being added (so it is not
-necessarily the same for each one).
+* Text of this stat
 
-* 3 = Homogeneous run: Follow by one data byte, which is used for all of
-the tiles in this run. If multiple digits are homogeneous runs, then they
-are in the order of kind, colour, parameter.
+* Speed (8-bits)
 
-* 4 = Heterogeneous run: Follow by one data byte for each tile in this
-run. If multiple digits are heterogeneous runs, then each tile will have
-multiple data bytes in the order kind, colour, parameter. If the run is
-both homogeneous and heterogeneous, then the bytes for the homogeneous
-data always comes first, before any bytes of heterogeneous data.
+* Number of XY records for this stat (16-bits)
 
-* 5 = Copy the tile to the north of the first tile being added, or if its
-kind, colour, and parameter all match the tile to the west, then copy the
-tile to the northwest instead; this copies the same data for all of the
-tiles, unlike 2 which copies each one individually.
+* The data of the XY records
 
-Exceptional codes: These codes are given in decimal notation, and (C)
-means it is followed by another command code, and (L) means it is followed
-by a length (like that for the base six codes).
+For each XY record, the first byte is the encoding flag, and then the rest
+of the data is according to the encoding flag:
+  bit1-bit0 = X coordinate
+  bit3-bit2 = Y coordinate
+  bit5-bit4 = Instruction pointer
+  bit6 = Layer
+  bit7 = Delay
 
-* 0-19 (C) = Long length: The next command must have a length; it will add
-256 times (one more than) this number to that length.
+* X and Y coordinates: If the encoding flag bits is 3, then a 8-bit or 16-bit
+number (depending on board width/height). Otherwise, it is the encoding flag
+bits number plus the coordinate of the previous XY record minus 1.
 
-* 20-29 (L) = MRU: Tiles are entered into the MRU if at least one digit
-specifies homogeneous and none of the digits specify heterogenous; some of
-the exceptional commands (mentioned below) will also enter into MRU. The
-first MRU it enters is 20, and then 21, etc, and after 29 the next MRU to
-enter will be 20 again. The MRU (and which one to enter next) is retained
-across layers in the same board.
+* Instruction pointer: Encoding flag bits 0 means 0, 1 means 65535, 2 means
+same as previous, and 3 means a specified 16-bit number.
 
-* 30 = End the grid and do layer inversion. Each tile where the kind of the
-under layer and the tile of the main layer are both nonzero, will exchange
-the under layer with the main layer.
+* Layer: Set means read a 8-bit number, clear means same as previous.
 
-* 31 = Begin the under layer.
-
-* 32 = Begin the over layer.
-
-* 33 = End the grid. The stat data follows. (If the grid is not complete,
-then the remaining data will be zero.)
-
-* 34 = Fill the over layer, with all tiles being the data of the next
-three bytes, in the order of kind, colour, parameter.
-
-* 38 = Follow by two bytes for colour and kind of one tile; the parameter
-will be zero. It is entered into the MRU (and into the board grid).
-
-* 39 = Follow by three bytes for colour and kind and parameter of one tile.
-It is entered into the MRU (and into the board grid).
-
-Each stat is then encoded as follows:
-
-* Encoding flags (1 byte).
-
-* Misc1 (2 bytes, if bit0 of encoding flag is set)
-
-* Misc2 (2 bytes, if bit1 of encoding flag is set)
-
-* Misc3 (2 bytes, if bit2 of encoding flag is set)
-
-* Speed: The bit4 and bit5 of the encoding flags are a 2-bit number which
-is the speed, but if it is 3 then one byte is added here which will be the
-actual speed value.
-
-* Text length (2 bytes, if bit3 of encoding flag is set). This is the
-uncompressed length of the text.
-
-* Text (if bit3 of encoding flag is set): This is stored in a somewhat
-compressed format explained below.
-
-* XY records (see below).
-
-The text compression is:
-
-* 0x00 is followed by a single byte to represent that byte itself.
-
-* 0x01 to 0x08 means a line break followed by another character; the other
-characters are "#", "!", "$", "/", "?", ":", "'", "#=".
-
-* 0x0A represents itself.
-
-* 0x10 to 0x1F are copying a text MRU line. Text MRU has the first entry
-numbered 1 and is a circular buffer. Each entry is one line of text, and
-the text MRU is retained across multiple stats in a single board. The
-copied line does not itself entered into the MRU (since it already is),
-and if the preceding character is not a line break then it will
-automaticaly add a line break. Text MRU copies up to and including the
-next line break.
-
-* Any code in range 0x20 to 0xFF represents itself.
-
-Each XY record starts with the command byte and then the parameters; a
-command byte of 0 terminates the list of XY records for this stat. The
-possible commands are:
-
-* If at least one of the low 2-bits is set, then the high 2-bits and low
-2-bits are the layer byte of this XY item. This is followed by the X and
-Y coordinates (each is 1 byte or 2 bytes according to the maximum allowed
-coordinate for this board). If bit2 is set then a 1-byte delay follows,
-otherwise the delay is zero. Bit5 and bit4 are a 2-bit number which will
-specify the instruction pointer: 0 means 0, 1 means stop (65535), 2 means
-a 8-bit number follows, and 3 means a 16-bit number follows.
-
-* If bit2 is set but the lower bits are clear, then it is a command to copy
-the previous item but with different coordinates. The high 5-bits make a
-base five number. The low digit then corresponds to the X coordinate and
-the high digit to the Y coordinate, where: 0 means -1, 1 means +0, 2 means
-+1, 3 means a relative coordinate follows, and 4 means an absolute
-coordinate follows. Absolute coordinates are one or two bytes according to
-the valid range. Relative coordinates are one byte and subtract 127, but if
-X and Y are both relative and neither board width nor height exceed 256,
-then they are packed into a single byte, with the low nybble for X and the
-high nybble for Y, where 0 to 15 means -9 to -2 and +2 to +9.
-
-* If the low three bits are clear but at least one other bit is set, then
-divide by 8 and that is how many more XY items to add, which are copies of
-the previous one but each one will be different coordinates, according to
-going to the right from the current position to find a tile in the same
-layer that has the same kind, colour, parameter.
-
-* If it is zero, then this is the end of the XY list of this stat; the
-next stat (or the end of the file) follows.
-
-The stat numbers in the board grid is then filled in automatically.
+* Delay: Set means read a 8-bit number, clear means same as previous.
 
 
 === *.HLP ===
@@ -177,7 +85,7 @@ The stat numbers in the board grid is then filled in automatically.
 A help file.
 
 This has the format of the script file but the set of commands is limited:
-  : ' $ ! !- #END #ESCAPE #IF
+  @ : ' $ ! !- #END #ESCAPE #IF
 (normal text is also allowed)
 
 Any ! command can have, if not a label name in this help file and not the
@@ -192,6 +100,8 @@ Line breaks are LF only. The text is not compressed.
 Screen definitions.
 
 The header is (each coordinate, etc are one byte each):
+
+* Always zero; if this byte is nonzero then it is an error.
 
 * Flags.
 
@@ -233,31 +143,23 @@ instead of blank.
 * bit3 = If set, then the USER indicators will display the border character
 instead of blank.
 
-After the header is the screen grid data. This is stored in the same way as
-the board grid data, although the exceptional codes have different meanings
-which are described below:
+* bit4 = Disable scrolling on this screen if set.
 
-* 0-19 (C) = Long length
+The screen data is compressed with the following commands:
 
-* 20-29 (L) = MRU
+* 0-79 = Copy previous cell 1 to 80 times.
 
-* 30 (L) = Copy tile from west, but with decreasing parameter values
+* 80-159 = Copy above cells (i.e. 80 behind) 1 to 80 times.
 
-* 31 (L) = Copy tile from west, but with increasing parameter values
+* 160-239 = Follow by the command byte and colour byte, and then 1 to 80
+more bytes being the parameters for that many cells.
 
-* 32 (L) = Copy tiles from north, but with decreasing parameter values
+* 240-255 = A single cell. If bit0 is set then the command byte follows;
+if bit1 is set then the colour byte follows; if bit2 is set then the
+parameter byte follows. Any omitted bytes are copied from the previous
+cell if bit3 is clear, or are zero if bit3 is set.
 
-* 33 (L) = Copy tiles from north, but with increasing parameter values
-
-* 34 (L) = A shortcut for the case in which colour is homogeneous, kind is
-always 0x03, and parameter is heterogeneous.
-
-* 39 = Follow by three bytes for colour and kind and parameter of one tile.
-It is entered into the MRU (and into the screen grid).
-
-The end grid code is not needed since nothing follows the grid.
-
-The kinds are:
+The commands are:
 
 * SC_BACKGROUND = Display a fixed colour and character (parameter). If bit0
 is set then uses the character, if bit1 is set then uses the colour; clear
@@ -513,6 +415,8 @@ characters that are not in the PC character set.)
 * DEM = Long description.
 
 * DES = Short description.
+
+* MOD = Modification date.
 
 * NVH* = Hash of next version of the world file.
 
