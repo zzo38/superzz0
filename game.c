@@ -67,6 +67,14 @@ const char*select_board(Uint16 b) {
   }
 }
 
+static void warp_to_board(Uint16 b,char m) {
+  
+  if(board_info.flag&BF_PERSIST) {
+    
+  }
+  
+}
+
 static Uint8 digit_of(Uint32 n,Uint8 f) {
   static const Uint8 roman1[10]={0,1,2,3,2,1,2,3,4,1};
   static const Uint8 roman2[40]={
@@ -196,7 +204,7 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
     tile:
     t=b_main+xy;
     e=elem_def+t->kind;
-    if(!(h&4) && !(e->attrib&A_LIGHT) && (b_over[xy].kind&OVER_VISIBLE)) {
+    if(!(h&4) && !(e->attrib&A_LIGHT) && (b_over[xy].kind&OVER_VISIBLE) && (board_info.flag&BF_OVERLAY)) {
       //TODO: light shape
       o=b_over[xy].kind;
     }
@@ -348,7 +356,7 @@ void update_screen(void) {
         }
         break;
       case SC_TEXT:
-        
+        // Used only for text windows
         break;
       case SC_BITS_0_LO ... SC_BITS_3_HI:
         v_color[i]=col;
@@ -360,7 +368,7 @@ void update_screen(void) {
 }
 
 StatXY*add_statxy(int n) {
-  Stat*s=stats+n;
+  Stat*s=stats+n-1;
   StatXY*r;
   s->xy=realloc(s->xy,++s->count*sizeof(StatXY));
   if(!s->xy) errx(1,"Allocation failed");
@@ -368,6 +376,23 @@ StatXY*add_statxy(int n) {
   r->x=r->y=r->instptr=0;
   r->layer=r->delay=0;
   return r;
+}
+
+static StatXY*get_statxy(Uint32 n) {
+  Stat*s;
+  if(!(n&0xFFFF) || (n&0xFFFF)>maxstat) return 0;
+  s=stats+(n&0xFFFF)-1;
+  n>>=16;
+  return (n<s->count?s->xy+n:0);
+}
+
+static void kill_stat(int ns,int nr) {
+  Stat*s=stats+ns-1;
+  StatXY*r=s->xy+nr;
+  r->x=r->y=r->instptr=65535;
+  r->layer=128;
+  r->delay=255;
+  // Later it is noticed and deleted from the stat XY list
 }
 
 static inline void calc_light(Uint8 sh,Sint32 r) {
@@ -463,11 +488,94 @@ static Sint32 scan_board(Sint32 xy,Uint8 k,Sint32 x,Sint32 y) {
   return 0;
 }
 
+static void do_change_stat(Uint16 f,Uint8 os,Uint8 lay,Uint32 x,Uint32 y) {
+  Uint32 i;
+  Stat*s;
+  StatXY*u;
+  StatXY r={.x=x,.y=y};
+  if(os && os<=maxstat) {
+    s=stats+os-1;
+    for(i=0;i<s->count;i++) {
+      u=s->xy+i;
+      if((u->layer&3)==lay && u->x==x && u->y==y) {
+        r=*u;
+        kill_stat(os,i);
+        break;
+      }
+    }
+  }
+  if(os=(lay==1?b_under:lay==2?b_main:b_over)[y*board_info.width+x].stat) {
+    if(f&0x8000) r.delay=(f>>8)&0x7F;
+    r.layer=lay|(r.layer&0xC0&~f);
+    *add_statxy(os)=r;
+  }
+}
+
+static Sint32 do_change(Uint8 how,Uint8 b,Uint32 a) {
+  Sint32 n=0;
+  Uint32 z;
+  Uint16 f=memory[a&0xFFFF];
+  Tile m,mm,r,rm;
+  int i,j;
+  for(i=0;i<4;i++) m.values[i]=memory[(a+i+1)&0xFFFF],mm.values[i]=memory[(a+i+1)&0xFFFF]>>8;
+  if(how) for(i=0;i<4;i++) r.values[i]=memory[(a+i+5)&0xFFFF],rm.values[i]=memory[(a+i+5)&0xFFFF]>>8;
+  i=(f>>3)&7;
+  if(i&3) {
+    if(i&4) r.values[i&3]+=b; else m.values[i&3]+=b;
+  }
+  for(i=0;i<4;i++) m.values[i]|=mm.values[i];
+  if(how==2) for(i=0;i<4;i++) r.values[i]|=rm.values[i];
+  z=board_info.width*board_info.height;
+  switch(f&7) {
+    case 0: return 0;
+    case 1: a=0; break;
+    case 2: a=z; z+=z; break;
+    case 3: a=0; z+=z; break;
+    case 4: a=z+z; z+=a; break;
+    case 5: memory[a&0xFFFF]=f-1; do_change(how,b,a); memory[a&0xFFFF]=f; a=0; break;
+    case 6: a=z; z+=z+z; break;
+    case 7: a=0; z+=z+z; break;
+  }
+  switch(how) {
+    case 0: for(;a<z;a++) {
+      for(i=0;i<4;i++) if((b_under[a].values[i]|mm.values[i])!=m.values[i]) goto skip0;
+      n++;
+      skip0: ;
+    } break;
+    case 1: for(;a<z;a++) {
+      for(i=0;i<4;i++) if((b_under[a].values[i]|mm.values[i])!=m.values[i]) goto skip1;
+      j=b_under[a].stat;
+      for(i=0;i<4;i++) b_under[a].values[i]=r.values[i]^(b_under[a].values[i]&rm.values[i]);
+      if(j || r.stat) do_change_stat(f,j,a/(board_info.width*board_info.height)+1,a%board_info.width,(a/board_info.width)%board_info.height);
+      skip1: ;
+    } break;
+    case 2: for(;a<z;a++) {
+      for(i=0;i<4;i++) if((b_under[a].values[i]^m.values[i])&~mm.values[i]) goto skip2a;
+      j=b_under[a].stat;
+      for(i=0;i<4;i++) b_under[a].values[i]=(b_under[a].values[i]&rm.values[i])|(b_under[a].values[i]&~rm.values[i]);
+      if(j || r.stat) do_change_stat(f,j,a/(board_info.width*board_info.height)+1,a%board_info.width,(a/board_info.width)%board_info.height);
+      continue;
+      skip2a:
+      for(i=0;i<4;i++) if((b_under[a].values[i]^r.values[i])&~rm.values[i]) goto skip2b;
+      j=b_under[a].stat;
+      for(i=0;i<4;i++) b_under[a].values[i]=(b_under[a].values[i]&mm.values[i])|(b_under[a].values[i]&~mm.values[i]);
+      if(j || m.stat) do_change_stat(f,j,a/(board_info.width*board_info.height)+1,a%board_info.width,(a/board_info.width)%board_info.height);
+      skip2b: ;
+    } break;
+  }
+  return n;
+}
+
 static inline Uint32 pack_tile(const Tile*t) {
   return t->kind|(t->color<<8)|(t->param<<16)|(t->stat<<24);
 }
 
+static void run_script(Uint16 m,Uint16 n,Sint32 u) {
+  
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
+  StatXY*rs;
   Uint16 op;
   Uint8 fo;
   Sint32 so,t,u;
@@ -540,8 +648,11 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_BTST: condflag=((1L<<(so&31))&regs[fo])?1:0; break;
       case OP_CALL: so=run_program(so,w,x,y,z); goto store;
       case OP_CASE: so=memory[(so+regs[fo])&0xFFFF]; goto jump;
+      case OP_CHA: do_change(1,regs[fo],so); break;
+      case OP_CHAX: do_change(2,regs[fo],so); break;
       case OP_CLAM: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=elem_def[b_main[t].kind].attrib&15; else condflag=0; break;
       case OP_CLAU: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=elem_def[b_under[t].kind].attrib&15; else condflag=0; break;
+      case OP_COUN: regs[fo]=do_change(0,regs[fo],so); break;
       case OP_CWOE: t=regs[fo]&0xFF; cwoe: t=(elem_def[t].attrib); t=(t&A_FLOOR?t:0); condflag=((1<<(t&15))&so)?1:0; break;
       case OP_CWOT: if((t=convxy(regs[fo],x,y))!=-1) { t=b_main[t].kind; goto cwoe; } else condflag=0; break;
       case OP_DEC: --so; goto store;
@@ -625,12 +736,10 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         if(t!=-1) {
           condflag=1;
           so=t+1;
-          goto store;
         } else {
           condflag=0;
-          if(so) goto store;
         }
-        break;
+        goto store;
       case OP_PBF: board_info.flag=so; break;
       case OP_PBU: board_info.userdata=so; break;
       case OP_PEEK: regs[fo]=memory[so&0xFFFF]; break;
@@ -657,9 +766,11 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_ROB: if(status_vars[fo]>so) status_vars[fo]-=so,condflag=1; else status_vars[fo]=0,condflag=0; break;
       case OP_RSH: regs[fo]=(so&~31?(regs[fo]<0?-1:0):regs[fo]>>so); break;
       case OP_RSUB: regs[fo]=so-regs[fo]; break;
+      case OP_RUN: run_script(regs[fo]&0xFFFF,(regs[fo]>>16)&0xFFFF,so); break;
       case OP_SCAN: so=scan_board(regs[fo],so&0xFF,x,y); if(!so) break; if(regs[fo]) regs[fo]=so; else goto unpack0; break;
       case OP_SEX: so=(Sint16)so; goto store;
       case OP_SGN: so=(so<0?-1:so>0?1:0); goto store;
+      case OP_SIXY: if((rs=get_statxy(so)) && (so=convxy(0,rs->x,rs->y)+1)) condflag=1; else condflag=so=0; goto store;
       case OP_SUB: regs[fo]-=so; break;
       case OP_SWPA: t=regs[0]; regs[0]=so; so=t; goto store;
       case OP_SWPB: t=regs[1]; regs[1]=so; so=t; goto store;
@@ -719,8 +830,50 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   }
 }
 
+static Uint32 broadcast(const char*label) {
+  
+}
+
 int run_game(void) {
+  Uint32 a,b,c,d,x,y;
+  Tile*t;
   reseed(0);
-  //TODO
+  
+  gameloop:
+  while(a=memory[MEM_WARP_CALL]) {
+    memory[MEM_WARP_CALL]=0;
+    b=cur_board_id;
+    warp_to_board(memory[MEM_WARP_TO],0);
+    run_program(a,b,(memory[MEM_WARP_X_HI]<<16)|memory[MEM_WARP_X_LO],(memory[MEM_WARP_Y_HI]<<16)|memory[MEM_WARP_Y_LO],(memory[MEM_WARP_Z_HI]<<16)|memory[MEM_WARP_Z_LO]);
+    broadcast("ENTERED");
+  }
+  *v_status=16;
+  update_screen();
+  //TODO: read input, timer, and system functions
+  
+  ++memory[MEM_FRAME_COUNTER];
+  if(run_program(memory[MEM_FRAME_EVENT],0,0,0,0)) goto gameloop;
+  for(a=y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++,a++) {
+    t=b_main+a;
+    if(b=elem_def[t->kind].event[EV_FRAME]) run_program(b,t->kind,x,y,t->param);
+  }
+  for(a=0;a<maxstat;a++) {
+    if(stats[a].xy) for(b=0;b<stats[a].count;b++) {
+      if((d=stats[a].xy[b].layer&3) && stats[a].xy[b].x<board_info.width && stats[a].xy[b].y<board_info.height) {
+        if(!stats[a].xy[b].delay--) {
+          t=(d==1?b_under:d==2?b_main:b_over)+stats[a].xy[b].y*board_info.width+stats[a].xy[b].x;
+          if(d==3 || !run_program(elem_def[t->kind].event[EV_STAT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) {
+            stats[a].xy[b].delay=stats[a].speed;
+            run_script(a+1,b,1);
+          }
+        }
+      } else {
+        // Delete this stat
+        memmove(stats[a].xy+b,stats[a].xy+b+1,(--stats[a].count-b)*sizeof(StatXY));
+        --b;
+      }
+    }
+  }
+  goto gameloop;
 }
 

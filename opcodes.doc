@@ -451,7 +451,9 @@ numbers are treated as unsigned.
 
 [05F CHAX]
   Like CHA but treats second to fifth and sixth to ninth both as matching
-  and replacing with each other.
+  and replacing with each other. In this case, the XOR mask is not used as
+  a XOR mask but instead is another don't care mask; both don't care masks
+  apply to both matching and replacement.
 
 [060 MTIL]
   Second operand is coordinates. If they are valid, then the tile at the
@@ -738,8 +740,7 @@ numbers are treated as unsigned.
 [130 PACK]
   If the X and Y coordinates are in range, then pack them into the first
   operand, and the condition flag is true. If not in range, then the
-  condition flag is false, and if the second operand is nonzero then it
-  is copied to the first operand.
+  condition flag is false, and second operand is copied to first operand.
 
 [131 BIT]
   Set first operand to a value with a single bit set; the bit to be set
