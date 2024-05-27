@@ -443,6 +443,24 @@ static void place_at(Uint16 x,Uint16 y,Tile t) {
   if(t.stat) find_stat(x,y,t.stat,0,2);
 }
 
+static void write_at(Uint16 x,Uint16 y,Tile t) {
+  Uint32 at=y*board_info.width+x;
+  Uint8 z=(t.stat!=b_main[at].stat);
+  if(b_main[at].stat && !config.overwrite_stats) return;
+  if(z) find_stat(x,y,b_main[at].stat,2,0);
+  b_main[at]=t;
+  if(t.stat && z) find_stat(x,y,t.stat,0,2);
+}
+
+static void write_under(Uint16 x,Uint16 y,Tile t) {
+  Uint32 at=y*board_info.width+x;
+  Uint8 z=(t.stat!=b_under[at].stat);
+  if(b_under[at].stat && !config.overwrite_stats) return;
+  if(z) find_stat(x,y,b_under[at].stat,1,0);
+  b_under[at]=t;
+  if(t.stat && z) find_stat(x,y,t.stat,0,1);
+}
+
 static void cursor_move(Sint32 xd,Sint32 yd) {
   Sint32 x=xcur+xd*(numprefix?:1);
   Sint32 y=ycur+yd*(numprefix?:1);
@@ -456,6 +474,54 @@ static void cursor_move(Sint32 xd,Sint32 yd) {
     }
   }
   numprefix=0;
+}
+
+static void copy_cell(Sint32 x0,Sint32 y0,Sint32 x1,Sint32 y1) {
+  
+}
+
+static void mass_move(Sint32 xd,Sint32 yd) {
+  Sint32 x,y,z;
+  Uint32 w=board_info.width;
+  Uint32 h=board_info.height;
+  if(!markgrid) return;
+  if(xd>0) {
+    if(xd>=w) return;
+    for(y=0;y<h;y++) for(x=w-xd;x<w;x++) if(set_mark(x,y,2)) return;
+  } else if(xd<0) {
+    if(-xd>=w) return;
+    for(y=0;y<h;y++) for(x=0;x<-xd;x++) if(set_mark(x,y,2)) return;
+  }
+  if(yd>0) {
+    if(yd>=h) return;
+    for(y=h-yd;y<h;y++) for(x=0;x<w;x++) if(set_mark(x,y,2)) return;
+  } else if(yd<0) {
+    if(-yd>=h) return;
+    //for(y=0;y<-yd;y++) for(x=0;x<w;x++) if(set_mark(x,y,2)) return;
+    for(y=0;y<markheight && y<-yd;y++) for(x=0;x<markskip;x++) if(markgrid[y*markskip+x]) return;
+  }
+  if(xd && yd) {
+    mass_move(0,yd);
+    yd=0;
+  }
+  if(yd>0 && !xd) {
+    
+  } else if(yd<0 && !xd) {
+    for(y=0;y<h+yd && y<markheight+yd;y++) {
+      memcpy(markgrid+y*markskip,markgrid+(y-yd)*markskip,markskip);
+      for(z=0;z<markskip;z++) {
+        for(x=0;x<8;x++) {
+          if(x+z*8>=w) break;
+          if(markgrid[y*markskip+z]&(1<<x)) copy_cell(x,y,x,y+yd);
+        }
+      }
+    }
+    if(markheight>-yd) markheight+=yd; else markheight=1;
+  } else if(xd>0 && !yd) {
+    
+  } else if(xd<0 && !yd) {
+    
+  }
 }
 
 static Sint32 cctmp;
@@ -688,6 +754,14 @@ static void cc_unmark(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   }
 }
 
+static void cc_write_step(Uint16 x,Uint16 y,const char*arg) {
+  write_at(x,y,cctile);
+}
+
+static void cc_writeunder_step(Uint16 x,Uint16 y,const char*arg) {
+  write_under(x,y,cctile);
+}
+
 static const ColonCommand colon_commands[]={
   {"b",0,cc_board,0,0,0},
   {"board",0,cc_board,0,0,0},
@@ -715,6 +789,10 @@ static const ColonCommand colon_commands[]={
   {"u",'.',cc_unmark,0,cc_unmark_step,0},
   {"unmark",'.',cc_unmark,0,cc_unmark_step,0},
   {"xl",'.',0,0,cc_exchangelayer_step,0},
+  {"w",'.',0,cc_place_begin,cc_write_step,0},
+  {"write",'.',0,cc_place_begin,cc_write_step,0},
+  {"writeunder",'.',0,cc_place_begin,cc_writeunder_step,0},
+  {"wu",'.',0,cc_place_begin,cc_writeunder_step,0},
 };
 
 typedef struct {
@@ -1038,7 +1116,7 @@ Uint16 edit_board(Uint16 id) {
           run_test_game(brd_id);
           break;
         case ' ': set_mark(xcur,ycur,1); break;
-        case 'c': clip.color=ask_color_char(0,clip.color); break;
+        case 'c': case 0x03: clip.color=ask_color_char(0,clip.color); break;
         case 'd': case -SDLK_DELETE: delete_at(xcur,ycur); break;
         case 'e': edit_tile(); break;
         case 'h': case -SDLK_LEFT: cursor_move(-1,0); break;
@@ -1047,6 +1125,9 @@ Uint16 edit_board(Uint16 id) {
         case 'l': case -SDLK_RIGHT: cursor_move(1,0); break;
         case 'm': emode='m'; break;
         case 'p': place_at(xcur,ycur,clip); break;
+        case 'q': write_at(xcur,ycur,clip); break;
+        case 'Q': write_under(xcur,ycur,clip); break;
+        case 't': emode='t'; xcur2=xcur; break;
         case 'u': unmark: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
         case 'y': clip=b_main[xcur+ycur*board_info.width]; set_apparent_clip(); break;
@@ -1066,6 +1147,17 @@ Uint16 edit_board(Uint16 id) {
         case 'D': do_colon_command("&delete"); emode=0; break;
         case 'p': do_colon_command("&place"); goto unmark;
         case 'P': do_colon_command("&place"); emode=0; break;
+        case 'h': case -SDLK_LEFT: mass_move(-(numprefix?:1),0); cursor_move(-1,0); break;
+        case 'j': case -SDLK_DOWN: mass_move(0,numprefix?:1); cursor_move(0,1); break;
+        case 'k': case -SDLK_UP: mass_move(0,-(numprefix?:1)); cursor_move(0,-1); break;
+        case 'l': case -SDLK_RIGHT: mass_move(numprefix?:1,0); cursor_move(1,0); break;
+        default: goto no_mode;
+      } break;
+      case 't': switch(k) {
+        case 0x08: if(xcur) --xcur; break;
+        case 0x0A: case 0x0D: xcur=xcur2; if(ycur<24) ++ycur; break;
+        case 0x10: if(k=ask_color_char(1,' ')) goto text; break;
+        case 0x20 ... 0x7E: text: write_at(xcur,ycur,(Tile){.kind=clip.kind,.color=clip.color,.param=k,.stat=clip.stat}); if(xcur<board_info.width) ++xcur; break;
         default: goto no_mode;
       } break;
       case 'v': switch(k) {

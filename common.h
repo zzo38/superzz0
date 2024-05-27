@@ -325,6 +325,7 @@ typedef struct {
 #define SF_FLASHY_MESSAGE 0x02
 #define SF_EXIT_BORDER 0x04
 #define SF_USER_BORDER 0x08
+#define SF_NO_SCROLL 0x10
 
 extern NumericFormat num_format[16];
 extern Screen cur_screen;

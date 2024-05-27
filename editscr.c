@@ -57,8 +57,8 @@ static void edit_screen_info(void) {
   win_form("Screen info") {
     win_text(':',"Screen name: ",nam);
     win_blank();
-    win_numeric('X',"View center X: ",cur_screen.view_x,0,80);
-    win_numeric('Y',"View center Y: ",cur_screen.view_y,0,25);
+    win_numeric('X',"View center X: ",cur_screen.view_x,0,79);
+    win_numeric('Y',"View center Y: ",cur_screen.view_y,0,24);
     win_blank();
     win_numeric('a',"Message X: ",cur_screen.message_x,0,255);
     win_numeric('g',"Message Y: ",cur_screen.message_y,0,25);
@@ -75,6 +75,7 @@ static void edit_screen_info(void) {
     win_boolean('F',"Flashy message",cur_screen.flag,SF_FLASHY_MESSAGE);
     win_boolean('i',"Exit indicators use border character",cur_screen.flag,SF_EXIT_BORDER);
     win_boolean('U',"User indicators use border character",cur_screen.flag,SF_USER_BORDER);
+    win_boolean('o',"Disable scrolling",cur_screen.flag,SF_NO_SCROLL);
     win_blank();
     win_command('.',"Edges...") {
       win_form("Screen edges") {
@@ -101,13 +102,37 @@ static void set_edges(Uint8*e) {
   Sint16 y0=ycur;
   Sint16 x1=xcur2;
   Sint16 y1=ycur2;
-  Sint16 z,x;
+  Sint16 z;
   if(x0>x1) z=x0,x0=x1,x1=z;
   if(y0>y1) z=y0,y0=y1,y1=z;
   e[DIR_E]=x1;
   e[DIR_N]=y0;
   e[DIR_W]=x0;
   e[DIR_S]=y1;
+}
+
+static void make_border(Uint8 thic) {
+  // 314
+  // 202
+  // 516
+  Uint8 bor[16]={
+    0x00,0xC4,0xB3,0xDA,0xBF,0xC0,0xD9,0xC5,
+    0x00,0xCD,0xBA,0xC9,0xBB,0xC8,0xBC,0xCE,
+  };
+  Sint16 x0=xcur;
+  Sint16 y0=ycur;
+  Sint16 x1=xcur2;
+  Sint16 y1=ycur2;
+  Sint16 z;
+  if(x0>x1) z=x0,x0=x1,x1=z;
+  if(y0>y1) z=y0,y0=y1,y1=z;
+  for(z=y0;z<=y1;z++) {
+    memset(cur_screen.command+z*80+x0,SC_BACKGROUND|3,x1+1-x0);
+    memset(cur_screen.color+z*80+x0,clip.col,x1+1-x0);
+    memset(cur_screen.parameter+z*80+x0,bor[thic+(z==y0?1:z==y1?1:0)],x1-x0);
+    cur_screen.parameter[z*80+x0]=bor[thic+(z==y0?3:z==y1?5:2)];
+    cur_screen.parameter[z*80+x1]=bor[thic+(z==y0?4:z==y1?6:2)];
+  }
 }
 
 static void edit_tile(void) {
@@ -132,6 +157,7 @@ static void edit_tile(void) {
           case SC_NUMERIC: case SC_NUMERIC_SPECIAL: h|=b&15; a=(a<<4)+d; break;
           case SC_MEMORY: c=a>>8; break;
           case SC_INDICATOR: h|=b; break;
+          case SC_TEXT: h|=b&15; break;
           case SC_BITS_0_LO: h|=b; break;
         }
         cur_screen.command[ycur*80+xcur]=h;
@@ -149,6 +175,7 @@ static void edit_tile(void) {
       switch(h) {
         case SC_NUMERIC: case SC_NUMERIC_SPECIAL: d=a&15; a>>=4; break;
         case SC_MEMORY: a|=c<<8; break;
+        case SC_TEXT: b|=c&0xF0; break;
         case SC_BITS_0_LO: b=cur_screen.command[y*80+x]&0x7F; break;
       }
       win_refresh();
@@ -160,7 +187,7 @@ static void edit_tile(void) {
     win_option('S',"Special numeric vaariable",h,SC_NUMERIC_SPECIAL) win_refresh();
     win_option('M',"Memory",h,SC_MEMORY) win_refresh();
     win_option('I',"Indicator",h,SC_INDICATOR) win_refresh();
-    //win_option('w',"Text window",h,SC_TEXT) win_refresh();
+    win_option('w',"Text window",h,SC_TEXT) win_refresh();
     win_option('o',"Bit of variable",h,SC_BITS_0_LO) win_refresh();
     win_blank();
     if(h!=SC_MEMORY) a&=0xFF;
@@ -214,6 +241,11 @@ static void edit_tile(void) {
             win_command_esc(0,"OK") break;
           }
         }
+        break;
+      case SC_TEXT:
+        win_char('h',"Default character: ",a);
+        win_color('c',"Primary color: ",c) b=(b&0x0F)|(c&0xF0);
+        win_color('d',"Secondary color: ",b) c=(c&0x0F)|(b&0xF0);
         break;
       case SC_BITS_0_LO:
         win_char('h',"Character: ",a);
@@ -307,10 +339,10 @@ static void f_menu(Uint8 mnu) {
     {'3',SC_IND_USER3,1,"User 3"},
     {0,0,0,""},
     {0,0,0,"Bits:"},
-    {'A',SC_BITS_0_LO,5,"Bits (A)"},
-    {'B',SC_BITS_1_LO,5,"Bits (B)"},
-    {'C',SC_BITS_2_LO,5,"Bits (C)"},
-    {'D',SC_BITS_3_LO,5,"Bits (D)"},
+    {'A',SC_BITS_0_LO,5,"Bits of (A)"},
+    {'B',SC_BITS_1_LO,5,"Bits of (B)"},
+    {'C',SC_BITS_2_LO,5,"Bits of (C)"},
+    {'D',SC_BITS_3_LO,5,"Bits of (D)"},
     {0,3,0,"Numbers:"},
     {'A',SC_NUMERIC|0x0,2,"(A)"},
     {'B',SC_NUMERIC|0x1,2,"(B)"},
@@ -346,6 +378,7 @@ static void f_menu(Uint8 mnu) {
     {'Z',SC_SPEC_USERDATA,2,"Board user data"},
     {0,255,0,0},
   };
+  char buf[4]={};
   Uint32 i,j,k,q,y;
   draw_border(0x1B,20,1,60,23);
   v_ycur=25;
@@ -379,6 +412,8 @@ static void f_menu(Uint8 mnu) {
     case 0: clip.par=0; break;
     case 1: clip.par=ask_color_char(1,0); break;
     case 2: clip.par=ask_numeric_digit_and_format(); break;
+    case 3: clip.par=ask_color_char(1,0); clip.com|=ask_color_char(0,clip.col)&15; break;
+    case 5: ask_text("Bit position (0-31):",buf,2); clip.par=ask_color_char(1,0); clip.com|=strtol(buf,0,10)&31; break;
   }
   place_at(xcur,ycur,clip);
 }
@@ -835,6 +870,8 @@ Uint16 edit_screen(Uint16 id) {
         case 0x0D: case 'm': do_colon_command("<:>mark"); emode='m'; break;
         case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
+        case 'b': make_border(0); emode=0; break;
+        case 'B': make_border(8); emode=0; break;
         default: goto no_mode;
       } break;
       default: emode=0;
