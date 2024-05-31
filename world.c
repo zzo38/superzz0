@@ -54,6 +54,7 @@ const char*init_world(void) {
   read32(fp); // used later
   read32(fp); // used later
   for(i=0;i<16;i++) status_vars[i]=read32(fp);
+  for(i=0;i<16;i++) namedflag[i].name[0]=0;
   fclose(fp);
   // "NUMFORM"
   if(fp=open_lump("NUMFORM","r")) {
@@ -176,12 +177,25 @@ static inline void fill_layer(Tile*p,Tile t,Uint32 c) {
   while(c--) *p++=t;
 }
 
+static void layer_inversion_stat(Uint32 at,Uint8 lay) {
+  Uint32 x=at%board_info.width;
+  Uint32 y=at/board_info.width;
+  Uint32 n=b_under[at].stat|b_main[at].stat;
+  Stat*s=stats+n-1;
+  if(n>maxstat) return;
+  for(n=0;n<s->count;n++) if(s->xy[n].x==x && s->xy[n].y==y && (s->xy[n].layer&3)==lay) {
+    s->xy[n].layer^=3;
+    return;
+  }
+}
+
 static void layer_inversion(void) {
   Uint32 tc=board_info.width*board_info.height;
   Uint32 i;
   Tile t;
   for(i=0;i<tc;i++) {
     if(b_under[i].kind && b_main[i].kind) {
+      if(b_under[i].stat && !b_main[i].stat) layer_inversion_stat(i,1); else if(!b_under[i].stat && b_main[i].stat) layer_inversion_stat(i,2);
       t=b_under[i];
       b_under[i]=b_main[i];
       b_main[i]=t;
@@ -189,7 +203,90 @@ static void layer_inversion(void) {
   }
 }
 
+static inline Uint8 make_guess(const Tile*pt,Uint8 v,Uint8*g) {
+  return v?g[pt->kind]:pt->stat?*g:0;
+}
+
+static inline void update_guess(const Tile*pt,Uint8 v,Uint8*g) {
+  // If the guess is correct then this does not actually make any changes.
+  if(v) g[pt->kind]=pt->values[v]; else if(pt->stat) *g=pt->kind;
+}
+
+static Uint32 load_board_run(FILE*fp,Tile*pt,Tile*end,Uint8 v,Uint8*g) {
+  Uint8 c=fgetc(fp);
+  Uint8 m=c>>6;
+  Uint16 r=c&63;
+  Uint16 n=0;
+  if(!r) {
+    r=127+fgetc(fp);
+    if(r>254) r+=(fgetc(fp)<<7)+63;
+  }
+  if(r>end-pt) r=end-pt;
+  if(pt==b_under && m>1) m=0;
+  if(pt<b_under+board_info.width && m==3) m=0;
+  while(n<r) {
+    pt[n].values[v]=(m==0?make_guess(pt+n,v,g):m==1?fgetc(fp):m==2?pt[-1].values[v]:pt[n-board_info.width].values[v]);
+    update_guess(pt+n,v,g);
+    n++;
+  }
+  return r;
+}
+
+static inline void hetero_board_run(FILE*fp,const Tile*pt,Uint16 n,Uint8 v) {
+  Uint16 i;
+  for(i=0;i<n;i++) fputc(pt[i].values[v],fp);
+}
+
+static Uint32 save_board_run(FILE*fp,const Tile*pt,const Tile*end,Uint8 v,Uint8*g) {
+  Uint8 g0[256];
+  Uint8 m;
+  Uint16 w=board_info.width;
+  Uint16 r0,r2,r3,n,i;
+  for(r0=r2=r3=n=0;n<end-pt && (n==r0 || n==r2 || n==r3) && n<33085;n++) {
+    if(n==r0 && pt[n].values[v]==make_guess(pt+n,v,g)) r0++;
+    if(n==r2 && pt>b_under && pt[n-1].values[v]==pt[n].values[v]) r2++;
+    if(n==r3 && pt>=b_under+w && pt[n-w].values[v]==pt[n].values[v]) r3++;
+  }
+  if(!r0 && !r2 && !r3) {
+    memcpy(g0,g,256);
+    for(n=1,i=0;n<end-pt && n<33085;n++) {
+      if(pt>b_under && pt[n-1].values[v]==pt[n].values[v]) i|=010;
+      if(pt>=b_under+w && pt[n-w].values[v]==pt[n].values[v]) i|=020;
+      if(pt[n].values[v]==make_guess(pt+n,v,g0)) i|=040;
+      if(i&(i>>3)) {
+        n--;
+        break;
+      }
+      i>>=3;
+      update_guess(pt+n,v,g0);
+    }
+    m=1;
+  } else if(r0>r2 && r0>r3) {
+    m=0; n=r0;
+  } else if(r2>=r3) {
+    m=2; n=r2;
+  } else {
+    m=3; n=r3;
+  }
+  if(n>63 && n<127) n=63;
+  if(n>254 && n<445) n=254;
+  if(m) for(i=0;i<n;i++) update_guess(pt+i,v,g);
+  if(n<64) {
+    fputc(n|(m<<6),fp);
+  } else if(n<255) {
+    fputc(m<<6,fp);
+    fputc(n-127,fp);
+  } else {
+    fputc(m<<6,fp);
+    fputc((n-318)|128,fp);
+    fputc((n-318)>>7,fp);
+  }
+  if(m==1) hetero_board_run(fp,pt,n,v);
+  return n;
+}
+
 const char*load_board(FILE*fp) {
+  Uint8 guess[256];
   Uint8 c;
   Uint16 ef=read16(fp);
   Uint32 at,tc,n;
@@ -197,7 +294,7 @@ const char*load_board(FILE*fp) {
   Tile*end;
   StatXY*r;
   int i,j;
-  if(ef&0x7CC0) return "Unrecognized file format";
+  if(ef&0x7AC0) return "Unrecognized file format";
   free(b_under);
   b_under=b_main=b_over=0;
   for(i=0;i<maxstat;i++) {
@@ -209,7 +306,7 @@ const char*load_board(FILE*fp) {
   maxstat=0;
   memset(&board_info,0,sizeof(BoardInfo));
   board_info.flag=(ef&0x100?read16(fp):read8(fp));
-  board_info.screen=(ef&0x200?read16(fp):read8(fp));
+  board_info.screen=read16(fp);
   for(i=0;i<4;i++) if(ef&(1<<i)) board_info.exits[i]=read16(fp);
   if(ef&0x10) {
     board_info.width=read16(fp);
@@ -228,7 +325,6 @@ const char*load_board(FILE*fp) {
   b_main=b_under+tc;
   b_over=b_main+tc;
   end=b_over+tc;
-  
   // Stats
   stats=calloc(maxstat,sizeof(Stat));
   if(!stats) err(1,"Allocation failed");
@@ -274,11 +370,20 @@ const char*load_board(FILE*fp) {
       }
     }
   }
+  // Board grid
+  *guess=1;
+  for(pt=b_under;pt<end;) pt+=load_board_run(fp,pt,end,0,guess);
+  memset(guess,0,256);
+  for(pt=b_under;pt<end;) pt+=load_board_run(fp,pt,end,1,guess);
+  memset(guess,0,256);
+  for(pt=b_under;pt<end;) pt+=load_board_run(fp,pt,end,2,guess);
+  if(ef&0x0400) layer_inversion();
   return 0;
 }
 
 const char*save_board(FILE*fp,int m) {
-  Uint16 ef=(m?0x8000:0);
+  Uint8 guess[256];
+  Uint16 ef=(m?0x8400:0x0400);
   Uint16 w=board_info.width;
   Uint32 at;
   Uint32 tc=board_info.width*board_info.height;
@@ -289,7 +394,6 @@ const char*save_board(FILE*fp,int m) {
   StatXY*r;
   // Header
   if(board_info.flag&~255) ef|=0x100;
-  if(board_info.screen&~255) ef|=0x200;
   if(board_info.exits[0]) ef|=1;
   if(board_info.exits[1]) ef|=2;
   if(board_info.exits[2]) ef|=4;
@@ -298,7 +402,7 @@ const char*save_board(FILE*fp,int m) {
   if(board_info.userdata) ef|=0x20;
   write16(fp,ef);
   if(ef&0x100) write16(fp,board_info.flag); else write8(fp,board_info.flag);
-  if(ef&0x200) write16(fp,board_info.screen); else write8(fp,board_info.screen);
+  write16(fp,board_info.screen);
   if(ef&1) write16(fp,board_info.exits[0]);
   if(ef&2) write16(fp,board_info.exits[1]);
   if(ef&4) write16(fp,board_info.exits[2]);
@@ -312,8 +416,7 @@ const char*save_board(FILE*fp,int m) {
   }
   if(ef&0x20) write16(fp,board_info.userdata);
   write8(fp,maxstat);
-  // Board grid
-  
+  if(ef&0x0400) layer_inversion();
   // Stats
   for(i=0;i<maxstat;i++) {
     write16(fp,stats[i].misc1);
@@ -352,6 +455,14 @@ const char*save_board(FILE*fp,int m) {
       write16(fp,i);
     }
   }
+  // Board grid
+  *guess=1;
+  for(pt=b_under;pt<end;) pt+=save_board_run(fp,pt,end,0,guess);
+  memset(guess,0,256);
+  for(pt=b_under;pt<end;) pt+=save_board_run(fp,pt,end,1,guess);
+  memset(guess,0,256);
+  for(pt=b_under;pt<end;) pt+=save_board_run(fp,pt,end,2,guess);
+  if(ef&0x0400) layer_inversion();
   return 0;
 }
 

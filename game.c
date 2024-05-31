@@ -31,6 +31,12 @@ Uint16 ngtext;
 Sint32 status_vars[16];
 Uint8**boardnames;
 Uint16 maxboard;
+Uint8 textbuf[81];
+Uint8 ntextbuf;
+Uint8 vtextbuf[81];
+Uint8 nvtextbuf;
+Uint16 vtexttime;
+NamedFlag namedflag[16];
 
 static uint64_t rseed;
 
@@ -570,6 +576,79 @@ static inline Uint32 pack_tile(const Tile*t) {
   return t->kind|(t->color<<8)|(t->param<<16)|(t->stat<<24);
 }
 
+static int match_label(const char*v,const char*label) {
+  int n=0;
+  char a,b;
+  for(;;) {
+    a=v[n+1];
+    b=label[n];
+    if(!b || b=='\n' || b==' ' || b=='\r') {
+      if(!a || a=='\n' || a==' ' || a=='\r' || a==';') {
+        n++;
+        while(v[n] && v[n]!='\n') n++;
+        if(v[n]=='\n') n++;
+        return n;
+      }
+      return 0;
+    }
+    if(a>='a') a+='A'-'a';
+    if(b>='a') b+='A'-'a';
+    if(a!=b) return 0;
+    n++;
+  }
+}
+
+static int match_name(const char*v,const char*name) {
+  int n=0;
+  char a,b;
+  if(*v++!='@') return 0;
+  for(;;) {
+    a=v[n];
+    b=name[n];
+    if(!b || b==':' || b=='=' || b=='\n' || b=='\r') {
+      return (!a || a==':' || a=='=' || a=='\n' || a=='\r');
+    }
+    if(a>='a') a+='A'-'a';
+    if(b>='a') b+='A'-'a';
+    if(a!=b) return 0;
+    n++;
+  }
+}
+
+static Sint32 find_label(Stat*s,const char*label) {
+  const char*v=(char*)s->text;
+  int n;
+  if(*v!=':') v=strstr(v,"\n:"),v+=(v?1:0);
+  while(v) {
+    if(n=match_label(v,label)) return (v-(const char*)s->text)+n;
+    v=strstr(v,"\n:"),v+=(v?1:0);
+  }
+  return -1;
+}
+
+static void send_message(Uint32 n,const char*label) {
+  const char*p;
+  const char*q=strchr(label,':');
+  StatXY*r;
+  Stat*s;
+  Sint32 f;
+  int m;
+  if(q || !n) {
+    if(q) p=label,label=q+1; else p=0;
+    for(n=0;n<maxstat;n++) if(stats[n].length) {
+      if(p && !match_name(s->text,p)) continue;
+      f=find_label(s=stats+n,label);
+      if(f!=-1) {
+        for(m=0;m<s->count;m++) if(!(s->xy[m].layer&0x80)) s->xy[m].instptr=f;
+      }
+    }
+  } else if(r=get_statxy(n)) {
+    if(r->layer&0x80) return;
+    f=find_label(stats+(n&0xFF)-1,label);
+    if(f!=-1) r->instptr=f;
+  }
+}
+
 static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   
 }
@@ -768,6 +847,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_RSUB: regs[fo]=so-regs[fo]; break;
       case OP_RUN: run_script(regs[fo]&0xFFFF,(regs[fo]>>16)&0xFFFF,so); break;
       case OP_SCAN: so=scan_board(regs[fo],so&0xFF,x,y); if(!so) break; if(regs[fo]) regs[fo]=so; else goto unpack0; break;
+      case OP_SEND: if(so>0 && so<=ngtext) send_message(regs[fo],gtext[so]); else if(!so) send_message(regs[fo],textbuf); break;
       case OP_SEX: so=(Sint16)so; goto store;
       case OP_SGN: so=(so<0?-1:so>0?1:0); goto store;
       case OP_SIXY: if((rs=get_statxy(so)) && (so=convxy(0,rs->x,rs->y)+1)) condflag=1; else condflag=so=0; goto store;
@@ -830,10 +910,6 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   }
 }
 
-static Uint32 broadcast(const char*label) {
-  
-}
-
 int run_game(void) {
   Uint32 a,b,c,d,x,y;
   Tile*t;
@@ -845,9 +921,10 @@ int run_game(void) {
     b=cur_board_id;
     warp_to_board(memory[MEM_WARP_TO],0);
     run_program(a,b,(memory[MEM_WARP_X_HI]<<16)|memory[MEM_WARP_X_LO],(memory[MEM_WARP_Y_HI]<<16)|memory[MEM_WARP_Y_LO],(memory[MEM_WARP_Z_HI]<<16)|memory[MEM_WARP_Z_LO]);
-    broadcast("ENTERED");
+    send_message(0,"ENTERED");
   }
   *v_status=16;
+  //TODO: scrolling
   update_screen();
   //TODO: read input, timer, and system functions
   

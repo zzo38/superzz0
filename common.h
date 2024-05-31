@@ -421,6 +421,18 @@ extern Uint16 ngtext;
 
 extern Sint32 status_vars[16];
 
+extern Uint8 textbuf[81];
+extern Uint8 ntextbuf;
+extern Uint8 vtextbuf[81];
+extern Uint8 nvtextbuf;
+extern Uint16 vtexttime;
+
+typedef struct {
+  Uint8 name[16];
+} NamedFlag;
+
+extern NamedFlag namedflag[16];
+
 // === File access (Hamster archives) ===
 
 extern char*world_name;

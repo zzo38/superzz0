@@ -3,17 +3,20 @@ All numbers are small-endian (except lump sizes, which are PDP-endian).
 
 === *.BRD ===
 
-The definition of a board.
+The definition of a board. The parts are:
+  Header
+  Stats
+  Stat grid (only CURRENT.BRD)
+  Grid other than stats
 
-The first part is the header, which is:
+The header consists of:
 
 * Encoding flags (2 bytes): Specifies which other fields are present.
 
 * Board flags (2 bytes if bit8 of encoding flags is set, or 1 byte if bit8
 of encoding flags is clear)
 
-* Screen number (2 bytes if bit9 of encoding flags is set, or 1 byte if
-bit9 of encoding flags is clear)
+* Screen number (2 bytes)
 
 * Exits: Two bytes per exit; the low four bits of the encoding flags
 specifies which ones are present (the non-present ones will be zero)
@@ -35,18 +38,15 @@ Summary of encoding flags:
   0040 = (reserved)
   0080 = (reserved)
   0100 = Long flag
-  0200 = Long screen number
-  0400 = (reserved)
+  0200 = (reserved)
+  0400 = Layer inversion
   0800 = (reserved)
   1000 = (reserved)
   2000 = (reserved)
   4000 = (reserved)
   8000 = Save game
 
-(TODO)
-
-After the board grid is the stats (the first stat number is stat 1). Each
-stat is as follows:
+Each stat (the first stat number is stat 1) is as follows:
 
 * Misc1, Misc2, Misc3 (16-bits each)
 
@@ -68,9 +68,10 @@ of the data is according to the encoding flag:
   bit6 = Layer
   bit7 = Delay
 
-* X and Y coordinates: If the encoding flag bits is 3, then a 8-bit or 16-bit
-number (depending on board width/height). Otherwise, it is the encoding flag
-bits number plus the coordinate of the previous XY record minus 1.
+* X and Y coordinates: If the encoding flag bits is 3, then a 8-bit or
+16-bit number (depending on board width/height; however, the coordinates
+are always 16-bits long in CURRENT.BRD). Otherwise, it is the encoding
+flag bits number plus the coordinate of the previous XY record minus 1.
 
 * Instruction pointer: Encoding flag bits 0 means 0, 1 means 65535, 2 means
 same as previous, and 3 means a specified 16-bit number.
@@ -78,6 +79,51 @@ same as previous, and 3 means a specified 16-bit number.
 * Layer: Set means read a 8-bit number, clear means same as previous.
 
 * Delay: Set means read a 8-bit number, clear means same as previous.
+
+The board grid is encoded in the order:
+  Under/kind
+  Main/kind
+  Over/kind
+  Under/color
+  Main/color
+  Over/color
+  Under/parameter
+  Main/parameter
+  Over/parameter
+
+It is encoded as a sequences of runs; a run is allowed to cross between
+layers, but cannot cross between kind/color/parameter.
+
+A run command in the board grid has the high 2-bits specifying where the
+data comes from, and then the low 6-bits being the run length; if the
+low 6-bits are zero then instead the run length is the next byte plus 127,
+but if that next byte is 128 or higher, then also add 128 times the next
+byte, and then add 63 more. The possible data sources are:
+
+* 0 = A guess is made. The logic for making guesses is explained below.
+
+* 1 = It is given explicitly, after the run length; one byte per cell.
+
+* 2 = Each cell repeats the value of the previous cell.
+
+* 3 = Each cell repeats the value of the cell whose distance behind this
+one is equal to the board width (i.e. a "copy-above" run).
+
+Guesses are made according to the following logic:
+
+* For the kind, the guess is always zero if there is no stat at that
+location, or the most recent kind of tile that does have a stat, if this
+one does have a stat.
+
+* For the colour and parameter, it guesses the colour or parameter of the
+most recent cell of the same kind, or zero if there isn't any.
+
+Bit11 if the encoding flags means that "layer inversion" is in use. After
+decoding the board data, any cell where the kind in both the under layer
+and main layer are nonzero, will have the two layers exchanged. Layer
+inversion also affects stats: If they are exchanged in this way and, one
+layer has a stat at those coordinates but the other doesn't, then the
+layer field of the corresponding stat XY record is updated.
 
 
 === *.HLP ===
@@ -345,8 +391,8 @@ This lump is mandatory.
 The initial state of the program memory (not compressed). If it is too
 small then the rest will be zero.
 
-The addresses from 0xD0 to 0xFF (which are twice as much as the actual
-address in the file) have special meanings:
+The addresses from 0xD0 to 0xFF (the actual address in the file is twice
+as much as these addresses, since they are 16-bits) have special meanings:
 
 * 0xE0 = Keyboard event
 
@@ -371,6 +417,9 @@ the address of a buffer of at least forty-nine cells in order to work.
 animations.
 
 * 0xED = Screen number for text windows
+
+Memory cells with addresses 0xD0 to 0xFF which have not been defined above
+should be set to zero for compatibility with future versions of ZZ Zero.
 
 
 === METADATA ===
@@ -536,6 +585,10 @@ It contains:
 * Length of text buffer (one byte).
 
 * Text buffer.
+
+* Sixteen named flags; each is a null-terminated string, with no more
+than fifteen characters (which cannot be lowercase; this fifteen characters
+does not include the null terminator).
 
 
 === SCR.NAM ===
