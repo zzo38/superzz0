@@ -163,9 +163,10 @@ const char*init_world(void) {
     Uint8*s;
     size_t z;
     maxscreen=read16(fp);
-    for(j=0;j<=maxboard;j++) {
+    screennames=calloc(maxscreen+1,sizeof(Uint8*));
+    for(j=0;j<=maxscreen;j++) {
       s=0; z=0; if(getdelim((char**)&s,&z,0,fp)<=0) break;
-      boardnames[j]=s;
+      screennames[j]=s;
     }
     fclose(fp);
   }
@@ -488,14 +489,14 @@ const char*load_screen(FILE*fp) {
     c=fgetc(fp);
     if(c<80) {
       c++;
-      if(at+c>=80*25) return "Out of bounds access";
+      if(at+c>80*25) return "Out of bounds access";
       memset(cur_screen.command+at,at?cur_screen.command[at-1]:0,c);
       memset(cur_screen.color+at,at?cur_screen.color[at-1]:0,c);
       memset(cur_screen.parameter+at,at?cur_screen.parameter[at-1]:0,c);
       at+=c;
     } else if(c<160) {
       c-=79;
-      if(at<80 || at+c>=80*25) return "Out of bounds access";
+      if(at<80 || at+c>80*25) return "Out of bounds access";
       for(i=0;i<c;i++) {
         cur_screen.command[at+i]=cur_screen.command[at+i-80];
         cur_screen.color[at+i]=cur_screen.color[at+i-80];
@@ -504,7 +505,7 @@ const char*load_screen(FILE*fp) {
       at+=c;
     } else if(c<240) {
       c-=159;
-      if(at+c>=80*25) return "Out of bounds access";
+      if(at+c>80*25) return "Out of bounds access";
       memset(cur_screen.command+at,fgetc(fp),c);
       memset(cur_screen.color+at,fgetc(fp),c);
       fread(cur_screen.parameter+at,1,c,fp);

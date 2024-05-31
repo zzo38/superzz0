@@ -35,8 +35,9 @@ void set_screen_name(Uint16 id,const char*name) {
 
 static void goto_screen(Uint16 id) {
   FILE*fp=open_lump_by_number(id,"SCR","r");
+  const char*e;
   if(fp) {
-    load_screen(fp);
+    if(e=load_screen(fp)) alert_text(e);
     fclose(fp);
   } else {
     memset(&cur_screen,0,sizeof(Screen));

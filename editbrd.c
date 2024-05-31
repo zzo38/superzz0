@@ -63,11 +63,12 @@ static Uint8 set_mark(Uint16 x,Uint16 y,Uint8 mask) {
 
 static void goto_board(Uint16 id) {
   FILE*fp=open_lump_by_number(id,"BRD","r");
+  const char*e;
   char b=0;
   int i;
   if(!fp) b=1,fp=open_lump_by_number(config.template_board,"BRD","r");
   if(fp) {
-    load_board(fp);
+    if(e=load_board(fp)) alert_text(e);
     fclose(fp);
     if(b) {
       memset(b_under,0,board_info.width*board_info.height);
