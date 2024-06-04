@@ -480,6 +480,7 @@ int next_event(void) {
         event.key.keysym.sym=numpad[event.key.keysym.sym-256];
       }
       return 1;
+    case SDL_USEREVENT: return 1;
     case SDL_QUIT: return 0;
     case SDL_VIDEOEXPOSE: redisplay(); break;
   }

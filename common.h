@@ -366,8 +366,8 @@ void update_screen(void);
 // Special outputs:
 //   S = Return value from subroutine
 //   T = Set condition flag to true if nonzero, or false if zero
-//   U = (reserved)
-//   V = (reserved)
+//   U = Coroutine U
+//   V = Coroutine V
 
 #define XOP_ADD 0x0000 // source+value
 #define XOP_ADD_NEG 0x0100 // source+value-256
@@ -394,6 +394,24 @@ void update_screen(void);
 #define XOP_S_BOARD_ID 0x0D80 // current board number
 #define XOP_S_SCREEN_ID 0x0D90 // current screen number
 
+#define MEM_COROUTINE_U_PC 0xCE
+#define MEM_COROUTINE_V_PC 0xCF
+#define MEM_COROUTINE_U_W_HI 0xD0
+#define MEM_COROUTINE_U_W_LO 0xD1
+#define MEM_COROUTINE_U_X_HI 0xD2
+#define MEM_COROUTINE_U_X_LO 0xD3
+#define MEM_COROUTINE_U_Y_HI 0xD4
+#define MEM_COROUTINE_U_Y_LO 0xD5
+#define MEM_COROUTINE_U_Z_HI 0xD6
+#define MEM_COROUTINE_U_Z_LO 0xD7
+#define MEM_COROUTINE_V_W_HI 0xD8
+#define MEM_COROUTINE_V_W_LO 0xD9
+#define MEM_COROUTINE_V_X_HI 0xDA
+#define MEM_COROUTINE_V_X_LO 0xDB
+#define MEM_COROUTINE_V_Y_HI 0xDC
+#define MEM_COROUTINE_V_Y_LO 0xDD
+#define MEM_COROUTINE_V_Z_HI 0xDE
+#define MEM_COROUTINE_V_Z_LO 0xDF
 #define MEM_KEY_EVENT 0xE0
 #define MEM_FRAME_EVENT 0xE1
 #define MEM_CUSTOM_COMMAND 0xE2
@@ -408,6 +426,8 @@ void update_screen(void);
 #define MEM_WARP_Z_LO 0xEB
 #define MEM_FRAME_COUNTER 0xEC
 #define MEM_TEXT_SCREEN 0xED
+#define MEM_SCROLL_X_RATE 0xEE
+#define MEM_SCROLL_Y_RATE 0xEF
 
 extern Uint16*memory;
 extern Sint32 regs[8];

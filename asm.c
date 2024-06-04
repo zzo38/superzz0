@@ -612,6 +612,7 @@ int main(int argc,char**argv) {
   infile=fopen(argv[optind],"r");
   if(!infile) err(1,"Cannot open input file");
   outname=argv[optind+1];
+  mem[0xEE]=mem[0xEF]=0xFFFF;
   do_pass();
   for(i=0;i<10;i++) if(flabel[i]) {
     fclose(flabel[i]);

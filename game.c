@@ -40,6 +40,11 @@ NamedFlag namedflag[16];
 
 static uint64_t rseed;
 
+#define PLAYSTATE_NORMAL 16
+#define PLAYSTATE_FAST 175
+#define PLAYSTATE_PAUSED 186
+static char playstate=PLAYSTATE_NORMAL;
+
 Uint32 dice(Uint32 n) {
   Uint32 o;
   Uint32 m=n-1;
@@ -74,11 +79,63 @@ const char*select_board(Uint16 b) {
 }
 
 static void warp_to_board(Uint16 b,char m) {
-  
-  if(board_info.flag&BF_PERSIST) {
-    
+  FILE*fp;
+  const char*e;
+  Sint32 x,y;
+  if((board_info.flag&BF_PERSIST) && !m) {
+    for(x=0;x<maxstat;x++) {
+      if(stats[x].xy) for(y=0;y<stats[x].count;y++) {
+        if(!(stats[x].xy[y].layer&3) || stats[x].xy[y].x>=board_info.width && stats[x].xy[y].y>=board_info.height) {
+          memmove(stats[x].xy+y,stats[x].xy+y+1,(--stats[x].count-y)*sizeof(StatXY));
+          --y;
+        }
+      }
+    }
+    fp=open_lump_by_number(cur_board_id,"BRD","w");
+    if(!fp) err(1,"Cannot open %04X.BRD",cur_board_id);
+    if(e=save_board(fp,0)) errx(1,"Error saving board #%d: %s",cur_board_id,e);
+    fclose(fp);
   }
-  
+  if(cur_board_id!=b || !board_info.width) {
+    if(e=select_board(cur_board_id=b)) errx(1,"Error loading board #%d: %s",b,e);
+  }
+  if(m || cur_screen_id!=board_info.screen) {
+    fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
+    if(!fp) err(1,"Cannot open %04X.SCR",cur_screen_id);
+    if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
+    fclose(fp);
+  }
+  // Handle scrolling
+  if((cur_screen.flag&SF_NO_SCROLL) || !maxstat || !stats->count) {
+    scroll_x=-cur_screen.hard_edge[DIR_W];
+    scroll_y=-cur_screen.hard_edge[DIR_N];
+  } else {
+    x=stats->xy->x; y=stats->xy->y;
+    scroll_x=x-cur_screen.view_x;
+    scroll_y=y-cur_screen.view_y;
+    if(scroll_x<-cur_screen.hard_edge[DIR_W]) scroll_x=cur_screen.hard_edge[DIR_W]; else if(scroll_x>board_info.width-cur_screen.hard_edge[DIR_E]) scroll_x=cur_screen.hard_edge[DIR_E];
+    if(scroll_y<-cur_screen.hard_edge[DIR_N]) scroll_y=cur_screen.hard_edge[DIR_N]; else if(scroll_y>board_info.height-cur_screen.hard_edge[DIR_S]) scroll_y=cur_screen.hard_edge[DIR_S];
+  }
+}
+
+static void display_message_text(void) {
+  Uint32 y=cur_screen.message_y;
+  Sint32 x,z;
+  Uint8 m=(cur_screen.flag&SF_FLASHY_MESSAGE?0x80:0xFF);
+  if(y>25) return;
+  if(cur_screen.flag&SF_LEFT_ALIGN_MESSAGE) {
+    x=cur_screen.message_l;
+  } else {
+    x=cur_screen.message_x-nvtextbuf/2;
+    if(x<cur_screen.message_l) x=cur_screen.message_l;
+  }
+  z=draw_text(x,y,vtextbuf,(cur_screen.flag&SF_FLASHY_MESSAGE?memory[MEM_FRAME_COUNTER]%7+9:0),nvtextbuf);
+  x+=y*80;
+  z+=y*80;
+  while(x<z) {
+    v_color[x]|=m&cur_screen.color[x];
+    x++;
+  }
 }
 
 static Uint8 digit_of(Uint32 n,Uint8 f) {
@@ -429,6 +486,41 @@ static inline void calc_light(Uint8 sh,Sint32 r) {
   }
 }
 
+static void do_text_op(Uint8 op,Sint32 n) {
+  int i;
+  char buf[81];
+  const char*s=buf;
+  if(op==4) ntextbuf=0,op=6;
+  *buf=0;
+  switch(op) {
+    case 0: // Packed string
+      n&=0xFFFF;
+      for(i=0;i<80 && n<0x10000;n++) {
+        buf[i++]=memory[n];
+        buf[i++]=memory[n++]>>8;
+        if(!buf[i-2] || !buf[i-1]) break;
+      }
+      break;
+    case 1: // Board title
+      if(boardnames && n>=0 && n<=maxboard && boardnames[n]) s=(char*)boardnames[n];
+      break;
+    case 2: // Single character
+      *buf=n;
+      break;
+    case 3: // Decimal
+      snprintf(buf,80,"%ld",(long)n);
+      break;
+    case 6: // Global
+      if(n>0 && n<ngtext) s=(char*)gtext[n];
+      break;
+    case 7: // Hexadecimal
+      snprintf(buf,80,"%08lX",(unsigned long)n);
+      break;
+  }
+  n=snprintf(textbuf+ntextbuf,81-ntextbuf,"%s",s);
+  if(n+ntextbuf<80) ntextbuf+=n; else ntextbuf=80;
+}
+
 static Sint32 xop_special(Sint32 so,Uint16 ex) {
   switch(ex&0x0FF0) {
     case XOP_S_EVENT: return elem_def[so&255].event[ex&15];
@@ -768,6 +860,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_GBF: regs[fo]=board_info.flag&~so; break;
       case OP_GBU: regs[fo]=board_info.userdata&~so; break;
       case OP_GCOU: so&=0xFFFF; so=(so<1?-1:so>maxstat?0:stats[so-1].count); goto store;
+      case OP_GIP: if(rs=get_statxy(so)) regs[fo]=rs->instptr; break;
       case OP_GIVE: status_vars[fo]+=so; break;
       case OP_GM1: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].misc1); goto store;
       case OP_GM2: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].misc2); goto store;
@@ -775,6 +868,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_GO: t=so; so=pc; pc=t; goto store;
       case OP_GOTO: goto jump;
       case OP_GRTR: condflag=(regs[fo]>so?1:0); break;
+      case OP_GSD: if(rs=get_statxy(so)) regs[fo]=rs->delay; break;
       case OP_GSPD: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].speed); goto store;
       case OP_GTMC: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_main[t].color; else condflag=0; break;
       case OP_GTMK: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_main[t].kind; else condflag=0; break;
@@ -803,6 +897,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_LOOP: if(!regs[fo]) break; --regs[fo]; goto jump;
       case OP_LSH: regs[fo]=(so&~31?0:regs[fo]<<so); break;
       case OP_MAX: if(so>regs[fo]) regs[fo]=so; break;
+      case OP_MESS: do_text_op(fo,so); memcpy(vtextbuf,textbuf,nvtextbuf=ntextbuf); vtextbuf[nvtextbuf]=0; vtexttime=(nvtextbuf?config.message_timer:0); break;
       case OP_MIN: if(so<regs[fo]) regs[fo]=so; break;
       case OP_MOD: if(so) condflag=1,regs[fo]%=so; else condflag=0; break;
       case OP_MTIL: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=pack_tile(b_main+t); else condflag=0; break;
@@ -823,10 +918,12 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PBU: board_info.userdata=so; break;
       case OP_PEEK: regs[fo]=memory[so&0xFFFF]; break;
       case OP_PEER: regs[fo]=memory[(so+regs[fo])&0xFFFF]; break;
+      case OP_PIP: if(rs=get_statxy(so)) rs->instptr=regs[fo]; break;
       case OP_PM1: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc1=regs[fo];
       case OP_PM2: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc2=regs[fo];
       case OP_PM3: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc3=regs[fo];
       case OP_POKE: memory[so&0xFFFF]=regs[fo]; break;
+      case OP_PSD: if(rs=get_statxy(so)) rs->delay=regs[fo]; break;
       case OP_PTMC: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].color=regs[fo]; else condflag=0; break;
       case OP_PTMK: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].kind=regs[fo]; else condflag=0; break;
       case OP_PTMP: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].param=regs[fo]; else condflag=0; break;
@@ -866,6 +963,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_SWPZ: t=z; z=so; so=t; goto store;
       case OP_TAKE: if(status_vars[fo]>=so) status_vars[fo]-=so,condflag=1; else condflag=0; break;
       case OP_TDEC: --so; if(condflag) goto store; break;
+      case OP_TEXT: do_text_op(fo,so); break;
       case OP_TINC: ++so; if(condflag) goto store; break;
       case OP_TLET: if(condflag) goto store; break;
       case OP_TMAT: if((t=convxy(so,x,y))!=-1) condflag=(elem_def[b_main[t].kind].attrib&(0x10000000UL<<fo)?1:0); break;
@@ -898,6 +996,20 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case 0 ... 7: regs[fo]=so; break;
       case 8: return so; break;
       case 9: condflag=(so?1:0); break;
+      case 10:
+        memory[MEM_COROUTINE_U_W_HI]=w>>16; memory[MEM_COROUTINE_U_W_LO]=w; w=so;
+        t=(memory[MEM_COROUTINE_U_X_HI]<<16)|memory[MEM_COROUTINE_U_X_LO]; memory[MEM_COROUTINE_U_X_HI]=x>>16; memory[MEM_COROUTINE_U_X_LO]=x; x=t;
+        t=(memory[MEM_COROUTINE_U_Y_HI]<<16)|memory[MEM_COROUTINE_U_Y_LO]; memory[MEM_COROUTINE_U_Y_HI]=y>>16; memory[MEM_COROUTINE_U_Y_LO]=y; y=t;
+        t=(memory[MEM_COROUTINE_U_Z_HI]<<16)|memory[MEM_COROUTINE_U_Z_LO]; memory[MEM_COROUTINE_U_Z_HI]=z>>16; memory[MEM_COROUTINE_U_Z_LO]=z; z=t;
+        t=pc; pc=memory[MEM_COROUTINE_U_PC]; memory[MEM_COROUTINE_U_PC]=t;
+        break;
+      case 11:
+        memory[MEM_COROUTINE_V_W_HI]=w>>16; memory[MEM_COROUTINE_V_W_LO]=w; w=so;
+        t=(memory[MEM_COROUTINE_V_X_HI]<<16)|memory[MEM_COROUTINE_V_X_LO]; memory[MEM_COROUTINE_V_X_HI]=x>>16; memory[MEM_COROUTINE_V_X_LO]=x; x=t;
+        t=(memory[MEM_COROUTINE_V_Y_HI]<<16)|memory[MEM_COROUTINE_V_Y_LO]; memory[MEM_COROUTINE_V_Y_HI]=y>>16; memory[MEM_COROUTINE_V_Y_LO]=y; y=t;
+        t=(memory[MEM_COROUTINE_V_Z_HI]<<16)|memory[MEM_COROUTINE_V_Z_LO]; memory[MEM_COROUTINE_V_Z_HI]=z>>16; memory[MEM_COROUTINE_V_Z_LO]=z; z=t;
+        t=pc; pc=memory[MEM_COROUTINE_V_PC]; memory[MEM_COROUTINE_V_PC]=t;
+        break;
       case 12: w=so; break;
       case 13: x=so; break;
       case 14: y=so; break;
@@ -911,10 +1023,13 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
 }
 
 int run_game(void) {
+  Uint8 ka=0;
+  Sint8 kd=-1;
   Uint32 a,b,c,d,x,y;
   Tile*t;
   reseed(0);
-  
+  warp_to_board(cur_board_id,1);
+  set_timer(config.speed);
   gameloop:
   while(a=memory[MEM_WARP_CALL]) {
     memory[MEM_WARP_CALL]=0;
@@ -923,11 +1038,48 @@ int run_game(void) {
     run_program(a,b,(memory[MEM_WARP_X_HI]<<16)|memory[MEM_WARP_X_LO],(memory[MEM_WARP_Y_HI]<<16)|memory[MEM_WARP_Y_LO],(memory[MEM_WARP_Z_HI]<<16)|memory[MEM_WARP_Z_LO]);
     send_message(0,"ENTERED");
   }
-  *v_status=16;
+  *v_status=playstate;
   //TODO: scrolling
   update_screen();
-  //TODO: read input, timer, and system functions
-  
+  if(vtexttime) {
+    display_message_text();
+    if(!--vtexttime) nvtextbuf=0;
+  }
+  redisplay();
+  ka=0; kd=-1;
+  do {
+    if(!next_event()) errx(0,"No events available.");
+    if(event.type==SDL_KEYDOWN) {
+      if(event.key.keysym.unicode>0 && event.key.keysym.unicode<127 && !(event.key.keysym.mod&(KMOD_ALT|KMOD_META))) {
+        a=event.key.keysym.unicode;
+        if((a>=32 && a<127) || a==8 || a==9 || a==13) {
+          ka=a;
+          if(event.key.keysym.sym==SDLK_KP2) kd=DIR_S;
+          if(event.key.keysym.sym==SDLK_KP4) kd=DIR_W;
+          if(event.key.keysym.sym==SDLK_KP6) kd=DIR_E;
+          if(event.key.keysym.sym==SDLK_KP8) kd=DIR_N;
+        }
+      } else {
+        switch(event.key.keysym.sym) {
+          case SDLK_UP: ka=(event.key.keysym.mod&KMOD_SHIFT)?30:24; kd=DIR_N; break;
+          case SDLK_DOWN: ka=(event.key.keysym.mod&KMOD_SHIFT)?31:25; kd=DIR_S; break;
+          case SDLK_LEFT: ka=(event.key.keysym.mod&KMOD_SHIFT)?27:17; kd=DIR_W; break;
+          case SDLK_RIGHT: ka=(event.key.keysym.mod&KMOD_SHIFT)?26:16; kd=DIR_E; break;
+          case SDLK_F10: return 0;
+          case SDLK_DELETE: vtexttime=nvtextbuf=*vtextbuf=0; update_screen(); break;
+          case SDLK_INSERT: goto nextturn; break;
+          case SDLK_PAUSE:
+            if(playstate==PLAYSTATE_PAUSED) playstate=PLAYSTATE_NORMAL; else playstate=PLAYSTATE_PAUSED;
+            *v_status=playstate;
+            set_timer(playstate==PLAYSTATE_PAUSED?0:config.speed);
+            break;
+        }
+      }
+      redisplay();
+    }
+  } while(!ka);
+  nextturn:
+  if(ka) run_program(memory[MEM_KEY_EVENT],ka,kd==DIR_E?1:kd==DIR_W?-1:0,kd==DIR_S?1:kd==DIR_N?-1:0,kd);
   ++memory[MEM_FRAME_COUNTER];
   if(run_program(memory[MEM_FRAME_EVENT],0,0,0,0)) goto gameloop;
   for(a=y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++,a++) {
