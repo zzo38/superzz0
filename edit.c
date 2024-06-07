@@ -365,6 +365,7 @@ int run_editor(void) {
   Uint16 lbrd=cur_board_id;
   Uint16 lscr=0;
   v_status[0]='E';
+  config.debug=1;
   win_form("Editor") {
     win_numeric('t',"Starting board: ",cur_board_id,0,65535);
     win_command('B',"Boards...") {

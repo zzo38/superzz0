@@ -136,9 +136,10 @@ int main(int argc,char**argv) {
   int b=-1;
   int i;
   const char*s;
-  while((i=getopt(argc,argv,"+ab:eq:r\\"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+ab:deq:r\\"))>0) switch(i) {
     case 'a': case 'r': o=(o&0x80)|i; break;
     case 'b': b=strtol(optarg,0,10); break;
+    case 'd': config.debug=1; break;
     case 'e': editor=1; break;
     case 'q': random_test(optarg); return 0;
     case '\\': o|=0x80; break;

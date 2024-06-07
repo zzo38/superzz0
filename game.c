@@ -43,7 +43,13 @@ static uint64_t rseed;
 #define PLAYSTATE_NORMAL 16
 #define PLAYSTATE_FAST 175
 #define PLAYSTATE_PAUSED 186
-static char playstate=PLAYSTATE_NORMAL;
+static Uint8 playstate=PLAYSTATE_NORMAL;
+
+typedef struct {
+  Uint8 text[81];
+} MessageScrollback;
+static MessageScrollback*scrback;
+static Uint16 nscrback;
 
 Uint32 dice(Uint32 n) {
   Uint32 o;
@@ -130,6 +136,8 @@ static void display_message_text(void) {
     if(x<cur_screen.message_l) x=cur_screen.message_l;
   }
   z=draw_text(x,y,vtextbuf,(cur_screen.flag&SF_FLASHY_MESSAGE?memory[MEM_FRAME_COUNTER]%7+9:0),nvtextbuf);
+  if(x>cur_screen.message_l) v_char[--x+y*80]=0;
+  if(z<cur_screen.message_r) v_char[++z+y*80]=0;
   x+=y*80;
   z+=y*80;
   while(x<z) {
@@ -745,6 +753,16 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   
 }
 
+static void add_message_text(void) {
+  if(!config.message_scrollback) return;
+  if(!scrback) {
+    scrback=calloc(config.message_scrollback,sizeof(MessageScrollback));
+    if(!scrback) return;
+  }
+  memcpy(scrback[nscrback].text,vtextbuf,nvtextbuf+1);
+  if(++nscrback==config.message_scrollback) nscrback=0;
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   StatXY*rs;
   Uint16 op;
@@ -897,7 +915,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_LOOP: if(!regs[fo]) break; --regs[fo]; goto jump;
       case OP_LSH: regs[fo]=(so&~31?0:regs[fo]<<so); break;
       case OP_MAX: if(so>regs[fo]) regs[fo]=so; break;
-      case OP_MESS: do_text_op(fo,so); memcpy(vtextbuf,textbuf,nvtextbuf=ntextbuf); vtextbuf[nvtextbuf]=0; vtexttime=(nvtextbuf?config.message_timer:0); break;
+      case OP_MESS: do_text_op(fo,so); memcpy(vtextbuf,textbuf,nvtextbuf=ntextbuf); vtextbuf[nvtextbuf]=0; if(vtexttime=(nvtextbuf?config.message_timer:0)) add_message_text(); break;
       case OP_MIN: if(so<regs[fo]) regs[fo]=so; break;
       case OP_MOD: if(so) condflag=1,regs[fo]%=so; else condflag=0; break;
       case OP_MTIL: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=pack_tile(b_main+t); else condflag=0; break;
@@ -1022,12 +1040,105 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   }
 }
 
+static int system_menu(void) {
+  Uint8 x=config.menu_x;
+  Uint8 y=config.menu_y;
+  Uint8 z;
+  set_timer(0);
+  v_status[1]='F';
+  redraw0:
+  update_screen();
+  if(vtexttime) display_message_text();
+  draw_border(0x19,x,y,x+40,y+16);
+  draw_text(x+12,y," Super ZZ Zero ",0x1B,-1);
+  // 012345678901234567890123456789012345
+  // =F1== Menu         =F7== Q. Restore
+  // =F2== Sound: ___   =F8== 
+  // =F3== Save         =F9== Messages
+  // =F4== Restore      =F10= Quit
+  // =F5== Q. Save      =F11= Print
+  // =F6== Debug        =F12= Speed: ____
+  // =PAUSE=   Pause/resume
+  // =INS=     Next frame
+  // =DEL=     Clear message
+  // (speed)
+  // (volume)
+  // (???)
+  // (???)
+  // (???)
+  // =^v<>=    Menu position
+  // 012345678901234567890123456789012345
+  redraw1:
+  draw_text(x+2,y+1," F1  ",0x30,-1); draw_text(x+8,y+1,"Menu",0x1F,-1);
+  draw_text(x+2,y+2," F2  ",0x70,-1); //draw_text(x+8,y+2,"Sound:",0x1F,-1);
+  draw_text(x+2,y+3," F3  ",0x30,-1); draw_text(x+8,y+3,"Save",0x1F,-1);
+  draw_text(x+2,y+4," F4  ",0x70,-1); draw_text(x+8,y+4,"Restore",0x1F,-1);
+  draw_text(x+2,y+5," F5  ",0x30,-1); draw_text(x+8,y+5,"Q. Save",0x1F,-1);
+  draw_text(x+2,y+6," F6  ",0x70,-1); if(config.debug) draw_text(x+8,y+6,"Debug",0x1F,-1);
+  draw_text(x+21,y+1," F7  ",0x30,-1); draw_text(x+27,y+1,"Q. Restore",0x1F,-1);
+  draw_text(x+21,y+2," F8  ",0x70,-1);
+  draw_text(x+21,y+3," F9  ",0x30,-1); draw_text(x+27,y+3,"Messages",0x1F,-1);
+  draw_text(x+21,y+4," F10 ",0x70,-1); draw_text(x+27,y+4,"Quit",0x1F,-1);
+  draw_text(x+21,y+5," F11 ",0x30,-1); //draw_text(x+27,y+5,"Print",0x1F,-1);
+  draw_text(x+21,y+6," F12 ",0x70,-1); draw_text(x+27,y+6,"Speed:",0x1F,-1);
+  draw_text(x+34,y+6,playstate==PLAYSTATE_NORMAL?"NORM":playstate==PLAYSTATE_FAST?"FAST":"STOP",0x1A,-1);
+  draw_text(x+2,y+7," PAUSE ",0x30,-1); draw_text(x+12,y+7,"Pause/resume",0x1F,-1);
+  draw_text(x+2,y+8," INS ",0x70,-1); draw_text(x+12,y+8,"Next frame",0x1F,-1);
+  draw_text(x+2,y+9," DEL ",0x30,-1); draw_text(x+12,y+9,"Clear message",0x1F,-1);
+  draw_text(x+2,y+15," \x18\x19\x1B\x1A ",0x30,-1); draw_text(x+12,y+15,"Menu position",0x1F,-1);
+  redisplay();
+  do { if(!next_event()) errx(0,"No events available."); } while(event.type!=SDL_KEYDOWN);
+  switch(event.key.keysym.sym) {
+    case SDLK_ESCAPE: case SDLK_F1: case SDLK_SPACE: case SDLK_RETURN: return 0;
+    case SDLK_F3: case SDLK_F4: case SDLK_F5: case SDLK_F6: case SDLK_F7: case SDLK_F9: case SDLK_F10: case SDLK_INSERT: return 1;
+    case SDLK_F12: *v_status=playstate=(playstate==PLAYSTATE_NORMAL?PLAYSTATE_FAST:PLAYSTATE_NORMAL); break;
+    case SDLK_PAUSE: *v_status=playstate=(playstate==PLAYSTATE_PAUSED?PLAYSTATE_NORMAL:PLAYSTATE_PAUSED); break;
+    case SDLK_DELETE: vtexttime=nvtextbuf=*vtextbuf=0; goto redraw0;
+    case SDLK_UP: case SDLK_KP8: if(y>1) y-=2; goto redraw0;
+    case SDLK_DOWN: case SDLK_KP2: if(y<7) y+=2; goto redraw0;
+    case SDLK_LEFT: case SDLK_KP4: if(x>2) x-=3; goto redraw0;
+    case SDLK_RIGHT: case SDLK_KP6: if(x<37) x+=3; goto redraw0;
+  }
+  goto redraw1;
+}
+
+static void message_scrollback(void) {
+  char buf[32];
+  Uint16 y;
+  Uint16 n=(nscrback+config.message_scrollback-24)%config.message_scrollback;
+  if(!scrback) return;
+  memset(v_color,0x07,80*25);
+  memset(v_char,0x00,80*25);
+  memset(v_color,0x30,80);
+  draw_text(0,0,"Message scrollback",0x30,-1);
+  redraw:
+  draw_text(60,0,buf,0x30,snprintf(buf,32,"%5d/%5d",(n+24+config.message_scrollback-nscrback)%config.message_scrollback?:config.message_scrollback,config.message_scrollback));
+  memset(v_char+80,0x20,80*24);
+  for(y=0;y<24;y++) draw_text(0,y+1,scrback[(n+y)%config.message_scrollback].text,0x07,80);
+  redisplay();
+  do { if(!next_event()) errx(0,"No events available."); } while(event.type!=SDL_KEYDOWN);
+  switch(event.key.keysym.sym) {
+    case SDLK_ESCAPE: case SDLK_RETURN: return;
+    case SDLK_END: case SDLK_KP1: n=(nscrback+config.message_scrollback-24)%config.message_scrollback; break;
+    case SDLK_UP: case SDLK_KP8: n=(n+config.message_scrollback-1)%config.message_scrollback; break;
+    case SDLK_DOWN: case SDLK_KP2: n=(n+1)%config.message_scrollback; break;
+    case SDLK_PAGEUP: case SDLK_KP9: n=(n+config.message_scrollback-24)%config.message_scrollback; break;
+    case SDLK_PAGEDOWN: case SDLK_KP3: n=(n+24)%config.message_scrollback; break;
+  }
+  goto redraw;
+}
+
+static void debug_menu(void) {
+  
+}
+
 int run_game(void) {
   Uint8 ka=0;
   Sint8 kd=-1;
   Uint32 a,b,c,d,x,y;
   Tile*t;
   reseed(0);
+  if(config.message_scrollback && config.message_scrollback<24) config.message_scrollback=24;
   warp_to_board(cur_board_id,1);
   set_timer(config.speed);
   gameloop:
@@ -1039,7 +1150,29 @@ int run_game(void) {
     send_message(0,"ENTERED");
   }
   *v_status=playstate;
-  //TODO: scrolling
+  if(!(cur_screen.flag&SF_NO_SCROLL) && maxstat && stats->count) {
+    if(memory[MEM_SCROLL_X_RATE]) {
+      a=stats->xy->x; b=scroll_x;
+      if(b<a-cur_screen.soft_edge[DIR_W]) b=a-cur_screen.soft_edge[DIR_W];
+      if(b>a-cur_screen.soft_edge[DIR_E]) b=a-cur_screen.soft_edge[DIR_E];
+      if(b<scroll_x-memory[MEM_SCROLL_X_RATE]) b=scroll_x-memory[MEM_SCROLL_X_RATE];
+      if(b>scroll_x+memory[MEM_SCROLL_X_RATE]) b=scroll_x+memory[MEM_SCROLL_X_RATE];
+      if(b<-cur_screen.hard_edge[DIR_W]) b=-cur_screen.hard_edge[DIR_W];
+      if(b>board_info.width-1-cur_screen.hard_edge[DIR_E]) b=board_info.width-1-cur_screen.hard_edge[DIR_E];
+      scroll_x=b;
+    }
+    if(memory[MEM_SCROLL_Y_RATE]) {
+      a=stats->xy->y; b=scroll_y;
+      if(b<a-cur_screen.soft_edge[DIR_N]) b=a-cur_screen.soft_edge[DIR_N];
+      if(b>a-cur_screen.soft_edge[DIR_S]) b=a-cur_screen.soft_edge[DIR_S];
+      if(b<scroll_y-memory[MEM_SCROLL_Y_RATE]) b=scroll_y-memory[MEM_SCROLL_Y_RATE];
+      if(b>scroll_y+memory[MEM_SCROLL_Y_RATE]) b=scroll_y+memory[MEM_SCROLL_Y_RATE];
+      if(b<-cur_screen.hard_edge[DIR_N]) b=-cur_screen.hard_edge[DIR_N];
+      if(b>board_info.height-1-cur_screen.hard_edge[DIR_S]) b=board_info.height-1-cur_screen.hard_edge[DIR_S];
+      scroll_y=b;
+    }
+  }
+  display:
   update_screen();
   if(vtexttime) {
     display_message_text();
@@ -1047,8 +1180,9 @@ int run_game(void) {
   }
   redisplay();
   ka=0; kd=-1;
-  do {
+  for(;;) {
     if(!next_event()) errx(0,"No events available.");
+    repeat_event:
     if(event.type==SDL_KEYDOWN) {
       if(event.key.keysym.unicode>0 && event.key.keysym.unicode<127 && !(event.key.keysym.mod&(KMOD_ALT|KMOD_META))) {
         a=event.key.keysym.unicode;
@@ -1065,9 +1199,25 @@ int run_game(void) {
           case SDLK_DOWN: ka=(event.key.keysym.mod&KMOD_SHIFT)?31:25; kd=DIR_S; break;
           case SDLK_LEFT: ka=(event.key.keysym.mod&KMOD_SHIFT)?27:17; kd=DIR_W; break;
           case SDLK_RIGHT: ka=(event.key.keysym.mod&KMOD_SHIFT)?26:16; kd=DIR_E; break;
+          case SDLK_F1:
+            a=system_menu();
+            resume:
+            *v_status=playstate;
+            set_timer(playstate==PLAYSTATE_PAUSED?0:playstate==PLAYSTATE_NORMAL?config.speed:config.speed_fast);
+            v_status[1]=0;
+            update_screen();
+            if(a) goto repeat_event;
+            goto display;
+          case SDLK_F6: if(config.debug) debug_menu(); goto resume;
+          case SDLK_F9: set_timer(0); v_status[1]=24; message_scrollback(); goto resume;
           case SDLK_F10: return 0;
+          case SDLK_F12:
+            if(playstate==PLAYSTATE_NORMAL) playstate=PLAYSTATE_FAST; else playstate=PLAYSTATE_NORMAL;
+            *v_status=playstate;
+            set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:config.speed);
+            break;
           case SDLK_DELETE: vtexttime=nvtextbuf=*vtextbuf=0; update_screen(); break;
-          case SDLK_INSERT: goto nextturn; break;
+          case SDLK_INSERT: goto nextturn;
           case SDLK_PAUSE:
             if(playstate==PLAYSTATE_PAUSED) playstate=PLAYSTATE_NORMAL; else playstate=PLAYSTATE_PAUSED;
             *v_status=playstate;
@@ -1076,8 +1226,11 @@ int run_game(void) {
         }
       }
       redisplay();
+      if(ka && playstate==PLAYSTATE_PAUSED) goto nextturn;
+    } else if(event.type==SDL_USEREVENT) {
+      goto nextturn;
     }
-  } while(!ka);
+  }
   nextturn:
   if(ka) run_program(memory[MEM_KEY_EVENT],ka,kd==DIR_E?1:kd==DIR_W?-1:0,kd==DIR_S?1:kd==DIR_N?-1:0,kd);
   ++memory[MEM_FRAME_COUNTER];
