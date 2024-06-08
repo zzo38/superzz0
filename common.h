@@ -393,7 +393,13 @@ void update_screen(void);
 #define XOP_S_PLAYER_Y 0x0D70 // Y coordinate of first XY record of stat 1, plus ((value&15)-8-source)
 #define XOP_S_BOARD_ID 0x0D80 // current board number
 #define XOP_S_SCREEN_ID 0x0D90 // current screen number
+#define XOP_S_SCROLL_X 0x0DA0 // scroll X plus (source+(value&15)-8)
+#define XOP_S_SCROLL_Y 0x0DB0 // scroll Y plus (source+(value&15)-8)
 
+#define MEM_GLOBAL_INSTPTR 0xCA
+#define MEM_CONTROL 0xCB
+#define MEM_ARG_J 0xCC
+#define MEM_ARG_K 0xCD
 #define MEM_COROUTINE_U_PC 0xCE
 #define MEM_COROUTINE_V_PC 0xCF
 #define MEM_COROUTINE_U_W_HI 0xD0

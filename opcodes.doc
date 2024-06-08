@@ -147,6 +147,15 @@ numbers are treated as unsigned.
   Low 4-bits of second operand tells which global status variable to
   access; the first operand is written to it.
 
+[026 VBC]
+  Clears a bit in a bit array. The second operand is the address of the bit
+  array; the first selects the bit, where 0 to 15 is the first cell (where
+  0 means the low bit), 16 to 31 for the second sell (i.e. add 1 to the
+  address), etc.
+
+[027 VBS]
+  Like VBC but set instead of clear.
+
 [028 PEER]
   Adds together the operands to make the address in memory to read a 16-bit
   number from, and store that in the first operand.
@@ -155,6 +164,10 @@ numbers are treated as unsigned.
   Adds together the operands to make the address in memory to read a 16-bit
   number from, and jumps to the address which is the 16-bit number which has
   been read from that address.
+
+[02A VBT]
+  Find a bit like VBC and VBS, but then set/clear the condition flag
+  according to the state of that bit.
 
 [02C REGS]
   Save registers. The second operand is the memory address, and the first
@@ -721,6 +734,20 @@ numbers are treated as unsigned.
   the bit to clear. The condition flag is true if that bit was previously
   set, or false if it was already clear (and therefore unchanged).
 
+[126 CBC]
+  Clear a bit (the first operand specifies which bit; A for the low bit
+  and Z for the high bit) of the memory at the address specified by the
+  second operand.
+
+[127 CBS]
+  Set a bit (the first operand specifies which bit; A for the low bit
+  and Z for the high bit) of the memory at the address specified by the
+  second operand.
+
+[12A CBT]
+  Find a bit like CBC and CBS, but then set/clear the condition flag
+  according to the state of that bit.
+
 [12C EAP0]
   The second operand is the element number; write the major appearance code
   of that element definition to the first operand.
@@ -746,6 +773,15 @@ numbers are treated as unsigned.
   Set first operand to a value with a single bit set; the bit to be set
   will be specified by the low 5-bits of the second operand.
 
+[132 CORU]
+  Sets the U coroutine. If the second operand is at least 256, sets the
+  PC of the coroutine to the second operand value. The coroutine's
+  registers will be given the current values of those registers. The first
+  operand will store the old value of the coroutine's W register
+
+[133 CORV]
+  Like CORU but sets the V coroutine instead of the U coroutine.
+
 [140 SWPA]
   Copy A register to first operand and then second operand to A register.
 
@@ -769,6 +805,14 @@ numbers are treated as unsigned.
 
 [147 SWPH]
   Copy H register to first operand and then second operand to H register.
+
+[148 SWPJ]
+  Copy J register to first operand and then second operand to J register.
+  (The J register is a 16-bit memory cell, not an actual register.)
+
+[149 SWPK]
+  Copy K register to first operand and then second operand to K register.
+  (The K register is a 16-bit memory cell, not an actual register.)
 
 [14C SWPW]
   Copy W register to first operand and then second operand to W register.

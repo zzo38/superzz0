@@ -399,6 +399,16 @@ static void do_pass(void) {
             if(v&~15) errx(1,"Operand out of range on line %d",linenum);
             i|=0x0D30;
             break;
+          case 'SX-':
+            v+=8;
+            if(v&~15) errx(1,"Operand out of range on line %d",linenum);
+            i|=0x0DA0;
+            break;
+          case 'SY-':
+            v+=8;
+            if(v&~15) errx(1,"Operand out of range on line %d",linenum);
+            i|=0x0DB0;
+            break;
           case 'BRD':
             v&=15;
             i|=0x0D80;
@@ -533,7 +543,13 @@ static void do_pass(void) {
         case 8: // TA
           v=parse_numeric(1);
           if(v&~0xFFFF) errx(1,"Improper address on line %d",linenum);
-          mem[v]=addr;
+          if(*linept==',') {
+            s=++linept;
+            u=parse_numeric(0);
+          } else {
+            u=addr;
+          }
+          mem[v]=u;
           if(addr && v>addr_end) addr_end=v;
           break;
         case 9: // ????
@@ -612,7 +628,8 @@ int main(int argc,char**argv) {
   infile=fopen(argv[optind],"r");
   if(!infile) err(1,"Cannot open input file");
   outname=argv[optind+1];
-  mem[0xEE]=mem[0xEF]=0xFFFF;
+  mem[0xEE]=mem[0xEF]=0xFFFF; // scroll rate
+  mem[0xE3]=0xFFFF; // light
   do_pass();
   for(i=0;i<10;i++) if(flabel[i]) {
     fclose(flabel[i]);

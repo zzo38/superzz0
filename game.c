@@ -540,6 +540,8 @@ static Sint32 xop_special(Sint32 so,Uint16 ex) {
     case XOP_S_PLAYER_Y: return stats->count?stats->xy->y+(ex&15)-8-so:0;
     case XOP_S_BOARD_ID: return cur_board_id;
     case XOP_S_SCREEN_ID: return cur_screen_id;
+    case XOP_S_SCROLL_X: return scroll_x+cur_screen.view_x+so+(ex&15)-8;
+    case XOP_S_SCROLL_Y: return scroll_y+cur_screen.view_y+so+(ex&15)-8;
     default: return 0;
   }
 }
@@ -611,6 +613,7 @@ static void do_change_stat(Uint16 f,Uint8 os,Uint8 lay,Uint32 x,Uint32 y) {
     }
   }
   if(os=(lay==1?b_under:lay==2?b_main:b_over)[y*board_info.width+x].stat) {
+    if(os>maxstat) return;
     if(f&0x8000) r.delay=(f>>8)&0x7F;
     r.layer=lay|(r.layer&0xC0&~f);
     *add_statxy(os)=r;
@@ -837,10 +840,29 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_BTST: condflag=((1L<<(so&31))&regs[fo])?1:0; break;
       case OP_CALL: so=run_program(so,w,x,y,z); goto store;
       case OP_CASE: so=memory[(so+regs[fo])&0xFFFF]; goto jump;
+      case OP_CBC: memory[so&0xFFFF]&=~(1<<fo); break;
+      case OP_CBS: memory[so&0xFFFF]|=(1<<fo); break;
+      case OP_CBT: condflag=(memory[so&0xFFFF]&(1<<fo)?1:0); break;
       case OP_CHA: do_change(1,regs[fo],so); break;
       case OP_CHAX: do_change(2,regs[fo],so); break;
       case OP_CLAM: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=elem_def[b_main[t].kind].attrib&15; else condflag=0; break;
       case OP_CLAU: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=elem_def[b_under[t].kind].attrib&15; else condflag=0; break;
+      case OP_CORU:
+        if(so>=256) memory[MEM_COROUTINE_U_PC]=so;
+        memory[MEM_COROUTINE_U_W_HI]=w>>16; memory[MEM_COROUTINE_U_W_LO]=w;
+        memory[MEM_COROUTINE_U_X_HI]=x>>16; memory[MEM_COROUTINE_U_X_LO]=x;
+        memory[MEM_COROUTINE_U_Y_HI]=y>>16; memory[MEM_COROUTINE_U_Y_LO]=y;
+        memory[MEM_COROUTINE_U_Z_HI]=z>>16; memory[MEM_COROUTINE_U_Z_LO]=z;
+        so=(memory[MEM_COROUTINE_U_W_HI]<<16)|memory[MEM_COROUTINE_U_W_LO];
+        goto store;
+      case OP_CORV:
+        if(so>=256) memory[MEM_COROUTINE_V_PC]=so;
+        memory[MEM_COROUTINE_V_W_HI]=w>>16; memory[MEM_COROUTINE_V_W_LO]=w;
+        memory[MEM_COROUTINE_V_X_HI]=x>>16; memory[MEM_COROUTINE_V_X_LO]=x;
+        memory[MEM_COROUTINE_V_Y_HI]=y>>16; memory[MEM_COROUTINE_V_Y_LO]=y;
+        memory[MEM_COROUTINE_V_Z_HI]=z>>16; memory[MEM_COROUTINE_V_Z_LO]=z;
+        so=(memory[MEM_COROUTINE_V_W_HI]<<16)|memory[MEM_COROUTINE_V_W_LO];
+        goto store;
       case OP_COUN: regs[fo]=do_change(0,regs[fo],so); break;
       case OP_CWOE: t=regs[fo]&0xFF; cwoe: t=(elem_def[t].attrib); t=(t&A_FLOOR?t:0); condflag=((1<<(t&15))&so)?1:0; break;
       case OP_CWOT: if((t=convxy(regs[fo],x,y))!=-1) { t=b_main[t].kind; goto cwoe; } else condflag=0; break;
@@ -975,6 +997,8 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_SWPF: t=regs[5]; regs[5]=so; so=t; goto store;
       case OP_SWPG: t=regs[6]; regs[6]=so; so=t; goto store;
       case OP_SWPH: t=regs[7]; regs[7]=so; so=t; goto store;
+      case OP_SWPJ: t=memory[MEM_ARG_J]; memory[MEM_ARG_J]=so; so=t; goto store;
+      case OP_SWPK: t=memory[MEM_ARG_K]; memory[MEM_ARG_K]=so; so=t; goto store;
       case OP_SWPW: t=w; w=so; so=t; goto store;
       case OP_SWPX: t=x; x=so; so=t; goto store;
       case OP_SWPY: t=y; y=so; so=t; goto store;
@@ -991,6 +1015,9 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_UPTO: condflag=(regs[fo]<so?1:0); regs[fo]+=condflag; break;
       case OP_URSH: regs[fo]=(so&~31?0:((Uint32)regs[fo])>>so); break;
       case OP_UTIL: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=pack_tile(b_under+t); else condflag=0; break;
+      case OP_VBC: memory[(so+(regs[fo]>>4))&0xFFFF]&=~(1<<(regs[fo]&15)); break;
+      case OP_VBS: memory[(so+(regs[fo]>>4))&0xFFFF]|=(1<<(regs[fo]&15)); break;
+      case OP_VBT: condflag=(memory[(so+(regs[fo]>>4))&0xFFFF]&(1<<(regs[fo]&15))?1:0); break;
       case OP_VGET: so=status_vars[so&15]; goto store;
       case OP_VPUT: status_vars[so&15]=regs[fo]; break;
       case OP_VSET: status_vars[fo]=so; break;
