@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -c -Wno-unused-result -fwrapv game.c `sdl-config --cflags`
+gcc -s -O2 -c -std=gnu99 -Wno-unused-result -fwrapv game.c `sdl-config --cflags`
 exit
 #endif
 
@@ -457,6 +457,22 @@ static StatXY*get_statxy(Uint32 n) {
   return (n<s->count?s->xy+n:0);
 }
 
+static StatXY*find_statxy(const Tile*at) {
+  Stat*s;
+  StatXY*r;
+  Sint32 z=(at-b_under)/(board_info.width*board_info.height)+1;
+  Sint32 x=(at-b_under)%board_info.width;
+  Sint32 y=((at-b_under)/board_info.width)%board_info.height;
+  Uint32 n;
+  if(!at->stat || at->stat>maxstat) return 0;
+  s=stats+at->stat-1;
+  for(n=0;n<s->count;n++) {
+    r=s->xy+n;
+    if(r->x==x && r->y==y && (r->layer&3)==z) return r;
+  }
+  return 0;
+}
+
 static void kill_stat(int ns,int nr) {
   Stat*s=stats+ns-1;
   StatXY*r=s->xy+nr;
@@ -753,7 +769,57 @@ static void send_message(Uint32 n,const char*label) {
 }
 
 static void run_script(Uint16 m,Uint16 n,Sint32 u) {
-  
+#if 0
+  // m=stat number, n=XY index, u=(<0 if imply #, =0 if restart, >0 if normal)
+  char buf[128];
+  Stat*s=stats+m-1;
+  StatXY*xy=s->xy+n;
+  Uint16 ip=xy->instptr;
+  Uint8 c,n;
+  if(!u) xy->instptr=ip=0;
+  if(!s->text) return;
+  if(ip>=s->length) {
+    xy->instptr=0xFFFF;
+    return;
+  }
+  begin:
+  switch(c) {
+    case '#':
+      ip++; // fall through
+    command:
+      if(s->text[ip]=='=') {
+        ip++;
+        if(s->text[ip]==' ') ip++;
+        send:
+        
+      } else {
+        n=0;
+        while((n<64) && (c=s->text[ip++])) {
+          if((c>='A' && c<='Z') || (c>='0' && c<='9')) buf[n++]=c;
+          else if(c>='a' && c<='z') buf[n++]=c+'A'-'a';
+          else break;
+        }
+        buf[n]=0;
+        
+      }
+      break;
+    case '/':
+      
+      break;
+    case '?':
+      
+      break;
+    case '\'': case ':': case '@':
+      while(s->text[ip] && s->text[ip]!='\n') ip++;
+      if(s->text[ip]) ip++;
+      break;
+    default:
+      if(u<0 && c!='!' && c!='$') goto command;
+      //TODO: text
+  }
+  u=0;
+  goto begin;
+#endif
 }
 
 static void add_message_text(void) {
@@ -880,6 +946,22 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         }
         break;
       case OP_DIV: if(so) condflag=1,regs[fo]/=so; else condflag=0; break;
+      case OP_DROP:
+        condflag=0;
+        if(rs=get_statxy(so)) {
+          if(x<0 || x>board_info.width || y<0 || y>board_info.height || (rs->layer&3)!=2) break;
+          rs->x=x; rs->y=y; rs->layer=(rs->layer&~3)+2;
+          u=x+y*board_info.width;
+          if(b_under[u].stat) break;
+          b_under[u]=b_main[u];
+          if(b_main[u].stat) if(rs=find_statxy(b_main+u)) rs->layer--;
+          b_main[u].stat=so;
+          b_main[u].kind=regs[fo];
+          b_main[u].color=regs[fo]>>8;
+          b_main[u].param=regs[fo]>>16;
+          condflag=1;
+        }
+        break;
       case OP_EAP0: so=elem_def[so&255].app[0]; goto store;
       case OP_EAP1: so=elem_def[so&255].app[1]; goto store;
       case OP_EATT: so=elem_def[so&255].attrib; goto store;
@@ -958,6 +1040,19 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PBU: board_info.userdata=so; break;
       case OP_PEEK: regs[fo]=memory[so&0xFFFF]; break;
       case OP_PEER: regs[fo]=memory[(so+regs[fo])&0xFFFF]; break;
+      case OP_PICK:
+        condflag=0;
+        if(rs=get_statxy(so)) {
+          x=rs->x; y=rs->y;
+          if(x<0 || x>board_info.width || y<0 || y>board_info.height || (rs->layer&3)!=2) break;
+          u=x+y*board_info.width;
+          regs[fo]=pack_tile(b_main+u);
+          b_main[u]=b_under[u];
+          if(b_main[u].stat) if(rs=find_statxy(b_under+u)) rs->layer++;
+          b_under[u]=(Tile){};
+          condflag=1;
+        }
+        break;
       case OP_PIP: if(rs=get_statxy(so)) rs->instptr=regs[fo]; break;
       case OP_PM1: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc1=regs[fo];
       case OP_PM2: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc2=regs[fo];
@@ -1156,7 +1251,56 @@ static void message_scrollback(void) {
 }
 
 static void debug_menu(void) {
-  
+  char buf[81];
+  v_status[1]='D';
+  win_form("Debug menu") {
+    win_picture(2) {
+      draw_text(0,0,buf,0x07,snprintf(buf,81,"BRD:%u  SCR:%u  Scroll:%d,%d",cur_board_id,cur_screen_id,(int)scroll_x,(int)scroll_y));
+      draw_text(0,1,buf,0x07,snprintf(buf,81,"rseed=%llu",(unsigned long long)rseed));
+    }
+    win_command('1',"User command #1") {
+      run_program(memory[MEM_KEY_EVENT],1,0,0,-1);
+      break;
+    }
+    win_command('2',"User command #2") {
+      run_program(memory[MEM_KEY_EVENT],2,0,0,-1);
+      break;
+    }
+    win_command('3',"User command #3") {
+      run_program(memory[MEM_KEY_EVENT],3,0,0,-1);
+      break;
+    }
+    win_command('4',"User command #4") {
+      run_program(memory[MEM_KEY_EVENT],4,0,0,-1);
+      break;
+    }
+    win_command('v',"Status variables...") {
+      win_form("Status variables") {
+        win_command_esc(0,"Cancel") break;
+      }
+    }
+    win_command('S',"Stats...") {
+      
+    }
+    win_command('R',"Registers...") {
+      win_form("Registers") {
+        win_command_esc(0,"Cancel") break;
+      }
+    }
+    win_command('M',"Memory...") {
+      
+    }
+    win_command('a',"Set random seed...") {
+      *buf=0;
+      ask_text("New random seed:",buf,32);
+      if(*buf) rseed=strtoll(buf,0,0);
+      if(!rseed) reseed(0);
+    }
+    win_command('C',"Call...") {
+      
+    }
+    win_command_esc(0,"Cancel") break;
+  }
 }
 
 int run_game(void) {
@@ -1174,7 +1318,6 @@ int run_game(void) {
     b=cur_board_id;
     warp_to_board(memory[MEM_WARP_TO],0);
     run_program(a,b,(memory[MEM_WARP_X_HI]<<16)|memory[MEM_WARP_X_LO],(memory[MEM_WARP_Y_HI]<<16)|memory[MEM_WARP_Y_LO],(memory[MEM_WARP_Z_HI]<<16)|memory[MEM_WARP_Z_LO]);
-    send_message(0,"ENTERED");
   }
   *v_status=playstate;
   if(!(cur_screen.flag&SF_NO_SCROLL) && maxstat && stats->count) {
@@ -1273,7 +1416,7 @@ int run_game(void) {
           t=(d==1?b_under:d==2?b_main:b_over)+stats[a].xy[b].y*board_info.width+stats[a].xy[b].x;
           if(d==3 || !run_program(elem_def[t->kind].event[EV_STAT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) {
             stats[a].xy[b].delay=stats[a].speed;
-            run_script(a+1,b,1);
+            if(stats[a].xy[b].instptr!=0xFFFF) run_script(a+1,b,1);
           }
         }
       } else {

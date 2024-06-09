@@ -10,6 +10,7 @@ $00E0
   will set the direction even if num lock is on, unlike top row numbers.
 
   A key code can be a printable ASCII character or one of the following:
+    1 to 4 = Debug commands
     8 = BACKSPACE
     9 = TAB
     13 = ENTER or RETURN

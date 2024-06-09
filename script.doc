@@ -46,17 +46,6 @@ $text
   specify a command to do if it fails to move.
 
 
-=== Standard messages ===
-
-:ENTERED
-  Received by everything when entering a board.
-
-:KEY_x
-  Received by everything when a key is pushed, according to which key is
-  pushed, which can be any letter or digit, or SPACE, RETURN, UP, DOWN,
-  LEFT, RIGHT, or BACKSPACE.
-
-
 === Standard commands ===
 
 Where another command is expected in these commands, the initial # is
@@ -117,7 +106,7 @@ are not allowed in this case.
 
 #ESCAPE ON
   Allows further lines of this text message to contain {} which can be
-  used 
+  used to include variable data in the text.
 
 #GIVE status_var number
   Increase the specified status variable (a letter A to H or S to Z) by the
