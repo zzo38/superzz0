@@ -51,6 +51,34 @@ typedef struct {
 static MessageScrollback*scrback;
 static Uint16 nscrback;
 
+static void debug_log(Uint8 fo,Sint32 so,Sint32 w,Sint32 x,Sint32 y,Sint32 z,Uint16 pc) {
+  FILE*f=stdout; // should it be configurable?
+  int i;
+  fprintf(f,"[$%04X] %ld ($%lX) : [%c]",pc,(long)so,(unsigned long)so,fo+'A');
+  switch(fo) {
+    case 0: // All registers
+      for(i=0;i<8;i++) fprintf(f," %c=%ld(%lX)",i+'A',(long)regs[i],(unsigned long)regs[i]);
+      fprintf(f," W=%ld(%lX) X=%ld(%lX) Y=%ld(%lX) Z=%ld(%lX)",(long)w,(unsigned long)w,(long)x,(unsigned long)x,(long)y,(unsigned long)y,(long)z,(unsigned long)z);
+      fprintf(f," ?=%d",condflag);
+      break;
+    case 1: // Board/screen info
+      fprintf(f," B#%d %dx%d S#%d %+ld%+ld",cur_board_id,board_info.width,board_info.height,cur_screen_id,(long)scroll_x,(long)scroll_y);
+      break;
+    case 2: // Text buffer
+      fprintf(f," %d {",ntextbuf);
+      for(i=0;i<ntextbuf;i++) if(textbuf[i]>=0x20 && textbuf[i]<0x7F) fputc(textbuf[i],f); else fprintf(f,"<%02X>",textbuf[i]);
+      fputc('}',f);
+      break;
+    case 3: // Status variables
+      for(i=0;i<16;i++) fprintf(f," %c=%ld",i+(i&8?'S'-8:'A'),(long)status_vars[i]);
+      break;
+    case 4: // Memory management
+      fputs("(Not implemented)",f);
+      break;
+  }
+  fputc('\n',f);
+}
+
 Uint32 dice(Uint32 n) {
   Uint32 o;
   Uint32 m=n-1;
@@ -877,7 +905,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         case XOP_LEFT_SHIFT: so<<=ex&31; break;
         case XOP_SIGNED_RIGHT_SHIFT: so>>=ex&31; break;
         case XOP_UNSIGNED_RIGHT_SHIFT: so=((Uint32)so)>>(ex&31); break;
-        case XOP_EXTRACT_BITS: so=(so>>(ex&15))&((-1)<<((ex>>4)&15)); break;
+        case XOP_EXTRACT_BITS: so=(so>>(ex&15))&~((-1ULL)<<((ex>>4)&15)); break;
         case XOP_SUBTRACT: so=(ex&255)-so; break;
         case XOP_SUBTRACT_NEG: so=(ex&255)-so-256; break;
         case XOP_XDIR: case XOP_YDIR:
@@ -905,6 +933,8 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_BTAK: condflag=(status_vars[fo]&(1<<(so&31))?1:0); status_vars[fo]&=~(1<<(so&31)); break;
       case OP_BTST: condflag=((1L<<(so&31))&regs[fo])?1:0; break;
       case OP_CALL: so=run_program(so,w,x,y,z); goto store;
+      case OP_CALM: if((t=convxy(so,x,y))!=-1) w=run_program(elem_def[b_main[t].kind].event[fo],w,t%board_info.width,t/board_info.width,z); break;
+      case OP_CALU: if((t=convxy(so,x,y))!=-1) w=run_program(elem_def[b_under[t].kind].event[fo],w,t%board_info.width,t/board_info.width,z); break;
       case OP_CASE: so=memory[(so+regs[fo])&0xFFFF]; goto jump;
       case OP_CBC: memory[so&0xFFFF]&=~(1<<fo); break;
       case OP_CBS: memory[so&0xFFFF]|=(1<<fo); break;
@@ -1016,16 +1046,35 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_LESS: condflag=(regs[fo]<so?1:0); break;
       case OP_LET: goto store;
       case OP_LITE: calc_light(fo,so); break;
+      case OP_LOG: if(config.debug) debug_log(fo,so,w,x,y,z,pc); break;
       case OP_LOOP: if(!regs[fo]) break; --regs[fo]; goto jump;
       case OP_LSH: regs[fo]=(so&~31?0:regs[fo]<<so); break;
       case OP_MAX: if(so>regs[fo]) regs[fo]=so; break;
       case OP_MESS: do_text_op(fo,so); memcpy(vtextbuf,textbuf,nvtextbuf=ntextbuf); vtextbuf[nvtextbuf]=0; if(vtexttime=(nvtextbuf?config.message_timer:0)) add_message_text(); break;
       case OP_MIN: if(so<regs[fo]) regs[fo]=so; break;
+      case OP_MNEW:
+        so=convxy(so,x,y);
+        if(so==-1 || !b_main[so].stat || b_under[so].stat>maxstat) break;
+        rs=add_statxy(b_main[so].stat);
+        rs->layer=2;
+        rs->x=so%board_info.width;
+        rs->y=so/board_info.width;
+        so=((rs-stats[b_main[so].stat].xy)<<16)|b_main[so].stat;
+        goto store;
       case OP_MOD: if(so) condflag=1,regs[fo]%=so; else condflag=0; break;
       case OP_MTIL: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=pack_tile(b_main+t); else condflag=0; break;
       case OP_MUL: regs[fo]*=so; break;
       case OP_NEG: so=-so; goto store;
       case OP_NOT: so=~so; goto store;
+      case OP_ONEW:
+        so=convxy(so,x,y);
+        if(so==-1 || !b_over[so].stat || b_under[so].stat>maxstat) break;
+        rs=add_statxy(b_over[so].stat);
+        rs->layer=3;
+        rs->x=so%board_info.width;
+        rs->y=so/board_info.width;
+        so=((rs-stats[b_over[so].stat].xy)<<16)|b_over[so].stat;
+        goto store;
       case OP_OR: regs[fo]|=so; break;
       case OP_PACK:
         t=convxy(0,x,y);
@@ -1106,6 +1155,15 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_TMAT: if((t=convxy(so,x,y))!=-1) condflag=(elem_def[b_main[t].kind].attrib&(0x10000000UL<<fo)?1:0); break;
       case OP_TSTB: condflag=((1L<<(regs[fo]&31))&so)?1:0; break;
       case OP_UMAT: if((t=convxy(so,x,y))!=-1) condflag=(elem_def[b_under[t].kind].attrib&(0x10000000UL<<fo)?1:0); break;
+      case OP_UNEW:
+        so=convxy(so,x,y);
+        if(so==-1 || !b_under[so].stat || b_under[so].stat>maxstat) break;
+        rs=add_statxy(b_under[so].stat);
+        rs->layer=1;
+        rs->x=so%board_info.width;
+        rs->y=so/board_info.width;
+        so=((rs-stats[b_under[so].stat].xy)<<16)|b_under[so].stat;
+        goto store;
       case OP_UNPC: unpack0: if(!so--) break; x=so%board_info.width; y=so%board_info.height; break;
       case OP_UPTO: condflag=(regs[fo]<so?1:0); regs[fo]+=condflag; break;
       case OP_URSH: regs[fo]=(so&~31?0:((Uint32)regs[fo])>>so); break;
@@ -1251,6 +1309,7 @@ static void message_scrollback(void) {
 }
 
 static void debug_menu(void) {
+  int i;
   char buf[81];
   v_status[1]='D';
   win_form("Debug menu") {
@@ -1276,6 +1335,7 @@ static void debug_menu(void) {
     }
     win_command('v',"Status variables...") {
       win_form("Status variables") {
+        win_blank();
         win_command_esc(0,"Cancel") break;
       }
     }
@@ -1284,6 +1344,7 @@ static void debug_menu(void) {
     }
     win_command('R',"Registers...") {
       win_form("Registers") {
+        win_blank();
         win_command_esc(0,"Cancel") break;
       }
     }

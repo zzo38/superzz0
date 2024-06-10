@@ -169,6 +169,15 @@ numbers are treated as unsigned.
   Find a bit like VBC and VBS, but then set/clear the condition flag
   according to the state of that bit.
 
+[02B LOG]
+  Debug logging; has no effect if debugging is disabled. The first operand
+  controls the type of debug logging (the second operand is always logged):
+  A = All registers
+  B = Board/screen info
+  C = Text buffer
+  D = Status variables
+  E = Memory management
+
 [02C REGS]
   Save registers. The second operand is the memory address, and the first
   operand is the last register to be saved. It uses two cells per register.
@@ -743,6 +752,16 @@ numbers are treated as unsigned.
   Set a bit (the first operand specifies which bit; A for the low bit
   and Z for the high bit) of the memory at the address specified by the
   second operand.
+
+[128 CALU]
+  Calls an event of a tile in the under layer, as a subroutine. The first
+  operand selects the event to call, in the same way as EJMP. The second
+  operand is the coordinates of the tile. Within the event subroutine, W
+  and Z inherit the current values of those registers, and X and Y are set
+  to the coordinates of the tile. The return value will be stored in W.
+
+[129 CALM]
+  Like CALU but the main layer instead of the under layer.
 
 [12A CBT]
   Find a bit like CBC and CBS, but then set/clear the condition flag
