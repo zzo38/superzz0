@@ -789,11 +789,11 @@ static const ColonCommand colon_commands[]={
   {"toggle",'.',0,0,cc_toggle_step,0},
   {"u",'.',cc_unmark,0,cc_unmark_step,0},
   {"unmark",'.',cc_unmark,0,cc_unmark_step,0},
-  {"xl",'.',0,0,cc_exchangelayer_step,0},
   {"w",'.',0,cc_place_begin,cc_write_step,0},
   {"write",'.',0,cc_place_begin,cc_write_step,0},
   {"writeunder",'.',0,cc_place_begin,cc_writeunder_step,0},
   {"wu",'.',0,cc_place_begin,cc_writeunder_step,0},
+  {"xl",'.',0,0,cc_exchangelayer_step,0},
 };
 
 typedef struct {
