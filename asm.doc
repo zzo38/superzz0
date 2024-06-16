@@ -1,8 +1,16 @@
 
 === Command-line switches ===
 
+It requires two arguments, being the input file name and the output file
+name; you can write - in place of the output file name for stdout, but
+the input file is required to be seekable.
+
 -d
   Emit debugging information.
+
+-w
+  Read the world file with the same name as the input file, but with the
+  suffix changed from ".asm" to ".sz0" or ".ASM" to ".SZ0".
 
 
 === Syntax ===

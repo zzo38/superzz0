@@ -1,6 +1,6 @@
 #if 0
 (sed -rn 's/^\[(...) (.*)]$/{"\2",0x\1},/p' < opcodes.doc; sed -rn 's/\/\/PSEUDO!(.*)$/{\1},/p' < asm.c) | sort > opcodes.inc
-gcc -s -O2 -o ~/bin/sz0asm -fwrapv -Wno-multichar asm.c
+gcc -s -O2 -o ~/bin/sz0asm -fwrapv -Wno-multichar -Wno-unused-result asm.c
 exit
 #endif
 
@@ -583,6 +583,60 @@ static void begin_lump(const char*name,Uint32 len) {
   fputc(len>>8,outfile);
 }
 
+static void read_world_file(const char*nam0) {
+  char*nam=strdup(nam0);
+  char buf[17]="_";
+  FILE*f;
+  int i,j,c;
+  Uint32 z;
+  if(!nam) err(1,"Allocation failed");
+  i=strlen(nam);
+  if(i<4 || nam[i-4]!='.') {
+    errx(1,"Cannot determine name of world file");
+  } else if(nam[i-3]=='a' && nam[i-2]=='s' && nam[i-1]=='m') {
+    nam[i-3]='s'; nam[i-2]='z'; nam[i-1]='0';
+  } else if(nam[i-3]=='A' && nam[i-2]=='S' && nam[i-1]=='M') {
+    nam[i-3]='S'; nam[i-2]='Z'; nam[i-1]='0';
+  } else {
+    errx(1,"Cannot determine name of world file");
+  }
+  f=fopen(nam,"r");
+  if(!f) err(1,"Cannot open world file '%s'",nam);
+  free(nam);
+  for(i=0;;) {
+    c=fgetc(f);
+    if(c==EOF) errx(1,"ELEMENT lump not found");
+    if(i>=0 && i<8 && c=="ELEMENT"[i]) i++; else i=-1;
+    if(!c) {
+      z=fgetc(f)<<16; z|=fgetc(f)<<24; z|=fgetc(f); z|=fgetc(f)<<8;
+      if(i==8) break;
+      fseek(f,z,SEEK_CUR);
+      i=0;
+    }
+  }
+  if(z>150) {
+    fseek(f,148,SEEK_CUR);
+    for(i=0;i<256;i++) {
+      c=fgetc(f);
+      if(c&15) {
+        fread(buf+1,1,c&15,f);
+        buf[(c&15)+1]=0;
+        if(c&0x80) fgetc(f);
+        if(c&0x40) fgetc(f);
+        if(c&0x20) fgetc(f),fgetc(f),fgetc(f),fgetc(f);
+        if(c&0x10) {
+          c=fgetc(f); c|=fgetc(f)<<8;
+          for(j=0;j<16;j++) if(c&(1<<j)) fgetc(f),fgetc(f);
+        }
+        add_name(buf,i,0);
+      } else {
+        i+=c>>4;
+      }
+    }
+  }
+  fclose(f);
+}
+
 static void do_output(void) {
   int i;
   if(*outname=='-' && !outname[1]) outfile=stdout; else outfile=fopen(outname,"w");
@@ -619,8 +673,9 @@ static void do_output(void) {
 
 int main(int argc,char**argv) {
   int i;
-  while((i=getopt(argc,argv,"+d"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+dw"))>0) switch(i) {
     case 'd': option|=0x0001; break;
+    case 'w': option|=0x0002; break;
     default: return 1;
   }
   if(optind+2!=argc) errx(1,"Wrong number of arguments");
@@ -630,6 +685,7 @@ int main(int argc,char**argv) {
   outname=argv[optind+1];
   mem[0xEE]=mem[0xEF]=0xFFFF; // scroll rate
   mem[0xE3]=0xFFFF; // light
+  if(option&0x0002) read_world_file(argv[optind]);
   do_pass();
   for(i=0;i<10;i++) if(flabel[i]) {
     fclose(flabel[i]);
