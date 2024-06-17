@@ -179,8 +179,8 @@ static void element_list_callback(Uint16 n,int y,void*uz) {
   v_color[80*y+31]=(e->attrib&A_LIGHT?0x0E:0x08);
   v_char[80*y+31]=(e->attrib&A_LIGHT?0x9D:0xFA);
   v_color[80*y+32]=(e->attrib&A_TRANSPORTER?0x0F:0x08);
-  v_char[80*y+32]=(e->attrib&A_TRANSPORTABLE?'T':0xFA);
-  v_color[80*y+33]=(e->attrib&A_TRANSPORTER?0x0F:0x08);
+  v_char[80*y+32]=(e->attrib&A_TRANSPORTER?'T':0xFA);
+  v_color[80*y+33]=(e->attrib&A_TRANSPORTABLE?0x0F:0x08);
   v_char[80*y+33]=(e->attrib&A_TRANSPORTABLE?'t':0xFA);
   for(x=0;x<8;x++) {
     v_color[80*y+x+34]=(e->attrib&(A_MOVE_C0<<x)?0x0A:0x08);
