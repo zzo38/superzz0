@@ -427,6 +427,7 @@ const char*save_board(FILE*fp,int m) {
     if(stats[i].length) fwrite(stats[i].text,1,stats[i].length,fp);
     write8(fp,stats[i].speed);
     write16(fp,stats[i].count);
+    r=stats[i].xy;
     for(j=0;j<stats[i].count;j++) {
       if(j) {
         if(r[j].x==r[j-1].x) c=1; else if(r[j].x==r[j-1].x-1) c=0; else if(r[j].x==r[j-1].x+1) c=2; else c=3;
@@ -439,6 +440,7 @@ const char*save_board(FILE*fp,int m) {
         if(r[j].delay) c|=0x80;
       }
       if(r[j].instptr==65535) c+=0x10; else if(j && r[j].instptr==r[j-1].instptr) c+=0x20; else if(r[j].instptr) c+=0x30;
+      write8(fp,c);
       if((c&0x03)==0x03) (board_info.width>256 || (ef&0x8000))?write16(fp,r[j].x):write8(fp,r[j].x);
       if((c&0x0C)==0x0C) (board_info.height>256 || (ef&0x8000))?write16(fp,r[j].y):write8(fp,r[j].y);
       if((c&0x30)==0x30) write16(fp,r[j].instptr);
