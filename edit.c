@@ -154,7 +154,10 @@ static void element_list_callback(Uint16 n,int y,void*uz) {
   draw_text(1,y,buf,e->name[0]?7:8,4);
   if(!e->name[0]) return;
   draw_text(5,y,e->name,0x0B,15);
-  if(e->app[0]&0x0F) {
+  if(e->app[0]&0x20) {
+    v_color[80*y+22]=0x08;
+    v_char[80*y+22]='M';
+  } else if(e->app[0]&0x0F) {
     v_color[80*y+22]=0x08;
     v_char[80*y+22]="FPOUS123LA??????"[e->app[0]&0x0F];
   } else {
@@ -263,7 +266,10 @@ static void edit_element(Uint8 en) {
           case AP_FIXED:
             win_char('h',"Character: ",e->app[1]);
             break;
-          case AP_PARAM: case AP_UNDER: case AP_MISC1: case AP_MISC2: case AP_MISC3:
+          case AP_PARAM:
+            win_char('h',"Base character: ",e->app[1]);
+            break;
+          case AP_UNDER: case AP_MISC1: case AP_MISC2: case AP_MISC3:
             win_char('h',"Default character: ",e->app[1]);
             break;
           case AP_LINES:
