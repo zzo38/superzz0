@@ -16,6 +16,10 @@ static Uint8 emode;
 static Uint8*markgrid;
 static Uint16 markwidth,markheight,markskip;
 
+static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay);
+static void stat_list_callback(Uint16 n,int y,void*uz);
+static void stat_xy_edit(Stat*s,Uint16 n);
+
 void set_board_name(Uint16 id,const char*name) {
   if(maxboard<id) {
     boardnames=realloc(boardnames,(id+1)*sizeof(Uint8*));
@@ -173,7 +177,18 @@ static void edit_tile(void) {
     win_option('O',"Over layer",lay,2) win_refresh();
     win_blank();
     p=(lay==0?b_under:lay==1?b_main:b_over)+xcur+ycur*board_info.width;
-    win_numeric('K',"Kind: ",p->kind,0,255);
+    if(lay==2) {
+      win_boolean('S',"Solid",p->kind,OVER_SOLID);
+      win_boolean('R',"Reserved",p->kind,OVER_RESERVED);
+      win_boolean('B',"BG Thru",p->kind,OVER_BG_THRU);
+      win_boolean('V',"Visible",p->kind,OVER_VISIBLE);
+      win_boolean('1',"User defined (1)",p->kind,0x01);
+      win_boolean('2',"User defined (2)",p->kind,0x02);
+      win_boolean('4',"User defined (4)",p->kind,0x04);
+      win_boolean('8',"User defined (8)",p->kind,0x08);
+    } else {
+      win_numeric('K',"Kind: ",p->kind,0,255);
+    }
     win_color('C',"Color: ",p->color);
     win_numeric('P',"Parameter: ",p->param,0,255);
     win_char('h',"Character: ",p->param) win_refresh();
@@ -182,7 +197,230 @@ static void edit_tile(void) {
       draw_text(0,0,buf,7,snprintf(buf,40,"Stat: %3d",p->stat));
       if(!p->stat) v_color[8]=8;
     }
+    win_command('t',"Select stat...") {
+      int n;
+      win_form("Select stat") {
+        win_cursor(p->stat);
+        win_list(maxstat+1,0,stat_list_callback,n) {
+          if(n!=p->stat) {
+            find_stat(xcur,ycur,p->stat,lay+1,0);
+            find_stat(xcur,ycur,p->stat=n,0,lay+1);
+          }
+          break;
+        }
+        win_blank();
+        win_command_esc(0,"Cancel") break;
+      }
+    }
+    if(p->stat && p->stat<=maxstat) {
+      win_command('E',"Edit stat item...") {
+        StatXY*r=find_stat(xcur,ycur,p->stat,lay+1,lay+1);
+        if(r) stat_xy_edit(stats+p->stat-1,r-stats[p->stat-1].xy);
+      }
+    }
+    // win_command('n',"Parameter menu...");
     win_blank();
+    win_command_esc(0,"Done") break;
+  }
+}
+
+static void stat_list_callback(Uint16 n,int y,void*uz) {
+  char buf[81];
+  Stat*s=n?stats+n-1:0;
+  if(!n) {
+    draw_text(1,y,"  0 (N/A)",0x08,-1);
+    v_color[y*80+3]=0x0E;
+    return;
+  }
+  draw_text(1,y,buf,0x0E,snprintf(buf,4,"%3u",n));
+  if(s->text && *s->text=='@') {
+    for(n=1;s->text[n] && s->text[n]!='\r' && s->text[n]!='\n' && n<28;n++);
+    draw_text(5,y,s->text+1,0x06,n-1);
+  }
+  draw_text(35,y,buf,0x07,snprintf(buf,48,"(%05u,%05u,%05u) L=%05u C=%05u S=%03u",s->misc1,s->misc2,s->misc3,s->length,s->count,s->speed));
+}
+
+static void stat_xy_list_callback(Uint16 n,int y,void*uz) {
+  char buf[81];
+  StatXY*o=((Stat*)uz)->xy+n;
+  draw_text(1,y,buf,0x0E,snprintf(buf,40,"%5u",n));
+  draw_text(7,y,buf,0x07,snprintf(buf,40,"(%05d,%05d,%c)",o->x,o->y,"-umo"[o->layer&3]));
+  v_char[80*y+23]=(o->layer&0x80?'L':250); v_color[80*y+23]=(o->layer&0x80?12:8);
+  v_char[80*y+24]=(o->layer&0x40?'U':250); v_color[80*y+24]=(o->layer&0x40?13:8);
+  draw_text(26,y,buf,0x07,snprintf(buf,40,"D=%3u",o->delay));
+  if(o->instptr==65535) draw_text(32,y,"(STOP)",7,-1); else draw_text(32,y,buf,7,snprintf(buf,40,"IP=%5u",o->instptr));
+}
+
+static Uint16 exchange_statxy(Stat*s,Uint16 m,Uint16 n) {
+  StatXY*o=s->xy+n;
+  StatXY*p=s->xy+m;
+  StatXY x=*p;
+  *p=*o;
+  *o=x;
+  return m;
+}
+
+static void stat_xy_edit(Stat*s,Uint16 n) {
+  char r;
+  StatXY*o=s->xy+n;
+  char buf[81];
+  static const char*const lay[4]={"N/A","Under","Main","Over"};
+  win_form("Stat XY Edit") {
+    win_picture(4) {
+      draw_text(1,0,buf,7,snprintf(buf,80,"Index: %5u/%5u",n,s->count));
+      draw_text(1,1,buf,7,snprintf(buf,80,"X: %5u",o->x));
+      draw_text(1,2,buf,7,snprintf(buf,80,"Y: %5u",o->y));
+      draw_text(1,3,buf,7,snprintf(buf,80,"Layer: %s",lay[o->layer&3]));
+    }
+    win_boolean('U',"User",o->layer,0x40);
+    win_boolean('L',"Lock",o->layer,0x80);
+    win_numeric('D',"Delay: ",o->delay,0,255);
+    win_numeric('I',"Instruction: ",o->instptr,0,65535);
+    win_blank();
+    win_command('R',"Restart script") o->instptr=0,r=1;
+    win_command('o',"Stop script") o->instptr=0xFFFF,r=1;
+    win_blank();
+    win_command('s',"Move to start") o=s->xy+(n=exchange_statxy(s,0,n)),r=1;
+    if(n) win_command('p',"Move to previous") o=s->xy+(n=exchange_statxy(s,n-1,n)),r=1;
+    if(n<s->count-1) win_command('n',"Move to next") o=s->xy+(n=exchange_statxy(s,n+1,n)),r=1;
+    win_command('e',"Move to end") o=s->xy+(n=exchange_statxy(s,s->count-1,n)),r=1;
+    if(r) {
+      r=0;
+      win_refresh();
+    }
+    win_blank();
+    win_command_esc(0,"Done") break;
+  }
+}
+
+static int statxy_sorter_callback(const void*aa,const void*bb) {
+  const StatXY*a=aa;
+  const StatXY*b=bb;
+  int q=numprefix>>4;
+  int t=numprefix&15;
+  int z=(a->layer-b->layer)&3;
+  if(t&8) {
+    if(a->layer&0x80&~b->layer) return -1;
+    if(b->layer&0x80&~a->layer) return 1;
+  }
+  if(q<2 && z) return z*(t&4?-1:1);
+  if((q&1) && a->y!=b->y) return a->y<b->y?(t&2?1:-1):(t&2?-1:1);
+  if(a->x!=b->x) return a->x<b->x?(t&1?1:-1):(t&1?-1:1);
+  if(a->y!=b->y) return a->y<b->y?(t&2?1:-1):(t&2?-1:1);
+  return z*(t&4?-1:1);
+}
+
+static void stat_edit(int n) {
+  char title[40];
+  char buf[80];
+  char nam[60];
+  Stat*s=stats+n-1;
+  int i,j;
+  Uint32 at;
+  Stat q;
+  snprintf(title,40,"Stat #%d",n);
+  name:
+  nam[1]=0;
+  if(s->text && *s->text=='@') {
+    for(i=0;s->text[i] && s->text[i]!='\r' && s->text[i]!='\n' && i<48;i++) nam[i]=s->text[i];
+    nam[i]=0;
+  }
+  win_form(title) {
+    win_numeric('1',"Misc1: ",s->misc1,0,0xFFFF);
+    win_numeric('2',"Misc2: ",s->misc2,0,0xFFFF);
+    win_numeric('3',"Misc3: ",s->misc3,0,0xFFFF);
+    win_numeric('S',"Speed: ",s->speed,0,255);
+    win_picture(3) {
+      draw_text(1,0,buf,7,snprintf(buf,80,"Length: %5d",s->length));
+      draw_text(1,1,buf,7,snprintf(buf,80,"Count: %5d",s->count));
+      draw_text(1,2,"Name: ",7,-1);
+      draw_text(7,2,nam+1,6,-1);
+    }
+    win_command('T',"Text") {
+      s->text=text_editor(s->text);
+      s->length=(s->text?strlen(s->text):0);
+      goto name;
+    }
+    win_command('L',"XY List") {
+      win_form(title) {
+        win_list(s->count,s,stat_xy_list_callback,i) stat_xy_edit(s,i);
+        win_blank();
+        win_command('S',"Sort...") {
+          i=j=0;
+          win_form("Sort stat XY list") {
+            win_option('X',"Layer,X,Y",i,0);
+            win_option('Y',"Layer,Y,X",i,1);
+            win_option('L',"X,Y,Layer",i,2);
+            win_option('a',"Y,X,Layer",i,3);
+            win_blank();
+            win_boolean('R',"Reverse X",j,1);
+            win_boolean('v',"Reverse Y",j,2);
+            win_boolean('s',"Reverse Layer",j,4);
+            win_boolean('U',"First if user bits set",j,8);
+            win_blank();
+            win_command('E',"Execute") {
+              numprefix=(i<<4)+j;
+              qsort(s->xy,s->count,sizeof(StatXY),statxy_sorter_callback);
+              numprefix=0;
+              break;
+            }
+            win_command_esc(0,"Cancel") break;
+          }
+        }
+        win_command('R',"Reverse") {
+          for(i=0;i<=s->count/2;i++) exchange_statxy(s,i,s->count-i-1);
+        }
+        win_command_esc(0,"Done") break;
+      }
+    }
+    win_command('x',"Exchange") {
+      *buf=0;
+      ask_text("Exchange with:",buf,8);
+      if(*buf && (i=strtol(buf,0,10)) && i<=maxstat && i!=n) {
+        for(at=0;at<board_info.width*board_info.height*3;at++) {
+          if(b_under[at].stat==n) b_under[at].stat=i; else if(b_under[at].stat==i) b_under[at].stat=n;
+        }
+        q=stats[i-1];
+        stats[i-1]=stats[n-1];
+        stats[n-1]=q;
+        s=stats+(n=i)-1;
+      }
+    }
+    if(maxstat>1) win_command('D',"Delete") {
+      *buf=0;
+      ask_text("Delete? (y/n)",buf,2);
+      if(*buf=='Y' || *buf=='y') {
+        for(at=0;at<board_info.width*board_info.height*3;at++) {
+          if(b_under[at].stat==n) b_under[at].stat=0; else if(b_under[at].stat>n) --b_under[at].stat;
+        }
+        if(n<maxstat) memmove(stats+n-1,stats+n,(maxstat-n)*sizeof(Stat));
+        --maxstat;
+        return;
+      }
+    }
+    win_command_esc(0,"Done") break;
+  }
+}
+
+static void stat_list(int pc) {
+  int n;
+  restart:
+  win_form("Stat list") {
+    win_cursor(pc?:1);
+    win_list(maxstat+1,0,stat_list_callback,n) if(n) stat_edit(n);
+    win_blank();
+    if(maxstat<255) win_command('A',"Add new stat") {
+      stats=realloc(stats,(maxstat+1)*sizeof(Stat));
+      if(!stats) err(1,"Allocation failed");
+      stats[maxstat].misc1=stats[maxstat].misc2=stats[maxstat].misc3=0;
+      stats[maxstat].speed=1;
+      stats[maxstat].length=0;
+      stats[maxstat].count=0;
+      stats[maxstat].text=0;
+      stats[maxstat].xy=0;
+      pc=++maxstat;
+      goto restart;
+    }
     win_command_esc(0,"Done") break;
   }
 }
@@ -389,6 +627,8 @@ static void estatus(void) {
 }
 
 static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay) {
+  // Moves a stat with number (n) from layer (lay) to (nlay), at coordinates (x,y).
+  // If either layer number is zero, means a nonexistent stat XY record.
   int i;
   Stat*s;
   if(!n || n>maxstat) return 0;
@@ -409,12 +649,12 @@ static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay) {
     if(s->xy[i].x==x && s->xy[i].y==y && (s->xy[i].layer&3)==lay) {
       if(nlay) {
         s->xy[i].layer=(s->xy[i].layer&~3)|(nlay&3);
+        return s->xy+i;
       } else {
         if(i!=s->count-1) memmove(s->xy+i,s->xy+i+1,(s->count-i-1)*sizeof(StatXY));
         --s->count;
         return 0;
       }
-      break;
     }
   }
   return 0;
@@ -478,7 +718,7 @@ static void cursor_move(Sint32 xd,Sint32 yd) {
 }
 
 static void copy_cell(Sint32 x0,Sint32 y0,Sint32 x1,Sint32 y1) {
-  
+  place_at(x1,y1,b_main[y0*board_info.width+x0]);
 }
 
 static void mass_move(Sint32 xd,Sint32 yd) {
@@ -1108,6 +1348,7 @@ Uint16 edit_board(Uint16 id) {
       case 0: case 15: no_mode: switch(k) {
         case 0x08: numprefix/=10; break;
         case 0x09: if(emode=(emode?0:15)) place_at(xcur,ycur,clip); break;
+        case 0x0F: stat_list(numprefix); numprefix=0; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
         case -SDLK_i: edit_board_info(); break;

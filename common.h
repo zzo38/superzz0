@@ -67,6 +67,7 @@ void combine_assembled(void);
 void set_board_name(Uint16 id,const char*name);
 void set_screen_name(Uint16 id,const char*name);
 void write_name_list(const char*lump,Uint8**data,Uint16 count);
+Uint8*text_editor(Uint8*t);
 
 // === Game definitions ===
 
