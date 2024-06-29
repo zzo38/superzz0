@@ -77,7 +77,7 @@ static void goto_board(Uint16 id) {
     if(b) {
       memset(b_under,0,board_info.width*board_info.height);
       memset(b_main,0,board_info.width*board_info.height);
-      memset(b_under,0,board_info.width*board_info.height);
+      memset(b_over,0,board_info.width*board_info.height);
       for(i=0;i<maxstat;i++) {
         free(stats[i].text);
         free(stats[i].xy);

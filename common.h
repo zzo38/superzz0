@@ -397,6 +397,7 @@ void update_screen(void);
 #define XOP_S_SCROLL_X 0x0DA0 // scroll X plus (source+(value&15)-8)
 #define XOP_S_SCROLL_Y 0x0DB0 // scroll Y plus (source+(value&15)-8)
 
+#define MEM_DEFAULT_OVERLAY 0xC9
 #define MEM_GLOBAL_INSTPTR 0xCA
 #define MEM_CONTROL 0xCB
 #define MEM_ARG_J 0xCC

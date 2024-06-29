@@ -394,6 +394,9 @@ small then the rest will be zero.
 The addresses from 0xC0 to 0xFF (the actual address in the file is twice
 as much as these addresses, since they are 16-bits) have special meanings:
 
+* 0xC9 = Default overlay; character in low byte and colour in high byte. If
+this is zero, then the default will be transparent.
+
 * 0xCA = Instruction pointer for global scripts.
 
 * 0xCC = Extra argument J

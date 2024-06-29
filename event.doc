@@ -79,6 +79,7 @@ EV_PUSH (2)
 
   W = Direction
   Z = Parameter
+  Condition flag = Suppression flag
 
   Return = Nonzero to prevent pushing.
 
@@ -90,6 +91,7 @@ EV_TRANSPORT (3)
 
   W = Direction
   Z = Previously attempted target coordinates, or zero if none
+  Condition flag = Suppression flag
 
   Return = Target coordinates; zero to prevent transport.
 

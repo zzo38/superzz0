@@ -51,6 +51,8 @@ typedef struct {
 static MessageScrollback*scrback;
 static Uint16 nscrback;
 
+static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z);
+
 static void debug_log(Uint8 fo,Sint32 so,Sint32 w,Sint32 x,Sint32 y,Sint32 z,Uint16 pc) {
   FILE*f=stdout; // should it be configurable?
   int i;
@@ -723,6 +725,163 @@ static inline Uint32 pack_tile(const Tile*t) {
   return t->kind|(t->color<<8)|(t->param<<16)|(t->stat<<24);
 }
 
+static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 flag,Uint16 cla,Uint16 tx,Uint16 ty) {
+  // Flags:
+  //   0x0001 = absolute
+  //   0x0002 = overlay
+  //   0x0004 = return stat
+  //   0x0008 = do not move
+  //   0x0010 = allow pushing
+  //   0x0020 = allow direct crushing
+  //   0x0040 = allow transporting
+  //   0x0080 = override move classes
+  //   0x0700 = Y step register
+  //   0x0800 = direction instead of displacement
+  //   0x7000 = X step register
+  //   0x8000 = use registers instead of tx/ty
+  Tile*b;
+  StatXY*qq=0;
+  StatXY*q;
+  Uint8 sn=0;
+  Uint16 sr=0;
+  Sint32 rx,ry;
+  Uint32 e0,e1;
+  Uint32 to;
+  Sint32 i;
+  condflag=0;
+  // Determine coordinates
+  if(flag&4) {
+    sn=at&0xFF;
+    sr=at>>16;
+    if(sn>maxstat || !sn || stats[sn].count>=sr) return 0;
+    i=(stats[sn].xy[sr].layer&3);
+    if(i==3) flag|=2; else if(i==2) flag&=~2; else return 0;
+    xx=stats[sn].xy[sr].x;
+    yy=stats[sn].xy[sr].y;
+    goto xy0;
+  } else if(at) {
+    if(at>board_info.width*board_info.height) return at;
+    --at;
+    xx=at%board_info.width;
+    yy=at/board_info.width;
+  } else {
+    xy0:
+    if(xx<0 || xx>=board_info.width || yy<0 || yy>=board_info.height) return 0;
+    at=yy*board_info.width+xx;
+  }
+  // Determine direction of movement and target location
+  if(flag&0x8000) tx=regs[(flag>>8)&7],ty=regs[(flag>>12)&7];
+  if(flag&0x800) {
+    tx&=3; ty&=3;
+    if(tx==DIR_E) rx=1; else if(tx==DIR_W) rx=-1; else rx=0;
+    if(ty==DIR_S) ry=1; else if(ty==DIR_N) ry=-1; else ry=0;
+    tx=rx+xx; ty=ry+yy;
+  } else if(flag&1) {
+    rx=tx-xx; ry=ty-yy;
+  } else {
+    rx=tx; ry=ty;
+    tx+=xx; ty+=yy;
+  }
+  if(tx<0 || tx>=board_info.width || ty<0 || ty>=board_info.height) goto end;
+  if(!rx && !ry) goto end;
+  to=ty*board_info.width+tx;
+  try_again:
+  // Determine attributes
+  if(flag&2) {
+    b=b_over;
+    e0=(A_PUSH_NS|A_PUSH_EW);
+    e1=(b[to].kind&OVER_SOLID)?(A_PUSH_NS|A_PUSH_EW):(A_FLOOR);
+  } else {
+    b=b_main;
+    e0=elem_def[b[at].kind].attrib; e1=elem_def[b[to].kind].attrib;
+    if(!(flag&0x80)) cla=(cla&0xFF00)|((e0/A_MOVE_C0)&0xFF);
+  }
+  // Check classes
+  if(!(cla&(1<<(e1&15)))) goto end;
+  // Check push direction
+  if(pushing) {
+    if(rx && !(e0&A_PUSH_EW)) goto end;
+    if(ry && !(e0&A_PUSH_NS)) goto end;
+  }
+  // Find stat record if necessary
+  if(b[at].stat && !sn && (qq=find_statxy(b+at))) sr=qq-stats[(sn=b[at].stat)-1].xy;
+  // Transporting
+  if((flag&0x40) && (e0&A_TRANSPORTABLE) && (e1&A_TRANSPORTER)) {
+    
+  }
+  // Push other objects out of the way
+  if((flag&0x10) && (e1&(A_PUSH_EW|A_PUSH_NS))) {
+    if(!(flag&2) && (i=elem_def[b[to].kind].event[EV_PUSH])) {
+      condflag=(flag>>3)&1;
+      i=run_program(i,(rx>0?DIR_E:rx<0?DIR_W:ry>0?DIR_S:DIR_N),tx,ty,b[to].param);
+      condflag=0;
+      if(i) goto end;
+    }
+    general_move(1,to+1,tx,ty,0x0070|flag&0x007A,cla,rx,ry);
+    flag&=~0x30;
+    if(condflag) {
+      condflag=0;
+      if(flag&8) {
+        if(flag&2) e1|=A_FLOOR; else b=b_under,e1=elem_def[b[to].kind].attrib;
+      } else {
+        goto try_again;
+      }
+    }
+  }
+  // Crushing
+  if((flag&0x20) && (e1&A_CRUSH)) {
+    if(flag&8) goto bypass;
+    if(b[to].stat && (q=find_statxy(b+to))) {
+      q->x=q->y=q->instptr=65535;
+      q->layer=128;
+      q->delay=255;
+    }
+    if(flag&2) {
+      b[to].kind=0;
+      b[to].stat=0;
+      e1=A_FLOOR;
+    } else {
+      if(b_under[to].stat && (q=find_statxy(b_under+to))) q->layer++;
+      b_main[to]=b_under[to];
+      b_under[to]=(Tile){};
+      flag|=0x80;
+      goto try_again;
+    }
+  }
+  // Check if the target location is blocked
+  if(!(e1&A_FLOOR)) goto end;
+  bypass:
+  // Check if a stat would fall beneath the under layer
+  if((flag&2) && b[at].stat && b[to].stat) goto end;
+  if(!(flag&2) && b_under[to].stat) goto end;
+  // Movement is OK
+  if(!(flag&8)) {
+    // Do movement
+    if(!(flag&2)) {
+      b_under[to]=b_main[to];
+      if(b_under[to].stat && (q=find_statxy(b_under+to))) q->layer--;
+    }
+    b[to]=b[at];
+    if(flag&2) {
+      b[to].stat|=b[at].stat;
+      b[at].kind=(b[at].kind&OVER_BG_THRU)|(memory[MEM_DEFAULT_OVERLAY]?OVER_VISIBLE:0);
+      b[at].color=memory[MEM_DEFAULT_OVERLAY]>>8;
+      b[at].param=memory[MEM_DEFAULT_OVERLAY];
+      b[at].stat=0;
+    } else {
+      if(b_under[at].stat && (q=find_statxy(b_under+at))) q->layer++;
+      b_main[at]=b_under[at];
+      b_under[at]=(Tile){};
+    }
+    if(qq) {
+      qq->x=tx; qq->y=ty;
+    }
+    at=to;
+  }
+  condflag=1;
+  end: return (flag&4)?(sn|(sr<<16)):(at+1);
+}
+
 static int match_label(const char*v,const char*label) {
   int n=0;
   char a,b;
@@ -928,6 +1087,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_ANDN: regs[fo]&=~so; break;
       case OP_ASUB: regs[fo]=labs(regs[fo]-so); break;
       case OP_BACK: so^=2; goto forw;
+      case OP_BFLG: condflag=(board_info.flag>>fo)&1; if(so>0) board_info.flag|=1<<fo; else if(so<0) board_info.flag&=~(1<<fo); break;
       case OP_BGIV: condflag=(status_vars[fo]&(1<<(so&31))?0:1); status_vars[fo]|=1<<(so&31); break;
       case OP_BIT: so=1<<(so&31); goto store;
       case OP_BTAK: condflag=(status_vars[fo]&(1<<(so&31))?1:0); status_vars[fo]&=~(1<<(so&31)); break;
@@ -1017,11 +1177,14 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_GM1: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].misc1); goto store;
       case OP_GM2: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].misc2); goto store;
       case OP_GM3: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].misc3); goto store;
+      case OP_GMOV: if(so>0xFFFC) break; so=general_move(0,regs[fo],x,y,memory[so],memory[so+1],memory[so+2],memory[so+3]); goto setxy;
       case OP_GO: t=so; so=pc; pc=t; goto store;
       case OP_GOTO: goto jump;
+      case OP_GPUS: if(so>0xFFFC) break; general_move(1,regs[fo],x,y,memory[so],memory[so+1],memory[so+2],memory[so+3]); break;
       case OP_GRTR: condflag=(regs[fo]>so?1:0); break;
       case OP_GSD: if(rs=get_statxy(so)) regs[fo]=rs->delay; break;
       case OP_GSPD: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].speed); goto store;
+      case OP_GSXY: if(rs=get_statxy(so)) x=rs->x,y=rs->y,so=rs->delay|(rs->layer<<8),condflag=1; else condflag=so=0; goto store;
       case OP_GTMC: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_main[t].color; else condflag=0; break;
       case OP_GTMK: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_main[t].kind; else condflag=0; break;
       case OP_GTMP: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_main[t].param; else condflag=0; break;
@@ -1062,10 +1225,12 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         so=((rs-stats[b_main[so].stat].xy)<<16)|b_main[so].stat;
         goto store;
       case OP_MOD: if(so) condflag=1,regs[fo]%=so; else condflag=0; break;
+      case OP_MOVE: so=general_move(0,regs[fo],x,y,(so&0xF8)+0x8800+(so&7)*0x1100,(so&0xFF00)+1,0,0); goto setxy;
       case OP_MTIL: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=pack_tile(b_main+t); else condflag=0; break;
       case OP_MUL: regs[fo]*=so; break;
       case OP_NEG: so=-so; goto store;
       case OP_NOT: so=~so; goto store;
+      case OP_OMOV: so=general_move(0,regs[fo],x,y,0x8802+(so&7)*0x1100,0xFFFF,0,0); goto setxy;
       case OP_ONEW:
         so=convxy(so,x,y);
         if(so==-1 || !b_over[so].stat || b_under[so].stat>maxstat) break;
@@ -1108,6 +1273,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PM3: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc3=regs[fo];
       case OP_POKE: memory[so&0xFFFF]=regs[fo]; break;
       case OP_PSD: if(rs=get_statxy(so)) rs->delay=regs[fo]; break;
+      case OP_PSXY: if(rs=get_statxy(so)) rs->x=x,rs->y=y,rs->delay=so,rs->layer=so>>8,condflag=1; else condflag=0; break;
       case OP_PTMC: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].color=regs[fo]; else condflag=0; break;
       case OP_PTMK: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].kind=regs[fo]; else condflag=0; break;
       case OP_PTMP: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].param=regs[fo]; else condflag=0; break;
@@ -1120,6 +1286,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PTUK: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].kind=regs[fo]; else condflag=0; break;
       case OP_PTUP: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].param=regs[fo]; else condflag=0; break;
       case OP_PTUS: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].stat=regs[fo]; else condflag=0; break;
+      case OP_PUSH: general_move(1,regs[fo],x,y,(so&0xF8)+0x8800+(so&7)*0x1100,(so&0xFF00)+1,0,0); break;
       case OP_REGL: load_registers(fo,so); break;
       case OP_REGS: save_registers(fo,so); break;
       case OP_REVB: revert_lump_by_number(so,"BRD"); break;
@@ -1132,6 +1299,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_SEX: so=(Sint16)so; goto store;
       case OP_SGN: so=(so<0?-1:so>0?1:0); goto store;
       case OP_SIXY: if((rs=get_statxy(so)) && (so=convxy(0,rs->x,rs->y)+1)) condflag=1; else condflag=so=0; goto store;
+      case OP_SMOV: general_move(0,regs[fo],x,y,(so&0xF8)+0x8804+(so&7)*0x1100,(so&0xFF00)+1,0,0); break;
       case OP_SUB: regs[fo]-=so; break;
       case OP_SWPA: t=regs[0]; regs[0]=so; so=t; goto store;
       case OP_SWPB: t=regs[1]; regs[1]=so; so=t; goto store;
@@ -1213,6 +1381,9 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case 14: y=so; break;
       case 15: z=so; break;
     }
+    continue;
+    setxy:
+    if(regs[fo]) regs[fo]=so; else so--,x=so%board_info.width,y=so/board_info.width;
     continue;
     jump:
     pc=so;

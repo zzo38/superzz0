@@ -309,6 +309,17 @@ numbers are treated as unsigned.
   operand will be the command code; otherwise, the condition flag will be
   false and the first operand is not affected.
 
+[043 CAM]
+  Operations with camera, according to first operand:
+  A = Condition flag if coordinates are visible
+  B = Condition flag if coordinates are within bounding box
+  C = Center on stat XY index specified by second operand
+  D = Move camera one step in direction by low 2-bits of second operand
+  E = Enable scrolling if second operand is nonzero, disable if zero
+  F = 
+  G = Go to (X,Y) immediately
+  H = 
+
 [044 WARP]
   Set the warp. The first operand is the target board number, and the
   second operand is the address of a subroutine to execute after the warp
@@ -555,11 +566,13 @@ numbers are treated as unsigned.
   Second operand is coordinates; if valid then the condition flag is true
   but otherwise it is false. Moves the under layer at the specified
   coordinates to the main layer and sets the under layer to zero; this
-  will update the stat XY record if applicable.
+  will update the stat XY record if applicable. What was in the main layer
+  will be written to the first operand.
 
 [073 SINK]
   This is like FLOA but moves the main layer to the under layer and sets
-  the main layer to zero, instead of the other way around.
+  the main layer to zero, instead of the other way around. What was in the
+  under layer will be written to the first operand.
 
 [074 PTUK]
   Second operand is coordinates. If they are valid, then the kind of the
@@ -650,6 +663,40 @@ numbers are treated as unsigned.
   condition flag will be true if successful, or false if there is any
   reason it doesn't work (coordinates out of range, index out of range,
   there is already another stat in the under layer, etc).
+
+[092 GSXY]
+  The second operand is the stat number and stat XY index. If it is valid,
+  then its coordinates are loaded into the X and Y registers, its delay
+  into the low 8-bits of the first operand, and its layer/lock into the
+  next 8-bits of the first operand, and then the condition flag is true.
+  If it is not valid, then the condition flag is false and zero is written
+  into the first operand.
+
+[093 PSXY]
+  Has the opposite effect of GSXY, writing X, Y, and the first operand,
+  into the stat XY record specified by the second operand. The condition
+  flag has the same meaning. Does not affect the board grid.
+
+[094 DIE]
+  Delete a stat XY entry given by second operand. The first operand
+  controls the additional behaviour; A-D will also affect the tile in the
+  board grid, while E-H will leave it there (but will set its stat to 0
+  if its current value matches the second operand); if it is not A or E
+  then it also returns from the current subroutine call:
+  B or F = return -1
+  C or G = return 0
+  D or H = return 1
+
+[095 KILU]
+  Works like DIE but affects a tile in the under layer, where the second
+  operand is the coordinates. It does not have to be a stat; A-D will still
+  affect the board grid even if it is not a stat.
+
+[096 KILM]
+  Like KILU but main layer instead of under layer.
+
+[097 KILO]
+  Like KILU but over layer instead of under layer.
 
 [100 LET]
   Copy second operand to first.
@@ -767,6 +814,11 @@ numbers are treated as unsigned.
   Find a bit like CBC and CBS, but then set/clear the condition flag
   according to the state of that bit.
 
+[12B BFLG]
+  Set/clear the condition flag according to the board flag bit selected by
+  the first operand (A=bit0, Z=bit15). If the second operand is nonzero, it
+  will then alter that bit: set if positive or clear if negative.
+
 [12C EAP0]
   The second operand is the element number; write the major appearance code
   of that element definition to the first operand.
@@ -800,6 +852,18 @@ numbers are treated as unsigned.
 
 [133 CORV]
   Like CORU but sets the V coroutine instead of the U coroutine.
+
+[134 EXT0]
+  (Reserved)
+
+[135 EXT1]
+  (Reserved)
+
+[136 EXT2]
+  (Reserved)
+
+[137 EXT3]
+  (Reserved)
 
 [140 SWPA]
   Copy A register to first operand and then second operand to A register.
