@@ -117,8 +117,8 @@ void run_test_game(int b) {
     return;
   }
   // This sequence of writes must match the sequence of reads below.
-    fwrite(&b,1,sizeof(b),stdin);
-    fwrite(&config,1,sizeof(config),stdin);
+    fwrite(&b,1,sizeof(b),fp);
+    fwrite(&config,1,sizeof(config),fp);
   pclose(fp);
   unlink(".superzz0_testgame");
   *v_status=r;
