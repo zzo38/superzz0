@@ -38,10 +38,8 @@ const char*init_world(void) {
     if(!fp) return "Cannot open MEMORY lump";
     u=lump_size>>1;
     if(u>0x10000) u=0x10000;
-    free(memory);
-    memory=calloc(0x10000,sizeof(Uint16));
-    if(!memory) err(1,"Allocation failed");
     for(i=0;i<u;i++) memory[i]=read16(fp);
+    for(;i<0x10000;i++) memory[i]=0;
     fclose(fp);
   }
   // "START"

@@ -437,7 +437,7 @@ void update_screen(void);
 #define MEM_SCROLL_X_RATE 0xEE
 #define MEM_SCROLL_Y_RATE 0xEF
 
-extern Uint16*memory;
+extern Uint16 memory[0x10000];
 extern Sint32 regs[8];
 extern Uint8 condflag;
 

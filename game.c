@@ -22,7 +22,7 @@ NumericFormat num_format[16];
 Screen cur_screen;
 Uint16 cur_screen_id;
 Sint32 scroll_x,scroll_y; // relative to screen(0,0)
-Uint16*memory;
+Uint16 memory[0x10000];
 Sint32 regs[8];
 Uint8 condflag;
 Uint8**gtext;
