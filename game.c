@@ -166,8 +166,8 @@ static void display_message_text(void) {
     if(x<cur_screen.message_l) x=cur_screen.message_l;
   }
   z=draw_text(x,y,vtextbuf,(cur_screen.flag&SF_FLASHY_MESSAGE?memory[MEM_FRAME_COUNTER]%7+9:0),nvtextbuf);
-  if(x>cur_screen.message_l) v_char[--x+y*80]=0;
-  if(z<cur_screen.message_r) v_char[++z+y*80]=0;
+  if(x>cur_screen.message_l) v_char[--x +y*80]=0;
+  if(z<cur_screen.message_r) v_char[z++ +y*80]=0;
   x+=y*80;
   z+=y*80;
   while(x<z) {
@@ -1430,7 +1430,7 @@ static int system_menu(void) {
   draw_text(x+21,y+2," F8  ",0x70,-1);
   draw_text(x+21,y+3," F9  ",0x30,-1); draw_text(x+27,y+3,"Messages",0x1F,-1);
   draw_text(x+21,y+4," F10 ",0x70,-1); draw_text(x+27,y+4,"Quit",0x1F,-1);
-  draw_text(x+21,y+5," F11 ",0x30,-1); //draw_text(x+27,y+5,"Print",0x1F,-1);
+  draw_text(x+21,y+5," F11 ",0x30,-1); draw_text(x+27,y+5,"Print",0x1F,-1);
   draw_text(x+21,y+6," F12 ",0x70,-1); draw_text(x+27,y+6,"Speed:",0x1F,-1);
   draw_text(x+34,y+6,playstate==PLAYSTATE_NORMAL?"NORM":playstate==PLAYSTATE_FAST?"FAST":"STOP",0x1A,-1);
   draw_text(x+2,y+7," PAUSE ",0x30,-1); draw_text(x+12,y+7,"Pause/resume",0x1F,-1);
@@ -1454,16 +1454,17 @@ static int system_menu(void) {
 }
 
 static void message_scrollback(void) {
-  char buf[32];
-  Uint16 y;
-  Uint16 n=(nscrback+config.message_scrollback-24)%config.message_scrollback;
+  char buf[71];
+  Uint16 n,y;
   if(!scrback) return;
+  reset:
+  n=(nscrback+config.message_scrollback-24)%config.message_scrollback;
   memset(v_color,0x07,80*25);
   memset(v_char,0x00,80*25);
   memset(v_color,0x30,80);
-  draw_text(0,0,"Message scrollback",0x30,-1);
+  draw_text(0,0,"<ESC> Cancel  <\x18/\x19> Scroll  <INS> Note  <F11> Print",0x30,-1);
   redraw:
-  draw_text(60,0,buf,0x30,snprintf(buf,32,"%5d/%5d",(n+24+config.message_scrollback-nscrback)%config.message_scrollback?:config.message_scrollback,config.message_scrollback));
+  draw_text(68,0,buf,0x3B,snprintf(buf,32,"%5d/%5d",(n+24+config.message_scrollback-nscrback)%config.message_scrollback?:config.message_scrollback,config.message_scrollback));
   memset(v_char+80,0x20,80*24);
   for(y=0;y<24;y++) draw_text(0,y+1,scrback[(n+y)%config.message_scrollback].text,0x07,80);
   redisplay();
@@ -1475,6 +1476,14 @@ static void message_scrollback(void) {
     case SDLK_DOWN: case SDLK_KP2: n=(n+1)%config.message_scrollback; break;
     case SDLK_PAGEUP: case SDLK_KP9: n=(n+config.message_scrollback-24)%config.message_scrollback; break;
     case SDLK_PAGEDOWN: case SDLK_KP3: n=(n+24)%config.message_scrollback; break;
+    case SDLK_INSERT: case SDLK_KP0:
+      *buf=0;
+      ask_text("Note:",buf,70);
+      if(*buf) {
+        memcpy(scrback[nscrback].text,buf,71);
+        if(++nscrback==config.message_scrollback) nscrback=0;
+      }
+      goto reset;
   }
   goto redraw;
 }
@@ -1599,8 +1608,8 @@ int run_game(void) {
         switch(event.key.keysym.sym) {
           case SDLK_UP: ka=(event.key.keysym.mod&KMOD_SHIFT)?30:24; kd=DIR_N; break;
           case SDLK_DOWN: ka=(event.key.keysym.mod&KMOD_SHIFT)?31:25; kd=DIR_S; break;
-          case SDLK_LEFT: ka=(event.key.keysym.mod&KMOD_SHIFT)?27:17; kd=DIR_W; break;
-          case SDLK_RIGHT: ka=(event.key.keysym.mod&KMOD_SHIFT)?26:16; kd=DIR_E; break;
+          case SDLK_LEFT: ka=(event.key.keysym.mod&KMOD_SHIFT)?17:27; kd=DIR_W; break;
+          case SDLK_RIGHT: ka=(event.key.keysym.mod&KMOD_SHIFT)?16:26; kd=DIR_E; break;
           case SDLK_F1:
             a=system_menu();
             resume:
