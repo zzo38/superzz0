@@ -559,7 +559,7 @@ static void do_text_op(Uint8 op,Sint32 n) {
       if(boardnames && n>=0 && n<=maxboard && boardnames[n]) s=(char*)boardnames[n];
       break;
     case 2: // Single character
-      *buf=n;
+      *buf=n; buf[1]=0;
       break;
     case 3: // Decimal
       snprintf(buf,80,"%ld",(long)n);
