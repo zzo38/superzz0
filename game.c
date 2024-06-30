@@ -1669,8 +1669,8 @@ int run_game(void) {
             update_screen();
             if(a) goto repeat_event;
             goto display;
-          case SDLK_F6: if(config.debug) debug_menu(); goto resume;
-          case SDLK_F9: set_timer(0); v_status[1]=24; message_scrollback(); goto resume;
+          case SDLK_F6: if(config.debug) debug_menu(); a=0; goto resume;
+          case SDLK_F9: set_timer(0); v_status[1]=24; message_scrollback(); a=0; goto resume;
           case SDLK_F10: return 0;
           case SDLK_F12:
             if(playstate==PLAYSTATE_NORMAL) playstate=PLAYSTATE_FAST; else playstate=PLAYSTATE_NORMAL;
