@@ -77,6 +77,9 @@ static void debug_log(Uint8 fo,Sint32 so,Sint32 w,Sint32 x,Sint32 y,Sint32 z,Uin
     case 4: // Memory management
       fputs("(Not implemented)",f);
       break;
+    case 5: // Stats
+      for(i=0;i<maxstat;i++) fprintf(f,"\n %d: count=%d xy=%p length=%d text=%p speed=%d",i+1,stats[i].count,stats[i].xy,stats[i].length,stats[i].text,stats[i].speed);
+      break;
   }
   fputc('\n',f);
 }
@@ -753,11 +756,12 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   if(flag&4) {
     sn=at&0xFF;
     sr=at>>16;
-    if(sn>maxstat || !sn || stats[sn].count>=sr) return 0;
-    i=(stats[sn].xy[sr].layer&3);
+    if(sn>maxstat || !sn || sr>=stats[sn-1].count) return 0;
+    qq=stats[sn-1].xy+sr;
+    i=qq->layer&3;
     if(i==3) flag|=2; else if(i==2) flag&=~2; else return 0;
-    xx=stats[sn].xy[sr].x;
-    yy=stats[sn].xy[sr].y;
+    xx=qq->x;
+    yy=qq->y;
     goto xy0;
   } else if(at) {
     if(at>board_info.width*board_info.height) return at;

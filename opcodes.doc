@@ -177,6 +177,7 @@ numbers are treated as unsigned.
   C = Text buffer
   D = Status variables
   E = Memory management
+  F = Stats
 
 [02C REGS]
   Save registers. The second operand is the memory address, and the first
