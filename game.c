@@ -886,6 +886,48 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   end: return (flag&4)?(sn|(sr<<16)):(at+1);
 }
 
+static void break_tile(Sint32 at,Uint8 lay,Uint16 sn,Uint16 sr,Uint8 f) {
+  StatXY*q=0;
+  StatXY*z;
+  Tile*t;
+  if(sn) {
+    if(sn>maxstat || sr>=stats[sn-1].count) return;
+    q=stats[sn-1].xy+sr;
+    lay=q->layer&3;
+    if(!lay) return;
+    at=convxy(0,q->x,q->y);
+    if(at==-1) return;
+  }
+  if(lay==1) {
+    t=b_under+at;
+    if(!sn && (sn=t->stat)) q=find_statxy(t);
+    if(!f) *t=(Tile){};
+  } else if(lay==2) {
+    t=b_main+at;
+    if(!sn && (sn=t->stat)) q=find_statxy(t);
+    if(!f) {
+      if(b_under[at].stat && (z=find_statxy(b_under+at))) z->layer++;
+      *t=b_under[at];
+      b_under[at]=(Tile){};
+    }
+  } else if(lay==3) {
+    t=b_over+at;
+    if(!sn && (sn=t->stat)) q=find_statxy(t);
+    if(!f) {
+      t->kind&=OVER_BG_THRU;
+      if(memory[MEM_DEFAULT_OVERLAY]) t->kind|=OVER_VISIBLE;
+      t->color=memory[MEM_DEFAULT_OVERLAY]>>8;
+      t->param=memory[MEM_DEFAULT_OVERLAY];
+    }
+  }
+  if(q) {
+    if(f && sn==t->stat) t->stat=0;
+    q->x=q->y=q->instptr=65535;
+    q->layer=128;
+    q->delay=255;
+  }
+}
+
 static int match_label(const char*v,const char*label) {
   int n=0;
   char a,b;
@@ -1127,6 +1169,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_CWOE: t=regs[fo]&0xFF; cwoe: t=(elem_def[t].attrib); t=(t&A_FLOOR?t:0); condflag=((1<<(t&15))&so)?1:0; break;
       case OP_CWOT: if((t=convxy(regs[fo],x,y))!=-1) { t=b_main[t].kind; goto cwoe; } else condflag=0; break;
       case OP_DEC: --so; goto store;
+      case OP_DIE: if(so&0xFF) break_tile(0,0,so&0xFFFF,so>>16,fo&4); died: if(fo&=3) return fo-2; break;
       case OP_DIR:
         if(regs[fo]) t=(regs[fo]-1)%board_info.width,u=(regs[fo]-1)/board_info.width; else t=x,u=y;
         so&=3;
@@ -1210,6 +1253,9 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_JPOS: if(regs[fo]>=0) goto jump; break;
       case OP_JT: if(condflag) goto jump; break;
       case OP_JZ: if(!regs[fo]) goto jump; break;
+      case OP_KILM: if((t=convxy(so,x,y))!=-1) break_tile(t,2,0,0,fo&4); goto died;
+      case OP_KILO: if((t=convxy(so,x,y))!=-1) break_tile(t,3,0,0,fo&4); goto died;
+      case OP_KILU: if((t=convxy(so,x,y))!=-1) break_tile(t,1,0,0,fo&4); goto died;
       case OP_LESS: condflag=(regs[fo]<so?1:0); break;
       case OP_LET: goto store;
       case OP_LITE: calc_light(fo,so); break;
