@@ -1091,14 +1091,14 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       ex=op&0xF000;
     }
     switch(ex>>12) {
-      case 0 ... 1: so=op>>12; break;
+      case 0 ... 1: so=ex>>12; break;
       case 2: so=memory[pc++]; break;
       case 3: so=memory[memory[pc++]]; break;
       case 4: so=w; break;
       case 5: so=x; break;
       case 6: so=y; break;
       case 7: so=z; break;
-      case 8 ... 15: so=regs[(op>>12)&7]; break;
+      case 8 ... 15: so=regs[(ex>>12)&7]; break;
     }
     so_done:
     if(ex&0x0FFF) {
