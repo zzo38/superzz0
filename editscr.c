@@ -377,9 +377,12 @@ static void f_menu(Uint8 mnu) {
     {'I',SC_SPEC_WIDTH,2,"Board width"},
     {'H',SC_SPEC_HEIGHT,2,"Board height"},
     {'Z',SC_SPEC_USERDATA,2,"Board user data"},
+    {0,0,0,""},
+    {0,0,0,"Others:"},
+    {'M',SC_MEMORY,6,"Memory"},
     {0,255,0,0},
   };
-  char buf[4]={};
+  char buf[8]={};
   Uint32 i,j,k,q,y;
   draw_border(0x1B,20,1,60,23);
   v_ycur=25;
@@ -415,6 +418,7 @@ static void f_menu(Uint8 mnu) {
     case 2: clip.par=ask_numeric_digit_and_format(); break;
     case 3: clip.par=ask_color_char(1,0); clip.com|=ask_color_char(0,clip.col)&15; break;
     case 5: ask_text("Bit position (0-31):",buf,2); clip.par=ask_color_char(1,0); clip.com|=strtol(buf,0,10)&31; break;
+    case 6: ask_text("Address:",buf,7); i=(*buf=='$'?strtol(buf+1,0,16):strtol(buf,0,10)); clip.par=i; clip.col=i>>8; break;
   }
   place_at(xcur,ycur,clip);
 }
@@ -439,17 +443,25 @@ static void digit_move(Sint32 xd,Sint32 yd) {
   Sint32 x=xcur+xd;
   Sint32 y=ycur+yd;
   ScTile t={cur_screen.command[ycur*80+xcur],cur_screen.color[ycur*80+xcur],cur_screen.parameter[ycur*80+xcur],1};
-  if((t.com&0xF0)!=SC_NUMERIC && (t.com&0xF0)!=SC_NUMERIC_SPECIAL) return;
-  if(!numprefix) numprefix=1;
-  while(numprefix-- && xcur+xd>=0 && xcur+xd<80 && ycur+yd>=0 && ycur+yd<25) {
-    if(!(++t.par&15)) {
-      j=num_format[--t.par>>4].code;
-      if(j==NF_METER) j=NF_METER_EXT; else if(j==NF_METER_HALF) j=NF_METER_HALF_EXT; else if(j==NF_BOARD_NAME) j=NF_BOARD_NAME_EXT; else return;
-      for(i=0;i<16;i++) if(num_format[i].code==j && num_format[i].lead==num_format[t.par>>4].lead && num_format[i].mark==num_format[t.par>>4].mark && num_format[i].div==num_format[t.par>>4].div) break;
-      if(i==16) break;
-      t.par=i<<4;
+  if((t.com&0xF0)==SC_MEMORY) {
+    if(!numprefix) numprefix=1;
+    while(numprefix-- && xcur+xd>=0 && xcur+xd<80 && ycur+yd>=0 && ycur+yd<25) {
+      if(t.par==255) t.par=0,++t.col; else ++t.par;
+      place_at(xcur+=xd,ycur+=yd,clip=t);
     }
-    place_at(xcur+=xd,ycur+=yd,clip=t);
+  } else {
+    if((t.com&0xF0)!=SC_NUMERIC && (t.com&0xF0)!=SC_NUMERIC_SPECIAL) return;
+    if(!numprefix) numprefix=1;
+    while(numprefix-- && xcur+xd>=0 && xcur+xd<80 && ycur+yd>=0 && ycur+yd<25) {
+      if(!(++t.par&15)) {
+        j=num_format[--t.par>>4].code;
+        if(j==NF_METER) j=NF_METER_EXT; else if(j==NF_METER_HALF) j=NF_METER_HALF_EXT; else if(j==NF_BOARD_NAME) j=NF_BOARD_NAME_EXT; else return;
+        for(i=0;i<16;i++) if(num_format[i].code==j && num_format[i].lead==num_format[t.par>>4].lead && num_format[i].mark==num_format[t.par>>4].mark && num_format[i].div==num_format[t.par>>4].div) break;
+        if(i==16) break;
+        t.par=i<<4;
+      }
+      place_at(xcur+=xd,ycur+=yd,clip=t);
+    }
   }
   numprefix=0;
 }
@@ -567,6 +579,17 @@ static void cc_markonly_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*a
   free(ccdata);
 }
 
+static void cc_memory_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  cctmp=(*arg=='$'?strtol(arg+1,0,16):strtol(arg,0,10));
+}
+
+static void cc_memory_step(Uint16 x,Uint16 y,const char*arg) {
+  cur_screen.command[y*80+x]=SC_MEMORY;
+  cur_screen.color[y*80+x]=cctmp>>8;
+  cur_screen.parameter[y*80+x]=cctmp;
+  ++cctmp;
+}
+
 static void cc_place_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   cctile=clip;
 }
@@ -599,6 +622,8 @@ static const ColonCommand colon_commands[]={
   {"m",'.',0,0,cc_mark_step,0},
   {"mark",'.',0,0,cc_mark_step,0},
   {"markonly",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
+  {"mem",'.',0,cc_memory_begin,cc_memory_step,0},
+  {"memory",'.',0,cc_memory_begin,cc_memory_step,0},
   {"mo",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
   {"p",'.',0,cc_place_begin,cc_place_step,0},
   {"place",'.',0,cc_place_begin,cc_place_step,0},
