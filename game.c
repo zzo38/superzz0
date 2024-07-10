@@ -822,8 +822,9 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
       if(i) goto end;
     }
     general_move(1,to+1,tx,ty,0x0070|flag&0x007A,cla,rx,ry);
-    flag&=~0x30;
+    flag&=~0x10;
     if(condflag) {
+      flag&=~0x20;
       condflag=0;
       if(flag&8) {
         if(flag&2) e1|=A_FLOOR; else b=b_under,e1=elem_def[b[to].kind].attrib;
