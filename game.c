@@ -728,7 +728,7 @@ static inline Uint32 pack_tile(const Tile*t) {
   return t->kind|(t->color<<8)|(t->param<<16)|(t->stat<<24);
 }
 
-static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 flag,Uint16 cla,Uint16 tx,Uint16 ty) {
+static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 flag,Uint16 cla,Sint32 tx,Sint32 ty) {
   // Flags:
   //   0x0001 = absolute
   //   0x0002 = overlay
@@ -748,8 +748,9 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   Uint8 sn=0;
   Uint16 sr=0;
   Sint32 rx,ry;
-  Uint32 e0,e1;
+  Uint32 e0,e1,e2;
   Uint32 to;
+  Sint32 tto=-1;
   Sint32 i;
   condflag=0;
   // Determine coordinates
@@ -811,7 +812,38 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   if(b[at].stat && !sn && (qq=find_statxy(b+at))) sr=qq-stats[(sn=b[at].stat)-1].xy;
   // Transporting
   if((flag&0x40) && (e0&A_TRANSPORTABLE) && (e1&A_TRANSPORTER)) {
-    
+    transport:
+    condflag=(flag>>3)&1;
+    if(tto=run_program(elem_def[b[to].kind].event[EV_TRANSPORT],(rx>0?DIR_E:rx<0?DIR_W:ry>0?DIR_S:DIR_N),tx,ty,tto+1)) {
+      --tto;
+      if(tto<0 || tto>=board_info.width*board_info.height) {
+        condflag=0;
+        goto end;
+      }
+      e2=elem_def[b[tto].kind].attrib;
+      if(!(cla&(1<<(e2&15)))) goto transport;
+      // Push while transporting (but cannot crush through transporters directly)
+      if((flag&0x10) && (e2&(A_PUSH_EW|A_PUSH_NS))) {
+        if(i=elem_def[b[tto].kind].event[EV_PUSH]) {
+          condflag=(flag>>3)&1;
+          if(run_program(i,(rx>0?DIR_E:rx<0?DIR_W:ry>0?DIR_S:DIR_N),tto%board_info.width,tto/board_info.width,b[tto].param+256)) goto tnopush;
+        }
+        general_move(1,tto+1,0,0,0x0070|flag&0x0078,cla,rx,ry);
+        if(condflag && (flag&8)) e2=elem_def[b_under[tto].kind].attrib; else e2=elem_def[b[tto].kind].attrib;
+        if(!(cla&(1<<(e2&15)))) goto transport;
+      }
+      tnopush:
+      if(!(e2&A_FLOOR)) goto transport;
+      // Transport is OK
+      to=tto;
+      tx=to%board_info.width;
+      ty=to/board_info.width;
+      condflag=0;
+      goto bypass;
+    } else {
+      flag&=~0x40;
+    }
+    condflag=0;
   }
   // Push other objects out of the way
   if((flag&0x10) && (e1&(A_PUSH_EW|A_PUSH_NS))) {
@@ -819,9 +851,10 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
       condflag=(flag>>3)&1;
       i=run_program(i,(rx>0?DIR_E:rx<0?DIR_W:ry>0?DIR_S:DIR_N),tx,ty,b[to].param);
       condflag=0;
-      if(i) goto end;
+      if(i) goto nopush;
     }
     general_move(1,to+1,tx,ty,0x0070|flag&0x007A,cla,rx,ry);
+    nopush:
     flag&=~0x10;
     if(condflag) {
       flag&=~0x20;
