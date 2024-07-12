@@ -264,12 +264,12 @@ static Uint8 digit_of(Uint32 n,Uint8 f) {
       if(!(f&1)) n/=10;
       return n?(n%10+'0'):nf->lead;
     case NF_METER:
-      return n/d>f?nf->mark:nf->lead;
+      return (n+d-1)/d>f?nf->mark:nf->lead;
     case NF_METER_HALF:
-      n/=d;
+      n+=d-1; n/=d;
       return n>=f+f?219:n==f+f-1?nf->mark:nf->lead;
     case NF_METER_EXT:
-      return n/d>f+16?nf->mark:nf->lead;
+      return (n+d-1)/d>f+16?nf->mark:nf->lead;
     case NF_METER_HALF_EXT:
       n/=d;
       return n>=f+f+32?219:n==f+f+31?nf->mark:nf->lead;
@@ -1357,6 +1357,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PM3: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc3=regs[fo];
       case OP_POKE: memory[so&0xFFFF]=regs[fo]; break;
       case OP_PSD: if(rs=get_statxy(so)) rs->delay=regs[fo]; break;
+      case OP_PSPD: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].speed=regs[fo]; break;
       case OP_PSXY: if(rs=get_statxy(so)) rs->x=x,rs->y=y,rs->delay=so,rs->layer=so>>8,condflag=1; else condflag=0; break;
       case OP_PTMC: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].color=regs[fo]; else condflag=0; break;
       case OP_PTMK: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].kind=regs[fo]; else condflag=0; break;
@@ -1416,7 +1417,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         rs->y=so/board_info.width;
         so=((rs-stats[b_under[so].stat].xy)<<16)|b_under[so].stat;
         goto store;
-      case OP_UNPC: unpack0: if(!so--) break; x=so%board_info.width; y=so%board_info.height; break;
+      case OP_UNPC: unpack0: if(!so--) break; x=so%board_info.width; y=so/board_info.width; break;
       case OP_UPTO: condflag=(regs[fo]<so?1:0); regs[fo]+=condflag; break;
       case OP_URSH: regs[fo]=(so&~31?0:((Uint32)regs[fo])>>so); break;
       case OP_UTIL: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=pack_tile(b_under+t); else condflag=0; break;

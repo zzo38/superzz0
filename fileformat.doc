@@ -523,7 +523,9 @@ use it for the nonblank character.
 
 * The division amount (1 byte): Amount to divide the value by before being
 converted into the numeric format. (This is mostly useful with meters, but
-can be used with any format type.)
+can be used with any format type.) (This division rounds down for most
+formats (although in some cases, it does not round to an integer), but
+for meters it will round up.)
 
 If this lump is not present, then only formats 0 and 1 are defined, both of
 which are decimal numeric formats, where format 0 means leading spaces and
