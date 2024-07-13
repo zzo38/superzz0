@@ -1200,7 +1200,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         so=(memory[MEM_COROUTINE_V_W_HI]<<16)|memory[MEM_COROUTINE_V_W_LO];
         goto store;
       case OP_COUN: regs[fo]=do_change(0,regs[fo],so); break;
-      case OP_CWOE: t=regs[fo]&0xFF; cwoe: t=(elem_def[t].attrib); t=(t&A_FLOOR?t:0); condflag=((1<<(t&15))&so)?1:0; break;
+      case OP_CWOE: t=regs[fo]&0xFF; cwoe: t=(elem_def[t].attrib); if(t&A_FLOOR) condflag=((1<<(t&15))&so)?1:0; else condflag=0; break;
       case OP_CWOT: if((t=convxy(regs[fo],x,y))!=-1) { t=b_main[t].kind; goto cwoe; } else condflag=0; break;
       case OP_DEC: --so; goto store;
       case OP_DIE: if(so&0xFF) break_tile(0,0,so&0xFFFF,so>>16,fo&4); died: if(fo&=3) return fo-2; break;
@@ -1244,6 +1244,19 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_FDEC: --so; if(!condflag) goto store; break;
       case OP_FINC: ++so; if(!condflag) goto store; break;
       case OP_FLET: if(!condflag) goto store; break;
+      case OP_FLOA:
+        t=convxy(so,x,y);
+        if(t!=-1) {
+          regs[fo]=pack_tile(b_main+t);
+          if(b_main[t].stat) if(rs=find_statxy(b_main+t)) rs->x=rs->y=rs->instptr=65535,rs->layer=128,rs->delay=255;
+          if(b_under[t].stat) if(rs=find_statxy(b_under+t)) rs->layer++;
+          b_main[t]=b_under[t];
+          b_under[t]=(Tile){};
+          condflag=1;
+        } else {
+          condflag=0;
+        }
+        break;
       case OP_FORW: forw:
         so&=3; t=x,u=y;
         if(so==DIR_N) u--; else if(so==DIR_S) u++;
@@ -1301,7 +1314,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_MIN: if(so<regs[fo]) regs[fo]=so; break;
       case OP_MNEW:
         so=convxy(so,x,y);
-        if(so==-1 || !b_main[so].stat || b_under[so].stat>maxstat) break;
+        if(so==-1 || !b_main[so].stat || b_main[so].stat>maxstat) break;
         rs=add_statxy(b_main[so].stat);
         rs->layer=2;
         rs->x=so%board_info.width;
@@ -1317,7 +1330,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_OMOV: so=general_move(0,regs[fo],x,y,0x8802+(so&7)*0x1100,0xFFFF,0,0); goto setxy;
       case OP_ONEW:
         so=convxy(so,x,y);
-        if(so==-1 || !b_over[so].stat || b_under[so].stat>maxstat) break;
+        if(so==-1 || !b_over[so].stat || b_over[so].stat>maxstat) break;
         rs=add_statxy(b_over[so].stat);
         rs->layer=3;
         rs->x=so%board_info.width;
@@ -1359,6 +1372,25 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PSD: if(rs=get_statxy(so)) rs->delay=regs[fo]; break;
       case OP_PSPD: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].speed=regs[fo]; break;
       case OP_PSXY: if(rs=get_statxy(so)) rs->x=x,rs->y=y,rs->delay=so,rs->layer=so>>8,condflag=1; else condflag=0; break;
+      case OP_PTM:
+        if((t=convxy(so,x,y))!=-1) {
+          condflag=1;
+          u=b_main[t].stat;
+          if(u && u!=((regs[fo]>>24)&0xFF) && (rs=find_statxy(b_main+t))) rs->x=rs->y=rs->instptr=65535,rs->layer=128,rs->delay=255;
+          b_main[t].kind=regs[fo]&0xFF;
+          b_main[t].color=(regs[fo]>>8)&0xFF;
+          b_main[t].param=(regs[fo]>>16)&0xFF;
+          b_main[t].stat=(regs[fo]>>24)&0xFF;
+          if(b_main[t].stat && u!=b_main[t].stat && b_main[t].stat<=maxstat) {
+            rs=add_statxy(b_main[t].stat);
+            rs->x=t%board_info.width;
+            rs->y=t/board_info.width;
+            rs->layer=2;
+          }
+        } else {
+          condflag=0;
+        }
+        break;
       case OP_PTMC: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].color=regs[fo]; else condflag=0; break;
       case OP_PTMK: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].kind=regs[fo]; else condflag=0; break;
       case OP_PTMP: if((t=convxy(so,x,y))!=-1) condflag=1,b_main[t].param=regs[fo]; else condflag=0; break;
@@ -1383,6 +1415,18 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_SEND: if(so>0 && so<=ngtext) send_message(regs[fo],gtext[so]); else if(!so) send_message(regs[fo],textbuf); break;
       case OP_SEX: so=(Sint16)so; goto store;
       case OP_SGN: so=(so<0?-1:so>0?1:0); goto store;
+      case OP_SINK:
+        t=convxy(so,x,y);
+        if(t!=-1 && !b_under[t].stat) {
+          regs[fo]=pack_tile(b_under+t);
+          if(b_main[t].stat) if(rs=find_statxy(b_main+t)) rs->layer--;
+          b_under[t]=b_main[t];
+          b_main[t]=(Tile){};
+          condflag=1;
+        } else {
+          condflag=0;
+        }
+        break;
       case OP_SIXY: if((rs=get_statxy(so)) && (so=convxy(0,rs->x,rs->y)+1)) condflag=1; else condflag=so=0; goto store;
       case OP_SMOV: general_move(0,regs[fo],x,y,(so&0xF8)+0x8804+(so&7)*0x1100,(so&0xFF00)+1,0,0); break;
       case OP_SUB: regs[fo]-=so; break;
@@ -1738,10 +1782,11 @@ int run_game(void) {
   for(a=0;a<maxstat;a++) {
     if(stats[a].xy) for(b=0;b<stats[a].count;b++) {
       if((d=stats[a].xy[b].layer&3) && stats[a].xy[b].x<board_info.width && stats[a].xy[b].y<board_info.height) {
-        if(!stats[a].xy[b].delay--) {
+        if(stats[a].speed && !stats[a].xy[b].delay--) {
           t=(d==1?b_under:d==2?b_main:b_over)+stats[a].xy[b].y*board_info.width+stats[a].xy[b].x;
+          stats[a].xy[b].delay=0;
           if(d==3 || !run_program(elem_def[t->kind].event[EV_STAT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) {
-            stats[a].xy[b].delay=stats[a].speed;
+            stats[a].xy[b].delay=stats[a].speed-1;
             if(stats[a].xy[b].instptr!=0xFFFF) run_script(a+1,b,1);
           }
         }
