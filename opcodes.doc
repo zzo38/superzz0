@@ -758,6 +758,15 @@ numbers are treated as unsigned.
   (If the first operand is S, then the second operand is ignored.) This
   instruction does not have a special treatment of addresses < 256.
 
+[112 BLOC]
+  Used for saving local registers in a block. If the first operand is W, X,
+  Y, or Z, then it will call the subroutine whose address is the that of
+  the next instruction, with only that one register changed inside of the
+  subroutine, and then go to the return value as an instruction address. If
+  the first operand is A to H or T, then it will act like LET but also
+  return from the subroutine, with the return value being the address of
+  the next instruction.
+
 [120 GIVE]
   The first operand tells which status variable to access, where A-H are
   the first eight and S-Z are the last eight. Adds the second operand to

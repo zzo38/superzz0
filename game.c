@@ -1170,6 +1170,14 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_BFLG: condflag=(board_info.flag>>fo)&1; if(so>0) board_info.flag|=1<<fo; else if(so<0) board_info.flag&=~(1<<fo); break;
       case OP_BGIV: condflag=(status_vars[fo]&(1<<(so&31))?0:1); status_vars[fo]|=1<<(so&31); break;
       case OP_BIT: so=1<<(so&31); goto store;
+      case OP_BLOC: switch(fo) {
+        case 0 ... 7: regs[fo]=so; return pc;
+        case 9: condflag=so?1:0; return pc;
+        case 12: pc=run_program(pc,so,x,y,z); if(pc<256) return pc;
+        case 13: pc=run_program(pc,w,so,y,z); if(pc<256) return pc;
+        case 14: pc=run_program(pc,w,x,so,z); if(pc<256) return pc;
+        case 15: pc=run_program(pc,w,x,y,so); if(pc<256) return pc;
+      } break;
       case OP_BTAK: condflag=(status_vars[fo]&(1<<(so&31))?1:0); status_vars[fo]&=~(1<<(so&31)); break;
       case OP_BTST: condflag=((1L<<(so&31))&regs[fo])?1:0; break;
       case OP_CALL: so=run_program(so,w,x,y,z); goto store;
