@@ -1,5 +1,7 @@
 ; Classes:
 ;   0 = normal
+;   1 = water
+;   2 = web
 ; Events:
 ;   A = frame
 ;   B = stat
@@ -10,6 +12,7 @@
 ;   X = explosive
 ; Element attributes:
 ;   C = creature
+;   D = damaged by stars
 ; Status variables:
 ;   A = ammo
 ;   C = money
@@ -31,11 +34,12 @@
 ;   UserData = Time limit (0=none)
 ; Stat uses:
 ;   1 = player
-;   2 = bullets
+;   2 = bullets/stars
 
 ; **** Global variables ****
 INITPX	IS $00
 INITPY	IS $01
+FACING	IS $02
 REGSAV	IS $10 ;x16
 
 ; **** Keyboard handler ****
@@ -56,6 +60,9 @@ KEYS	FILL $80
 	; Do nothing if no direction is pushed
 	INC T,Z
 	FLET S,0
+	; Save direction
+	LET A,Z
+	POKE A,FACING
 	; Find player
 	GSXY A,1
 	XOR A,A
@@ -159,7 +166,7 @@ KEYS	FILL $80
 	JT A,1F
 	MESS E,"You don't have any torches!"
 	LET S,0
-1F	LITE C,5
+1H	LITE C,5
 	GIVE W,200
 	LET S,0
 
@@ -202,7 +209,7 @@ KEYS	FILL $80
 	TLET S,0
 	GOTO A,OUCH1
 
-; **** Miscellaneous subroutines ***
+; **** Miscellaneous subroutines ****
 
 	; Game over
 GAMOVER	GSXY A,1
@@ -254,6 +261,7 @@ OUCH1	ROB H,10
 	EV T,_EMPTY,1
 	EV T,_FLOOR,1
 	EV T,_FAKE,1
+	EV T,_WEB,1
 
 ; **** Keys/doors ****
 	EV T,_KEY
@@ -320,6 +328,11 @@ OUCH1	ROB H,10
 	GIVE T,1
 	KILM D,0
 
+; **** Money ****
+	EV T,_MONEY
+	GIVE C,1
+	KILM D,0
+
 ; **** Energizer ****
 	EV T,_ENERGIZER
 	VSET E,75
@@ -334,6 +347,7 @@ OUCH1	ROB H,10
 
 ; **** Harmful objects ****
 	EV T,_BULLET
+	EV T,_STAR
 	CALL W,OUCH
 	KILM D,0
 
@@ -367,6 +381,13 @@ OUCH1	ROB H,10
 	XOR A,2
 	PTMP A,0
 	LET S,1
+
+; **** Invisible walls ****
+	EV T,_INVISIBLE
+	MESS E,"You are blocked by an invisible wall!"
+	LET A,_NORMAL
+	PTMK A,0
+	LET S,0
 
 ; **** Breakable walls ****
 	EV S,_BREAKABLE
@@ -408,6 +429,116 @@ OUCH1	ROB H,10
 	EQ A,Z
 	JT A,3B
 	GOTO A,1B
+
+; **** Potion ****
+; Parameter: effect of potion (0=none)
+	EV A,_POTION
+	GTMC A,0
+	XOR A,8
+	PTMC A,0
+	LET S,0
+
+	EV T,_POTION
+	GTMP A,0
+	GIVE S,5
+	KILM A,0
+	TEXT E,"\xB0\xB1\xB2 "
+	LET B,A
+	PEER B,1F
+	TEXT G,B
+	MESS G," \xB2\xB1\xB0"
+	CASE A,POTION
+1H	DATA "Dud","Healing","Poison","Energy"
+	DATA "Reveal Walls","Extra Healing"
+POTION	FILL $10,1
+
+	TA POTION+1 ; Healing
+	GIVE H,10
+	LET S,1
+
+	TA POTION+2 ; Poison
+	ROB H,10
+	LET S,1
+
+	TA POTION+3 ; Energy
+	GIVE E,70
+	LET S,1
+
+	TA POTION+4 ; Reveal Walls
+	CHA A,1F
+	LET S,1
+1H	DATA $0003,_INVISIBLE,$FFFF,$FFFF,$FFFF,_NORMAL,$FF00,$FF00,$FF00
+
+	TA POTION+5 ; Extra Healing
+	GIVE H,50
+	LET S,1
+
+; **** Stars ****
+; Parameter: duration
+	EV B,_STAR
+	GTMP A,0
+	LOOP A,1F
+	DIE C,W
+1H	PTMP A,0
+	GTMC A,0
+	ICG A,15
+	TLET A,9
+	PTMC A,0
+	SEEK A,1
+	FORW B,A
+	TMAT D,0
+	JT A,1F
+	TMAT C,0
+	JT A,0
+	LET B,W
+	SMOV B,$0010
+	LET S,0
+1H	LET T,0
+	LET Z,A
+	DIE A,W
+	CALM S,0
+	LET S,0
+
+; **** Object ****
+	EV B,_OBJECT
+	LET A,W
+	RUN A,1
+	LET S,0
+	EV S,_OBJECT
+	SIM A,0
+	SEND A,"SHOT"
+	LET S,0
+	EV T,_OBJECT
+	SIM A,0
+	SEND A,"TOUCH"
+	LET S,0
+	EV X,_OBJECT
+	SIM A,0
+	SEND A,"BOMBED"
+	LET S,0
+
+; **** Scroll ****
+	EV A,_SCROLL
+	GTMC A,0
+	ICG A,15
+	TLET A,9
+	PTMC A,0
+	LET S,0
+
+	EV T,_SCROLL
+	SIM A,0
+	RUN A,0
+	KILM C,0
+
+; **** Checkpoint ****
+	EV T,_CHECKPOINT
+	LET A,X
+	POKE A,INITPX
+	LET A,Y
+	POKE A,INITPY
+	GBU A,0
+	VSET X,A
+	KILM D,0
 
 ; **** Light shape ****
 	TA $E3
