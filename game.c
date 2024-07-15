@@ -680,6 +680,8 @@ static Sint32 do_change(Uint8 how,Uint8 b,Uint32 a) {
   i=(f>>3)&7;
   if(i&3) {
     if(i&4) r.values[i&3]+=b; else m.values[i&3]+=b;
+  } else if(i==4) {
+    how+=3;
   }
   for(i=0;i<4;i++) m.values[i]|=mm.values[i];
   if(how==2) for(i=0;i<4;i++) r.values[i]|=rm.values[i];
@@ -719,6 +721,20 @@ static Sint32 do_change(Uint8 how,Uint8 b,Uint32 a) {
       for(i=0;i<4;i++) b_under[a].values[i]=(b_under[a].values[i]&mm.values[i])|(b_under[a].values[i]&~mm.values[i]);
       if(j || m.stat) do_change_stat(f,j,a/(board_info.width*board_info.height)+1,a%board_info.width,(a/board_info.width)%board_info.height);
       skip2b: ;
+    } break;
+    case 3: for(;a<z;a++) {
+      if(((elem_def[b_under[a].kind].attrib>>24)|mm.kind)!=m.kind) goto skip3;
+      for(i=1;i<4;i++) if((b_under[a].values[i]|mm.values[i])!=m.values[i]) goto skip3;
+      n++;
+      skip3: ;
+    }
+    case 4: for(;a<z;a++) {
+      if(((elem_def[b_under[a].kind].attrib>>24)|mm.kind)!=m.kind) goto skip4;
+      for(i=1;i<4;i++) if((b_under[a].values[i]|mm.values[i])!=m.values[i]) goto skip4;
+      j=b_under[a].stat;
+      for(i=0;i<4;i++) b_under[a].values[i]=r.values[i]^(b_under[a].values[i]&rm.values[i]);
+      if(j || r.stat) do_change_stat(f,j,a/(board_info.width*board_info.height)+1,a%board_info.width,(a/board_info.width)%board_info.height);
+      skip4: ;
     } break;
   }
   return n;
@@ -1210,6 +1226,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_COUN: regs[fo]=do_change(0,regs[fo],so); break;
       case OP_CWOE: t=regs[fo]&0xFF; cwoe: t=(elem_def[t].attrib); if(t&A_FLOOR) condflag=((1<<(t&15))&so)?1:0; else condflag=0; break;
       case OP_CWOT: if((t=convxy(regs[fo],x,y))!=-1) { t=b_main[t].kind; goto cwoe; } else condflag=0; break;
+      case OP_DCL: condflag=(--regs[fo]<so?1:0); break;
       case OP_DEC: --so; goto store;
       case OP_DIE: if(so&0xFF) break_tile(0,0,so&0xFFFF,so>>16,fo&4); died: if(fo&=3) return fo-2; break;
       case OP_DIR:
@@ -1245,7 +1262,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_EAP1: so=elem_def[so&255].app[1]; goto store;
       case OP_EATT: so=elem_def[so&255].attrib; goto store;
       case OP_EJMP: so=elem_def[so&255].event[fo]; goto jump;
-      case OP_EMAT: condflag=(elem_def[so&255].attrib&(0x10000000UL<<fo)?1:0); break;
+      case OP_EMAT: condflag=(elem_def[so&255].attrib&(0x1000000UL<<fo)?1:0); break;
       case OP_EQ: condflag=(so==regs[fo]?1:0); break;
       case OP_EXCH: t=memory[so&0xFFFF]|(regs[fo]&~0xFFFF); memory[so&0xFFFF]=regs[fo]; regs[fo]=t; break;
       case OP_EXIT: condflag=(regs[fo]=board_info.exits[so&3])?1:0; break;
@@ -1299,6 +1316,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_GTUK: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].kind; else condflag=0; break;
       case OP_GTUP: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].param; else condflag=0; break;
       case OP_GTUS: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].stat; else condflag=0; break;
+      case OP_ICG: condflag=(++regs[fo]>so?1:0); break;
       case OP_INC: ++so; goto store;
       case OP_JEV: if(!(regs[fo]&1)) goto jump; break;
       case OP_JF: if(!condflag) goto jump; break;
@@ -1420,6 +1438,19 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_RSUB: regs[fo]=so-regs[fo]; break;
       case OP_RUN: run_script(regs[fo]&0xFFFF,(regs[fo]>>16)&0xFFFF,so); break;
       case OP_SCAN: so=scan_board(regs[fo],so&0xFF,x,y); if(!so) break; if(regs[fo]) regs[fo]=so; else goto unpack0; break;
+      case OP_SEEK:
+        if(rs=get_statxy(so)) {
+          t=rs->x-x; u=rs->y-y;
+          if(t && u) {
+            regs[fo]=dice(2)?(t>0?DIR_E:DIR_W):(u>0?DIR_S:DIR_N);
+          } else {
+            if(t>0) regs[fo]=DIR_E;
+            if(t<0) regs[fo]=DIR_W;
+            if(u>0) regs[fo]=DIR_S;
+            if(u<0) regs[fo]=DIR_N;
+          }
+        }
+        break;
       case OP_SEND: if(so>0 && so<=ngtext) send_message(regs[fo],gtext[so]); else if(!so) send_message(regs[fo],textbuf); break;
       case OP_SEX: so=(Sint16)so; goto store;
       case OP_SGN: so=(so<0?-1:so>0?1:0); goto store;
@@ -1457,9 +1488,9 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_TEXT: do_text_op(fo,so); break;
       case OP_TINC: ++so; if(condflag) goto store; break;
       case OP_TLET: if(condflag) goto store; break;
-      case OP_TMAT: if((t=convxy(so,x,y))!=-1) condflag=(elem_def[b_main[t].kind].attrib&(0x10000000UL<<fo)?1:0); break;
+      case OP_TMAT: if((t=convxy(so,x,y))!=-1) condflag=(elem_def[b_main[t].kind].attrib&(0x1000000UL<<fo)?1:0); break;
       case OP_TSTB: condflag=((1L<<(regs[fo]&31))&so)?1:0; break;
-      case OP_UMAT: if((t=convxy(so,x,y))!=-1) condflag=(elem_def[b_under[t].kind].attrib&(0x10000000UL<<fo)?1:0); break;
+      case OP_UMAT: if((t=convxy(so,x,y))!=-1) condflag=(elem_def[b_under[t].kind].attrib&(0x1000000UL<<fo)?1:0); break;
       case OP_UNEW:
         so=convxy(so,x,y);
         if(so==-1 || !b_under[so].stat || b_under[so].stat>maxstat) break;
@@ -1793,10 +1824,7 @@ int run_game(void) {
         if(stats[a].speed && !stats[a].xy[b].delay--) {
           t=(d==1?b_under:d==2?b_main:b_over)+stats[a].xy[b].y*board_info.width+stats[a].xy[b].x;
           stats[a].xy[b].delay=0;
-          if(d==3 || !run_program(elem_def[t->kind].event[EV_STAT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) {
-            stats[a].xy[b].delay=stats[a].speed-1;
-            if(stats[a].xy[b].instptr!=0xFFFF) run_script(a+1,b,1);
-          }
+          if(d==3 || !run_program(elem_def[t->kind].event[EV_STAT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) stats[a].xy[b].delay=stats[a].speed-1;
         }
       } else {
         // Delete this stat

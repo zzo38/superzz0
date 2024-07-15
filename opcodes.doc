@@ -226,6 +226,13 @@ numbers are treated as unsigned.
 [036 UMAT]
   Similar to TMAT but using the under layer instead of the main layer.
 
+[037 SEEK]
+  Set first operand to the direction from the X and Y registers toward the
+  stat XY record which is specified by the second operand. If it is not
+  aligned, then one of the two directions toward it is chosen at random. If
+  there is no such stat or if it is the same coordinates, then the first
+  operand may be unchanged.
+
 [038 MOVE]
   Attempt to move the contents of a tile. The first operand is the packed
   coordinates of that tile, or zero to use X and Y coordinates. If the move
@@ -438,15 +445,6 @@ numbers are treated as unsigned.
   The second operand specifies the stat XY record to use; the first operand
   value is copied into the instruction pointer of that record.
 
-[05C FNT]
-  The first opcode is coordinates. Looks beyond those coordinates in the
-  direction specified by low 2-bits of the second operand, for a tile
-  whose main layer has the TRANSPORTER attribute, and if it is found then
-  the condition flag is true and the coordinates of the tile it found are
-  written to the first operand, or to X and Y instead if the first operand
-  is zero. If nothing is found, sets the condition flag false and the first
-  operand is unchanged.
-
 [05D COUN]
   Count the number of tiles matching a pattern, and store in the first
   operand. The second operand is the address of a structure which is like
@@ -478,7 +476,7 @@ numbers are treated as unsigned.
   Mode 1 = Colour to match.
   Mode 2 = Parameter to match.
   Mode 3 = Stat number to match.
-  Mode 4 = Ignored.
+  Mode 4 = Ignored. Match user-defined attributes instead of kind.
   Mode 5 = Colour to replace with.
   Mode 6 = Parameter to replace with.
   Mode 7 = Stat number to replace with.
@@ -642,6 +640,12 @@ numbers are treated as unsigned.
   from the second operand. If successful, skips past it, and the condition
   flag is set or clear according to the result of the condition. If not
   successful, does not skip, and the condition flag is unchanged.
+
+[08E ICG]
+  Increment first operand and compare if new value greater than second.
+
+[08F DCL]
+  Decrement first operand and compare if new value less than second.
 
 [090 PICK]
   The second operand is the stat XY index in the same format as the SIXY

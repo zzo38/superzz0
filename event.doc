@@ -72,7 +72,7 @@ EV_STAT (1)
   W = Stat number and stat XY index
   Z = Parameter
 
-  Return = Nonzero to prevent scripts/delay.
+  Return = Nonzero to prevent automatically setting the delay.
 
 EV_PUSH (2)
   Called when this object would be pushed.
