@@ -135,7 +135,7 @@ static void warp_to_board(Uint16 b,char m) {
     if(e=save_board(fp,0)) errx(1,"Error saving board #%d: %s",cur_board_id,e);
     fclose(fp);
   }
-  if(cur_board_id!=b || !board_info.width) {
+  if(cur_board_id!=b || !board_info.width || (!m && !(board_info.flag&BF_PERSIST))) {
     if(e=select_board(cur_board_id=b)) errx(1,"Error loading board #%d: %s",b,e);
   }
   if(m || cur_screen_id!=board_info.screen) {
@@ -1485,6 +1485,28 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_SWPZ: t=z; z=so; so=t; goto store;
       case OP_TAKE: if(status_vars[fo]>=so) status_vars[fo]-=so,condflag=1; else condflag=0; break;
       case OP_TDEC: --so; if(condflag) goto store; break;
+      case OP_TELE:
+        condflag=0;
+        if(rs=get_statxy(regs[fo])) {
+          if((rs->layer&3)!=2 || rs->x>=board_info.width || rs->y>=board_info.height) break;
+          t=convxy(so,x,y);
+          if(t==-1 || !(elem_def[b_main[t].kind].attrib&A_FLOOR)) break;
+          u=rs->x+rs->y*board_info.width;
+          if(!b_main[u].stat) break;
+          if(t==u) {
+            condflag=1;
+            break;
+          }
+          rs->x=t%board_info.width; rs->y=t/board_info.width;
+          b_under[t]=b_main[t];
+          if(rs=find_statxy(b_main+t)) rs->layer--;
+          b_main[t]=b_main[u];
+          b_main[u]=b_under[u];
+          if(rs=find_statxy(b_under+u)) rs->layer++;
+          b_under[u]=(Tile){};
+          condflag=1;
+        }
+        break;
       case OP_TEXT: do_text_op(fo,so); break;
       case OP_TINC: ++so; if(condflag) goto store; break;
       case OP_TLET: if(condflag) goto store; break;
