@@ -2,6 +2,8 @@
 ;   0 = normal
 ;   1 = water
 ;   2 = web
+;   3 = player only
+;   4 = ice
 ; Events:
 ;   A = frame
 ;   B = stat
@@ -9,7 +11,8 @@
 ;   D = transport
 ;   S = shot (W=stat, Z=direction, condflag=player) (zero to destroy bullet)
 ;   T = touch (XY=coordinates, Z=direction) (ret nonzero to allow move)
-;   X = explosive
+;   U = under player
+;   X = explosive (ret nonzero to destroy object)
 ; Element attributes:
 ;   C = creature
 ;   D = damaged by stars
@@ -256,6 +259,7 @@ OUCH1	ROB H,10
 
 ; **** Player ****
 	EV S,_PLAYER,OUCH
+	EV X,_PLAYER,OUCH
 
 ; **** Floors ****
 	EV T,_EMPTY,1
@@ -539,6 +543,23 @@ POTION	FILL $10,1
 	GBU A,0
 	VSET X,A
 	KILM D,0
+
+; **** Passage ****
+	EV T,_PASSAGE
+	GTMP A,0
+	GTMC B,0
+	LET Z,B
+	WARP A,1F
+	LET S,0
+1H	DEC A,0
+1H	SCAN A,_PASSAGE
+	JF A,ENTER
+	GTMC C,A
+	XOR C,Z
+	JNZ C,1B
+	LET B,1
+	TELE B,A
+	GOTO A,ENTER
 
 ; **** Light shape ****
 	TA $E3
