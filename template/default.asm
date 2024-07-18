@@ -64,11 +64,11 @@ KEYS	FILL $80
 	INC T,Z
 	FLET S,0
 	; Save direction
-	LET A,Z
+MOVEPL	LET A,Z
 	POKE A,FACING
 	; Find player
 	GSXY A,1
-	XOR A,A
+MOVEPL1	XOR A,A
 	DIR A,Z
 	JF A,1F
 	; Hit a tile within the board
@@ -131,7 +131,7 @@ KEYS	FILL $80
 1H	GSXY A,1
 	FORW E,Z
 	XOR E,E
-	CWOT E,$0003
+	CWOT E,$0017
 	JF A,1F
 	; Add bullet
 	SINK E,0
@@ -261,11 +261,16 @@ OUCH1	ROB H,10
 	EV S,_PLAYER,OUCH
 	EV X,_PLAYER,OUCH
 
+	EV B,_PLAYER
+	GTUK A,0
+	EJMP U,A
+
 ; **** Floors ****
 	EV T,_EMPTY,1
 	EV T,_FLOOR,1
 	EV T,_FAKE,1
 	EV T,_WEB,1
+	EV T,_ICE,1
 
 ; **** Keys/doors ****
 	EV T,_KEY
@@ -560,6 +565,70 @@ POTION	FILL $10,1
 	LET B,1
 	TELE B,A
 	GOTO A,ENTER
+
+; **** Ice ****
+	EV U,_ICE
+	LET Z,%I,,FACING
+	GOTO A,MOVEPL1
+
+; **** Forest ****
+	EV T,_FOREST
+	LET A,_FLOOR
+	PTMK A,0
+	GTMC A,0
+	LSH A,4
+	OR A,%UR,A,8
+	PTMC A,0
+	LET S,1
+
+; **** Slime ****
+; Parameter:
+;   bit7-bit4 = Current delay
+;   bit3-bit0 = Speed
+	EV T,_SLIME
+	LET A,_BREAKABLE
+	PTMK A,0
+	LET S,0
+
+	EV A,_SLIME
+	; Alternate odd/even frames
+	PEEK A,$EC
+	ADD A,X
+	ADD A,Y
+	JOD A,0
+	; Check delay
+	GTMP A,0
+	LESS A,$10
+	JF A,1F
+	; Do spread
+	MUL A,$11
+	GTMK E,0
+	GTMC D,0
+	LET C,_BREAKABLE
+	PTMK C,0
+	XOR C,C
+	CALL C,2F
+2H	CALL C,2F
+2H	FORW C,C
+	GTMK B,0
+	JNZ B,2F
+	PTMC D,0
+	PTMP A,0
+	PTMK E,0
+2H	INC S,C
+	; Decrement
+1H	SUB A,$10
+	PTMP A,0
+	LET S,0
+
+; **** Pusher ****
+; Parameter:
+;   bit1-bit0 = Direction
+	EV B,_PUSHER
+	LET A,W
+	LET B,Z
+	SMOV A,$0011
+	LET S,0
 
 ; **** Light shape ****
 	TA $E3
