@@ -115,6 +115,188 @@ Uint8 ask_color_char(Uint8 m,Uint8 v) {
   return v;
 }
 
+typedef struct {
+  char file[12];
+  Uint16 top,cur;
+} History;
+
+void online_help(const char*major,const char*minor) {
+  History his[16];
+  Uint32*lines=0;
+  int c,i,n,nlines,top,cur;
+  int nhis=0;
+  int gtop=0;
+  int gcur=0;
+  char find[70];
+  char name[800];
+  char maj[12];
+  char min[12];
+  char*s;
+  FILE*f=0;
+  v_xcur=v_ycur=128;
+  *find=0;
+  cwin=0;
+  if(!config.help) return;
+  load:
+  snprintf(maj,12,"%s",major);
+  if(minor) snprintf(min,12,"%s",minor); else *min=0;
+  if(f) fclose(f);
+  if(lines) free(lines),lines=0;
+  top=cur=0;
+  snprintf(name,800,"%s%s.hlp",config.help,maj);
+  f=fopen(name,"r");
+  if(!f) {
+    warn("Cannot open help file: %s",name);
+    snprintf(name,60,"Help topic '%s' not found",maj);
+    alert_text(name);
+    return;
+  }
+  for(nlines=0;;) {
+    c=fgetc(f);
+    if(c==EOF) break;
+    if(c=='\n') ++nlines;
+  }
+  rewind(f);
+  lines=calloc(nlines,sizeof(Uint32));
+  if(!lines) err(1,"Allocation failed");
+  for(n=i=0;n<nlines;) {
+    c=fgetc(f);
+    if(c==EOF) break;
+    if(c=='\n') {
+      name[i]=0;
+      if(*name==':' && *min && !strcmp(name+1,min)) top=n;
+      lines[n++]=ftell(f);
+      i=0;
+    } else if(i<80) {
+      name[i++]=(c==';'?0:c);
+    }
+  }
+  if(*min) --top; else top=gtop,cur=gcur,gtop=0,gcur=0;
+  memcpy(sv_char,v_char,80*25);
+  memcpy(sv_color,v_color,80*25);
+  window:
+  memset(v_char,0x00,80*25);
+  memset(v_color,0x3E,80);
+  memset(v_color+80*24,0x30,80);
+  draw_text(0,24,"ESC=Exit RET=Select F1=Index F2=Find F3=Repeat F4=Back F11=Print",0x30,-1);
+  rewind(f);
+  if(fgetc(f)=='@') {
+    for(i=0;i<80;i++) {
+      c=fgetc(f);
+      if(c=='\n' || c==EOF) break;
+      v_char[i]=c;
+    }
+  }
+  v_status[80]='?';
+  view:
+  memset(v_color+80,0x00,80*23);
+  if(top<0) top=0; else if(top>=nlines) top=nlines-1;
+  fseek(f,lines[top],SEEK_SET);
+  for(i=0,n=1;n<24;) {
+    c=fgetc(f);
+    if(c==EOF) break;
+    if(c=='\n') {
+      name[i]=0;
+      switch(*name) {
+        case '!': s=strchr(name,';')?:name; draw_text(1,n,"\x10\x20",0x0A,2); draw_text(3,n,s+1,0x07,-1); break;
+        case '$': draw_text((80-i)/2,n,name+1,0x0F,-1); break;
+        case ':': if(s=strchr(name,';')) draw_text(1,n,"\x15",0x04,1),draw_text(4,n,s+1,0x0F,-1); break;
+        default: draw_text(1,n,name,0x07,i); break;
+      }
+      i=0;
+      n++;
+    } else if(i<80) {
+      name[i++]=c;
+    }
+  }
+  control:
+  if(cur>nlines-top) cur=nlines-top;
+  draw_text(70,0,name,0x30,snprintf(name,10,"%4d/%4d",top+cur,nlines));
+  v_char[(cur+1)*80]=0x10;
+  v_color[(cur+1)*80]=0x0D;
+  redisplay();
+  v_color[(cur+1)*80]=0;
+  while(next_event()) if(event.type==SDL_KEYDOWN) {
+    switch(event.key.keysym.sym) {
+      case SDLK_UP: if(cur) { --cur; goto control; } else { --top; goto view; }
+      case SDLK_DOWN: if(cur<22) { ++cur; goto control; } else { ++top; goto view; }
+      case SDLK_HOME: cur=top=0; goto view;
+      case SDLK_END: top=nlines-23; cur=nlines-top; if(cur<0) cur=0; else if(cur>22) cur=22; goto view;
+      case SDLK_PAGEUP: top-=23; goto view;
+      case SDLK_PAGEDOWN: top+=23; goto view;
+      case SDLK_RETURN: case SDLK_KP_ENTER:
+        if(top+cur>=nlines) break;
+        fseek(f,lines[top+cur],SEEK_SET);
+        if(fgetc(f)!='!') break;
+        if(nhis==16) {
+          memmove(his,his+1,15*sizeof(History));
+          nhis--;
+        }
+        memcpy(his[nhis].file,maj,12);
+        his[nhis].top=top;
+        his[nhis].cur=cur;
+        nhis++;
+        i=n=0;
+        minor=name;
+        while(i<80) {
+          c=fgetc(f);
+          if(c==EOF || c=='\n' || c==';') break;
+          if(c=='-' && !i) n=1,major=name; else name[i++]=c;
+          if(c==':' && n) n=0,name[i-1]=0,minor=name+i;
+        }
+        name[i]=0;
+        goto load;
+      case SDLK_ESCAPE: goto quit;
+      case SDLK_F1: major="index"; minor=0; goto load;
+      case SDLK_F2:
+        *find=0;
+        ask_text("Find?",find,69);
+        for(i=0;find[i];i++) if(find[i]>='a' && find[i]<='z') find[i]+='A'-'a';
+        // fall through
+      case SDLK_F3:
+        if(!*find) goto window;
+        fseek(f,lines[n=(top+cur+1<nlines?top+cur+1:0)],SEEK_SET);
+        repeatfind:
+        for(i=0;;) {
+          c=fgetc(f);
+          if(c==EOF) break;
+          if(c=='\n') {
+            name[i]=0;
+            s=name;
+            if(*s=='!' || *s==':') s=strchr(s,';');
+            if(s && *s && strstr(s,find)) {
+              top=n;
+              cur=0;
+              goto window;
+            }
+            n++;
+            i=0;
+            if(n==top+cur) {
+              alert_text("No match");
+              goto window;
+            }
+          } else if(i<600) {
+            if(c>='a' && c<='z') c+='A'-'a';
+            name[i++]=c;
+          }
+        }
+        if(n) {
+          fseek(f,lines[n=0],SEEK_SET);
+          goto repeatfind;
+        }
+        goto window;
+      case SDLK_F4: if(!nhis) break; --nhis; major=his[nhis].file; minor=0; gtop=his[nhis].top; gcur=his[nhis].cur; goto load;
+    }
+  }
+  quit:
+  fclose(f);
+  free(lines);
+  memcpy(v_char,sv_char,80*25);
+  memcpy(v_color,sv_color,80*25);
+  v_status[80]=0;
+  redisplay();
+}
+
 static inline int selected_key(Uint8 k) {
   Uint16 u=event.key.keysym.unicode;
   return k && (u==k || (k>='A' && k<='Z' && u==k+'a'-'A'));
@@ -547,5 +729,9 @@ void win_cursor_(win_memo*wm,int offset) {
     wm->ready=0;
     wm->ncur=wm->line+offset;
   }
+}
+
+void win_help_(win_memo*wm,const char*major,const char*minor) {
+  if(wm==cwin && config.help && event.type==SDL_KEYDOWN && (event.key.keysym.mod&(KMOD_ALT|KMOD_META)) && (event.key.keysym.sym==SDLK_SLASH || event.key.keysym.sym==SDLK_QUESTION)) online_help(major,minor);
 }
 

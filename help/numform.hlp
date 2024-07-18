@@ -1,0 +1,83 @@
+@Numeric formats
+Numeric formats are used in screens to display the contents of numeric
+variables to the player during the game.
+
+On this screen, select which numeric format that you want to edit by the
+"Numeric format edit" field; this is a number from 0 to 15.
+
+Next is the selection of the type of numeric format. After that are three
+additional parameters for controlling the formatting; "Lead", "Mark", and
+"Division"; their meaning depends on the type of format, which is explained
+below. Division is the number to divide the value by before interpreting it
+in this format; in most cases, division rounds down, although there are
+some exceptions as noted below.
+
+The following types of numeric formats are available. The ones with "ext."
+are used for extended digit positions; 16 is added to the digit position
+coded in the screen definition.
+
+$Decimal
+Display a number in decimal. Position 0 is the ones digit (on the right).
+Lead denotes the leading characters to display; for example, "0" will cause
+it to display leading zeros and a space will hide them. Note that you must
+define one format to include a leading zero if you want that digit position
+to always show a digit; if you do not, then no digits will be displayed if
+the value is zero.
+
+$Uppercase hex / Lowercase hex
+Display a number in hexadecimal (base sixteen). Lead works as for decimal.
+
+$Octal
+Display a number in octal (base eight). Lead works as for decimal.
+
+$Comma
+Display commas for decimal numbers. Position is interpreted as for decimal;
+Mark is displayed if there should be a digit there or Lead if not.
+
+$Roman
+Display roman numbers. Position 0 is the first letter (on the left). Mark
+is the code for the letter "A"; you may use this to switch between uppercase
+and lowercase. Lead is used to display excess space. Division is rounded to
+a multiple of one half; if one half remains then "S" is displayed.
+
+$œsd money
+Display the old English money. Digit positions are right to left (same as
+for Decimal, Octal, etc), and Lead is interpreted as for decimal numbers.
+The value is interpreted as a number of pence, although farthings are also
+possible if the division is 2 or 4. Position 0 is farthings; if division is
+2 then Mark is used for a half penny, but if division is 4 then it is a
+plain number of farthings. Positions 1 and 2 are pence. Positions 3 and
+4 are shillings. Other positions are pounds. Note that this does not
+automatically add any delimiters; you must add those by yourself.
+
+$Meter (full blocks)
+Show a meter. Division is rounding up for this interpretation. Mark is
+shown if the position (after division) is less than the value, or Lead is
+displayed otherwise. This can be used for meters in any direction, including
+unusual directions such as spirals. Use "Meter ext." if sixteen positions is
+not enough and you need a longer meter.
+
+$Meter (half blocks)
+Show a meter, like for full blocks, but each position can show two values.
+The Mark is the character for a half-full block; the character for a full
+block is always "Û".
+
+$Binary
+Position is the bit number (0 for the low bit); shows Mark if the bit is
+set or Lead if the bit is clear.
+
+$Character
+Division is ignored; the value is the character code to display. If the
+value is zero then the Lead is displayed. Position is how many bytes to
+shift right to find the character code to be displayed.
+
+$Nonzero
+Show Mark if the value is nonzero or Lead if the value is zero. Division
+can be set to the minimum value for which Mark is displayed. Position is
+ignored for this format.
+
+$Board name
+Displays the board name whose number is the given value; ignores division.
+Position 0 is the first character of the board name. If there are more
+positions than the length of the board name, then Lead is displayed.
+

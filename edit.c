@@ -204,6 +204,7 @@ static void edit_element(Uint8 en) {
   Uint8 colo=(e->attrib&(A_OVER_COLOR|A_UNDER_COLOR))>>6;
   snprintf(title,80,"Edit element #%d ($%02X)",en,en);
   win_form(title) {
+    win_help("element","at");
     win_text_restrict('m',"Name: ",e->name);
     win_numeric('l',"Class: ",cla,0,15);
     win_boolean('P',"Pushable \x12",e->attrib,A_PUSH_NS);
@@ -241,6 +242,7 @@ static void edit_element(Uint8 en) {
       Uint8 bs=e->app[0]&7;
       Uint8 bi=((e->app[0]>>3)&3)+1;
       win_form(title) {
+        win_help("element","ap");
         win_boolean('B',"Background of under layer",e->attrib,A_UNDER_BGCOLOR);
         win_boolean('k',"Visible in dark",e->attrib,A_LIGHT);
         win_numeric('j',"Line joining class: ",lj,0,3);
@@ -373,6 +375,7 @@ int run_editor(void) {
   v_status[0]='E';
   config.debug=1;
   win_form("Editor") {
+    win_help("index",0);
     win_numeric('t',"Starting board: ",cur_board_id,0,65535);
     win_command('B',"Boards...") {
       boards_form:
@@ -467,6 +470,7 @@ int run_editor(void) {
     win_command('E',"Elements...") {
       c=0;
       win_form("Elements") {
+        win_help("element","list");
         win_list(256,0,element_list_callback,n) {
           c=1;
           edit_element(n);
@@ -475,6 +479,7 @@ int run_editor(void) {
         win_command('C',"Copy attributes...") {
           n=0; lo=0; hi=255; b=1;
           win_form("Copy attributes") {
+            win_help("element","copy");
             win_numeric('S',"Source: ",n,0,255);
             win_numeric('L',"Low target: ",lo,0,255);
             win_numeric('H',"High target: ",hi,0,255);
@@ -533,6 +538,7 @@ int run_editor(void) {
     win_command('N',"Numeric formats...") {
       n=c=0;
       win_form("Numeric formats") {
+        win_help("numform",0);
         win_numeric('t',"Numeric format edit: ",n,0,15) win_refresh();
         win_blank();
         win_option('D',"Decimal",num_format[n].code,NF_DECIMAL) c=1;
@@ -568,5 +574,7 @@ int run_editor(void) {
     }
     win_command('S',"Save") save_world(0);
     win_command('Q',"Quit") break;
+    win_blank();
+    win_command(0,"Help (ALT+?)") online_help("index",0);
   }
 }

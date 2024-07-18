@@ -527,6 +527,7 @@ void draw_border(Uint8 c,Uint8 x0,Uint8 y0,Uint8 x1,Uint8 y1);
 void alert_text(const char*text);
 void ask_text(const char*prompt,Uint8*buf,int len);
 Uint8 ask_color_char(Uint8 m,Uint8 v);
+void online_help(const char*major,const char*minor);
 
 typedef struct {
   int line,cur,ncur,scroll;
@@ -571,4 +572,7 @@ int win_list_(win_memo*wm,int n,void*u,void(*f)(Uint16,int,void*));
 
 #define win_cursor(aaa) win_cursor_(&win_mem,aaa)
 void win_cursor_(win_memo*wm,int offset);
+
+#define win_help(aaa,bbb) win_help_(&win_mem,aaa,bbb)
+void win_help_(win_memo*wm,const char*major,const char*minor);
 

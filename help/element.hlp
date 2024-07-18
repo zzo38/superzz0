@@ -1,0 +1,128 @@
+@Elements
+The element definitions menu can be used to define the kinds of pieces that
+can be placed into boards. Note that you must also associate behaviours with
+them by using the assembler, which is documented in a separate file.
+
+:list;Element list
+
+On the list screen, select the element you want to edit; there are 256
+possible elements. Super ZZ Zero assumes that element 0 is always used to
+mean an empty space, so you should define it as such.
+:copy
+The "Copy attributes" submenu can be used for copying the attributes of one
+element to several others in case you want to define several elements that
+have the same or similar attributes. (Names are not copied.)
+
+"Source" is the element whose attributes you want copied. "Low target" and
+"High target" are the lowest and highest numbers of the elements that you
+want the attributes to be copied to. If "Exclude if already defined" is
+selected (by default it is selected), then it will not modify any elements
+that already have a name.
+
+:at;Attributes
+
+Name: Set the name of this element. This must be filled in or else the
+element definition will not be saved; if you erase it, then the attributes
+for this element will be lost when the world file is saved. It can only
+include letters, digits, and underscores, and cannot start with a digit.
+
+Class: A class number from 0 to 15. Although you can use this in your own
+code for your own purposes, its primary purpose is to define the types of
+terrains that other objects can be moved into; see "Movement classes".
+
+Pushable: Define which direction it can be pushed.
+
+Crushable: If selected, anything that can crush (which includes objects
+being directly pushed), that tries to move into this object, will destroy
+it if it cannot be pushed out of the way.
+
+Floor: Allows other objects to be moved onto this one. Normally, a blank
+space should have this attribute set, although it is not actually required.
+
+Transporter: This element can act as a transporter, for other elements that
+have the Transportable attribute to be moved through. The event code for
+finding the destination must be defined in the assembly code; if it is not,
+then it will not be able to transport anything.
+
+Transportable: Allows this element to be transported through a transporter.
+
+Movement classes: Defines which classes of other objects this object is
+normally allowed to move into (for any reason, including pushing, crushing,
+transporting, and moving across floors and other terrains); even if the
+movement is allowed according to classes, the other attributes will still
+be checked as well before the movement will be allowed to proceed. It is
+possible for assembly code to override movement classes in specific
+circumstances, and this is mandatory for classes 8 to 15.
+
+User-defined: Super ZZ Zero has no use for these attributes, but you can
+refer to them in your own assembly code for your own purposes.
+
+:ap;Appearance
+
+Background of under layer: If this tile has a black background colour, then
+the background colour from the under layer is displayed instead.
+
+Visible in dark: Suppresses the overlay display of any tile where this
+element is in the main layer at the same coordinates.
+
+Line joining class: A number from 0 to 3. This is used for line joining,
+if the type of character display is set to "Line joining"; see below for
+details about how this works. (This is unrelated to movement classes.)
+
+Own color: Uses the colour of the tile itself.
+
+Over layer: Uses the colour of the overlay at the same coordinates.
+
+Under layer: Uses the colour of the tile underneath at the same coordinates.
+
+Screen data: Uses the colour defined in the screen, at the position where it
+will be displayed.
+
+Fixed: Displays a fixed character.
+
+Parameter (character): The parameter of the tile is the code of the character
+to be displayed. You may optionally specify a base character; this is added
+to the parameter to determine the character to display (modulo 256).
+
+Parameter (mapped): Displays a character from the appearance mapping, using
+the parameter of the tile to decide what to display. You must specify an
+appearance mapping offset that is a multiple of two. Specify how many bits
+of the parameter to use and how many low bits to ignore (i.e. the number of
+bits to shift right); this is added to the appearance mapping offset to find
+which character should be displayed. You may also optionally specify an
+animation to use (either animation 0 or animation 1 can be used), which will
+contain an additional number to add to the calculated appearance mapping
+(using both the coordinates and the frame counter, and will decide what
+number to add according to the definition of that animation).
+
+Animation (ignore parameter): Select one of the four animations, and the
+appearance mapping offset to add (which must be a multiple of four). Normally
+only the coordinates of the tile are used to decide which animation step will
+be displayed, but if "Time-based" is selected, then the frame counter will be
+used in addition to the coordinates of the tile.
+
+Line joining: Select an appearance mapping offset which must be a multiple of
+sixteen. You can specify which line joining classes to look for in the
+adjacent grid cells; "Join edge" means if it is next to the outer edge of
+the board grid. To the appearance mapping offset, adds the following numbers
+according to which adjacent cells have those line joining classes: 1=east,
+2=north, 4=west, 8=south. For example, if the line joining class is 1 and
+"Join class 1" is selected, and the tiles to the north and to the west are
+also line joining class 1, and the appearance mapping offset is 16x2, then
+the final calculated index will be 32+2+4=38.
+
+Misc1/Misc2/Misc3: Display one of the Misc values of the stat. If this tile
+is not a stat, then the default character will be displayed.
+
+Over layer: Show the character from the overlay. (If you also want the colour
+of the overlay, then you should select that in the colour list as well.)
+
+Under layer: Show the character of the tile underneath this one. (If you also
+want the colour, then you should select that in the colour list as well.)
+
+Screen data: Show the character of the screen data. (If you also want the
+colour, then you should select that in the colour list as well.)
+
+See also:
+!-appmap;Appearance mapping
+!-anima;Animations
