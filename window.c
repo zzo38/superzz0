@@ -194,13 +194,18 @@ void online_help(const char*major,const char*minor) {
   fseek(f,lines[top],SEEK_SET);
   for(i=0,n=1;n<24;) {
     c=fgetc(f);
-    if(c==EOF) break;
+    if(c==EOF) {
+      memset(v_char+n*80+1,0xC4,78);
+      memset(v_color+n*80+1,0x08,78);
+      draw_text(38,n,"END",0x08,3);
+      break;
+    }
     if(c=='\n') {
       name[i]=0;
       switch(*name) {
         case '!': s=strchr(name,';')?:name; draw_text(1,n,"\x10\x20",0x0A,2); draw_text(3,n,s+1,0x07,-1); break;
         case '$': draw_text((80-i)/2,n,name+1,0x0F,-1); break;
-        case ':': if(s=strchr(name,';')) draw_text(1,n,"\x15",0x04,1),draw_text(4,n,s+1,0x0F,-1); break;
+        case ':': if(s=strchr(name,';')) draw_text(1,n,"\xF9",0x0E,1),draw_text((80-strlen(s+1))/2,n,s+1,0x0F,-1),draw_text(78,n,"\xF9",0x0E,1); break;
         default: draw_text(1,n,name,0x07,i); break;
       }
       i=0;
@@ -210,7 +215,7 @@ void online_help(const char*major,const char*minor) {
     }
   }
   control:
-  if(cur>nlines-top) cur=nlines-top;
+  if(cur>nlines-top-1) cur=nlines-top-1;
   draw_text(70,0,name,0x30,snprintf(name,10,"%4d/%4d",top+cur,nlines));
   v_char[(cur+1)*80]=0x10;
   v_color[(cur+1)*80]=0x0D;
@@ -286,6 +291,20 @@ void online_help(const char*major,const char*minor) {
         }
         goto window;
       case SDLK_F4: if(!nhis) break; --nhis; major=his[nhis].file; minor=0; gtop=his[nhis].top; gcur=his[nhis].cur; goto load;
+      case SDLK_TAB:
+        if(top+cur+1>=nlines) break;
+        fseek(f,lines[top+cur+1],SEEK_SET);
+        for(i=n=1;;) {
+          c=fgetc(f);
+          if(c==EOF) break;
+          if(i && c=='!') {
+            cur+=n;
+            if(n>22) top+=cur-22,cur=22;
+            goto view;
+          }
+          if(c=='\n') n++,i=1; else i=0;
+        }
+        break;
     }
   }
   quit:
