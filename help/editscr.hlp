@@ -1,0 +1,181 @@
+@Screen editor
+The screen editor allows to edit screen layouts. The initial mode is normal
+mode; some commands change modes, as described below.
+
+The possible editing modes are:
+!norm;Normal mode / draw mode
+!mass;Mass mode
+!text;Text mode
+!bloc;Block mode
+
+Others:
+!mark;Marks
+!-screen;Screen elements
+!info;Screen info
+!colon;Colon commands
+
+:norm;Normal mode / draw mode
+ESC        Exit
+TAB        Toggle normal/draw mode
+^V         Toggle view mode
+0-9        Numeric prefix
+ALT+I      Screen info
+ALT+L      Set message left edge
+ALT+M      Set message center position
+ALT+R      Set message right edge
+ALT+V      Set viewport center position
+SPACE      Toggle mark
+c          Select drawing colour
+C          Change colour of tile at cursor
+d          Delete tile at cursor
+e          Edit tile at cursor
+h j k l    Move cursor (arrows can also be used)
+H J K L    Move cursor and extend numeric display
+m          Mass mode
+p          Place tile
+t          Text entry
+u          Unmark all
+v          Block mode
+y          Copy tile at cursor (place with p)
+:          Colon commands
+F1         Menu: Backgrounds, Tiles, Windows
+F2         Menu: Indicators, Bits
+F3         Menu: Numbers (status variables)
+F4         Menu: Numbers (specials), Memory
+
+:mass;Mass mode
+c          Set colour of all marked (discard marks)
+C          Set colour of all marked (keep marks)
+p          Place at all marked (discard marks)
+P          Place at all marked (keep marks)
+h j k l    Paint copies of marked cells (arrows can also be used)
+
+:text;Text mode
+In this mode, you can type any text that you want to enter. In addition,
+the following keys can also be used:
+
+ESC        Leave text mode; switch to normal mode
+^P         Enter special character
+
+:bloc;Block mode
+Block mode is used for selecting a rectangular block.
+
+SPACE      Toggle marks in selected block; leave block mode
+RETURN     Same as 'm'
+b          Draw thin border; leave block mode
+B          Draw thick border; leave block mode
+m          Mark selected block and switch to mass mode
+;          Move cursor to opposite corner
+ALT+H      Set hard edges
+ALT+S      Set soft edges
+
+:mark;Marks
+
+Marks can be placed in the grid to perform batch operations with mass mode
+and with colon commands. These marks are not saved in the world file; they
+are only used in the editor, and are lost if you quit from Super ZZ Zero.
+
+The mark grid is kept in memory as long as Super ZZ Zero is still running,
+but only one mark grid is kept for all screen layouts; if you make marks
+and then edit a different screen, the marks will appear on the new screen
+instead (to avoid this, push "u" when entering the screen editor).
+
+:info;Screen info
+
+"Screen name" is a title for the game author's use; it is not used for any
+purpose during the game, and is only displayed in the editor.
+
+The "view center" is used when recentering the view, which is done
+automatically upon entering a board; the view will be scrolled so that
+the player (stat 1:0) appears at the specified screen coordinates.
+
+The message position defines where the message line should appear. If the
+Y coordinate is set to 25 then it will not be displayed. The message X
+should be the X coordinate where the message text will be centered, but it
+will be adjusted to fit within the boundaries if necessary; no text will
+be displayed outside of these boundaries.
+
+The border characters are used for displaying the borders at the specified
+edges of the board or other things, according to other settings if the
+border display has been enabled. Set these to zero to suppress the borders.
+
+"Left align message" will left align the message text if selected. If not
+selected, it is centered at the message X coordinate.
+
+"Flashy message" will cause message text to automatically change colours.
+If not selected, the colour at those coordinates in the screen layout will
+be used to display the message text instead.
+
+"Exit indicators use border character" and "User indicators use border
+character" will cause the border characters to be used instead of blank
+characters if those indicators appear in the screen layout but what the
+indicator refers to should be "off" instead of "active".
+
+"Disable scrolling" will disable automatic scrolling if selected. In this
+case, the northwest corner of the board is placed at the hard edges.
+
+In addition, there is a submenu for dealing with edges.
+:edge
+"Soft edges" are the soft limits where the player can be inside of; if the
+player steps out of range, the camera moves so that the player is in range.
+
+"Hard edges" are the limits for where the board grid can be placed inside
+of. These override the soft edges if the camera would move such that the
+outside of the board would be within the hard edge limits.
+
+Note that the screen layout can have board tiles outside of the hard edges,
+and they will still be displayed. The hard edges are only used to restrict
+the movement of the camera, not where the board is actually displayed.
+
+:colon;Colon commands
+These colon commands can be used for various batch operations.
+
+Most of these commands allow a prefix; this can be & for marked cells only,
+~& for unmarked cells only, % for all cells, . for the cell at the cursor,
+or one or two coordinate pairs. If there are coordinate pairs, put : in
+between. Each coordinate pair otherwise uses two numbers with a comma in
+between, being the zero-based X and Y coordinates. If a number is preceded
+by - or + then it is relative to the cursor.
+
+Many colon commands have abbreviations; these are listed after the slash in
+the below listings of the commands.
+
+color/c
+  Set the colour of cells. This can either be the current colour or a
+  colour specified as a hexadecimal colour code.
+
+export/ex
+  Export the current screen layout to a file. If the file name starts with
+  | then it is instead a pipe to an external shell command.
+
+import/im
+  Import the current screen layout from a file. If the file name starts with
+  | then it is instead a pipe from an external shell command.
+
+mark/m
+  Marks cells.
+
+markonly/mo
+  Marks cells, but unmarks any cells that are not being marked in this way.
+
+memory/mem
+  Requires an argument being a starting memory address, in decimal, or in
+  hexadecimal with $ at first. This command expects a range prefix to be
+  given; it will fill the area with memory tiles that refer to the memory
+  address, starting at the specified address and then advancing to the
+  right, and the left side of the next row continues where it left off, etc.
+
+place/p
+  Place copies of the tile selected with the "y" normal command.
+
+status
+  Toggles the status line display. You can specify 0 or 1 to disable or
+  enable the status line display, respectively; if neither is specified,
+  then the current state is toggled.
+
+toggle/t
+  Toggles the marks of cells.
+
+unmark/u
+  Unmarks cells.
+

@@ -1,0 +1,29 @@
+@Animations
+You can define up to four animations which can then be used in element
+definitions. These animations are usually time-based but sometimes they
+might not be; they can also be based on coordinates.
+
+The "Animation edit" field selects which of the four animations you
+want to edit, numbered from 0 to 3.
+
+You can set the amount to add to the appearance mapping offsets defined
+in the element definitions for each of four steps of the animation. These
+additions are always modulo 128. The step number is usually time-based,
+but sometimes the coordinates also affect which step to use.
+
+X1, X2, Y1, and Y2 define the pattern for considering the coordinates of
+tiles to decide the animation step differently for each tiles; if none
+of them are selected then the animation step is the same for the entire
+board grid at a specific time. SLOW will make time-based animations slower,
+taking two frames per step; if not selected then one frame per step.
+
+At the bottom is the preview display of the animation; for time 0 on the
+left and time 3 on the right. This will show the patterns which are
+controlled by the parameters above, so that you can see how they are
+desired. Use the "Preview from" field to set which appearance mapping
+offset to add to the numbers given in the step fields for the preview;
+the "Preview from" field will not be saved in the world file.
+
+See also:
+!-appmap;Appearance mapping
+

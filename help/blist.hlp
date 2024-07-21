@@ -1,0 +1,17 @@
+@Board list
+The board list menu displays the list of boards.
+
+The board numbers are displayed on the left, and then the board names.
+On the right it shows which directions the exits from that board are.
+
+"Find" can be used to quickly find a board by entering a prefix of the
+board title.
+
+"Add new board". Note that there is a limit of 65535 boards; you cannot
+add any boards if there are already 65535 boards.
+:copy
+"Copy board" allows making a copy of a board. You must specify the name
+of the new board, and the board number to be copied from.
+
+See also:
+!-editbrd;Board editor

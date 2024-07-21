@@ -1,0 +1,3 @@
+@Status variables
+On this screen you can define the initial values of the sixteen global
+status variables, which can be displayed in screens using numeric formats.

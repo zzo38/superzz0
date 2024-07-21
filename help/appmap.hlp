@@ -1,0 +1,23 @@
+@Appearance mapping
+This screen allows editing the appearance mapping array. Some
+element definitions will refer to these, for the following purposes:
+
+þ Line joining
+þ Animations
+þ Custom parameter mapping
+
+They are not needed for all kinds of appearances of elements; specifically,
+it is never needed where the parameter of a tile controls the character
+directly or when an element uses a fixed character for its appearance.
+Note that "custom parameter mapping" includes cases where only a part of
+the parameter controls the appearance rather than all of it; for example
+if the low 2-bits specify a direction.
+
+Most uses will require a range of contiguous appearance mappings. Some uses
+will require the starting offset to be a multiple of 2, 4, or 16; see the
+documentation about element definitions for details about this.
+
+See also:
+!-anima;Animation
+!-element:ap;Element definition - Appearance
+

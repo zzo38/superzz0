@@ -56,6 +56,7 @@ static void edit_screen_info(void) {
   if(scr_id<=maxscreen && screennames && screennames[scr_id]) strncpy(nam,screennames[scr_id],60);
   nam[60]=0;
   win_form("Screen info") {
+    win_help("editscr","info");
     win_text(':',"Screen name: ",nam);
     win_blank();
     win_numeric('X',"View center X: ",cur_screen.view_x,0,79);
@@ -80,6 +81,7 @@ static void edit_screen_info(void) {
     win_blank();
     win_command('.',"Edges...") {
       win_form("Screen edges") {
+        win_help("editscr","edge");
         win_numeric('E',"East soft edge:  ",cur_screen.soft_edge[DIR_E],0,79);
         win_numeric('N',"North soft edge: ",cur_screen.soft_edge[DIR_N],0,24);
         win_numeric('W',"West soft edge:  ",cur_screen.soft_edge[DIR_W],0,79);
@@ -183,7 +185,7 @@ static void edit_tile(void) {
     }
     win_blank();
     win_option('k',"Background",h,SC_BACKGROUND) win_refresh();
-    win_option('B',"Board",h,SC_BOARD) win_refresh();
+    win_option('B',"Board tiles",h,SC_BOARD) win_refresh();
     win_option('N',"Numeric variable",h,SC_NUMERIC) win_refresh();
     win_option('S',"Special numeric vaariable",h,SC_NUMERIC_SPECIAL) win_refresh();
     win_option('M',"Memory",h,SC_MEMORY) win_refresh();
@@ -871,6 +873,7 @@ Uint16 edit_screen(Uint16 id) {
         case -SDLK_F2: f_menu(2); break;
         case -SDLK_F3: f_menu(3); break;
         case -SDLK_F4: f_menu(4); break;
+        case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editscr",0); break;
       } break;
       case 'm': switch(k) {
         case 'c': do_colon_command("&color"); goto unmark;

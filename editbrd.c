@@ -1381,6 +1381,7 @@ Uint16 edit_board(Uint16 id) {
         case '{': switch_to_board(numprefix); numprefix=0; break;
         case '}': switch_to_board(maxboard); numprefix=0; break;
         case ':': ask_colon_command(); break;
+        case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd",0); break;
       } break;
       case 'm': switch(k) {
         case 'c': do_colon_command("&color"); goto unmark;

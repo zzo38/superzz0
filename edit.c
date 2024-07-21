@@ -327,7 +327,7 @@ static char edit_appearance_mapping(void) {
     snprintf(buf,6,"%3d:",i);
     draw_text((i>>4)*9+2,(i&15)+2,buf,0x07,4);
   }
-  draw_text(2,19,"<ESC> Done   <SPACE> Edit",7,-1);
+  draw_text(2,19,"<ESC> Done   <SPACE> Edit   <?> Help",7,-1);
   key:
   for(i=0;i<128;i++) {
     v_char[(i>>4)*9+(i&15)*80+161]=(n==i?0x10:0xFA);
@@ -347,6 +347,7 @@ static char edit_appearance_mapping(void) {
       case SDLK_RIGHT: n=(n+16)&127; goto key;
       case SDLK_SPACE: case SDLK_RETURN: c=1; appearance_mapping[n]=ask_color_char(1,appearance_mapping[n]); goto draw;
       case SDLK_ESCAPE: return c;
+      case SDLK_SLASH: case SDLK_QUESTION: online_help("appmap",0); goto draw;
     }
   }
 }
@@ -375,11 +376,12 @@ int run_editor(void) {
   v_status[0]='E';
   config.debug=1;
   win_form("Editor") {
-    win_help("index",0);
+    win_help("edit",0);
     win_numeric('t',"Starting board: ",cur_board_id,0,65535);
     win_command('B',"Boards...") {
       boards_form:
       win_form("Boards") {
+        win_help("blist",0);
         win_cursor(lbrd);
         if(boardnames) win_list(maxboard+1,0,board_list_callback,n) {
           lbrd=edit_board(n);
@@ -411,6 +413,7 @@ int run_editor(void) {
             char buf[61]="";
             n=lbrd;
             win_form("Copy board") {
+              win_help("blist","copy");
               win_text('N',"Name: ",buf);
               win_numeric('S',"Source: ",n,0,maxboard);
               win_blank();
@@ -434,6 +437,7 @@ int run_editor(void) {
     win_command('c',"Screens...") {
       screens_form:
       win_form("Screens") {
+        win_help("slist",0);
         win_cursor(lscr);
         if(screennames) win_list(maxscreen+1,0,screen_list_callback,n) {
           lscr=edit_screen(n);
@@ -458,6 +462,7 @@ int run_editor(void) {
     win_command('v',"Status variables...") {
       win_form("Status variables") {
         int i;
+        win_help("stvar",0);
         for(i=0;i<16;i++) {
           char b[3]={(i&7)+(i&8?'S':'A'),'=',0};
           win_numeric(*b,b,status_vars[i],0,999999999);
@@ -508,6 +513,7 @@ int run_editor(void) {
     win_command('i',"Animations...") {
       n=i=c=0;
       win_form("Animations") {
+        win_help("anima",0);
         win_numeric('m',"Animation edit: ",n,0,3) win_refresh();
         win_blank();
         win_numeric('S',"Step I:   ",animation[n].step[0],0,127) win_refresh(),c=1;
@@ -575,6 +581,6 @@ int run_editor(void) {
     win_command('S',"Save") save_world(0);
     win_command('Q',"Quit") break;
     win_blank();
-    win_command(0,"Help (ALT+?)") online_help("index",0);
+    win_command(0,"Help (ALT+?)") online_help("edit",0);
   }
 }

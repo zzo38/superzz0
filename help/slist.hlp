@@ -1,0 +1,12 @@
+@Screen list
+This menu lists the screen layouts defined in a world file. These screen
+layouts are used for displaying the board and status during the game, and
+can also be used for text windows. A screen includes the definitions of
+borders, board viewports, colours, positioning of message lines, and
+status displays (normally numeric, but can also include other things).
+
+Move the cursor to the screen that you want to edit and then push enter
+to load the screen editor. Select "Add new screen" to add a new screen.
+
+See also:
+!-editscr;Screen editor

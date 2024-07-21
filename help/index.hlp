@@ -1,27 +1,16 @@
-@Editor Help
+@Help Index
 $ษอออออออออออออออออป
 $บ                 บ
 $บ  Super ZZ Zero  บ
 $บ                 บ
 $ศอออออออออออออออออผ
 
-The editor menus can be operated by using the arrows up/down and the
-page up and page down keys, or using tab; push enter to activate the
-selected menu item. Some letters are highlighted in green; you can
-push ALT and the highlighted to select it. Some items allow entering
-numbers or text; you can push CTRL+U to erase the number/text.
-
-You can push ALT+? on almost any screen to display context-sensitive
-online help for that screen.
-
-Remember to save before you quit; otherwise your changes are lost.
-
-The main screen of the editor contains the following submenus:
+!-anima;Animations
 !-blist;Board list
+!-debug;Debugging
+!-edit;Editor
+!-game;Game play
+!-numform;Numeric formats
 !-slist;Screen list
 !-stvar;Status variables
-!-element;Elements
-!-appmap;Appearance mapping
-!-anima;Animations
-!-numform;Numeric formats
 

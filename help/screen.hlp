@@ -1,0 +1,105 @@
+@Screen elements
+
+!b;Backgrounds
+!t;Tiles
+!w;Windows
+!i;Indicators
+!x;Bits
+!n;Numbers
+!o;Others
+
+:b;Backgrounds
+In the tile editor menu, you can specify the character and colour, and if
+they should be shown. Whichever is not shown will display whatever was
+previously shown on the display (this can be used for popup menus that only
+take up a part of the screen).
+
+In the F1 menu, "Opaque" means both, "Shadow" means the colour only, and
+"Transparent" means neither.
+
+:t;Tiles
+Displays a tile from the board.
+
+"Suppress overlay" will cause it to always display the main layer if this
+is selected; if not, then it will display the overlay if there is a visible
+overlay tile at that position in the board, or the main layer if it is a
+transparent overlay or if the light radius hides the overlay.
+
+If "Use defaults if out of range" is selected, then the default character
+and colour are displayed if the camera views beyond the board edges. If not
+selected, it will display the board tile of the nearest edge.
+
+"Show border" causes it to display the border character and colour defined
+for this screen if it is outside of the board grid but adjacent to it.
+
+In the F1 menu, "Light" suppresses the overlay and "Dark" displays it (if
+there is an overlay).
+
+:w;Windows
+(TODO)
+
+:i;Indicators
+An indicator has a character code to display if it is "set"; if the
+indicator is "clear" then a blank space is displayed (unless you set in
+the screen info menu to use the border characters instead).
+
+þ Cursor - In the main game, displayed if the player's X or Y coordinate
+is lined up with the indicator. In a text window, displayed if the cursor
+is at the current line.
+
+þ Scroll - Displayed if more of the board (or text, in the case of a text
+window) is beyond the nearest edge of the viewport.
+
+þ Exits - Displayed if the specified exit is nonzero.
+
+þ User - Displayed if the corresponding user flag is set in the board info
+for the current board.
+
+:x;Bits
+This means the bits of one of the first four status variables A to D, where
+bits 0 to 31 are A, 32 to 63 are B, etc.
+
+The character is displayed if that bit is set (0 means the low bit), or a
+blank space is displayed if that bit is clear.
+
+:n;Numbers
+Numbers will display a selected numeric value, using a selected numeric
+format (the numeric format numbers being numbered 0 to 15).
+!-numform;Numeric formats
+
+The numeric value to be displayed can be a user-defined status variable
+from (A) to (Z), or one of the following special numeric variables:
+
+þ Player X/Y - The zero-based coordinates of the player (stat 1 on the
+current board), where the northwest corner is (0,0).
+
+þ Camera X/Y - The camera position.
+
+þ Scroll % - In a text window, the percentage scroll from the top (0%) to
+the bottom (100%).
+
+þ Line number - In a text window, the line number where the cursor position
+is currently at.
+
+þ Line count - In a text window, the number of lines of text (including
+those which are not currently visible).
+
+þ Cur. board - The current board number. (You can use a numeric format
+which is defined to display the name of the board.)
+
+þ Exits - The board number of the exits from the current board.
+
+þ Width/Height- The size of the current board.
+
+þ User - The user data of the current board.
+
+In addition to which variable to display, the position (also 0 to 15)
+must also be selected; the meaning of the positions depends on the
+definitions of the numeric formats.
+
+:o;Others
+Memory means to display the contents of a single 16-bit cell of program
+memory. You must specify the address. The low byte of the data of that
+memory cell will decide the character to display, and the high byte will
+decide the colour to display.
+
