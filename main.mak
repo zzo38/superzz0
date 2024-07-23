@@ -1,4 +1,5 @@
-main.c display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o window.o world.o common.h config.inc -> $ : bash main.c
+main.c audio.o display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o window.o world.o common.h config.inc -> $ : bash main.c
+audio.c common.h config.inc -> audio.o : bash audio.c
 display.c common.h config.inc -> display.o : bash display.c
 edit.c common.h config.inc -> edit.o : bash edit.c
 editbrd.c common.h config.inc -> editbrd.o : bash editbrd.c

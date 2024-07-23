@@ -40,6 +40,13 @@ void set_timer(Uint32);
 Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n);
 int next_event(void);
 
+// === Sounds ===
+
+void audio_init(void);
+void audio_set_volume(Uint16 vol,Uint8 mut);
+Sint32 audio_get_volume(void); // volume + (0x000000=on, 0x010000=mute, 0xFF0000=disabled)
+void audio_set_sfx(const char*m);
+
 // === Miscellaneous ===
 
 #define SUPER_ZZ_ZERO_VERSION 1

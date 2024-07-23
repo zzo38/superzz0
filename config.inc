@@ -8,6 +8,8 @@
   These should be listed in ASCII order by name.
 */
 I(audio_buffer,Uint16,0)
+F(audio_filter,float,1e-4)
+I(audio_rate,Uint16,0)
 I(audio_volume,Uint16,12288)
 I(block_color,Uint8,0x2E)
 B(brd_edit_status,Uint8,1)

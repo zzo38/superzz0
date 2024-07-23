@@ -43,6 +43,7 @@
 INITPX	IS $00
 INITPY	IS $01
 FACING	IS $02
+FOREST	IS $03
 REGSAV	IS $10 ;x16
 
 ; **** Keyboard handler ****
@@ -139,6 +140,7 @@ MOVEPL1	XOR A,A
 	LET A,%L,Z,16
 	ADD A,$02800F00+_BULLET
 	PTM A,0
+	SFX A,"@22C'C<C"
 	LET S,0
 	; Close range shot
 1H	GTMK B,0
@@ -219,6 +221,7 @@ GAMOVER	GSXY A,1
 	LET B,0
 	PTMK B,0
 	PSPD B,1
+	SFX A,"@82<S.CD#GC'GA#>DGFG#>CFO1Q.CX"
 	LET A,1F
 	POKE A,$E0
 	POKE A,$E1
@@ -243,6 +246,7 @@ OUCH	ROB E,0
 	JT E,0
 OUCH1	ROB H,10
 	MESS E,"Ouch!"
+	SFX A,"@30Z<<CC'C#D#'X"
 	; Restart if zapped
 	BFLG A,0
 	JF A,0
@@ -282,10 +286,12 @@ OUCH1	ROB H,10
 	TEXT E,"You now have the "
 	TEXT G,C
 	MESS G," key."
+	SFX A,"@22T>CEGCEGCEG>SC"
 	KILM D,0
 1H	TEXT E,"You already have a "
 	TEXT G,C
 	MESS G," key!"
+	SFX A,"@22SC<C"
 	LET S,0
 2H	DATA "black","blue","green","cyan","red","purple","yellow","white"
 	EV T,_DOOR
@@ -297,8 +303,10 @@ OUCH1	ROB H,10
 	TEXT G,C
 	JF D,1F
 	MESS G," door is now open."
+	SFX A,"@22TCGBCGB>IC"
 	KILM D,0
 1H	MESS G," door is locked!"
+	SFX A,"@22T<<GC"
 	LET S,0
 
 ; **** Gems ****
@@ -307,6 +315,7 @@ OUCH1	ROB H,10
 	EV T,_GEM
 	GIVE G,1
 	GIVE S,10
+	SFX A,"@20TC'GEC"
 	KILM D,0
 
 	EV S,_MAGICGEM
@@ -317,6 +326,7 @@ OUCH1	ROB H,10
 ; **** Stone ****
 	EV T,_STONE
 	GIVE Z,1
+	SFX A,"@20ZK4K6K8K10K12K14K16K20K24K28K32"
 	KILM D,0
 
 	EV A,_STONE
@@ -330,11 +340,13 @@ OUCH1	ROB H,10
 ; **** Ammo ****
 	EV T,_AMMO
 	GIVE A,5
+	SFX A,"@20TCC#D"
 	KILM D,0
 
 ; **** Torch ****
 	EV T,_TORCH
 	GIVE T,1
+	SFX A,"@20TCASE"
 	KILM D,0
 
 ; **** Money ****
@@ -396,6 +408,7 @@ OUCH1	ROB H,10
 	MESS E,"You are blocked by an invisible wall!"
 	LET A,_NORMAL
 	PTMK A,0
+	SFX A,"@20<<DC"
 	LET S,0
 
 ; **** Breakable walls ****
@@ -405,6 +418,7 @@ OUCH1	ROB H,10
 ; **** Water ****
 	EV T,_WATER
 	MESS E,"Your way is blocked by water."
+	SFX A,"@20T>C>C"
 	LET S,0
 
 ; **** Transporter ****
@@ -555,6 +569,7 @@ POTION	FILL $10,1
 	GTMC B,0
 	LET Z,B
 	WARP A,1F
+	SFX A,"@30CEGC#FG#DF#AD#GA#EG#>C"
 	LET S,0
 1H	DEC A,0
 1H	SCAN A,_PASSAGE
@@ -579,7 +594,15 @@ POTION	FILL $10,1
 	LSH A,4
 	OR A,%UR,A,8
 	PTMC A,0
+	; Sound effect
+	INC A,%I,,FOREST
+	AND A,7
+	POKE A,FOREST
+	PEER A,1F
+	SFX A,A
 	LET S,1
+1H	DATA "@18>F","@18>C","@18>G","@18>>C"
+	DATA "@18>F#","@18>C#","@18>G#","@18>>C#"
 
 ; **** Slime ****
 ; Parameter:
@@ -588,6 +611,7 @@ POTION	FILL $10,1
 	EV T,_SLIME
 	LET A,_BREAKABLE
 	PTMK A,0
+	SFX A,"@20<CD#"
 	LET S,0
 
 	EV A,_SLIME

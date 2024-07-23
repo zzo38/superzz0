@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -o ~/bin/superzz0 -Wno-unused-result main.c display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o window.o world.o -lm `sdl-config --cflags --libs`
+gcc -s -O2 -o ~/bin/superzz0 -Wno-unused-result main.c audio.o display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o window.o world.o -lm `sdl-config --cflags --libs`
 exit
 #endif
 
@@ -169,6 +169,7 @@ int main(int argc,char**argv) {
     if(!editor && (s=select_board(b))) errx(1,"Cannot load board: %s",s);
   }
   init_display();
+  if(config.audio_buffer && !editor) audio_init();
   if(editor) run_editor(); else run_game();
   return 0;
 }

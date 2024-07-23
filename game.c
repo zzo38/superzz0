@@ -39,6 +39,7 @@ Uint16 vtexttime;
 NamedFlag namedflag[16];
 
 static uint64_t rseed;
+static char soundon;
 
 #define PLAYSTATE_NORMAL 16
 #define PLAYSTATE_FAST 175
@@ -1453,6 +1454,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         break;
       case OP_SEND: if(so>0 && so<=ngtext) send_message(regs[fo],gtext[so]); else if(!so) send_message(regs[fo],textbuf); break;
       case OP_SEX: so=(Sint16)so; goto store;
+      case OP_SFX: if(soundon && so && so<=ngtext) audio_set_sfx(so>=0?gtext[so]:textbuf); break;
       case OP_SGN: so=(so<0?-1:so>0?1:0); goto store;
       case OP_SINK:
         t=convxy(so,x,y);
@@ -1582,9 +1584,13 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
 }
 
 static int system_menu(void) {
+  Uint32 vm=audio_get_volume();
+  Uint16 vol=vm&0xFFFF;
+  Uint8 mu=vm>>16;
   Uint8 x=config.menu_x;
   Uint8 y=config.menu_y;
   Uint8 z;
+  char buf[16];
   set_timer(0);
   v_status[1]='F';
   redraw0:
@@ -1603,15 +1609,15 @@ static int system_menu(void) {
   // =INS=     Next frame
   // =DEL=     Clear message
   // (speed)
-  // (volume)
-  // (???)
+  // =-/+=     Volume: ___
+  // (message-time)
   // (???)
   // (???)
   // =^v<>=    Menu position
   // 012345678901234567890123456789012345
   redraw1:
   draw_text(x+2,y+1," F1  ",0x30,-1); draw_text(x+8,y+1,"Menu",0x1F,-1);
-  draw_text(x+2,y+2," F2  ",0x70,-1); //draw_text(x+8,y+2,"Sound:",0x1F,-1);
+  draw_text(x+2,y+2," F2  ",0x70,-1); // Sound
   draw_text(x+2,y+3," F3  ",0x30,-1); draw_text(x+8,y+3,"Save",0x1F,-1);
   draw_text(x+2,y+4," F4  ",0x70,-1); draw_text(x+8,y+4,"Restore",0x1F,-1);
   draw_text(x+2,y+5," F5  ",0x30,-1); draw_text(x+8,y+5,"Q. Save",0x1F,-1);
@@ -1620,17 +1626,24 @@ static int system_menu(void) {
   draw_text(x+21,y+2," F8  ",0x70,-1);
   draw_text(x+21,y+3," F9  ",0x30,-1); draw_text(x+27,y+3,"Messages",0x1F,-1);
   draw_text(x+21,y+4," F10 ",0x70,-1); draw_text(x+27,y+4,"Quit",0x1F,-1);
-  draw_text(x+21,y+5," F11 ",0x30,-1); draw_text(x+27,y+5,"Print",0x1F,-1);
+  draw_text(x+21,y+5," F11 ",0x30,-1); if(config.print_command) draw_text(x+27,y+5,"Print",0x1F,-1);
   draw_text(x+21,y+6," F12 ",0x70,-1); draw_text(x+27,y+6,"Speed:",0x1F,-1);
   draw_text(x+34,y+6,playstate==PLAYSTATE_NORMAL?"NORM":playstate==PLAYSTATE_FAST?"FAST":"STOP",0x1A,-1);
   draw_text(x+2,y+7," PAUSE ",0x30,-1); draw_text(x+12,y+7,"Pause/resume",0x1F,-1);
   draw_text(x+2,y+8," INS ",0x70,-1); draw_text(x+12,y+8,"Next frame",0x1F,-1);
   draw_text(x+2,y+9," DEL ",0x30,-1); draw_text(x+12,y+9,"Clear message",0x1F,-1);
   draw_text(x+2,y+15," \x18\x19\x1B\x1A ",0x30,-1); draw_text(x+12,y+15,"Menu position",0x1F,-1);
+  if(!(vm&0x800000)) {
+    draw_text(x+8,y+2,"Sound:",0x1F,-1);
+    draw_text(x+15,y+2,mu?"MUTE":"ON  ",0x1A,-1);
+    draw_text(x+2,y+11," -/+ ",0x30,-1); draw_text(x+12,y+11,"Volume:",0x1F,-1);
+    draw_text(x+20,y+11,buf,0x1A,snprintf(buf,16,"%3d",vol/327));
+  }
   redisplay();
   do { if(!next_event()) errx(0,"No events available."); } while(event.type!=SDL_KEYDOWN);
   switch(event.key.keysym.sym) {
     case SDLK_ESCAPE: case SDLK_F1: case SDLK_SPACE: case SDLK_RETURN: return 0;
+    case SDLK_F2: if(mu<2) mu^=1; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
     case SDLK_F3: case SDLK_F4: case SDLK_F5: case SDLK_F6: case SDLK_F7: case SDLK_F9: case SDLK_F10: case SDLK_INSERT: return 1;
     case SDLK_F12: *v_status=playstate=(playstate==PLAYSTATE_NORMAL?PLAYSTATE_FAST:PLAYSTATE_NORMAL); break;
     case SDLK_PAUSE: *v_status=playstate=(playstate==PLAYSTATE_PAUSED?PLAYSTATE_NORMAL:PLAYSTATE_PAUSED); break;
@@ -1639,6 +1652,8 @@ static int system_menu(void) {
     case SDLK_DOWN: case SDLK_KP2: if(y<7) y+=2; goto redraw0;
     case SDLK_LEFT: case SDLK_KP4: if(x>2) x-=3; goto redraw0;
     case SDLK_RIGHT: case SDLK_KP6: if(x<37) x+=3; goto redraw0;
+    case SDLK_KP_MINUS: case SDLK_MINUS: if(vol>327) vol-=327; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
+    case SDLK_KP_PLUS: case SDLK_PLUS: case SDLK_EQUALS: if(vol<32760) vol+=327; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
   }
   goto redraw1;
 }
@@ -1730,6 +1745,11 @@ static void debug_menu(void) {
     win_command('C',"Call...") {
       
     }
+    win_command('u',"Sound effect...") {
+      *buf=0;
+      ask_text("Sound effect:",buf,70);
+      if(*buf) audio_set_sfx(buf);
+    }
     win_command_esc(0,"Cancel") break;
   }
 }
@@ -1740,6 +1760,7 @@ int run_game(void) {
   Uint32 a,b,c,d,x,y;
   Tile*t;
   reseed(0);
+  soundon=(audio_get_volume()<0x10000?1:0);
   if(config.message_scrollback && config.message_scrollback<24) config.message_scrollback=24;
   warp_to_board(cur_board_id,1);
   set_timer(config.speed);
@@ -1809,6 +1830,12 @@ int run_game(void) {
             update_screen();
             if(a) goto repeat_event;
             goto display;
+          case SDLK_F2:
+            a=audio_get_volume();
+            audio_set_volume(a&0xFFFF,(a>>16)^1);
+            soundon=(audio_get_volume()<0x10000?1:0);
+            audio_set_sfx("@0ZCX");
+            break;
           case SDLK_F6: if(config.debug) debug_menu(); a=0; goto resume;
           case SDLK_F9: set_timer(0); v_status[1]=24; message_scrollback(); a=0; goto resume;
           case SDLK_F10: return 0;

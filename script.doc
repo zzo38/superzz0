@@ -413,7 +413,7 @@ L
   anywhere note lengths are allowed).
 
 O
-  Set a specific octave.
+  Set a specific octave. The default octave is 3.
 
 Q
   Same as L4.
@@ -451,11 +451,13 @@ Z
 @
   Specify priority. If higher than the existing priority, or if equal and
   even, then it interrupts it, but otherwise it skips playing this sound.
-  If the priority is not specified, then it is queued.
+  If the priority is not specified, then it is queued. The priority of
+  queued sounds is 64 (but explicitly setting priority to 64 will override
+  the sound instead of queueing).
 
 Any command HIKQSTWZ, or L or a letter A to G, or percussion notes, can be
-followed by any number of dots to lengthen the length; for commands that
-play notes, it affects only for that note; for others, it affects all
+followed by a dot to multiply the final note length by 1.5; for commands
+that play notes, it affects only for that note; for others, it affects all
 following notes until the length is changed.
 
 (Numeric expressions and hexadecimal cannot be used in sound effects.)
