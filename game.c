@@ -852,6 +852,15 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
       tnopush:
       if(!(e2&A_FLOOR)) goto transport;
       // Transport is OK
+      if(memory[MEM_TRANSPORT_EVENT]) {
+        condflag=(flag>>3)&1;
+        i=run_program(memory[MEM_TRANSPORT_EVENT],at+1,tto+1,to+1,cla);
+        if(i<0) goto transport;
+        if(i>0) {
+          at=i-1;
+          goto end;
+        }
+      }
       to=tto;
       tx=to%board_info.width;
       ty=to/board_info.width;

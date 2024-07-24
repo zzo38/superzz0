@@ -1,8 +1,25 @@
 
 === Global events ===
 
-Memory addresses $00E0 to $00FF are the system area, some of which are used
+Memory addresses $00C0 to $00FF are the system area, some of which are used
 for global events.
+
+$00C8
+  This event occurs whenever something tries to move through a transporter,
+  after it calls the EV_TRANSPORT events of the transporter and after it
+  checks that it is valid and pushes things out of the way if necessary,
+  but before actually moving the object through the transporter.
+
+  W = Source coordinates
+  X = Destination coordinates
+  Y = Transporter coordinates
+  Z = Movement classes
+  Condition flag = Suppression flag
+
+  Return = One of the below. Set condition flag to treat >0 as successful.
+    <0 = Try transporting again
+    0 = Continue
+    >0 = Cancel; return value as new coordinates
 
 $00E0
   Keyboard event at the beginning of each frame, if any key is pushed.

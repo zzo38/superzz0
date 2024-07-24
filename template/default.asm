@@ -321,6 +321,7 @@ OUCH1	ROB H,10
 	EV S,_MAGICGEM
 	EV S,_GEM
 	FLET S,0
+	SFX A,"@10Z.<C"
 	KILM C,0
 
 ; **** Stone ****
@@ -363,7 +364,7 @@ OUCH1	ROB H,10
 	EV T,_BOULDER
 	EV T,_SLIDERNS
 	EV T,_SLIDEREW
-	; (TODO: sound effects)
+	SFX A,"@12T<<F"
 	LET S,1
 
 ; **** Harmful objects ****
@@ -413,6 +414,7 @@ OUCH1	ROB H,10
 
 ; **** Breakable walls ****
 	EV S,_BREAKABLE
+	SFX A,"@10Z.<C"
 	KILM C,0
 
 ; **** Water ****
@@ -453,6 +455,10 @@ OUCH1	ROB H,10
 	JT A,3B
 	GOTO A,1B
 
+	TA $C8
+	SFX A,"@24TCD'EF#'G#>A#CD'"
+	LET S,0
+
 ; **** Potion ****
 ; Parameter: effect of potion (0=none)
 	EV A,_POTION
@@ -470,6 +476,7 @@ OUCH1	ROB H,10
 	PEER B,1F
 	TEXT G,B
 	MESS G," \xB2\xB1\xB0"
+	SFX A,"@24Z.U4U5U6U7U8U9U10U12U14U16U18U20U18U16U14U12U10U9U8U7U6U5U4U3"
 	CASE A,POTION
 1H	DATA "Dud","Healing","Poison","Energy"
 	DATA "Reveal Walls","Extra Healing"
