@@ -59,7 +59,7 @@ are not allowed in this case.
   An abbrevation for #SEND.
 
 #BECOME kind
-  
+  Changes this object into the specified kind.
 
 #BIND name
   Changes this object to the stat of the specified name. On its turn, it
@@ -67,7 +67,8 @@ are not allowed in this case.
   currently has no XY records; this command will add one.)
 
 #CHANGE kind kind
-  
+  Changes all tiles that match the first kind to the second kind. Affects
+  the main layer and the under layer.
 
 #CLEAR flag
   Clear a flag.
@@ -120,7 +121,7 @@ are not allowed in this case.
   Display a help file, given the name of the lump without ".HLP" suffix.
 
 #IDLE
-  Skip a turn. (You can also use /I to mean the same thing.)
+  Skip a turn. (You can also use /I or ?I to mean the same thing.)
 
 #IF condition command
   Execute the command only if the condition is true.
@@ -140,9 +141,6 @@ are not allowed in this case.
 #MISC3 number
   Set this stat's misc3 value.
 
-#MUSIC bgm_name
-  
-
 #PARAMETER number
   Set this object's tile parameter.
 
@@ -150,16 +148,19 @@ are not allowed in this case.
   See the below section about sound effects.
 
 #PUSH dir
-  
+  If the tile in the specified direction is pushable in that direction,
+  then it will be moved out of the way if possible.
 
 #PUT dir kind
-  
+  Like #PUTAT but the adjacent cell in the specified direction.
 
 #PUTAT number number kind
-  
+  Add a tile of the specified kind at the specified coordinates. If it
+  is not a floor but the tile that was there is a floor, then it will
+  move what was there to the under layer; otherwise, it is overwritten.
 
 #PUTBELOW kind
-  
+  Set the tile beneath the program to the specified kind.
 
 #RESTART
   Restart the program from the beginning.
@@ -249,7 +250,7 @@ name
 
 #BLOCKED:dir
   True if blocked in the specified direction (i.e. it is the board edge or
-  it is not a UNDER element).
+  it is not a FLOOR element).
 
 #BLOCKEDAT:number:number
   True if specified coordinates are blocked.
@@ -266,7 +267,7 @@ name
   True if this object is locked from receiving messages.
 
 #MAIN:kind
-  
+  Same as M@kind.
 
 #OVERLAY
   The board overlay flag.
@@ -275,13 +276,13 @@ name
   The board persist flag.
 
 #PLAYER:kind
-  
+  Same as P@kind.
 
 #RANDOM
   There is a 50% chance to be true.
 
 #UNDER:kind
-  
+  Same as U@kind.
 
 #USER
   The user bit of this stat XY record.
