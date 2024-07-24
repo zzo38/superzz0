@@ -1637,7 +1637,7 @@ static int system_menu(void) {
     draw_text(x+8,y+2,"Sound:",0x1F,-1);
     draw_text(x+15,y+2,mu?"MUTE":"ON  ",0x1A,-1);
     draw_text(x+2,y+11," -/+ ",0x30,-1); draw_text(x+12,y+11,"Volume:",0x1F,-1);
-    draw_text(x+20,y+11,buf,0x1A,snprintf(buf,16,"%3d",vol/327));
+    draw_text(x+20,y+11,buf,0x1A,snprintf(buf,16,"%3d",(vol+100)/327));
   }
   redisplay();
   do { if(!next_event()) errx(0,"No events available."); } while(event.type!=SDL_KEYDOWN);
@@ -1653,7 +1653,7 @@ static int system_menu(void) {
     case SDLK_LEFT: case SDLK_KP4: if(x>2) x-=3; goto redraw0;
     case SDLK_RIGHT: case SDLK_KP6: if(x<37) x+=3; goto redraw0;
     case SDLK_KP_MINUS: case SDLK_MINUS: if(vol>327) vol-=327; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
-    case SDLK_KP_PLUS: case SDLK_PLUS: case SDLK_EQUALS: if(vol<32760) vol+=327; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
+    case SDLK_KP_PLUS: case SDLK_PLUS: case SDLK_EQUALS: if(vol<32400) vol+=327; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
   }
   goto redraw1;
 }

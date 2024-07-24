@@ -76,6 +76,34 @@ static void set_config(const char*s) {
   }
 }
 
+static void load_config(char*nam) {
+  FILE*f;
+  int n;
+  char*line=0;
+  size_t linesize=0;
+  if(nam) {
+    if(!*nam) return;
+    f=fopen(nam,"r");
+    if(!f) err(1,"Cannot open configuration file");
+  } else {
+    char*e=getenv("HOME");
+    if(!e) return;
+    nam=malloc(n=strlen(e)+14);
+    if(!nam) err(1,"Allocation failed");
+    snprintf(nam,n,"%s/.superzz0rc",e);
+    f=fopen(nam,"r");
+    free(nam);
+    if(!f) return;
+  }
+  while(getline(&line,&linesize,f)>0) {
+    *strchrnul(line,'\n')=0;
+    if(*line=='#' || !*line) continue;
+    set_config(line);
+  }
+  fclose(f);
+  free(line);
+}
+
 static void combine_raw(void) {
   FILE*fp;
   char nam[16];
@@ -135,17 +163,21 @@ int main(int argc,char**argv) {
   Uint8 o=0;
   int b=-1;
   int i;
+  char*configname=0;
   const char*s;
-  while((i=getopt(argc,argv,"+ab:deq:r\\"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+ab:c:denq:r\\"))>0) switch(i) {
     case 'a': case 'r': o=(o&0x80)|i; break;
+    case 'c': configname=optarg; break;
     case 'b': b=strtol(optarg,0,10); break;
     case 'd': config.debug=1; break;
     case 'e': editor=1; break;
+    case 'n': configname=""; break;
     case 'q': random_test(optarg); return 0;
     case '\\': o|=0x80; break;
     default: errx(1,"Wrong switches");
   }
   if(optind>=argc) errx(1,"Too few arguments");
+  load_config(configname);
   for(i=optind+1;i<argc;i++) set_config(argv[i]);
   if(o&0x80) {
     fread(&b,1,sizeof(b),stdin);

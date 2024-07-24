@@ -1,0 +1,101 @@
+Configurations can be specified by command-line arguments and by the
+configuration file (it looks for ~/.superzz0rc by default). Command-line
+arguments override whatever is in the configuration file. Comments can be
+made in the configuration file by # at the beginning of a line.
+
+Configuration format is the key and = and the value (if any one is omitted,
+then the default value will be used instead). The possible keys are
+explained below.
+
+audio_buffer
+  Audio buffer size; zero to disable audio.
+
+audio_filter
+  A filter coefficient for the audio.
+
+audio_rate
+  Audio sample rate (in Hz); zero to disable audio.
+
+audio_volume
+  Initial audio volume from 0 to 32767.
+
+block_color
+  Colour of the selected block (in block mode) in the board editor. Zero
+  means to just use the inverse colour.
+
+brd_edit_status
+  Set to 1 (default) to display the editor status line, or 0 to suppress.
+
+debug
+  Set debug mode. The -e and -d switches both enable this automatically;
+  this option allows it to be permanently enabled if desired.
+
+editor_scroll_x
+  Amount by which to scroll the board editor window if the cursor is moved
+  out of the range of the screen.
+
+editor_scroll_y
+  Amount by which to scroll the board editor window if the cursor is moved
+  out of the range of the screen.
+
+full_screen
+  Set to 1 for full screen or 0 (default) for windowed. (If no windowing
+  system is present, then it would be ignored.)
+
+help
+  Name of a directory (including the trailing slash) of the online help
+  files for the editor. This is not the same as the help lumps within a
+  world file, although the file format is similar (but not the same).
+
+key_repeat_delay
+  Keyboad repeat delay.
+
+key_repeat_interval
+  Keyboard repeat interval.
+
+mark_color
+  Colour of marked tiles in the board editor. Zero means to just use the
+  inverse colour.
+
+menu_x
+  The initial position of the F1 menu in the game.
+
+menu_y
+  The initial position of the F1 menu in the game.
+
+message_scrollback
+  Number of single-line text messages to store in the message scrollback.
+
+message_timer
+  Time limit for single-line text messages, in frames.
+
+overwrite_stats
+  Set to 1 to allow overwriting stats by space or draw mode in the editor.
+
+print_command
+  A operating system shell command to execute when you want to print the
+  contents of a text window. This program will receive the text on stdin.
+
+scr_edit_status
+  Set to 1 (default) to display the editor status line, or 0 to suppress.
+
+show_status
+  Set to 1 (default) to display the global status line, or 0 to hide it.
+  (This setting has no effect in PC text mode.)
+
+speed
+  Game speed in milliseconds per frame, in normal speed mode.
+
+speed_fast
+  Game speed in milliseconds per frame, when fast-forward is activated.
+
+template_board
+  The board number to use as the template for new boards; the default value
+  is zero.
+
+text_editor_command
+  If defined, an external command to execute for the text editor; the
+  environment variable named "textfile" will contain the name of the
+  temporary file. If this is not defined, then the internal text editor
+  willl be used instead.
+
