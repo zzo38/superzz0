@@ -30,6 +30,11 @@ debug
   Set debug mode. The -e and -d switches both enable this automatically;
   this option allows it to be permanently enabled if desired.
 
+default_colors
+  If set to 1, then the default colours of elements selected from the F1
+  to F12 menus in the board editor will be used, but if 0 then the colour
+  specified by the user is used instead.
+
 editor_scroll_x
   Amount by which to scroll the board editor window if the cursor is moved
   out of the range of the screen.

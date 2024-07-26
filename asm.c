@@ -44,6 +44,15 @@ static const Opcodes opcodes[]={
 //PSEUDO!"PT",0x8007
 //PSEUDO!"TA",0x8008
 //PSEUDO!"????",0x8009
+//PSEUDO!"ED",0x802F
+//PSEUDO!"ED0",0x8030
+//PSEUDO!"ED1",0x8031
+//PSEUDO!"ED2",0x8032
+//PSEUDO!"ED3",0x8033
+//PSEUDO!"ED4",0x8034
+//PSEUDO!"ED5",0x8035
+//PSEUDO!"ED6",0x8036
+//PSEUDO!"ED7",0x8037
 
 static char pass;
 static Uint16 addr;
@@ -74,6 +83,12 @@ static Sint32*wlabel;
 static Sint32 wflabel;
 static int atcount;
 static int has_unknown;
+static Uint16 ed_addr;
+static Uint16 ed_addr_end=0x280;
+static const char**ed_strings;
+static int ed_nstrings;
+static Uint32 ed_tstrings;
+static Uint16 ed_mem[0x10000];
 
 static Name*add_name(const char*name,Sint32 value,char kind) {
   name=strdup(name);
@@ -97,6 +112,18 @@ static int find_string(const char*t) {
   strings[nstrings-1]=t;
   tstrings+=strlen(t)+1;
   return nstrings-1;
+}
+
+static void exchange_strings(void) {
+  const char**a=strings;
+  int b=nstrings;
+  Uint32 c=tstrings;
+  strings=ed_strings;
+  nstrings=ed_nstrings;
+  tstrings=ed_tstrings;
+  ed_strings=a;
+  ed_nstrings=b;
+  ed_tstrings=c;
 }
 
 static int compare_op(const void*a,const void*b) {
@@ -268,6 +295,11 @@ static inline void put_data(Uint16 d) {
   if(d && addr>addr_end) addr_end=addr;
 }
 
+static inline void ed_put_data(Uint16 d) {
+  ed_mem[ed_addr++]=d;
+  if(d && ed_addr>ed_addr_end) ed_addr_end=addr;
+}
+
 static void do_pass(void) {
   char*s;
   Name*name;
@@ -277,6 +309,7 @@ static void do_pass(void) {
   rewind(infile);
   linenum=0;
   addr=256;
+  ed_addr=0x280;
   while(getline(&line,&linesize,infile)>0) {
     ++linenum;
     if(s=strchr(line,'\r')) *s=0; else if(s=strchr(line,'\n')) *s=0;
@@ -484,6 +517,11 @@ static void do_pass(void) {
       }
     } else {
       // Pseudo-op
+      if(op&0x20) {
+        if(!(option&0x0004)) goto skip;
+        exchange_strings();
+        if(wlabel) *wlabel=ed_addr;
+      }
       switch(op&255) {
         case 0: // AT
           addr=parse_numeric(1);
@@ -556,10 +594,28 @@ static void do_pass(void) {
           for(i=0;i<10;i++) fprintf(stderr,"[%d]%d/%d ",i,nhlabel[i],mhlabel[i]);
           fprintf(stderr,"{%d}\n",chlabel);
           break;
+        case 0x2F: // ED
+          do ed_put_data(parse_numeric(0)); while(*linept==',' && ++linept);
+          break;
+        case 0x30: // ED0
+        case 0x31: // ED1
+          v=parse_numeric(1);
+          if(op&1) v=(v&0x7F)+0x200; else v+=0x100;
+          if(*linept==',') {
+            s=++linept;
+            u=parse_numeric(0);
+          } else {
+            u=ed_addr;
+          }
+          ed_mem[v]=u;
+          if(ed_addr && v>ed_addr_end) ed_addr_end=v;
+          break;
       }
+      if(op&0x20) exchange_strings();
     }
     while(*linept==' ' || *linept=='\t') ++linept;
     if(*linept && *linept!=';') errx(1,"Extra text on line %d",linenum);
+    skip:
     if(chlabel!=-1) {
       if(!pass) {
         if(!flabel[chlabel]) {
@@ -668,18 +724,34 @@ static void do_output(void) {
     fwrite(oo,1,os,outfile);
     free(oo);
   }
+  if((option&0x0004) && ed_addr_end>256) {
+    begin_lump("MEMORY.ED",(ed_addr_end-256)<<1);
+    for(i=256;i<ed_addr_end;i++) {
+      fputc(ed_mem[i],outfile);
+      fputc(ed_mem[i]>>8,outfile);
+    }
+    if(ed_nstrings>1) {
+      begin_lump("TEXT.ED",ed_tstrings-1);
+      for(i=1;i<ed_nstrings;i++) fwrite(ed_strings[i],1,strlen(ed_strings[i])+1,outfile);
+    }
+  }
   if(*outname!='-' || outname[1]) fclose(outfile);
 }
 
 int main(int argc,char**argv) {
   int i;
-  while((i=getopt(argc,argv,"+dw"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+dew"))>0) switch(i) {
     case 'd': option|=0x0001; break;
+    case 'e': option|=0x0004; break;
     case 'w': option|=0x0002; break;
     default: return 1;
   }
   if(optind+2!=argc) errx(1,"Wrong number of arguments");
   find_string("");
+  if(option&0x0004) {
+    exchange_strings();
+    find_string("");
+  }
   infile=fopen(argv[optind],"r");
   if(!infile) err(1,"Cannot open input file");
   outname=argv[optind+1];

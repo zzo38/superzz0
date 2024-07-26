@@ -166,6 +166,19 @@ static void clear_extra_stats(void) {
   }
 }
 
+static Uint8 new_stat(void) {
+  if(maxstat==255) return 0;
+  stats=realloc(stats,(maxstat+1)*sizeof(Stat));
+  if(!stats) err(1,"Allocation failed");
+  stats[maxstat].misc1=stats[maxstat].misc2=stats[maxstat].misc3=0;
+  stats[maxstat].speed=1;
+  stats[maxstat].length=0;
+  stats[maxstat].count=0;
+  stats[maxstat].text=0;
+  stats[maxstat].xy=0;
+  return ++maxstat;
+}
+
 static void edit_tile(void) {
   char lay=1;
   Tile*p;
@@ -410,15 +423,7 @@ static void stat_list(int pc) {
     win_list(maxstat+1,0,stat_list_callback,n) if(n) stat_edit(n);
     win_blank();
     if(maxstat<255) win_command('A',"Add new stat") {
-      stats=realloc(stats,(maxstat+1)*sizeof(Stat));
-      if(!stats) err(1,"Allocation failed");
-      stats[maxstat].misc1=stats[maxstat].misc2=stats[maxstat].misc3=0;
-      stats[maxstat].speed=1;
-      stats[maxstat].length=0;
-      stats[maxstat].count=0;
-      stats[maxstat].text=0;
-      stats[maxstat].xy=0;
-      pc=++maxstat;
+      pc=new_stat();
       goto restart;
     }
     win_command_esc(0,"Done") break;
@@ -769,6 +774,7 @@ static Sint32 cctmp;
 static Tile cctile;
 static Uint8*ccdata;
 static Uint8 ccerror;
+static Uint8 ccrestrict=0;
 
 static Tile read_tile(const char*arg) {
   int k;
@@ -842,7 +848,7 @@ static int compare_coloncommand(const void*a,const void*b) {
 }
 
 static void cc_board(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
-  switch_to_board(strtol(arg,0,10));
+  if(!ccrestrict) switch_to_board(strtol(arg,0,10));
 }
 
 static void cc_color_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
@@ -905,7 +911,7 @@ static void cc_export(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   char buf[75];
   const char*e;
   FILE*fp;
-  if(!*arg) return;
+  if(ccrestrict || !*arg) return;
   if(*arg=='|') fp=popen(arg+1,"w"); else fp=fopen(arg,"wx");
   if(fp) {
     if(e=save_board(fp,0)) alert_text(e);
@@ -920,7 +926,7 @@ static void cc_import(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   char buf[75];
   const char*e;
   FILE*fp;
-  if(!*arg) return;
+  if(ccrestrict || !*arg) return;
   if(*arg=='|') fp=popen(arg+1,"r"); else fp=fopen(arg,"r");
   if(fp) {
     if(e=load_board(fp)) alert_text(e);
@@ -1322,6 +1328,172 @@ static void show_selection(void) {
   for(z=y0*80;y0<=y1;y0++,z+=80) for(x=x0;x<=x1;x++) v_color[z+x]=(config.block_color?:~v_color[z+x]);
 }
 
+static Uint8 parameter_calc(Uint8 par,Uint8 sta,const char*calc) {
+  Sint32 w=par;
+  Sint32 z=par;
+  Sint32 v;
+  int c;
+  for(;;) switch(c=*calc++) {
+    case 0: return par;
+    case 'A' ... 'H': regs[c-'A']=w; break;
+    case 'K' ... 'N': clip.values[c-'K']=w; break;
+    case 'P': par=w; break;
+    case 'S': sta=w; break;
+    case 'X': if(w>=0 && w<board_info.width) xcur=w; break;
+    case 'Y': if(w>=0 && w<board_info.height) ycur=w; break;
+    case 'a' ... 'h': z=w; w=regs[c-'a']; break;
+    case 'k' ... 'n': z=w; w=clip.values[c-'k']; break;
+    case 'p': z=w; w=par; break;
+    case 's': z=w; w=sta; break;
+    case 'x': z=w; w=xcur; break;
+    case 'y': z=w; w=ycur; break;
+    case '.': v=w; w=z; z=v; break;
+    case '0' ... '9': z=c-'0'; break;
+    case '+': w+=z; break;
+    case '-': w-=z; break;
+    case '*': w/=z; break;
+    case '&': w&=z; break;
+    case '|': w|=z; break;
+    case '^': w^=z; break;
+    case '<': w<<=z&31; break;
+    case '>': w>>=z&31; break;
+  }
+}
+
+static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
+  if(addr<0x100) return par;
+  if(addr<0x200) return ask_color_char(1,par);
+  for(;;) {
+    switch(memory[addr]&0xFF) {
+      case 0: return par;
+      case 1: addr+=2; break;
+      case ':':
+        if(ccrestrict) errx(1,"Recursive colon commands");
+        if(memory[addr+1]<ngtext && memory[addr+1]>0) {
+          ccrestrict=1;
+          do_colon_command(gtext[memory[addr+1]]);
+          ccrestrict=0;
+        }
+        addr+=2;
+        break;
+      case '=': if(memory[addr+1]<ngtext) par=parameter_calc(par,sta,gtext[memory[addr+1]]); addr+=2; break;
+      case 'C': par=ask_color_char(1,par); addr++; break;
+      case 'E':
+        if(sta && sta<=maxstat) {
+          stats[sta-1].text=text_editor(stats[sta-1].text);
+          stats[sta-1].length=(stats[sta-1].text?strlen(stats[sta-1].text):0);
+        }
+        addr++;
+        break;
+      case 'S': if(memory[addr+1]==0xFFFF) sta=clip.stat; else sta=memory[addr+1]; addr+=2; break;
+      default: errx(1,"Improper instruction: %04X",memory[addr]);
+    }
+  }
+}
+
+static void f_menu(Uint16 f) {
+  Uint8 b,c,x,y,z;
+  Uint16 m;
+  Uint32 k;
+  f=memory[f+0x200];
+  if(f<0x280 || emode=='v' || emode=='m') return;
+  v_ycur=255;
+  if(memory[f]) {
+    m=f; x=0; y=2; z=0; c=0; b=255;
+    while(memory[m]!=2 && b==255) {
+      if(memory[m]==1) {
+        if(c!=x) b=z-1; else if(y>2) y++;
+        m+=2; c=x; z++;
+      } else {
+        m+=4;
+      }
+      if(y>=22) y=2,x=1; else y++;
+    }
+    if(x) {
+      draw_border(0x1B,10,1,40,23);
+      draw_border(0x1B,40,1,70,23);
+      v_char[40+1*80]=0xC2;
+      v_char[40+23*80]=0xC1;
+      x=12;
+    } else {
+      draw_border(0x1B,25,1,55,23);
+      x=27;
+    }
+    m=f; y=2; z=0;
+    while(memory[m]!=2) {
+      if(memory[m]==1) {
+        if(b==z++) y=2,x=42; else if(y>2) y++;
+        if(memory[m+1]<ngtext) draw_text(x,y,gtext[memory[m+1]],0x1F,29);
+        m+=2;
+      } else {
+        draw_text(x,y," ? ",y&1?0x70:0x30,3);
+        v_char[x+1+y*80]=memory[m];
+        if(memory[m+1]<ngtext) draw_text(x+4,y,gtext[memory[m+1]],0x1E,24);
+        m+=4;
+      }
+      if(y>=22) y=2,x=42; else y++;
+    }
+    redisplay();
+    do { if(!next_event()) return; } while(event.type!=SDL_KEYDOWN);
+    k=event.key.keysym.unicode;
+    if(!k) return;
+    if(k>='a' && k<='z') k+='A'-'a';
+    m=f;
+    while(memory[m]!=k) {
+      if(memory[m]==2) return;
+      if(memory[m]==1) {
+        m+=2;
+      } else {
+        m+=4;
+      }
+    }
+  } else {
+    m=f-1;
+  }
+  if(memory[m+3]&0x8000) {
+    parameter_edit(memory[m+2],memory[m+3]&0xFF,0,0);
+    return;
+  }
+  f=memory[(memory[m+2]&0xFF)+0x100];
+  if(memory[m+3]&0x800) {
+    if(maxstat==255) {
+      alert_text("Too many stats");
+      return;
+    }
+    clip.stat=new_stat();
+    if(f>=0x200 && memory[f]==1) stats[clip.stat].speed=memory[f+1]>>8;
+  } else {
+    clip.stat=memory[m+2]>>8;
+  }
+  clip.kind=memory[m+2]&255;
+  if(config.default_colors) {
+    switch((memory[m+3]>>8)&7) {
+      case 1: clip.color=(clip.color&0xF0)|(memory[m+3]&0x0F); break;
+      case 2: clip.color=(clip.color&0x0F)|(memory[m+3]&0xF0); break;
+      case 3: clip.color=(memory[m+3]&0xFF); break;
+      case 4: if(clip.color<0x10 || (clip.color&0x0F)!=(memory[m+3]&0x0F)) clip.color=((clip.color&7)<<4)|(memory[m+3]&0x8F); break;
+      case 5: clip.color=(clip.color&7)*0x11+(memory[m+3]&0x88); break;
+    }
+  }
+  if(memory[m+3]&0x1000) {
+    clip.param=0;
+  } else if(f>=0x200) {
+    if(memory[f]==1) clip.param=memory[f+1]; else clip.param=0;
+  } else if(f>=0x100) {
+    clip.param=ask_color_char(1,f&0xFF);
+  } else {
+    clip.param=f;
+  }
+  if(memory[m+3]&0x1000) {
+    xcur2=xcur;
+    if(emode=='t') emode=0; else emode='t';
+  } else {
+    place_at(xcur,ycur,clip);
+    if(f>=0x200) clip.param=b_main[ycur*board_info.width+xcur].param=parameter_edit(f,clip.param,clip.stat,find_stat(xcur,ycur,clip.stat,2,2));
+  }
+  set_apparent_clip();
+}
+
 Uint16 edit_board(Uint16 id) {
   int i;
   Sint32 k;
@@ -1382,6 +1554,7 @@ Uint16 edit_board(Uint16 id) {
         case '}': switch_to_board(maxboard); numprefix=0; break;
         case ':': ask_colon_command(); break;
         case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd",0); break;
+        case -SDLK_F12 ... -SDLK_F1: f_menu(1-k-SDLK_F1); break;
       } break;
       case 'm': switch(k) {
         case 'c': do_colon_command("&color"); goto unmark;

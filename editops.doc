@@ -1,0 +1,127 @@
+
+=== F1-F12 menus ===
+
+Use ED1 and the menu number 1 to 12 at the beginning of this menu.
+
+The instructions in this menu are of the formats:
+  ED 0,kind,flag            (immediate; no menu)
+  ED 1,text                 (menu heading)
+  ED 2                      (end of menu)
+  ED key,text,kind,flag     (menu item)
+
+A menu must be either an immediate command or the first instruction must
+be a menu heading; if not immediate then menu items follow and additional
+menu headings are also possible, and the end of menu must be last. The
+menu items must all have different keys, which are ASCII characters '0'
+to '9' and 'A' to 'Z'.
+
+The kind is a element number in the low 8-bits, and the stat number in the
+high 8-bits (zero if no stat).
+
+The normal flag is as follows:
+
+* bit7-bit0 = Intended colour of tile
+
+* bit10-bit8 = Mode of colour of tile
+
+* bit11 = If set, add a new stat
+
+* bit12 = If set, use text entry mode
+
+* bit13 = (Reserved)
+
+* bit14 = (Reserved)
+
+* bit15 = Abnormal flag
+
+The modes of colours of tiles are:
+
+* 0 = Use the current colour; ignore the colour in the menu.
+
+* 1 = Use the current background but use the specified foreground.
+
+* 2 = Use the current foreground but use the specified background.
+
+* 3 = Use the specified colour; override the current colour.
+
+* 4 = Door colour; use the specified foreground, and the bit7; the low
+3-bits of current colour will then be shifted left by 4.
+
+* 5 = Door colour where the current colour is multiplied by seventeen and
+then adding the specified colour value.
+
+* 6-7 = (Reserved)
+
+The abnormal flag has the high bit set. In this case, the "kind" is the
+address of a parameter editor to execute instead, and the low 8-bits of
+the flag is the initial value.
+
+
+=== Parameter editors ===
+
+Use ED0 and the element number to define how element parameter editors,
+and default values (for both tiles and stats), will work.
+
+The instructions are mostly ED but some might use ED2, ED3, etc.
+
+ED 0
+  End of instructions. This must be the last instruction.
+
+ED 1,parameter
+  Set the default parameter value. If present, it must be the first
+  instruction. If it is a new stat added due to the bit11 flag of F1-F12
+  menus, then the high 8-bits of the parameter will be used as the speed
+  value of the new stat.
+
+ED ':',string
+  Execute a colon command. Some colon commands are restricted.
+
+ED '=',string
+  Make a calculation.
+
+ED 'C'
+  Ask for a character code to use as the parameter.
+
+ED 'E'
+  Edit the text of the stat. If there is no stat, then does nothing.
+
+ED 'S',stat
+  Select stat. This affects some of the other commands that can be used
+  in the parameter editor, such as the ED 'E' command. If the stat number
+  is specified as $FFFF then the stat of the saved tile is used instead.
+
+
+=== Parameter calculations ===
+
+Initially, the primary and secondary value are both set to the parameter
+value, but the below calculations can change them.
+
+Uppercase alphabets will copy the primary value to something, and lowercase
+alphabets will copy the primary to the secondary and then read the value
+into the primary value. These values are:
+
+* A to H = Signed 32-bit registers.
+
+* K = Kind of saved tile.
+
+* L = Colour of saved tile.
+
+* M = Parameter of saved tile.
+
+* N = Stat of saved tile.
+
+* P = Parameter value. (This can affect the parameter value that is used
+after the calculation is finished.)
+
+* S = Stat number. (This is not saved after the calculation is finished.)
+
+* X and Y = Cursor position.
+
+The digits 0 to 9 will set the secondary value to the number 0 to 9.
+
+The following calculations will change the primary value to a calculation
+of it and the secondary value: + - * & | ^ < > these are the same as the
+corresponding operators in C, except that < and > are bit shifts.
+
+You can write . to exchange primary and secondary values.
+

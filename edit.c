@@ -84,7 +84,7 @@ void combine_assembled(void) {
     if(c) while((c=getchar())>0);
     fread(buf,1,4,stdin);
     len=(buf[0]<<16)|(buf[1]<<24)|(buf[2]<<0)|(buf[3]<<8);
-    if(!strcmp(nam,"MEMORY") || !strcmp(nam,"TEXT")) {
+    if(!strcmp(nam,"MEMORY") || !strcmp(nam,"TEXT") || !strcmp(nam,"MEMORY.ED") || !strcmp(nam,"TEXT.ED")) {
       fp=open_lump(nam,"w");
       if(!fp) errx(1,"Cannot open %s lump for writing",nam);
       while(len) {

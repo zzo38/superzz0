@@ -443,6 +443,12 @@ Memory cells with addresses 0xC0 to 0xFF which have not been defined above
 should be set to zero for compatibility with future versions of ZZ Zero.
 
 
+=== MEMORY.ED ===
+
+Like MEMORY but optional and only used in the editor. For this lump, the
+starting address ix 0x100 instead of zero.
+
+
 === METADATA ===
 
 Contains a sequence of null-terminated metadata strings. Each metadata
@@ -641,4 +647,9 @@ It contains:
 
 Contains null-terminated global text strings, starting with string 1 (with
 no other data). (String 0 is always blank.)
+
+
+=== TEXT.ED ===
+
+Like TEXT but only used in the editor.
 

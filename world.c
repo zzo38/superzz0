@@ -41,6 +41,11 @@ const char*init_world(void) {
     for(i=0;i<u;i++) memory[i]=read16(fp);
     for(;i<0x10000;i++) memory[i]=0;
     fclose(fp);
+  } else if(fp=open_lump("MEMORY.ED","r")) {
+    u=(lump_size>>1)+0x100;
+    if(u>0x10000) u=0x10000;
+    for(i=0x100;i<u;i++) memory[i]=read16(fp);
+    fclose(fp);
   }
   // "START"
   fp=open_lump("START","r");
@@ -97,7 +102,7 @@ const char*init_world(void) {
   // "TEXT"
   free(vgtext),vgtext=0;
   free(gtext),gtext=0;
-  if(fp=open_lump("TEXT","r")) {
+  if(fp=open_lump(editor?"TEXT.ED":"TEXT","r")) {
     Uint8*p;
     vgtext=malloc(lump_size+1);
     if(!vgtext) err(1,"Allocation failed");

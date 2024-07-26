@@ -8,6 +8,9 @@ the input file is required to be seekable.
 -d
   Emit debugging information.
 
+-e
+  Emit editor information in addition to the usual data.
+
 -w
   Read the world file with the same name as the input file, but with the
   suffix changed from ".asm" to ".sz0" or ".ASM" to ".SZ0".
@@ -135,7 +138,8 @@ duplicates) and represents its index into the table.
 * A label name, for that label's address (or its value, if the IS or ISNT
 pseudo is used).
 
-* The sign @ to mean the current address of this instruction.
+* The sign @ to mean the current address of this instruction. (Do not
+use this in the operands of editor-specific pseudos.)
 
 * A digit 0 to 9 followed by B or F to find the closest numbered label
 in the specified direction (B for backward, F for forward) with the
@@ -191,4 +195,27 @@ PT string
 TA addr[,value]
   Write the current address (or the specified value, if it is present) at
   the specified address.
+
+
+=== Editor-specific pseudos ===
+
+These pseudos are only meaningful if the -e switch is used. Any of these
+pseudos that are preceded by a label will make a label which is only to be
+used in the operands of other editor-specific pseudos.
+
+ED number[,number...]
+  Works like DATA but for the editor memory. See editops.doc for details
+  of what format of operands is expected.
+
+ED0 number[,number]
+  The first number is a element number. The following editor-specific
+  pseudos will control the parameter editing for that element. If a second
+  operand is specified, then instead it will use that value as the default
+  value of the parameter and no parameter editing will be needed; you can
+  add $100 to the default value to ask the user for a character code.
+
+ED1 number[,number]
+  Used for board editor function keys and some other purposes. Usually the
+  menu items (as ED commands) would follow, but a second number can be
+  specified in some cases.
 
