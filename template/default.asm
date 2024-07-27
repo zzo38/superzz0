@@ -327,7 +327,7 @@ OUCH1	ROB H,10
 ; **** Stone ****
 	EV T,_STONE
 	GIVE Z,1
-	SFX A,"@20ZK4K6K8K10K12K14K16K20K24K28K32"
+	SFX A,"@23ZK4K6K8K10K12K14K16K20K24K28K32"
 	KILM D,0
 
 	EV A,_STONE
@@ -353,6 +353,7 @@ OUCH1	ROB H,10
 ; **** Money ****
 	EV T,_MONEY
 	GIVE C,1
+	SFX A,"@20ZATA"
 	KILM D,0
 
 ; **** Energizer ****
@@ -393,6 +394,7 @@ OUCH1	ROB H,10
 
 	EV S,_BULLET
 	DIE A,W
+	SFX A,"@10Z.<C"
 	KILM C,0
 
 ; **** Ricochet ****
@@ -659,9 +661,90 @@ POTION	FILL $10,1
 	LET A,W
 	LET B,Z
 	SMOV A,$0011
+	FLET S,0
+	SFX A,"@12T<<F"
 	LET S,0
 
 ; **** Light shape ****
 	TA $E3
-	; (This must be the last one)
+; (This must be the last one, other than the editor data.)
+
+; **** Editor menus ****
+
+	ED1 1
+	ED 1,"Items:"
+	ED 'G',"Gem",_GEM,$0000
+	ED 'M',"Magic Gem",_MAGICGEM,$0000
+	ED 'O',"Money",_MONEY,$030E
+	ED 'A',"Ammo",_AMMO,$0303
+	ED 'T',"Torch",_TORCH,$0306
+	ED 'K',"Key",_KEY,$0000
+	ED 'D',"Door",_DOOR,$040F
+	ED 'Z',"Stone",_STONE,$0000
+	ED 'E',"Energizer",_ENERGIZER,$0307
+	ED 'P',"Potion",_POTION,$0200
+	ED 'S',"Scroll",_SCROLL,$0800
+	ED 'Q',"Checkpoint",_CHECKPOINT,$0309
+	ED 2
+
+	ED1 2
+	ED 1,"Creatures:"
+	ED 'L',"Lion",E_LION,_LION+$8000
+	ED 'T',"Tiger",E_LION,_TIGER+$8000
+	ED 'B',"Bear",E_LION,_BEAR+$8000
+	ED 1,"Centipedes:"
+	ED 'H',"Head",_HEAD,$0800
+	ED 'S',"Segment",E_SEGM,$8000
+	ED 2
+
+	ED1 3
+	ED 1,"Terrains:"
+	ED 'W',"Water",_WATER,$0319
+	ED 'F',"Forest",_FOREST,$0320
+	ED 'I',"Ice",_ICE,$0331
+	ED 'X',"Web",_WEB,$0000
+	ED 1,"Walls:"
+	ED 'S',"Solid",_SOLID,$0000
+	ED 'N',"Normal",_NORMAL,$0000
+	ED 'B',"Breakable",_BREAKABLE,$0000
+	ED 'T',"Text",_TEXT,$0000
+	ED 'V',"Invisible",_INVISIBLE,$0000
+	ED 1,"Floors:"
+	ED 'E',"Empty",_EMPTY,$0300
+	ED 'O',"Floor",_FLOOR,$0000
+	ED 'K',"Fake",_FAKE,$0000
+	ED 2
+
+	ED1 5
+	ED 1,"Special:"
+	ED 'E',"Empty",_EMPTY,$0300
+	ED 'Z',"Player",_PLAYER+$0100,$031F
+	ED 'O',"Object",_OBJECT,$0800
+	ED 2
+
+	ED1 6
+	ED 0,_TEXT,$1000
+
+; **** Parameter edit ****
+
+	ED0 _TEXT,$0100
+
+	ED0 _OBJECT
+	ED 'C'
+	ED0 _SCROLL
+	ED 1,$0200
+	ED 'E'
+	ED 0
+
+	ED0 _HEAD
+	ED 1,$0200
+	ED 0
+
+E_SEGM	ED 'P',_SEGMENT,$5000
+	ED 0
+
+E_LION	ED '=',"K-MP"
+	ED '@',"_Creatures",2
+	ED 'P',$FFFF,$4800
+	ED 0
 
