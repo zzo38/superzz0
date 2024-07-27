@@ -445,8 +445,21 @@ should be set to zero for compatibility with future versions of ZZ Zero.
 
 === MEMORY.ED ===
 
-Like MEMORY but optional and only used in the editor. For this lump, the
-starting address ix 0x100 instead of zero.
+Like MEMORY but optional and only used in the editor, and there is some
+compression applied. For this lump, the starting address is 0x100 instead
+of zero.
+
+Each command of the compression code has the high 2-bits specifying the
+command code and the low 6-bits being one less than the run length. The
+possible command codes are:
+
+* 0 = Homogeneous; all zero
+
+* 1 = Heterogeneous; 8-bit data
+
+* 2 = Heterogeneous; 16-bit data
+
+* 3 = (Reserved)
 
 
 === METADATA ===

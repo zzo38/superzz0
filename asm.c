@@ -297,7 +297,7 @@ static inline void put_data(Uint16 d) {
 
 static inline void ed_put_data(Uint16 d) {
   ed_mem[ed_addr++]=d;
-  if(d && ed_addr>ed_addr_end) ed_addr_end=addr;
+  if(d && ed_addr>ed_addr_end) ed_addr_end=ed_addr;
 }
 
 static void do_pass(void) {
@@ -725,10 +725,38 @@ static void do_output(void) {
     free(oo);
   }
   if((option&0x0004) && ed_addr_end>256) {
-    begin_lump("MEMORY.ED",(ed_addr_end-256)<<1);
-    for(i=256;i<ed_addr_end;i++) {
-      fputc(ed_mem[i],outfile);
-      fputc(ed_mem[i]>>8,outfile);
+    int n=0;
+    int c;
+    for(i=256;i<ed_addr_end;n++) {
+      if(ed_mem[i]&0xFF00) {
+        for(c=0;c<64;c++) if(!ed_mem[i+c] || (ed_mem[i+c]<256 && ed_mem[i+c+1]<256)) break;
+        n+=c+c;
+      } else if(ed_mem[i]) {
+        for(c=0;c<64;c++) if((!ed_mem[i+c] && !ed_mem[i+c+1]) || (ed_mem[i+c]&0xFF00)) break;
+        n+=c;
+      } else {
+        for(c=0;c<64;c++) if(ed_mem[i+c]) break;
+      }
+      i+=c;
+    }
+    begin_lump("MEMORY.ED",n);
+    for(i=256;i<ed_addr_end;) {
+      if(ed_mem[i]&0xFF00) {
+        for(c=0;c<64;c++) if(!ed_mem[i+c] || (ed_mem[i+c]<256 && ed_mem[i+c+1]<256)) break;
+        fputc(c+0x7F,outfile);
+        while(c--) {
+          fputc(ed_mem[i],outfile);
+          fputc(ed_mem[i++]>>8,outfile);
+        }
+      } else if(ed_mem[i]) {
+        for(c=0;c<64;c++) if((!ed_mem[i+c] && !ed_mem[i+c+1]) || (ed_mem[i+c]&0xFF00)) break;
+        fputc(c+0x3F,outfile);
+        while(c--) fputc(ed_mem[i++],outfile);
+      } else {
+        for(c=0;c<64;c++) if(ed_mem[i+c]) break;
+        i+=c;
+        fputc(c-1,outfile);
+      }
     }
     if(ed_nstrings>1) {
       begin_lump("TEXT.ED",ed_tstrings-1);

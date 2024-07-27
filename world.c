@@ -42,9 +42,18 @@ const char*init_world(void) {
     for(;i<0x10000;i++) memory[i]=0;
     fclose(fp);
   } else if(fp=open_lump("MEMORY.ED","r")) {
-    u=(lump_size>>1)+0x100;
-    if(u>0x10000) u=0x10000;
-    for(i=0x100;i<u;i++) memory[i]=read16(fp);
+    for(i=0;i<0x10000;i++) memory[i]=0;
+    i=0x100;
+    while(i<0x10000) {
+      j=fgetc(fp);
+      if(j==EOF) break;
+      switch(j>>6) {
+        case 0: i+=j+1; break;
+        case 1: j=(j&0x3F)+1; while(j-- && i<0x10000) memory[i++]=read8(fp); break;
+        case 2: j=(j&0x3F)+1; while(j-- && i<0x10000) memory[i++]=read16(fp); break;
+        case 3: return "Improper file format";
+      }
+    }
     fclose(fp);
   }
   // "START"
