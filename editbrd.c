@@ -1361,12 +1361,17 @@ static Uint8 parameter_calc(Uint8 par,Uint8 sta,const char*calc) {
 }
 
 static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
+  Uint16 wst;
+  StatXY rxy;
+  int i,j;
   if(addr<0x100) return par;
   if(addr<0x200) return ask_color_char(1,par);
-  for(;;) {
+  if(sxy) rxy=*sxy; else rxy=(StatXY){};
+  normal: for(;;) {
     switch(memory[addr]&0xFF) {
       case 0: return par;
       case 1: addr+=2; break;
+      case 4: regs[(memory[addr]>>8)&7]=memory[addr+1]; addr+=2; break;
       case ':':
         if(ccrestrict) errx(1,"Recursive colon commands");
         if(memory[addr+1]<ngtext && memory[addr+1]>0) {
@@ -1374,9 +1379,37 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
           do_colon_command(gtext[memory[addr+1]]);
           ccrestrict=0;
         }
+        sxy=0;
         addr+=2;
         break;
       case '=': if(memory[addr+1]<ngtext) par=parameter_calc(par,sta,gtext[memory[addr+1]]); addr+=2; break;
+      case '@':
+        if(memory[addr+1]>=ngtext) errx(1,"Invalid string number");
+        if(memory[addr+1]) {
+          for(i=0;i<maxstat;i++) {
+            if(stats[i].text && stats[i].text[0]=='@') {
+              for(j=0;;j++) {
+                if((stats[i].text[j+1]=='=' || stats[i].text[j+1]=='\n' || !stats[i].text[j+1]) && (gtext[memory[addr+1]][j]=='=' || gtext[memory[addr+1]][j]=='\n' || !gtext[memory[addr+1]][j])) goto found;
+                if(stats[i].text[j+1]=='=' || stats[i].text[j+1]=='\n' || !stats[i].text[j+1] || gtext[memory[addr+1]][j]=='=' || gtext[memory[addr+1]][j]=='\n' || !gtext[memory[addr+1]][j]) break;
+                if((stats[i].text[j+1]^gtext[memory[addr+1]][j])&0x5F) break;
+              }
+            }
+          }
+        } else {
+          i=maxstat;
+        }
+        found: sta=i+1;
+        if(i==maxstat) {
+          if(i==255) return par;
+          new_stat();
+          stats[i].speed=memory[addr+2];
+          stats[i].length=strlen(gtext[memory[addr+1]])+2;
+          stats[i].text=malloc(stats[i].length+1);
+          if(!stats[i].text) err(1,"Allocation failed");
+          snprintf(stats[i].text,stats[i].length+1,"@%s\n",gtext[memory[addr+1]]);
+        }
+        addr+=3;
+        break;
       case 'C': par=ask_color_char(1,par); addr++; break;
       case 'E':
         if(sta && sta<=maxstat) {
@@ -1385,8 +1418,46 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
         }
         addr++;
         break;
+      case 'P':
+        cctile=clip;
+        if(memory[addr+1]!=0xFFFF) cctile.kind=memory[addr+1];
+        if(memory[addr+2]&0x800) cctile.stat=sta;
+        if(memory[addr+2]&0x1000) cctile.param=par;
+        if(config.default_colors) {
+          switch((memory[addr+2]>>8)&7) {
+            case 1: cctile.color=(cctile.color&0xF0)|(memory[addr+2]&0x0F); break;
+            case 2: cctile.color=(cctile.color&0x0F)|(memory[addr+2]&0xF0); break;
+            case 3: cctile.color=(memory[addr+2]&0xFF); break;
+            case 4: if(cctile.color<0x10 || (cctile.color&0x0F)!=(memory[addr+2]&0x0F)) cctile.color=((cctile.color&7)<<4)|(memory[addr+2]&0x8F); break;
+            case 5: cctile.color=(cctile.color&7)*0x11+(memory[addr+2]&0x88); break;
+          }
+        }
+        if(memory[addr+2]&0x8000) write_at(xcur,ycur,cctile); else place_at(xcur,ycur,cctile);
+        if(memory[addr+2]&0x4000) clip=cctile;
+        sxy=(cctile.stat?find_stat(xcur,ycur,cctile.stat,2,2):0);
+        if(sxy && (memory[addr+2]&0x2000)) {
+          sxy->instptr=rxy.instptr;
+          sxy->delay=rxy.delay;
+          sxy->layer|=rxy.layer&0xC0;
+        }
+        if(sxy) rxy=*sxy;
+        addr+=3;
+        break;
       case 'S': if(memory[addr+1]==0xFFFF) sta=clip.stat; else sta=memory[addr+1]; addr+=2; break;
       default: errx(1,"Improper instruction: %04X",memory[addr]);
+    }
+  }
+  form: win_form("Parameter edit") {
+    addr=wst;
+    for(;;) switch(memory[addr]&0xFF) {
+      
+      default: goto endform;
+    }
+    endform:
+    win_blank();
+    win_command_esc(0,"Done") {
+      
+      goto normal;
     }
   }
 }
@@ -1441,17 +1512,14 @@ static void f_menu(Uint16 f) {
     m=f;
     while(memory[m]!=k) {
       if(memory[m]==2) return;
-      if(memory[m]==1) {
-        m+=2;
-      } else {
-        m+=4;
-      }
+      if(memory[m]==1) m+=2; else m+=4;
     }
   } else {
     m=f-1;
   }
   if(memory[m+3]&0x8000) {
-    parameter_edit(memory[m+2],memory[m+3]&0xFF,0,0);
+    parameter_edit(memory[m+2],memory[m+3]&0xFF,memory[m+3]&0x100?clip.stat:0,0);
+    set_apparent_clip();
     return;
   }
   f=memory[(memory[m+2]&0xFF)+0x100];

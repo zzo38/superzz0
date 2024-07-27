@@ -219,3 +219,10 @@ ED1 number[,number]
   menu items (as ED commands) would follow, but a second number can be
   specified in some cases.
 
+ED2 number,string[,number...]
+  Defines a form field in a parameter editor. See editops.doc for details.
+
+ED4 register,number
+  Sets the value of a A to H register in a parameter editor instruction
+  list. See editops.doc for details.
+

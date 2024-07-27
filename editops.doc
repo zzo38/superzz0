@@ -53,8 +53,15 @@ then adding the specified colour value.
 * 6-7 = (Reserved)
 
 The abnormal flag has the high bit set. In this case, the "kind" is the
-address of a parameter editor to execute instead, and the low 8-bits of
-the flag is the initial value.
+address of a parameter editor to execute instead, and the flag is:
+
+* bit7-bit0 = Initial value
+
+* bit8 = Use stat of saved tile
+
+* bit14-bit9 = (Reserved)
+
+* bit15 = Abnormal flag
 
 
 === Parameter editors ===
@@ -79,16 +86,37 @@ ED ':',string
 ED '=',string
   Make a calculation.
 
+ED '@',string,speed
+  Select a stat according to the specified name (which will not have
+  another at sign at first). If there is no stat with the specified name,
+  then such a stat will be added, with the specified speed. The string
+  can be 0 instead to always add a new stat, which will have no name.
+
 ED 'C'
   Ask for a character code to use as the parameter.
 
 ED 'E'
   Edit the text of the stat. If there is no stat, then does nothing.
 
+ED 'P',kind,flag
+  Place a tile at the cursor. The flag is as follows:
+   bit7-bit0 = Intended colour of tile
+   bit10-bit8 = Mode of colour of tile
+   bit11 = Set to use selected stat; clear to use saved tile
+   bit12 = Set to use parameter value; clear to use saved tile
+   bit13 = Copy user/lock flag, delay, and instruction pointer
+   bit14 = Set to override saved tile with this one
+   bit15 = Do not use floors
+  If kind is $FFFF then use the kind of the saved tile instead.
+
 ED 'S',stat
   Select stat. This affects some of the other commands that can be used
   in the parameter editor, such as the ED 'E' command. If the stat number
   is specified as $FFFF then the stat of the saved tile is used instead.
+
+ED4 register,number
+  Sets the value of a signed 32-bit register A to H, which can later be
+  used in a ED '=' command.
 
 
 === Parameter calculations ===

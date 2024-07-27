@@ -610,6 +610,26 @@ static void do_pass(void) {
           ed_mem[v]=u;
           if(ed_addr && v>ed_addr_end) ed_addr_end=v;
           break;
+        case 0x32: // ED2
+          v=0x80|parse_numeric(0)&0xFF;
+          parse_comma();
+          read_string();
+          for(i=0;strbuf[i];i++) if(strbuf[i]=='~') {
+            memmove(strbuf+i,strbuf+i+1,strlen(strbuf+i));
+            v+=strbuf[i]<<8;
+            break;
+          }
+          ed_put_data(v);
+          if(*linept==',') {
+            do ed_put_data(parse_numeric(0)); while(*linept==',' && ++linept);
+          }
+          break;
+        case 0x34: // ED4
+          i=parse_reg16();
+          if(i>=8) errx(1,"Invalid register on line %d",linenum);
+          parse_comma();
+          ed_put_data((i<<8)+4);
+          ed_put_data(parse_numeric(0));
       }
       if(op&0x20) exchange_strings();
     }
