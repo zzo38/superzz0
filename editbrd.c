@@ -125,15 +125,18 @@ static void edit_board_info(void) {
       char buf[40];
       draw_text(1,0,buf,7,snprintf(buf,40,"Dimensions: %dx%d",board_info.width,board_info.height));
     }
-    win_numeric('U',"User data: ",board_info.userdata,0,65535);
+    win_numeric('U',(config.editor_custom_labels && memory[0x224])?(char*)gtext[memory[0x224]]:"User data: ",board_info.userdata,0,65535);
     win_numeric('c',"Screen: ",board_info.screen,0,65535);
-    win_boolean('0',"User flag 0",board_info.flag,BF_USER0);
-    win_boolean('1',"User flag 1",board_info.flag,BF_USER1);
-    win_boolean('2',"User flag 2",board_info.flag,BF_USER2);
-    win_boolean('3',"User flag 3",board_info.flag,BF_USER3);
+    win_boolean('0',(config.editor_custom_labels && memory[0x220])?(char*)gtext[memory[0x220]]:"User flag 0",board_info.flag,BF_USER0);
+    win_boolean('1',(config.editor_custom_labels && memory[0x221])?(char*)gtext[memory[0x221]]:"User flag 1",board_info.flag,BF_USER1);
+    win_boolean('2',(config.editor_custom_labels && memory[0x222])?(char*)gtext[memory[0x222]]:"User flag 2",board_info.flag,BF_USER2);
+    win_boolean('3',(config.editor_custom_labels && memory[0x223])?(char*)gtext[memory[0x223]]:"User flag 3",board_info.flag,BF_USER3);
     win_boolean('P',"Persist",board_info.flag,BF_PERSIST);
     win_boolean('g',"Suppress global scripts",board_info.flag,BF_NO_GLOBAL);
     win_boolean('V',"Visible overlay",board_info.flag,BF_OVERLAY);
+    if(config.editor_custom_labels && memory[0x225] && maxstat) win_numeric('5',gtext[memory[0x225]],stats->misc1,0,65535);
+    if(config.editor_custom_labels && memory[0x226] && maxstat) win_numeric('6',gtext[memory[0x226]],stats->misc2,0,65535);
+    if(config.editor_custom_labels && memory[0x227] && maxstat) win_numeric('7',gtext[memory[0x227]],stats->misc3,0,65535);
     win_blank();
     win_numeric('E',"East exit:  ",board_info.exits[DIR_E],0,65535) win_refresh();
     win_numeric('N',"North exit: ",board_info.exits[DIR_N],0,65535) win_refresh();

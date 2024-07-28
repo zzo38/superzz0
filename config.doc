@@ -35,6 +35,10 @@ default_colors
   to F12 menus in the board editor will be used, but if 0 then the colour
   specified by the user is used instead.
 
+editor_custom_labels
+  Set to 1 (default) to enable custom labels in the editor. (These custom
+  labels can be defined by the asm file; see editops.doc for details.)
+
 editor_scroll_x
   Amount by which to scroll the board editor window if the cursor is moved
   out of the range of the screen.

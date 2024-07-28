@@ -748,3 +748,8 @@ E_LION	ED '=',"K-MP"
 	ED 'P',$FFFF,$4800
 	ED 0
 
+; **** Editor board info ****
+	ED1 32,"Restart if zapped"
+	ED1 36,"Time limit: "
+	ED1 37,"Max shots: "
+
