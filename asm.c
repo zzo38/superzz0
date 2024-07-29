@@ -620,7 +620,9 @@ static void do_pass(void) {
             break;
           }
           ed_put_data(v);
+          ed_put_data(find_string(strbuf));
           if(*linept==',') {
+            ++linept;
             do ed_put_data(parse_numeric(0)); while(*linept==',' && ++linept);
           }
           break;
@@ -629,6 +631,14 @@ static void do_pass(void) {
           if(i>=8) errx(1,"Invalid register on line %d",linenum);
           parse_comma();
           ed_put_data((i<<8)+4);
+          ed_put_data(parse_numeric(0));
+        case 0x35: // ED5
+          i=parse_reg16();
+          if(i>=8) errx(1,"Invalid register on line %d",linenum);
+          parse_comma();
+          v=parse_numeric(1);
+          parse_comma();
+          ed_put_data((i<<8)+(v<<12)+5);
           ed_put_data(parse_numeric(0));
       }
       if(op&0x20) exchange_strings();

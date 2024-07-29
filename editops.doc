@@ -76,7 +76,9 @@ address of a parameter editor to execute instead, and the flag is:
 
 * bit8 = Use stat of saved tile
 
-* bit14-bit9 = (Reserved)
+* bit9 = Use parameter editor of tile at cursor after completed
+
+* bit14-bit10 = (Reserved)
 
 * bit15 = Abnormal flag
 
@@ -86,7 +88,13 @@ address of a parameter editor to execute instead, and the flag is:
 Use ED0 and the element number to define how element parameter editors,
 and default values (for both tiles and stats), will work.
 
-The instructions are mostly ED but some might use ED2, ED3, etc.
+In the below descriptions, ! means it is only valid in a form, and + means
+it is meaningful inside and outside of a form; other commands are only
+meaningful outside of a form (but are allowed after the end of a form).
+
+In ED2 commands, the second operand (the "text") can contain up to one
+tilde, which will not be displayed but makes the next character to be
+displayed green and can be used with ALT key to select it.
 
 ED 0
   End of instructions. This must be the last instruction.
@@ -96,6 +104,13 @@ ED 1,parameter
   instruction. If it is a new stat added due to the bit11 flag of F1-F12
   menus, then the high 8-bits of the parameter will be used as the speed
   value of the new stat.
+
+ED '/',which,bits  !
+  Set a condition for further form items to be displayed or suppressed
+  (up to the next ED '/' instruction). The bits are, if any bit is set
+  then it is allowed but if clear then it is suppressed; numbers higher
+  than 15 are treated as 15 so that the high bit will control it. If the
+  value is invalid then it is automatically suppressed.
 
 ED ':',string
   Execute a colon command. Some colon commands are restricted.
@@ -109,11 +124,37 @@ ED '@',string,speed
   then such a stat will be added, with the specified speed. The string
   can be 0 instead to always add a new stat, which will have no name.
 
+ED2 'B',text,which  !
+  Add a boolean item to a form.
+
 ED 'C'
   Ask for a character code to use as the parameter.
 
+ED2 'C',text,which  !
+  Add an item to a form to ask for a character code.
+
 ED 'E'
   Edit the text of the stat. If there is no stat, then does nothing.
+
+ED 'H',string  +
+  Add a heading to a form. This must be the first command in a form
+  (although you can have other commands before the beginning of the form).
+
+ED2 'L',text,which  !
+  Add an item to a form to ask for a colour code.
+
+ED 'M',which  !
+  Set a value to zero inside of a form. This can be used to mask out any
+  bits that you do not need.
+
+ED2 'N',text,which,min,max  !
+  Add a numeric item to a form.
+
+ED 'O',which  !
+  Beginning of a option group in a form.
+
+ED2 'O',text,value  !
+  Add a item to a option group, with the specified value.
 
 ED 'P',kind,flag
   Place a tile at the cursor. The flag is as follows:
@@ -134,6 +175,46 @@ ED 'S',stat
 ED4 register,number
   Sets the value of a signed 32-bit register A to H, which can later be
   used in a ED '=' command.
+
+ED5 register,how,which
+  Copy or exchange registers to/from the "which" value as documented in
+  the below section. The "how" is made by: bit0 is set to copy register
+  to other, bit1 to copy other way around, and bit2 for addition. This
+  will not work to affect only some bits; it will always overwrite the
+  entire value instead of the specified bits, although it is able to
+  read only the specified bits and ignore the others when reading.
+  Furthermore, bit0 can't be used to write to A to H registers.
+
+
+=== Parameter editor item specifications ===
+
+The "which" operand in some of the instructions is encoded as follows:
+
+* bit3-bit0 = Shift amount
+
+* bit7-bit4 = One less than the number of bits (ignored for ED2 'B')
+
+* bit11-bit8 = Minor code
+
+* bit14-bit12 = Major code
+
+* bit15 = Inverse
+
+The major codes are:
+
+* 0 = Parameter; minor code should always be zero.
+
+* 1 = Stat data; minor 0 is the speed, and minor 1 to 3 are the Misc1 to
+Misc3 values.
+
+* 2 = Stat XY data; minor 0 for delay, minor 1 for instruction pointer,
+minor 2 for user/lock flags.
+
+* 3 = Board info; minor 0 for flags, 1 for user data, 2 for screen, and 8
+to 11 for exits.
+
+* 7 = One of the 32-bit registers A to H (minor codes 0 to 7) (although
+only the low 16-bits are valid).
 
 
 === Parameter calculations ===
@@ -160,6 +241,8 @@ after the calculation is finished.)
 
 * S = Stat number. (This is not saved after the calculation is finished.)
 
+* T = Same as L but writes are ignored if config.default_colors is 0.
+
 * X and Y = Cursor position.
 
 The digits 0 to 9 will set the secondary value to the number 0 to 9.
@@ -169,4 +252,7 @@ of it and the secondary value: + - * & | ^ < > these are the same as the
 corresponding operators in C, except that < and > are bit shifts.
 
 You can write . to exchange primary and secondary values.
+
+The ? and ! means to ignore the rest of the calculation unless the primary
+value is nonzero or zero.
 

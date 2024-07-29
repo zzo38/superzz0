@@ -226,3 +226,6 @@ ED4 register,number
   Sets the value of a A to H register in a parameter editor instruction
   list. See editops.doc for details.
 
+ED5 register,number,number
+  See editops.doc for details about this command.
+

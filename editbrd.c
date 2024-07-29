@@ -1342,29 +1342,59 @@ static Uint8 parameter_calc(Uint8 par,Uint8 sta,const char*calc) {
     case 'K' ... 'N': clip.values[c-'K']=w; break;
     case 'P': par=w; break;
     case 'S': sta=w; break;
+    case 'T': if(config.default_colors) clip.color=w; break;
     case 'X': if(w>=0 && w<board_info.width) xcur=w; break;
     case 'Y': if(w>=0 && w<board_info.height) ycur=w; break;
     case 'a' ... 'h': z=w; w=regs[c-'a']; break;
     case 'k' ... 'n': z=w; w=clip.values[c-'k']; break;
     case 'p': z=w; w=par; break;
     case 's': z=w; w=sta; break;
+    case 't': z=w; w=clip.color; break;
     case 'x': z=w; w=xcur; break;
     case 'y': z=w; w=ycur; break;
     case '.': v=w; w=z; z=v; break;
     case '0' ... '9': z=c-'0'; break;
     case '+': w+=z; break;
     case '-': w-=z; break;
-    case '*': w/=z; break;
+    case '*': w*=z; break;
     case '&': w&=z; break;
     case '|': w|=z; break;
     case '^': w^=z; break;
     case '<': w<<=z&31; break;
     case '>': w>>=z&31; break;
+    case '!': if(w) return par; break;
+    case '?': if(!w) return par; break;
   }
 }
 
+static Sint32 parameter_which_get(Uint16 which,Uint8 par,Uint8 sta,StatXY*sxy) {
+  Uint32 v=0;
+  switch((which>>8)&0x7F) {
+    case 0x00 ... 0x0F: v=par; break;
+    case 0x10: if(sta && sta<=maxstat) v=stats[sta-1].speed; else return -1; break;
+    case 0x11: if(sta && sta<=maxstat) v=stats[sta-1].misc1; else return -1; break;
+    case 0x12: if(sta && sta<=maxstat) v=stats[sta-1].misc2; else return -1; break;
+    case 0x13: if(sta && sta<=maxstat) v=stats[sta-1].misc3; else return -1; break;
+    case 0x20: if(sxy) v=sxy->delay; else return -1; break;
+    case 0x21: if(sxy) v=sxy->instptr; else return -1; break;
+    case 0x22: if(sxy) v=sxy->layer&0xC0; else return -1; break;
+    case 0x30: v=board_info.flag; break;
+    case 0x31: v=board_info.userdata; break;
+    case 0x32: v=board_info.screen; break;
+    case 0x38 ... 0x3B: v=board_info.exits[(which>>8)&3]; break;
+    case 0x70 ... 0x77: v=regs[(which>>8)&7]; break;
+    default: return -1;
+  }
+  v>>=which&15;
+  v&=(2UL<<((which>>4)&15))-1;
+  if(which&0x8000) v=~v;
+  return v&0xFFFF;
+}
+
 static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
-  Uint16 wst;
+  char ok;
+  Uint16 wst,opv,opw;
+  Sint32 u,v;
   StatXY rxy;
   int i,j;
   if(addr<0x100) return par;
@@ -1375,6 +1405,32 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
       case 0: return par;
       case 1: addr+=2; break;
       case 4: regs[(memory[addr]>>8)&7]=memory[addr+1]; addr+=2; break;
+      case 5:
+        u=regs[(memory[addr]>>8)&7];
+        v=parameter_which_get(memory[addr+1],par,sta,sxy);
+        if(v!=-1) {
+          if(memory[addr]&0x2000) regs[(memory[addr]>>8)&7]=v+(memory[addr]&0x4000?u:0);
+          if(memory[addr]&0x1000) {
+            v=u+(memory[addr]&0x4000?v:0);
+            if(memory[addr+1]&0x8000) v=~v;
+            switch(memory[addr+1]>>8) {
+              case 0x00 ... 0x0F: par=v; break;
+              case 0x10: stats[sta-1].speed=v; break;
+              case 0x11: stats[sta-1].misc1=v; break;
+              case 0x12: stats[sta-1].misc2=v; break;
+              case 0x13: stats[sta-1].misc3=v; break;
+              case 0x20: rxy.delay=sxy->delay=v; break;
+              case 0x21: rxy.instptr=sxy->instptr=v; break;
+              case 0x22: rxy.layer=sxy->layer=(sxy->layer&0x3F)+(v&0xC0); break;
+              case 0x30: board_info.flag=v; break;
+              case 0x31: board_info.userdata=v; break;
+              case 0x32: board_info.screen=v; break;
+              case 0x38 ... 0x3B: board_info.exits[(memory[addr+1]>>8)&3]=v; break;
+            }
+          }
+        }
+        addr+=2;
+        break;
       case ':':
         if(ccrestrict) errx(1,"Recursive colon commands");
         if(memory[addr+1]<ngtext && memory[addr+1]>0) {
@@ -1394,7 +1450,7 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
               for(j=0;;j++) {
                 if((stats[i].text[j+1]=='=' || stats[i].text[j+1]=='\n' || !stats[i].text[j+1]) && (gtext[memory[addr+1]][j]=='=' || gtext[memory[addr+1]][j]=='\n' || !gtext[memory[addr+1]][j])) goto found;
                 if(stats[i].text[j+1]=='=' || stats[i].text[j+1]=='\n' || !stats[i].text[j+1] || gtext[memory[addr+1]][j]=='=' || gtext[memory[addr+1]][j]=='\n' || !gtext[memory[addr+1]][j]) break;
-                if((stats[i].text[j+1]^gtext[memory[addr+1]][j])&0x5F) break;
+                if((stats[i].text[j+1]^gtext[memory[addr+1]][j])&0xDF) break;
               }
             }
           }
@@ -1421,6 +1477,7 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
         }
         addr++;
         break;
+      case 'H': wst=addr; goto form;
       case 'P':
         cctile=clip;
         if(memory[addr+1]!=0xFFFF) cctile.kind=memory[addr+1];
@@ -1447,21 +1504,94 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
         addr+=3;
         break;
       case 'S': if(memory[addr+1]==0xFFFF) sta=clip.stat; else sta=memory[addr+1]; addr+=2; break;
-      default: errx(1,"Improper instruction: %04X",memory[addr]);
+      default: errx(1,"Improper instruction: $%04X at $%04X",memory[addr],addr);
     }
   }
   form: win_form("Parameter edit") {
-    addr=wst;
-    for(;;) switch(memory[addr]&0xFF) {
-      
+    addr=wst; opv=0; opw=0xFFFF; ok=1;
+    item:
+    switch(memory[addr]&0xFF) {
+      case '/':
+        v=parameter_which_get(memory[addr+1],par,sta,sxy);
+        if(v<0) ok=0; else ok=(memory[addr+2]>>(v>15?15:v))&1;
+        addr+=3;
+        break;
+      case 'B'+128:
+        addr+=3;
+        if(ok && memory[addr-2]<ngtext && (v=parameter_which_get(j=(memory[addr-1]&0xFF00)|0xF0,par,sta,sxy))>=0) {
+          win_boolean(memory[addr-3]>>8,gtext[memory[addr-2]],v,1UL<<(memory[addr-1]&15)) goto store;
+        }
+        break;
+      case 'C'+128:
+        addr+=3;
+        if(ok && memory[addr-2]<ngtext && (v=parameter_which_get(j=memory[addr-1],par,sta,sxy))>=0) {
+          win_char(memory[addr-3]>>8,gtext[memory[addr-2]],v) goto store;
+        }
+        break;
+      case 'H': if(ok && memory[addr+1]<ngtext) win_heading(gtext[memory[addr+1]]); addr+=2; break;
+      case 'L'+128:
+        addr+=3;
+        if(ok && memory[addr-2]<ngtext && (v=parameter_which_get(j=memory[addr-1],par,sta,sxy))>=0) {
+          if((j&0xFF)<0x30) v|=8;
+          win_color(memory[addr-3]>>8,gtext[memory[addr-2]],v) goto store;
+        }
+        break;
+      case 'M':
+        addr+=2;
+        if(ok) {
+          j=memory[addr-1];
+          v=0;
+          goto store;
+        }
+        break;
+      case 'N'+128:
+        addr+=5;
+        if(ok && memory[addr-4]<ngtext && (v=parameter_which_get(j=memory[addr-3],par,sta,sxy))>=0) {
+          win_numeric(memory[addr-5]>>8,gtext[memory[addr-4]],v,memory[addr-2],memory[addr-1]) goto store;
+        }
+        break;
+      case 'O':
+        if(ok) opv=parameter_which_get(opw=memory[addr+1],par,sta,sxy);
+        if(v<0) opw=0xFFFF;
+        addr+=2;
+        break;
+      case 'O'+128:
+        addr+=3;
+        if(ok && opw!=0xFFFF && memory[addr-2]<ngtext) win_option(memory[addr-3]>>8,gtext[memory[addr-2]],opv,memory[addr-1]) {
+          j=opw;
+          v=opv;
+          goto store;
+        }
+        break;
       default: goto endform;
     }
+    goto item;
+    store:
+    u=parameter_which_get(0xF0|j&0x7FF0,par,sta,sxy);
+    if(u<0) goto item;
+    if(j&0x8000) v=~v;
+    v&=(2UL<<((j>>4)&15))-1;
+    v<<=j&15;
+    v|=u&~(((2UL<<((j>>4)&15))-1)<<(j&15));
+    switch(j>>8) {
+      case 0x00 ... 0x0F: par=v; break;
+      case 0x10: stats[sta-1].speed=v; break;
+      case 0x11: stats[sta-1].misc1=v; break;
+      case 0x12: stats[sta-1].misc2=v; break;
+      case 0x13: stats[sta-1].misc3=v; break;
+      case 0x20: rxy.delay=sxy->delay=v; break;
+      case 0x21: rxy.instptr=sxy->instptr=v; break;
+      case 0x22: rxy.layer=sxy->layer=(sxy->layer&0x3F)+(v&0xC0); break;
+      case 0x30: board_info.flag=v; break;
+      case 0x31: board_info.userdata=v; break;
+      case 0x32: board_info.screen=v; break;
+      case 0x38 ... 0x3B: board_info.exits[(j>>8)&3]=v; break;
+      case 0x70 ... 0x77: regs[(j>>8)&7]=v; break;
+    }
+    goto item;
     endform:
     win_blank();
-    win_command_esc(0,"Done") {
-      
-      goto normal;
-    }
+    win_command_esc(0,"Done") goto normal;
   }
 }
 
@@ -1522,6 +1652,9 @@ static void f_menu(Uint16 f) {
   }
   if(memory[m+3]&0x8000) {
     parameter_edit(memory[m+2],memory[m+3]&0xFF,memory[m+3]&0x100?clip.stat:0,0);
+    if((memory[m+3]&0x200) && clip.kind==b_main[ycur*board_info.width+xcur].kind) {
+      clip.param=b_main[ycur*board_info.width+xcur].param=parameter_edit(memory[clip.kind+0x100],clip.param,clip.stat,find_stat(xcur,ycur,clip.stat,2,2));
+    }
     set_apparent_clip();
     return;
   }
@@ -1591,6 +1724,13 @@ Uint16 edit_board(Uint16 id) {
       case 0: case 15: no_mode: switch(k) {
         case 0x08: numprefix/=10; break;
         case 0x09: if(emode=(emode?0:15)) place_at(xcur,ycur,clip); break;
+        case 0x0D:
+          if(!emode) {
+            clip=b_main[xcur+ycur*board_info.width];
+            if((i=memory[clip.kind+0x100])>=0x200) clip.param=b_main[xcur+ycur*board_info.width].param=parameter_edit(i,clip.param,clip.stat,find_stat(xcur,ycur,clip.stat,2,2));
+            set_apparent_clip();
+          }
+          break;
         case 0x0F: stat_list(numprefix); numprefix=0; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;

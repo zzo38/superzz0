@@ -689,9 +689,10 @@ POTION	FILL $10,1
 
 	ED1 2
 	ED 1,"Creatures:"
-	ED 'L',"Lion",E_LION,_LION+$8000
-	ED 'T',"Tiger",E_LION,_TIGER+$8000
-	ED 'B',"Bear",E_LION,_BEAR+$8000
+	ED 'L',"Lion",E_LION,_LION+$8200
+	ED 'T',"Tiger",E_LION,_TIGER+$8200
+	ED 'B',"Bear",E_LION,_BEAR+$8200
+	ED 'V',"Slime",_SLIME,$0000
 	ED 1,"Centipedes:"
 	ED 'H',"Head",_HEAD,$0800
 	ED 'S',"Segment",E_SEGM,$8000
@@ -716,6 +717,9 @@ POTION	FILL $10,1
 	ED 2
 
 	ED1 5
+	ED 1,"Projectiles:"
+	ED 'B',"Bullet",_BULLET+$0200,$010F
+	ED 'S',"Star",_STAR+$0200,$010F
 	ED 1,"Special:"
 	ED 'E',"Empty",_EMPTY,$0300
 	ED 'Z',"Player",_PLAYER+$0100,$031F
@@ -736,6 +740,34 @@ POTION	FILL $10,1
 	ED 'E'
 	ED 0
 
+	ED0 _BULLET
+	ED 'H',"Bullet"
+	ED 'O',$0010
+	ED2 'O',"~East",0
+	ED2 'O',"~North",1
+	ED2 'O',"~West",2
+	ED2 'O',"~South",3
+	ED 'H',0
+	ED2 'B',"~Player bullet",$0007
+	ED 0
+
+	ED0 _STAR
+	ED 1,$007F
+	ED 'H',"Star"
+	ED2 'N',"~Duration: ",$0070,0,255
+	ED 0
+
+	ED0 _POTION
+	ED 'H',"Potion"
+	ED 'O',$0070
+	ED2 'O',"~Dud",0
+	ED2 'O',"~Healing",1
+	ED2 'O',"~Poison",2
+	ED2 'O',"~Energy",3
+	ED2 'O',"Re~veal Walls",4
+	ED2 'O',"E~xtra Healing",5
+	ED 0
+
 	ED0 _HEAD
 	ED 1,$0200
 	ED 0
@@ -746,6 +778,23 @@ E_SEGM	ED 'P',_SEGMENT,$5000
 E_LION	ED '=',"K-MP"
 	ED '@',"_Creatures",2
 	ED 'P',$FFFF,$4800
+	ED 0
+
+	ED0 _SLIME
+	ED 1,$0077
+	ED 'H',"Slime"
+	ED2 'N',"~Speed: ",$0030,0,15
+	ED2 'N',"~Delay: ",$0034,0,15
+	ED 0
+
+	ED0 _TRANSPORTER
+	ED0 _PUSHER
+	ED 'H',"Direction:"
+	ED 'O',$0010
+	ED2 'O',"~East",0
+	ED2 'O',"~North",1
+	ED2 'O',"~West",2
+	ED2 'O',"~South",3
 	ED 0
 
 ; **** Editor board info ****

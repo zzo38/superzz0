@@ -43,6 +43,9 @@ F2         Menu: Indicators, Bits
 F3         Menu: Numbers (status variables)
 F4         Menu: Numbers (specials), Memory
 
+Draw mode will cause it to automatically place (like the "p" command)
+as you move the cursor; normal mode doesn't do that.
+
 :mass;Mass mode
 c          Set colour of all marked (discard marks)
 C          Set colour of all marked (keep marks)
@@ -68,6 +71,8 @@ m          Mark selected block and switch to mass mode
 ;          Move cursor to opposite corner
 ALT+H      Set hard edges
 ALT+S      Set soft edges
+
+!edge;Edges
 
 :mark;Marks
 
