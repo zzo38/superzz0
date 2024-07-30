@@ -1404,6 +1404,10 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
     switch(memory[addr]&0xFF) {
       case 0: return par;
       case 1: addr+=2; break;
+      case 3:
+        i=memory[addr++]>>8;
+        while(i--) if((memory[addr++]&0xFF)==par) *regs=memory[addr-1]>>8;
+        break;
       case 4: regs[(memory[addr]>>8)&7]=memory[addr+1]; addr+=2; break;
       case 5:
         u=regs[(memory[addr]>>8)&7];

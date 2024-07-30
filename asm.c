@@ -626,6 +626,16 @@ static void do_pass(void) {
             do ed_put_data(parse_numeric(0)); while(*linept==',' && ++linept);
           }
           break;
+        case 0x33: // ED3
+          ed_mem[u=ed_addr++]=3;
+          do {
+            v=parse_numeric(0)&0xFF;
+            parse_comma();
+            v|=parse_numeric(0)<<8;
+            ed_put_data(v);
+          } while(*linept==',' && ++linept);
+          ed_mem[u]+=(ed_addr-u-1)<<8;
+          break;
         case 0x34: // ED4
           i=parse_reg16();
           if(i>=8) errx(1,"Invalid register on line %d",linenum);

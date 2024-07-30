@@ -481,7 +481,7 @@ OUCH1	ROB H,10
 	SFX A,"@24Z.U4U5U6U7U8U9U10U12U14U16U18U20U18U16U14U12U10U9U8U7U6U5U4U3"
 	CASE A,POTION
 1H	DATA "Dud","Healing","Poison","Energy"
-	DATA "Reveal Walls","Extra Healing"
+	DATA "Reveal Walls","Extra Healing","Time"
 POTION	FILL $10,1
 
 	TA POTION+1 ; Healing
@@ -503,6 +503,10 @@ POTION	FILL $10,1
 
 	TA POTION+5 ; Extra Healing
 	GIVE H,50
+	LET S,1
+
+	TA POTION+6 ; Time
+	GIVE T,25
 	LET S,1
 
 ; **** Stars ****
@@ -692,6 +696,8 @@ POTION	FILL $10,1
 	ED 'L',"Lion",E_LION,_LION+$8200
 	ED 'T',"Tiger",E_LION,_TIGER+$8200
 	ED 'B',"Bear",E_LION,_BEAR+$8200
+	ED 'K',"Shark",E_LION,_SHARK+$8200
+	ED 'R',"Runner",E_RUNN,$8200
 	ED 'V',"Slime",_SLIME,$0000
 	ED 1,"Centipedes:"
 	ED 'H',"Head",_HEAD,$0800
@@ -707,9 +713,11 @@ POTION	FILL $10,1
 	ED 1,"Walls:"
 	ED 'S',"Solid",_SOLID,$0000
 	ED 'N',"Normal",_NORMAL,$0000
+	ED 'L',"Line",_LINE,$0000
 	ED 'B',"Breakable",_BREAKABLE,$0000
 	ED 'T',"Text",_TEXT,$0000
 	ED 'V',"Invisible",_INVISIBLE,$0000
+	ED 'R',"Ricochet",_RICOCHET,$030A
 	ED 1,"Floors:"
 	ED 'E',"Empty",_EMPTY,$0300
 	ED 'O',"Floor",_FLOOR,$0000
@@ -766,6 +774,7 @@ POTION	FILL $10,1
 	ED2 'O',"~Energy",3
 	ED2 'O',"Re~veal Walls",4
 	ED2 'O',"E~xtra Healing",5
+	ED2 'O',"~Time",6
 	ED 0
 
 	ED0 _HEAD
@@ -775,9 +784,15 @@ POTION	FILL $10,1
 E_SEGM	ED 'P',_SEGMENT,$5000
 	ED 0
 
-E_LION	ED '=',"K-MP"
-	ED '@',"_Creatures",2
+E_LION	ED3 _LION,$0C,_TIGER,$0B,_BEAR,$06,_SHARK,$07
+	ED '=',"K-MPaT"
+	ED '@',"_2",2
 	ED 'P',$FFFF,$4800
+	ED 0
+
+E_RUNN	ED '=',"-MP"
+	ED '@',"_1",1
+	ED 'P',_RUNNER,$5800
 	ED 0
 
 	ED0 _SLIME
@@ -789,6 +804,7 @@ E_LION	ED '=',"K-MP"
 
 	ED0 _TRANSPORTER
 	ED0 _PUSHER
+	ED0 _RUNNER
 	ED 'H',"Direction:"
 	ED 'O',$0010
 	ED2 'O',"~East",0

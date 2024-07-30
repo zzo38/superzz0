@@ -172,6 +172,10 @@ ED 'S',stat
   in the parameter editor, such as the ED 'E' command. If the stat number
   is specified as $FFFF then the stat of the saved tile is used instead.
 
+ED3 key,value[,key,value,...]
+  If the parameter any of the keys then the A register is changed to the
+  specified value. All of the keys and values must be 8-bit numbers.
+
 ED4 register,number
   Sets the value of a signed 32-bit register A to H, which can later be
   used in a ED '=' command.

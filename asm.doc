@@ -222,6 +222,9 @@ ED1 number[,number]
 ED2 number,string[,number...]
   Defines a form field in a parameter editor. See editops.doc for details.
 
+ED3 key,value[,key,value,...]
+  A key/value list; see editops.doc for details.
+
 ED4 register,number
   Sets the value of a A to H register in a parameter editor instruction
   list. See editops.doc for details.
