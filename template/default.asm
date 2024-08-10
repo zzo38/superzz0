@@ -261,6 +261,46 @@ OUCH1	ROB H,10
 	VSET X,A
 	LET S,0
 
+	; Move creature, but die and ouch if player
+	; A = the direction of movement
+	; B = move flags
+	; C = temporary
+	; W = stat
+	; X,Y = coordinates
+	; Return = 0 if not moved, 1 if OK, -1 if hurt player
+MOVCRE	FORW A,A
+	JF A,0
+	GTMK C,0
+	EQ C,_PLAYER
+	JF C,1F
+	CALL C,OUCH
+	DIE B,W
+1H	LET C,W
+	SMOV C,B
+	JF A,0
+	JT A,1
+
+	; Shoot (non-player bullets)
+	; H = temporary use
+	; X,Y = coordinates
+	; Z = direction
+SHOOT	FORW H,Z
+	XOR H,H
+	CWOT H,$0017
+	JF A,1F
+	; Add bullet
+	SINK H,0
+	JF H,0
+	LET H,%L,Z,16
+	ADD H,$02000F00+_BULLET
+	PTM H,0
+	LET S,0
+	; Close range shot
+1H	GTMK H,0
+	LET W,0
+	LET T,0
+	EJMP H,0
+
 ; **** Player ****
 	EV S,_PLAYER,OUCH
 	EV X,_PLAYER,OUCH
@@ -371,6 +411,11 @@ OUCH1	ROB H,10
 ; **** Harmful objects ****
 	EV T,_BULLET
 	EV T,_STAR
+	EV T,_LION
+	EV T,_TIGER
+	EV T,_BEAR
+	EV T,_SHARK
+	EV T,_RUNNER
 	CALL W,OUCH
 	KILM D,0
 
@@ -385,7 +430,7 @@ OUCH1	ROB H,10
 	JT A,0
 	FORW H,Z
 	JF A,1F
-	LET T,%B,B,$71
+	LET T,%B,B,$17
 	BLOC Z,%B,B,$20
 	CALM S,0
 	BLOC A,W
@@ -669,8 +714,280 @@ POTION	FILL $10,1
 	SFX A,"@12T<<F"
 	LET S,0
 
+; **** Creatures (General) ****
+	EV S,_RUNNER
+	EV S,_LION
+	EV S,_TIGER
+	EV S,_BEAR
+	EV S,_SHARK
+	EV S,_HEAD
+	EV S,_SEGMENT
+	FLET S,0
+	GIVE S,1
+	SFX A,"@20O4CO1CO5CO3C"
+	KILM C,0
+
+; **** Runner ****
+; Parameter:
+;   bit1-bit0 = Direction
+	EV B,_RUNNER
+	LET A,Z
+	LET B,$0050
+	CALL C,MOVCRE
+	JNEG C,1
+	JNZ C,0
+	INC A,1
+	XOR A,Z
+	PTMP A,0
+	LET S,0
+
+; **** Lion, Tiger, Shark ****
+; Parameter:
+;   bit3-bit0 = Intelligence
+;   bit7-bit4 = Firing rate (Tiger only)
+; User bit: 0=bullets, 1=stars (Tiger only)
+	EV B,_TIGER
+	; Check firing rate
+	LET B,%B,Z,$44
+	GRTR B,%R,,16
+	JF B,1F
+	; Do shoot
+	SEEK A,1
+	LET Z,A
+	CALL A,SHOOT
+	; fall through to Lion moving subroutine
+
+	EV B,_LION
+	EV B,_SHARK
+1H	LET B,Z
+	AND B,$0F
+	SEEK A,1
+	GRTR C,%R,,16
+	TLET A,%R,,4
+	LET B,0
+	CALL C,MOVCRE
+	LET S,0
+
+; **** Bear ****
+; Parameter: Range (0-255)
+	EV B,_BEAR
+	ABS A,%XP,X,0
+	ABS B,%YP,Y,0
+	ADD A,B
+	GRTR A,Z
+	JT A,0
+	SEEK A,1
+	LET Z,A
+	LET B,0
+	CALL A,MOVCRE
+	JNZ A,0
+	FORW A,Z
+	GTMK A,0
+	EQ A,_BREAKABLE
+	JF A,0
+	KILM A,0
+	SFX A,"@20O4CO1CO5CO3C"
+	DIE C,W
+
+; **** Centipedes ****
+; Parameter: Direction (0-3)
+; Misc1: Intelligence (0-128)
+; Misc2: Deviance (0-128)
+; Instruction pointer: Sequence number
+; User bit:
+;   clear = Follower is next
+;   set = Follower is previous
+; Lock bit: Initialized
+
+	; Initialization
+CENINI	LET A,%UR,W,16
+	PIP A,W
+	LET A,$80
+	LOCK A,W
+	LET S,0
+
+	; Subroutine for trying to move a centipede.
+	; Does not cause segments to follow, but does update parameter.
+	; Return value is 1 if successful, 0 if not successful, -1 if ouch.
+	; Input: W=stat, XY=coordinates, Z=direction.
+	; Output: D=direction.
+	; Clobbers: B.
+CENMOV	LET D,Z
+	AND D,3
+	FORW B,D
+	JF B,0
+	GTMK B,0
+	EQ B,_PLAYER
+	JT A,1F
+	LET B,W
+	SMOV B,$0003
+	JF B,0
+	SIXY W,W
+	PTMP D,W
+	LET S,1
+	; Hurt player
+1H	CALL A,OUCH
+	DIE B,W
+
+	EV B,_HEAD
+	LAY A,W
+	BTST A,7
+	JF A,CENINI
+	; (A = layer/lock bits of head)
+	; Check if it should change direction to follow player
+	GM1 B,W
+	GRTR B,%R,,128
+	JF B,1F
+	LET T,%XP,X,0
+	TLET T,%YP,Y,0
+	JT B,1F
+	SEEK D,1
+	GOTO D,2F
+	; Check if it should change direction at random
+1H	GM2 B,W
+	GRTR B,%R,,128
+	JF B,1F
+	LET D,%R,,4
+	; Do change direction to D
+2H	PTMP D,0
+	LET Z,D
+	; Try to move
+1H	CALL B,CENMOV
+	JNEG B,0
+	JNZ B,2F
+	; Can't move; try to change direction CW or CCW
+	INC Z,Z
+	CALL B,CENMOV
+	JNEG B,0
+	JNZ B,2F
+	DEC Z,Z
+	DEC Z,Z
+	CALL B,CENMOV
+	JNEG B,0
+	JZ B,3F
+	; Moved successfully; other segments should follow
+	; (D = direction)
+	; (Now (X,Y) are the old coordinates of the head)
+2H	BTST A,6
+	FLET C,$10000
+	TLET C,-$10000
+	; (C = +1 or -1 offset to follower)
+	LET E,W
+	; (E = stat index to work with)
+	PACK Z,0
+	; (Z = packed coordinates to move segment to)
+	; Find follower
+1H	GIP G,E
+	ADD E,C
+	GIP H,E
+	; Check if sequence is broken
+	ASUB G,H
+	EQ G,1
+	JF G,0
+	; Check if the follower is valid
+	GSXY B,E
+	JF B,0
+	URSH B,8
+	EQ B,A
+	JF B,0
+	GTMK B,0
+	EQ B,_SEGMENT
+	JF B,0
+	; Move follower
+	PICK B,E
+	JF B,0
+	PACK F,Z
+	UNPC F,Z
+	DROP B,E
+	LET Z,F
+	; Update direction
+	GTMP G,0
+	PTMP D,0
+	LET D,G
+	; Continue
+	GOTO F,1B
+	; Can't go either way, so reverse direction instead
+	;  Directions must be reversed as follows:
+	;    >>v             <<<
+	;      v   becomes     ^
+	;      v               ^
+3H	BTST A,6
+	FLET C,$10000
+	TLET C,-$10000
+	LET E,W
+	; (E = stat to work with)
+	; (W = old head)
+	; Change head to segment
+	LET B,_SEGMENT
+	PTMK B,0
+	; Find end of tail
+1H	GIP G,E
+	ADD E,C
+	GIP H,E
+	; Check if sequence is broken
+	ASUB G,H
+	EQ G,1
+	JF G,1F
+	; Check if follower is valid
+	GSXY B,E
+	JF B,1F
+	URSH B,8
+	EQ B,A
+	JF B,1F
+	GTMK B,0
+	EQ B,_SEGMENT
+	JT B,1B
+	; Found end of tail
+1H	SUB E,C
+	XOR A,$40
+	; Make new head and remember direction
+	GSXY B,E
+	GTMP D,0
+	XOR D,2
+	; (D = direction)
+	LET B,_HEAD
+	PTMK B,0
+	; Go back the other way
+1H	LOCK A,E
+	GTMP F,0
+	PTMP D,0
+	EQ E,W
+	JT E,0
+	SUB E,C
+	GSXY B,E
+	LET D,F
+	XOR D,2
+	GOTO A,1B
+
+	EV B,_SEGMENT
+	LAY A,W
+	BTST A,7
+	JF A,CENINI
+	; Check forward or backward
+	LET B,-$10000
+	BTST A,6
+	TLET B,$10000
+	ADD B,W
+	; Check that there is another segment/head
+	LAY E,B
+	JF E,1F
+	; If the other one is not initialized, wait until it is
+	BTST E,7
+	JF E,0
+	; If chain has not been broken, wait until it is broken
+	GIP C,W
+	GIP D,B
+	ASUB C,D
+	EQ C,1
+	JT C,0
+	; Chain is broken; change this segment into a head
+1H	LET A,_HEAD
+	PTMK A,0
+	LET S,0
+
 ; **** Light shape ****
 	TA $E3
+	ASS @,65487
 ; (This must be the last one, other than the editor data.)
 
 ; **** Editor menus ****
@@ -693,15 +1010,15 @@ POTION	FILL $10,1
 
 	ED1 2
 	ED 1,"Creatures:"
-	ED 'L',"Lion",E_LION,_LION+$8200
-	ED 'T',"Tiger",E_LION,_TIGER+$8200
-	ED 'B',"Bear",E_LION,_BEAR+$8200
-	ED 'K',"Shark",E_LION,_SHARK+$8200
+	ED 'L',"Lion",E_LION,_LION+$8600
+	ED 'T',"Tiger",E_LION,_TIGER+$8600
+	ED 'B',"Bear",E_LION,_BEAR+$8600
+	ED 'K',"Shark",E_LION,_SHARK+$8600
 	ED 'R',"Runner",E_RUNN,$8200
 	ED 'V',"Slime",_SLIME,$0000
 	ED 1,"Centipedes:"
-	ED 'H',"Head",_HEAD,$0800
-	ED 'S',"Segment",E_SEGM,$8000
+	ED 'H',"Head",E_CENT,_HEAD+$8200
+	ED 'S',"Segment",E_CENT,_SEGMENT+$8200
 	ED 2
 
 	ED1 3
@@ -777,13 +1094,6 @@ POTION	FILL $10,1
 	ED2 'O',"~Time",6
 	ED 0
 
-	ED0 _HEAD
-	ED 1,$0200
-	ED 0
-
-E_SEGM	ED 'P',_SEGMENT,$5000
-	ED 0
-
 E_LION	ED3 _LION,$0C,_TIGER,$0B,_BEAR,$06,_SHARK,$07
 	ED '=',"K-MPaT"
 	ED '@',"_2",2
@@ -802,6 +1112,27 @@ E_RUNN	ED '=',"-MP"
 	ED2 'N',"~Delay: ",$0034,0,15
 	ED 0
 
+	ED0 _LION
+	ED0 _SHARK
+	ED 1,$0008
+	ED 'H',"Creature"
+	ED2 'N',"~Intelligence: ",$0030,0,15
+	ED 0
+
+	ED0 _TIGER
+	ED 1,$0088
+	ED 'H',"Creature"
+	ED2 'N',"~Intelligence: ",$0030,0,15
+	ED2 'N',"~Firing rate: ",$0034,0,15
+	ED2 'B',"~Stars",$2204
+	ED 0
+
+	ED0 _BEAR
+	ED 1,$0006
+	ED 'H',"Bear"
+	ED2 'N',"~Range: ",$0030,0,255
+	ED 0
+
 	ED0 _TRANSPORTER
 	ED0 _PUSHER
 	ED0 _RUNNER
@@ -811,6 +1142,24 @@ E_RUNN	ED '=',"-MP"
 	ED2 'O',"~North",1
 	ED2 'O',"~West",2
 	ED2 'O',"~South",3
+	ED 0
+
+E_CENT	ED '=',"K-MP"
+	ED '@',"_C",2
+	ED 'P',$FFFF,$4800
+	ED 0
+
+	ED0 _HEAD
+	ED0 _SEGMENT
+	ED 'H',"Direction:"
+	ED 'O',$0010
+	ED2 'O',"~East",0
+	ED2 'O',"~North",1
+	ED2 'O',"~West",2
+	ED2 'O',"~South",3
+	ED 'H',0
+	ED2 'N',"~Intelligence: ",$1170,0,128
+	ED2 'N',"~Deviance: ",$1270,0,128
 	ED 0
 
 ; **** Editor board info ****
