@@ -78,7 +78,9 @@ address of a parameter editor to execute instead, and the flag is:
 
 * bit9 = Use parameter editor of tile at cursor after completed
 
-* bit14-bit10 = (Reserved)
+* bit10 = Set default value of parameter of tile at cursor after completed
+
+* bit14-bit11 = (Reserved)
 
 * bit15 = Abnormal flag
 

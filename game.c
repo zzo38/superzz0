@@ -1339,9 +1339,11 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_KILM: if((t=convxy(so,x,y))!=-1) break_tile(t,2,0,0,fo&4); goto died;
       case OP_KILO: if((t=convxy(so,x,y))!=-1) break_tile(t,3,0,0,fo&4); goto died;
       case OP_KILU: if((t=convxy(so,x,y))!=-1) break_tile(t,1,0,0,fo&4); goto died;
+      case OP_LAY: if(rs=get_statxy(so)) { condflag=1; so=rs->layer; goto store; } else condflag=0; break;
       case OP_LESS: condflag=(regs[fo]<so?1:0); break;
       case OP_LET: goto store;
       case OP_LITE: calc_light(fo,so); break;
+      case OP_LOCK: if(rs=get_statxy(so)) rs->layer=(rs->layer&0x3F)|(regs[fo]&0xC0); break;
       case OP_LOG: if(config.debug) debug_log(fo,so,w,x,y,z,pc); break;
       case OP_LOOP: if(!regs[fo]) break; --regs[fo]; goto jump;
       case OP_LSH: regs[fo]=(so&~31?0:regs[fo]<<so); break;

@@ -1656,6 +1656,10 @@ static void f_menu(Uint16 f) {
   }
   if(memory[m+3]&0x8000) {
     parameter_edit(memory[m+2],memory[m+3]&0xFF,memory[m+3]&0x100?clip.stat:0,0);
+    if((memory[m+3]&0x400) && clip.kind==b_main[ycur*board_info.width+xcur].kind) {
+      f=memory[clip.kind+0x100];
+      if(f>=0x200 && memory[f]==1) clip.param=b_main[ycur*board_info.width+xcur].param=memory[f+1];
+    }
     if((memory[m+3]&0x200) && clip.kind==b_main[ycur*board_info.width+xcur].kind) {
       clip.param=b_main[ycur*board_info.width+xcur].param=parameter_edit(memory[clip.kind+0x100],clip.param,clip.stat,find_stat(xcur,ycur,clip.stat,2,2));
     }

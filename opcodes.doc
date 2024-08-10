@@ -950,7 +950,7 @@ numbers are treated as unsigned.
   The low 16-bits of the second operand are the stat number, and the high
   16-bits are the index into the XY list of that stat. The first operand
   will then be the layer/lock flag of that stat. The condition flag will
-  be false if it is locked or no such record, or true if unlocked.
+  be false if there is no such record or true if there is.
 
 [157 GSD]
   The low 16-bits of the second operand are the stat number, and the high
