@@ -307,6 +307,7 @@ static void do_pass(void) {
   Uint16 op;
   Sint32 u,v;
   int i,j;
+  if(option&0x0008) fprintf(stderr,"Pass %d\n",pass);
   rewind(infile);
   linenum=0;
   addr=256;
@@ -741,6 +742,7 @@ static void read_world_file(const char*nam0) {
         i+=c>>4;
       }
     }
+    if(option&0x0008) fprintf(stderr,"Found %d element names\n",nnames);
   }
   fclose(f);
 }
@@ -820,9 +822,10 @@ static void do_output(void) {
 
 int main(int argc,char**argv) {
   int i;
-  while((i=getopt(argc,argv,"+dew"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+devw"))>0) switch(i) {
     case 'd': option|=0x0001; break;
     case 'e': option|=0x0004; break;
+    case 'v': option|=0x0008; break;
     case 'w': option|=0x0002; break;
     default: return 1;
   }
@@ -847,6 +850,10 @@ int main(int argc,char**argv) {
   pass=1;
   do_pass();
   fclose(infile);
+  if(option&0x0008) {
+    fprintf(stderr,"Memory: %d",addr_end); if(option&0x0004) fprintf(stderr," (editor: %d)",ed_addr_end); fputc('\n',stderr);
+    fprintf(stderr,"Strings: %d/%d",nstrings,tstrings); if(option&0x0004) fprintf(stderr," (editor: %d/%d)",ed_nstrings,ed_tstrings); fputc('\n',stderr);
+  }
   do_output();
   return 0;
 }

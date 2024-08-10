@@ -15,6 +15,9 @@ the input file is required to be seekable.
   Read the world file with the same name as the input file, but with the
   suffix changed from ".asm" to ".sz0" or ".ASM" to ".SZ0".
 
+-v
+  Verbose output (to stderr).
+
 
 === Syntax ===
 
