@@ -161,6 +161,11 @@ In characters and strings, the valid escaping is:
 In the below, [] denotes optional items and ... means you can have more
 items if desired.
 
+ASS number[,number...]
+  If there is only one operand, it is an error if it is zero. If there is
+  more than one operand, it is an error if any operand is less than the
+  previous operand.
+
 AT number
   Write further code at the specified address. (If not specified, then the
   default starting address is 256.)

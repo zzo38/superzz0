@@ -44,6 +44,7 @@ static const Opcodes opcodes[]={
 //PSEUDO!"PT",0x8007
 //PSEUDO!"TA",0x8008
 //PSEUDO!"????",0x8009
+//PSEUDO!"ASS",0x800A
 //PSEUDO!"ED",0x802F
 //PSEUDO!"ED0",0x8030
 //PSEUDO!"ED1",0x8031
@@ -593,6 +594,17 @@ static void do_pass(void) {
         case 9: // ????
           for(i=0;i<10;i++) fprintf(stderr,"[%d]%d/%d ",i,nhlabel[i],mhlabel[i]);
           fprintf(stderr,"{%d}\n",chlabel);
+          break;
+        case 10: // ASS
+          if(!pass) goto skip;
+          v=parse_numeric(0);
+          if(*linept!=',' && !v) errx(1,"Assertion failed on line %d",linenum);
+          while(*linept==',') {
+            ++linept;
+            u=parse_numeric(0);
+            if(u<v) errx(1,"Assertion failed on line %d",linenum);
+            v=u;
+          }
           break;
         case 0x2F: // ED
           do ed_put_data(parse_numeric(0)); while(*linept==',' && ++linept);
