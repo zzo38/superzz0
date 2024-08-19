@@ -455,7 +455,7 @@ void set_timer(Uint32 x) {
 }
 
 Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
-  while(*t && n-- && x<80 && y<25) {
+  while(n-- && *t && x<80 && y<25) {
     v_color[y*80+x]=c;
     v_char[y*80+x]=*t++;
     x++;

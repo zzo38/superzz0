@@ -165,8 +165,8 @@ int main(int argc,char**argv) {
   int i;
   char*configname=0;
   const char*s;
-  while((i=getopt(argc,argv,"+ab:c:denq:r\\"))>0) switch(i) {
-    case 'a': case 'r': o=(o&0x80)|i; break;
+  while((i=getopt(argc,argv,"+Tab:c:denq:r\\"))>0) switch(i) {
+    case 'T': case 'a': case 'r': o=(o&0x80)|i; break;
     case 'c': configname=optarg; break;
     case 'b': b=strtol(optarg,0,10); break;
     case 'd': config.debug=1; break;
@@ -176,9 +176,14 @@ int main(int argc,char**argv) {
     case '\\': o|=0x80; break;
     default: errx(1,"Wrong switches");
   }
-  if(optind>=argc) errx(1,"Too few arguments");
+  if(optind>=argc && o!='T') errx(1,"Too few arguments");
   load_config(configname);
   for(i=optind+1;i<argc;i++) set_config(argv[i]);
+  if(o=='T') {
+    init_display();
+    puts(text_editor(0)?:(Uint8*)"");
+    return 0;
+  }
   if(o&0x80) {
     fread(&b,1,sizeof(b),stdin);
     fread(&config,1,sizeof(config),stdin);

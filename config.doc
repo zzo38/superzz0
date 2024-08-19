@@ -108,3 +108,8 @@ text_editor_command
   temporary file. If this is not defined, then the internal text editor
   willl be used instead.
 
+text_editor_insert
+  Controls the initial insert/overwrite mode in the text editor (not
+  meaningful if text_editor_command is set). Set to 1 for insert mode
+  or 0 for overwrite mode. This can be toggled by ^V at run time.
+
