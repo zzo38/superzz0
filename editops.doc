@@ -262,3 +262,9 @@ You can write . to exchange primary and secondary values.
 The ? and ! means to ignore the rest of the calculation unless the primary
 value is nonzero or zero.
 
+
+=== Miscellaneous options ===
+
+ED1 64,margin
+  Set the right margin position in the text editor, from 1 to 79.
+

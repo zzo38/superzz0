@@ -1167,3 +1167,6 @@ E_CENT	ED '=',"K-MP"
 	ED1 36,"Time limit: "
 	ED1 37,"Max shots: "
 
+	; Text editor
+	ED1 64,60
+

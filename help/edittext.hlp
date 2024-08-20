@@ -1,0 +1,38 @@
+@Text editor
+ ^A   word left
+ ^C   scroll page down
+ ^D   right
+ @D   copy character from above
+ ^E   up
+ ^F   word right
+ ^G   delete right
+ ^H   delete left
+ ^J   next line
+ @J   join line
+ ^L   repeat find
+ ^M   line break
+ ^N   split line
+ ^P   add character code
+ ^QC  end of document
+ ^QD  end of line
+ ^QE  top of screen
+ ^QF  find
+ ^QI  go to line
+ ^QR  beginning of document
+ ^QS  beginning of line
+ ^QX  bottom of screen
+ ^QY  delete to end of line
+ ^R   scroll page up
+ ^S   left
+ @S   copy character from left
+ ^T   delete word right
+ ^V   toggle insert/overwrite
+ ^W   scroll line up
+ @W   copy line from above
+ ^X   down
+ ^Y   destroy line
+ ^Z   scroll line down
+ ^_   insert space
+ F10  exit
+
+(^ = control; @ = alt)
