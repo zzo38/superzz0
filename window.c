@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -c -Wno-unused-result -fwrapv window.c `sdl-config --cflags`
+gcc -s -O2 -c -std=gnu99 -Wno-unused-result -fwrapv window.c `sdl-config --cflags`
 exit
 #endif
 

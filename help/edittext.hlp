@@ -9,6 +9,7 @@
  ^H   delete left
  ^J   next line
  @J   join line
+ ^KP  send to printer
  ^L   repeat find
  ^M   line break
  ^N   split line

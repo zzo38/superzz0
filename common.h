@@ -533,6 +533,7 @@ static inline void write32(FILE*fp,Uint32 v) {
 
 int lpt_begin(void); // returns 1 to begin printing or 0 to disable printing
 void lpt_end(void); // must be called to end printing
+#define lpt_document() for(int lpt_document_=lpt_begin();lpt_document_;lpt_document_=(lpt_end(),0))
 
 void lpt_linefeed(void);
 void lpt_text(const Uint8*p,int w);

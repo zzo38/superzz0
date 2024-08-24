@@ -1700,6 +1700,15 @@ static void message_scrollback(void) {
         if(++nscrback==config.message_scrollback) nscrback=0;
       }
       goto reset;
+    case SDLK_F11:
+      lpt_document() {
+        for(y=0;y<config.message_scrollback;y++) {
+          if(scrback[(nscrback+y)%config.message_scrollback].text[0]) {
+            lpt_text(scrback[(nscrback+y)%config.message_scrollback].text,strlen(scrback[(nscrback+y)%config.message_scrollback].text));
+          }
+        }
+      }
+      goto redraw;
   }
   goto redraw;
 }

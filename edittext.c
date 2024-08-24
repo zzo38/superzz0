@@ -14,6 +14,13 @@ static Line*lines;
 static Uint16 nlines,nchars;
 static Uint8*findtext[41];
 
+static void print_document(void) {
+  int n;
+  lpt_document() {
+    for(n=0;n<nlines;n++) lpt_text(lines[n].ptr,lines[n].len);
+  }
+}
+
 static int ins_char(Uint16 ln,Uint8 xc,Uint8 ch) {
   Uint8*p;
   Line*li=lines+ln;
@@ -252,6 +259,7 @@ static Uint8*text_editor_1(Uint8*text) {
     case_CTRL('M'): line_break(xc,yc); xc=0; ++yc; goto display;
     case_CTRL('N'): line_break(xc,yc); goto display;
     case_CTRL('P'): xc+=ins_char(yc,xc,ask_color_char(1,askch)); goto display;
+    case_CTRLK('P'): case -SDLK_F11: print_document(); goto display;
     case_CTRL('Q'): prefix=1; break;
     case_CTRL('R'): case -SDLK_PAGEUP: yc=(yc>23?yc-23:0); scrol=(scrol>23?scrol-23:0); goto display;
     case_CTRLQ('R'): xc=yc=0; goto display;
