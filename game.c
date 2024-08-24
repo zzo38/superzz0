@@ -1637,7 +1637,7 @@ static int system_menu(void) {
   draw_text(x+21,y+2," F8  ",0x70,-1);
   draw_text(x+21,y+3," F9  ",0x30,-1); draw_text(x+27,y+3,"Messages",0x1F,-1);
   draw_text(x+21,y+4," F10 ",0x70,-1); draw_text(x+27,y+4,"Quit",0x1F,-1);
-  draw_text(x+21,y+5," F11 ",0x30,-1); if(config.print_command) draw_text(x+27,y+5,"Print",0x1F,-1);
+  draw_text(x+21,y+5," F11 ",0x30,-1); if(config.printer_type) draw_text(x+27,y+5,"Print",0x1F,-1);
   draw_text(x+21,y+6," F12 ",0x70,-1); draw_text(x+27,y+6,"Speed:",0x1F,-1);
   draw_text(x+34,y+6,playstate==PLAYSTATE_NORMAL?"NORM":playstate==PLAYSTATE_FAST?"FAST":"STOP",0x1A,-1);
   draw_text(x+2,y+7," PAUSE ",0x30,-1); draw_text(x+12,y+7,"Pause/resume",0x1F,-1);

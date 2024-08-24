@@ -81,9 +81,28 @@ message_timer
 overwrite_stats
   Set to 1 to allow overwriting stats by space or draw mode in the editor.
 
-print_command
-  A operating system shell command to execute when you want to print the
-  contents of a text window. This program will receive the text on stdin.
+printer_begin
+  Optional; specifies a name of a file with commands that will be sent to
+  the printer at the beginning of a print job. In continuous mode, this
+  file is only included once, before the first print.
+
+printer_command
+  On UNIX systems, this option specifies a system shell command to execute
+  when you want to send text to a printer. It receives the text on stdin.
+
+printer_end
+  Optional; specifies a name of a file with commands that will be sent to
+  the printer at the end of a print job. In continuous mode, this file is
+  included after every print.
+
+printer_option
+  Configures printer-type-independent options for printing. See printer.doc
+  for details.
+
+printer_type
+  Specifies the printer type. A PostScript printer cannot be specified
+  here; if you use a PostScript printer then emulation is required. See
+  printer.doc for details.
 
 scr_edit_status
   Set to 1 (default) to display the editor status line, or 0 to suppress.

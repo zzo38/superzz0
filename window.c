@@ -216,6 +216,11 @@ void online_help(const char*major,const char*minor) {
   }
   control:
   if(cur>nlines-top-1) cur=nlines-top-1;
+  if(cur>22) {
+    top+=cur-22;
+    cur=22;
+    goto view;
+  }
   draw_text(70,0,name,0x30,snprintf(name,10,"%4d/%4d",top+cur,nlines));
   v_char[(cur+1)*80]=0x10;
   v_color[(cur+1)*80]=0x0D;
@@ -291,6 +296,35 @@ void online_help(const char*major,const char*minor) {
         }
         goto window;
       case SDLK_F4: if(!nhis) break; --nhis; major=his[nhis].file; minor=0; gtop=his[nhis].top; gcur=his[nhis].cur; goto load;
+      case SDLK_F11:
+        if(lpt_begin()) {
+          rewind(f);
+          if((c=fgetc(f))=='@') {
+            for(i=0;i<127;i++) {
+              name[i]=c=fgetc(f);
+              if(c=='\n' || c<=0 || c=='\r') break;
+            }
+            lpt_title(name,i);
+          } else {
+            ungetc(c,f);
+          }
+          for(;;) {
+            *name=c=fgetc(f);
+            if(c==EOF) {
+              break;
+            } else if(c=='\n') {
+              lpt_linefeed();
+            } else {
+              for(i=1;i<127;i++) {
+                name[i]=c=fgetc(f);
+                if(c=='\n' || c==EOF) break;
+              }
+              lpt_script(name,i);
+            }
+          }
+          lpt_end();
+        }
+        goto view;
       case SDLK_TAB:
         if(top+cur+1>=nlines) break;
         fseek(f,lines[top+cur+1],SEEK_SET);

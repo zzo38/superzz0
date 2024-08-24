@@ -1,0 +1,94 @@
+This document describes printing functions within Super ZZ Zero. If you do
+not intend to use the printing functions, then you may ignore them. If you
+just want to write text to a file for later reference and do not need to
+use a printer, then you should use printer type "0".
+
+The first character of config.printer_type must be the printer type major
+code which is one of the codes below:
+
+  0 = Plain text
+  1 = Epson
+
+After that will be the options specific to the printer type, which are
+described in the below sections.
+
+
+=== Plain text (0) ===
+
+This printer type is used when you do not want to use the control codes of
+any specific kind of printer; it can send the text directly.
+
+The following option characters are possible:
+
+  0 = ASCII only (default)
+  1 = PC character codes 128-255 but not 0-31
+  2 = All PC character codes, except NUL, CR, LF, FF
+  C = Send CR only
+  F = Send a form feed after printing is completed
+  L = Send LF only
+  X = Send CRLF (default)
+
+
+=== Epson (1) ===
+
+This printer type is for many Epson printers as well as other printers
+that support the ESC/P command set, including some dot matrix printers
+from other manufacturers. Refer to the documentation of your printer to
+determine which commands are supported.
+
+@ will automatically initialize the printer settings by the ESC @ command
+and other appropriate commands. If you need customized initialization,
+you should use config.printer_begin to set up your own initialization,
+instead of using this command.
+
+B will ring the bell in the printer at the beginning and end of the print
+job (only valid for printers that have an internal bell).
+
+C enables colour printing (only valid for colour printers).
+
+N causes it to not send line feeds (only carriage returns will be sent).
+
+P means the PC character set is fully supported. Only printers with ESC/P 2
+are capable of this.
+
+
+=== PostScript ===
+
+This software does not directly support printing using PostScript. To print
+using PostScript, you must install a PostScript program which will emulate
+one of the above printer types.
+
+(Emulation files are not currently included with this software, but they
+may be added in future, in which case they will be documented here.)
+
+
+=== Printer-type-independent options ===
+
+The config.printer_option may be set to a list of options that will work in
+the same way regardless of the printer type. The default setting depends on
+the printer type.
+
+Separate these options by commas. Each one has the format of one letter and
+then one or more digits to give a numeric value to that option.
+
+B is the number of blank lines to add before each print, from 0 to 255.
+
+C is 1 to center headings or 0 to not center headings.
+
+L is the number of lines per page; it will automatically send a form feed
+after the specified number of lines.
+
+S is the starting line offset. This can be used if config.printer_begin is
+used to print a heading. If there is no such heading, this should be zero.
+
+T tells whether or not to print the title: 1 to print, 0 to not print. You
+may also specify 2 for wide printing.
+
+W is the maximum number of characters on each line. Longer lines will be
+truncated to the specified length. The maximum width is 255 characters.
+
+Z means continuous printing; do not add a form feed after a print job and
+do not reinitialize the printer after each print job either (it will only
+be initialized once). This also prevents resetting the printer after the
+printing is completed. Set to 1 to enable or 0 to disable.
+

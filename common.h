@@ -529,6 +529,18 @@ static inline void write32(FILE*fp,Uint32 v) {
 
 #endif
 
+// === Printer ===
+
+int lpt_begin(void); // returns 1 to begin printing or 0 to disable printing
+void lpt_end(void); // must be called to end printing
+
+void lpt_linefeed(void);
+void lpt_text(const Uint8*p,int w);
+void lpt_title(const Uint8*p,int w);
+void lpt_heading(const Uint8*p,int w);
+void lpt_link(const Uint8*p,int w);
+void lpt_script(const Uint8*p,int w);
+
 // === Window ===
 
 void draw_border(Uint8 c,Uint8 x0,Uint8 y0,Uint8 x1,Uint8 y1);
