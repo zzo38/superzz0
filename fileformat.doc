@@ -181,7 +181,8 @@ is centred at the specified message X coordinate.
 * bit1 = If set, then message text is flashy like in ZZT; if clear, then it
 will instead use the colour defined in the screen where the text is written
 (which may be multiple colours if they are not all the same in all of the
-places where the characters of the message text are written).
+places where the characters of the message text are written). This is not
+meaningful for text windows.
 
 * bit2 = If set, then the EXIT indicators will display the border character
 instead of blank.
@@ -308,6 +309,42 @@ where this is relative to the nearest hard edge.
 * SC_IND_USER2 = Displayed if the user2 flag of the board is set.
 
 * SC_IND_USER3 = Displayed if the user3 flag of the board is set.
+
+
+=== *.WIN ===
+
+Window info; this is optionally present for each screen, and is only used
+if the screen is used for a text window or item window.
+
+This starts with a header. The first byte is a flag byte, and the second
+byte is currently unused and must be zero.
+
+The flags are:
+
+* bit0 = Set if the text window has single ends, clear if the ends are
+extended to the entire size of the window.
+
+* bit1 = Set for zero-based line numbers.
+
+After that is the commands. If the high bit is set, then:
+
+* bit4-bit0 = Command code
+
+* bit5 = Set if new parameter follows
+
+* bit6 = Set if new colour follows
+
+If the high bit is clear, then it specifies how many cells will copy the
+previous cell. Values higher than eighty are reserved.
+
+See help/editwin.hlp for an explanation of the command codes.
+
+The parameter is usually a character code, but zero can be used to mean
+to use the character within the screen at that position instead. In some
+cases the parameter can be 255 which also has a special meaning.
+
+The colour can be 0x11 for the primary colour or 0x22 for the secondary
+colour; other numbers will use that number as the colour.
 
 
 === BRD.NAM ===

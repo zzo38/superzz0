@@ -46,6 +46,9 @@ FACING	IS $02
 FOREST	IS $03
 REGSAV	IS $10 ;x16
 
+; **** Global parameters ****
+	TA $ED,1
+
 ; **** Keyboard handler ****
 	TA $E0
 	LET A,%B,W,$70

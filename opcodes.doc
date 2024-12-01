@@ -393,7 +393,9 @@ numbers are treated as unsigned.
   the label name. If the first operand is zero, then send to all stats that
   are not locked. If the label name contains a colon, then ignore the first
   operand and instead, it will send to everything whose name matches the
-  part before the colon.
+  part before the colon. Starting the label name with * means that it will
+  send even if it is locked, but this does not work if you are sending by
+  name or broadcasting to all objects.
 
 [051 PM1]
   Set misc1 of stat specified by second operand to first operand.

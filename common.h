@@ -347,6 +347,21 @@ const char*load_screen(FILE*fp);
 const char*save_screen(FILE*fp);
 void update_screen(void);
 
+// === Windows ===
+
+typedef struct {
+  Uint8 command[80];
+  Uint8 color[80];
+  Uint8 parameter[80];
+  Uint8 flag;
+} WindowInfo;
+
+// WindowInfo:flag
+#define WF_SINGLE_ENDS 0x01
+#define WF_ZERO_BASED 0x02
+
+const char*load_window(FILE*fp,WindowInfo*wind);
+
 // === Program memory / instructions ===
 
 // Instruction format:

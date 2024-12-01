@@ -51,6 +51,117 @@ static void goto_screen(Uint16 id) {
   scroll_x=scroll_y=0;
 }
 
+static void edit_window(void) {
+  WindowInfo wind;
+  FILE*fp;
+  const char*e;
+  Uint8 xc=xcur;
+  int i;
+  v_xcur=255;
+  if(fp=open_lump_by_number(scr_id,"WIN","r")) {
+    if(e=load_window(fp,&wind)) alert_text(e);
+    fclose(fp);
+  } else {
+    wind.flag=0;
+    memset(wind.command,'X',80);
+    memset(wind.color,0,80);
+    memset(wind.parameter,0,80);
+  }
+  show:
+  memset(v_color,7,80*25);
+  memset(v_char,0,80*25);
+  draw_text(0,0," Window Edit ",0x1F,-1);
+  for(i=0;i<80;i++) {
+    v_color[i+3*80]=7; v_char[i+3*80]=wind.command[i];
+    if(wind.color[i]%17) {
+      v_color[i+4*80]=wind.color[i]; v_char[i+4*80]=7;
+    } else {
+      v_color[i+4*80]=15; v_char[i+4*80]=" 12-------------"[wind.color[i]/17];
+    }
+    if(wind.parameter[i]==255) {
+      v_color[i+5*80]=0x1A; v_char[i+5*80]='+';
+    } else if(wind.parameter[i]) {
+      v_color[i+5*80]=0x1F; v_char[i+5*80]=wind.parameter[i];
+    } else {
+      v_color[i+5*80]=0x19; v_char[i+5*80]='-';
+    }
+  }
+  v_char[cur_screen.soft_edge[DIR_W]+6*80]='('; v_char[cur_screen.soft_edge[DIR_E]+6*80]=')';
+  v_char[cur_screen.hard_edge[DIR_W]+6*80]='['; v_char[cur_screen.hard_edge[DIR_E]+6*80]=']';
+  draw_text(0,23,"<A-Z> Command  <1> Primary  <2> Secondary  <3> Color  <4> Parameter",7,-1);
+  draw_text(0,24,"<F1> Flags   <F5> Save   <F6> Delete",7,-1);
+  for(;;) {
+    v_color[xc+2*80]=v_color[xc+6*80]=0x0E; v_char[xc+2*80]=31; v_char[xc+6*80]=30;
+    redisplay();
+    do { if(!next_event()) return; } while(event.type!=SDL_KEYDOWN);
+    v_color[xc+2*80]=v_color[xc+6*80]=0;
+    switch(event.key.keysym.sym) {
+      case SDLK_LEFT: case SDLK_COMMA:
+        if(xc) {
+          --xc;
+          if(event.key.keysym.mod&KMOD_SHIFT) {
+            wind.command[xc]=wind.command[xc+1];
+            wind.color[xc]=wind.color[xc+1];
+            wind.parameter[xc]=wind.parameter[xc+1];
+            goto show;
+          }
+        }
+        break;
+      case SDLK_RIGHT: case SDLK_PERIOD:
+        if(xc!=79) {
+          ++xc;
+          if(event.key.keysym.mod&KMOD_SHIFT) {
+            wind.command[xc]=wind.command[xc-1];
+            wind.color[xc]=wind.color[xc-1];
+            wind.parameter[xc]=wind.parameter[xc-1];
+            goto show;
+          }
+        }
+        break;
+      case SDLK_HOME: case SDLK_LEFTBRACKET: xc=0; break;
+      case SDLK_END: case SDLK_RIGHTBRACKET: xc=79; break;
+      case SDLK_a ... SDLK_z: wind.command[xc]=event.key.keysym.sym-SDLK_a+'A'; goto show;
+      case SDLK_1: wind.color[xc]=0x11; goto show;
+      case SDLK_2: wind.color[xc]=0x22; goto show;
+      case SDLK_3: wind.color[xc]=ask_color_char(0,wind.color[xc]); goto show;
+      case SDLK_4: wind.parameter[xc]=ask_color_char(1,wind.parameter[xc]); goto show;
+      case SDLK_F1:
+        win_form("Window flags") {
+          win_help("editwin","flag");
+          win_boolean('S',"Single ends",wind.flag,WF_SINGLE_ENDS);
+          win_boolean('Z',"Zero-based line numbers",wind.flag,WF_ZERO_BASED);
+          win_blank();
+          win_command_esc(0,"Done") break;
+        }
+        goto show;
+      case SDLK_F5: goto save;
+      case SDLK_F6: goto delete;
+      case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editwin",0); break;
+    }
+  }
+  save:
+  if(fp=open_lump_by_number(scr_id,"WIN","w")) {
+    fputc(wind.flag,fp);
+    fputc(0,fp);
+    for(xc=i=0;i<80;i++) {
+      if(!i || wind.command[i]!=wind.command[i-1] || wind.parameter[i]!=wind.parameter[i-1] || wind.color[i]!=wind.color[i-1]) {
+        if(xc) fputc(xc,fp);
+        xc=0;
+        fputc((wind.command[i]&0x1F)+(wind.parameter[i]==wind.parameter[i-1]?0:0x20)+(wind.color[i]==wind.color[i-1]?0:0x40)+0x80,fp);
+        if(wind.parameter[i]!=wind.parameter[i-1]) fputc(wind.parameter[i],fp);
+        if(wind.color[i]!=wind.color[i-1]) fputc(wind.color[i],fp);
+      } else {
+        ++xc;
+      }
+    }
+    if(xc) fputc(xc,fp);
+    fclose(fp);
+  }
+  return;
+  delete:
+  if(fp=open_lump_by_number(scr_id,"WIN","w")) fclose(fp);
+}
+
 static void edit_screen_info(void) {
   char nam[61]="";
   if(scr_id<=maxscreen && screennames && screennames[scr_id]) strncpy(nam,screennames[scr_id],60);
@@ -847,6 +958,7 @@ Uint16 edit_screen(Uint16 id) {
         case -SDLK_m: cur_screen.message_x=xcur; cur_screen.message_y=ycur; break;
         case -SDLK_r: cur_screen.message_r=xcur; break;
         case -SDLK_v: cur_screen.view_x=xcur; cur_screen.view_y=ycur; break;
+        case -SDLK_w: edit_window(); break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'c': case 0x03: clip.col=ask_color_char(0,clip.col); break;
         case 'C': cur_screen.color[ycur*80+xcur]=ask_color_char(0,cur_screen.color[ycur*80+xcur]); break;

@@ -616,3 +616,34 @@ const char*save_screen(FILE*fp) {
   return 0;
 }
 
+const char*load_window(FILE*fp,WindowInfo*wind) {
+  int a,c;
+  wind->flag=c=fgetc(fp);
+  if(c==EOF) {
+    wind->flag=0;
+    memset(wind->command,'X',80);
+    memset(wind->color,0,80);
+    memset(wind->parameter,0,80);
+    return 0;
+  }
+  if(fgetc(fp)) return "Reserved byte has improper value";
+  for(a=0;a<80;a++) {
+    c=fgetc(fp);
+    if(c==EOF) return "Unexpected end of file in window lump";
+    if(c&0x80) {
+      wind->command[a]=(c&0x1F)+0x40;
+      if(c&0x20) wind->parameter[a]=fgetc(fp); else if(a) wind->parameter[a]=wind->parameter[a-1];
+      if(c&0x40) wind->color[a]=fgetc(fp); else if(a) wind->color[a]=wind->color[a-1];
+    } else {
+      if(c>80 || !a || !c) return "Unrecognized command in window lump";
+      while(c-- && a<80) {
+        wind->command[a]=wind->command[a-1];
+        wind->color[a]=wind->color[a-1];
+        wind->parameter[a]=wind->parameter[a-1];
+        if(c) a++;
+      }
+    }
+  }
+  return 0;
+}
+

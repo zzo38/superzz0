@@ -104,6 +104,11 @@ printer_type
   here; if you use a PostScript printer then emulation is required. See
   printer.doc for details.
 
+return_cancels
+  Set to 1 (default) if the return key in a text window in the game play
+  will cancel if the cursor is not at a link, like escape will do. If set
+  to 0 then the return key will do nothing in such a circumstance.
+
 scr_edit_status
   Set to 1 (default) to display the editor status line, or 0 to suppress.
 

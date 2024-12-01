@@ -13,6 +13,7 @@ Others:
 !-screen;Screen elements
 !info;Screen info
 !colon;Colon commands
+!-editwin;Window info editor
 
 :norm;Normal mode / draw mode
 ESC        Exit
@@ -24,6 +25,7 @@ ALT+L      Set message left edge
 ALT+M      Set message center position
 ALT+R      Set message right edge
 ALT+V      Set viewport center position
+ALT+W      Window info
 SPACE      Toggle mark
 c          Select drawing colour
 C          Change colour of tile at cursor
@@ -109,12 +111,14 @@ selected, it is centered at the message X coordinate.
 
 "Flashy message" will cause message text to automatically change colours.
 If not selected, the colour at those coordinates in the screen layout will
-be used to display the message text instead.
+be used to display the message text instead. This is not meaningful for
+text windows, which will always use the colour at the coordinates.
 
 "Exit indicators use border character" and "User indicators use border
 character" will cause the border characters to be used instead of blank
 characters if those indicators appear in the screen layout but what the
-indicator refers to should be "off" instead of "active".
+indicator refers to should be "off" instead of "active". For text windows,
+these instead control the use of borders with scroll indicators.
 
 "Disable scrolling" will disable automatic scrolling if selected. In this
 case, the northwest corner of the board is placed at the hard edges.
@@ -131,6 +135,9 @@ outside of the board would be within the hard edge limits.
 Note that the screen layout can have board tiles outside of the hard edges,
 and they will still be displayed. The hard edges are only used to restrict
 the movement of the camera, not where the board is actually displayed.
+
+For text windows, the east/west hard edges are where the text is aligned
+and the north/south hard edges 
 
 :colon;Colon commands
 These colon commands can be used for various batch operations.

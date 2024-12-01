@@ -52,6 +52,13 @@ typedef struct {
 static MessageScrollback*scrback;
 static Uint16 nscrback;
 
+#define TEXTREC 81
+static FILE*textfile;
+static char*textfile_text;
+static size_t textfile_size;
+// Text window
+static Uint16 tnlines,tcursor,tscroll;
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z);
 
 static void debug_log(Uint8 fo,Sint32 so,Sint32 w,Sint32 x,Sint32 y,Sint32 z,Uint16 pc) {
@@ -426,9 +433,6 @@ void update_screen(void) {
           case SC_SPEC_PLAYER_Y: v=stats->count?stats->xy->y:0; break;
           case SC_SPEC_CAMERA_X: v=scroll_x-cur_screen.view_x; break;
           case SC_SPEC_CAMERA_Y: v=scroll_y-cur_screen.view_y; break;
-          case SC_SPEC_TEXT_SCROLL_PERCENT: 
-          case SC_SPEC_TEXT_LINE_NUMBER: 
-          case SC_SPEC_TEXT_LINE_COUNT: 
           case SC_SPEC_EXIT_E: v=board_info.exits[DIR_E]; break;
           case SC_SPEC_EXIT_N: v=board_info.exits[DIR_N]; break;
           case SC_SPEC_EXIT_W: v=board_info.exits[DIR_W]; break;
@@ -436,6 +440,7 @@ void update_screen(void) {
           case SC_SPEC_WIDTH: v=board_info.width; break;
           case SC_SPEC_HEIGHT: v=board_info.height; break;
           case SC_SPEC_USERDATA: v=board_info.userdata; break;
+          default: continue; // not applicable in this context (e.g. some that are only for text windows), so ignore it
         }
         v_char[i]=digit_of(v,chr);
         v_color[i]=col;
@@ -1038,7 +1043,7 @@ static Sint32 find_label(Stat*s,const char*label) {
   return -1;
 }
 
-static void send_message(Uint32 n,const char*label) {
+static void send_message(Uint32 n,const char*label,Uint8 ignlock) {
   const char*p;
   const char*q=strchr(label,':');
   StatXY*r;
@@ -1055,64 +1060,15 @@ static void send_message(Uint32 n,const char*label) {
       }
     }
   } else if(r=get_statxy(n)) {
-    if(r->layer&0x80) return;
+    if(*label=='*') ++label; else if((r->layer&0x80) && !ignlock) return;
     f=find_label(stats+(n&0xFF)-1,label);
     if(f!=-1) r->instptr=f;
   }
 }
 
-static void run_script(Uint16 m,Uint16 n,Sint32 u) {
-#if 0
-  // m=stat number, n=XY index, u=(<0 if imply #, =0 if restart, >0 if normal)
-  char buf[128];
-  Stat*s=stats+m-1;
-  StatXY*xy=s->xy+n;
-  Uint16 ip=xy->instptr;
-  Uint8 c,n;
-  if(!u) xy->instptr=ip=0;
-  if(!s->text) return;
-  if(ip>=s->length) {
-    xy->instptr=0xFFFF;
-    return;
-  }
-  begin:
-  switch(c) {
-    case '#':
-      ip++; // fall through
-    command:
-      if(s->text[ip]=='=') {
-        ip++;
-        if(s->text[ip]==' ') ip++;
-        send:
-        
-      } else {
-        n=0;
-        while((n<64) && (c=s->text[ip++])) {
-          if((c>='A' && c<='Z') || (c>='0' && c<='9')) buf[n++]=c;
-          else if(c>='a' && c<='z') buf[n++]=c+'A'-'a';
-          else break;
-        }
-        buf[n]=0;
-        
-      }
-      break;
-    case '/':
-      
-      break;
-    case '?':
-      
-      break;
-    case '\'': case ':': case '@':
-      while(s->text[ip] && s->text[ip]!='\n') ip++;
-      if(s->text[ip]) ip++;
-      break;
-    default:
-      if(u<0 && c!='!' && c!='$') goto command;
-      //TODO: text
-  }
-  u=0;
-  goto begin;
-#endif
+static void script_error(Uint16 m,StatXY*xy,const char*text) {
+  fprintf(stderr,"Script error in stat %d at offset %d: %s\n",m,xy->instptr,text);
+  xy->instptr=65535;
 }
 
 static void add_message_text(void) {
@@ -1123,6 +1079,382 @@ static void add_message_text(void) {
   }
   memcpy(scrback[nscrback].text,vtextbuf,nvtextbuf+1);
   if(++nscrback==config.message_scrollback) nscrback=0;
+}
+
+static void update_text_window(const WindowInfo*wind) {
+  int i,j;
+  Uint8 top=cur_screen.hard_edge[DIR_N];
+  Uint8 mid=cur_screen.view_y;
+  Uint8 bot=cur_screen.hard_edge[DIR_S];
+  Uint32 v,x,y;
+  Uint8 cmd,col,chr;
+  int linkline=-1;
+  int linktext=-1;
+  for(i=0;i<80*25;i++) {
+    cmd=cur_screen.command[i];
+    col=cur_screen.color[i];
+    chr=cur_screen.parameter[i];
+    switch(cmd&0xF0) {
+      case SC_BACKGROUND:
+        if(cmd&1) v_char[i]=chr;
+        if(cmd&2) v_color[i]=col;
+        break;
+      case SC_NUMERIC:
+        v_char[i]=digit_of(status_vars[cmd&15],chr);
+        v_color[i]=col;
+        break;
+      case SC_NUMERIC_SPECIAL:
+        switch(cmd) {
+          case SC_SPEC_PLAYER_X: v=stats->count?stats->xy->x:0; break;
+          case SC_SPEC_PLAYER_Y: v=stats->count?stats->xy->y:0; break;
+          case SC_SPEC_CAMERA_X: v=scroll_x-cur_screen.view_x; break;
+          case SC_SPEC_CAMERA_Y: v=scroll_y-cur_screen.view_y; break;
+          case SC_SPEC_TEXT_SCROLL_PERCENT: v=(100L*(tcursor+(wind->flag&WF_ZERO_BASED?0:1)))/tnlines; break;
+          case SC_SPEC_TEXT_LINE_NUMBER: v=tcursor+(wind->flag&WF_ZERO_BASED?0:1); break;
+          case SC_SPEC_TEXT_LINE_COUNT: v=tnlines; break;
+          case SC_SPEC_EXIT_E: v=board_info.exits[DIR_E]; break;
+          case SC_SPEC_EXIT_N: v=board_info.exits[DIR_N]; break;
+          case SC_SPEC_EXIT_W: v=board_info.exits[DIR_W]; break;
+          case SC_SPEC_EXIT_S: v=board_info.exits[DIR_S]; break;
+          case SC_SPEC_WIDTH: v=board_info.width; break;
+          case SC_SPEC_HEIGHT: v=board_info.height; break;
+          case SC_SPEC_USERDATA: v=board_info.userdata; break;
+          default: continue; // not applicable in this context, so ignore it
+        }
+        v_char[i]=digit_of(v,chr);
+        v_color[i]=col;
+        break;
+      case SC_MEMORY:
+        v_char[i]=memory[(col<<8)|chr];
+        v_color[i]=memory[(col<<8)|chr]>>8;
+        break;
+      case SC_INDICATOR:
+        v_color[i]=col;
+        x=i%80; y=i/80;
+        switch(cmd) {
+          case SC_IND_CURSOR: v_char[i]=(cur_screen.flag&SF_NO_SCROLL?(y-top-tscroll==tcursor):(y==mid))?chr:0; break;
+          case SC_IND_SCROLL: v_char[i]=(y>cur_screen.view_y?(tscroll>mid-top):(tscroll<tnlines+mid-bot))
+           ?chr:(cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[y>cur_screen.view_y?DIR_S:DIR_N]:0); break;
+          case SC_IND_EXIT_E: v_char[i]=board_info.exits[DIR_E]?chr:0; break;
+          case SC_IND_EXIT_N: v_char[i]=board_info.exits[DIR_N]?chr:0; break;
+          case SC_IND_EXIT_W: v_char[i]=board_info.exits[DIR_W]?chr:0; break;
+          case SC_IND_EXIT_S: v_char[i]=board_info.exits[DIR_S]?chr:0; break;
+          case SC_IND_USER0: v_char[i]=board_info.flag&BF_USER0?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[0]:0; break;
+          case SC_IND_USER1: v_char[i]=board_info.flag&BF_USER1?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[1]:0; break;
+          case SC_IND_USER2: v_char[i]=board_info.flag&BF_USER2?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[2]:0; break;
+          case SC_IND_USER3: v_char[i]=board_info.flag&BF_USER3?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[3]:0; break;
+        }
+        break;
+      case SC_TEXT:
+        x=i%80; y=i/80;
+        v_char[i]=0;
+        v_color[i]=col;
+        if(y+tscroll-mid<0 || y+tscroll-mid>=tnlines) {
+          if(y+tscroll-mid==-1 || y+tscroll-mid==tnlines || !(wind->flag&WF_SINGLE_ENDS)) {
+            v_char[i]=chr;
+            if(cur_screen.border_color) v_color[i]=cur_screen.border_color;
+          }
+        } else {
+          y+=tscroll-mid;
+          v=textfile_text[y*TEXTREC];
+          if(!v) break;
+          j=textfile_text[y*TEXTREC+1];
+          if(j=='!' && v>1) {
+            if(linkline!=y) {
+              linkline=y;
+              linktext=0;
+              for(j=1;j<v;j++) if(textfile_text[y*TEXTREC+j+1]==';') {
+                linktext=j+1;
+                break;
+              }
+            }
+            switch(wind->command[x]) {
+              case 'A': case 'L': indicator:
+                if(wind->color[x]!=0x11) v_color[i]=(wind->color[x]==0x22?(col&0xF0)|(cmd&0x0F):wind->color[x]);
+                v_char[i]=wind->parameter[x]?:chr;
+                break;
+              case 'C':
+                if(tcursor==y) goto indicator;
+                break;
+              case 'K':
+                if(v>3 && textfile_text[y*TEXTREC+2]=='<' && textfile_text[y*TEXTREC+4]=='>') {
+                  if(wind->color[x]!=0x11) v_color[i]=(wind->color[x]==0x22?(col&0xF0)|(cmd&0x0F):wind->color[x]);
+                  v_char[i]=textfile_text[y*TEXTREC+3];
+                } else if(wind->parameter[x]!=255) {
+                  goto indicator;
+                }
+                break;
+              case 'P':
+                if(v>3 && textfile_text[y*TEXTREC+2]=='<' && textfile_text[y*TEXTREC+4]=='>') goto indicator;
+                break;
+              case 'T':
+                if(x>=cur_screen.soft_edge[DIR_W] && x<cur_screen.soft_edge[DIR_W]+v-linktext) {
+                  if(wind->color[x]!=0x11) v_color[i]=(wind->color[x]==0x22?(col&0xF0)|(cmd&0x0F):wind->color[x]);
+                  v_char[i]=textfile_text[y*TEXTREC+v+x-cur_screen.soft_edge[DIR_W]];
+                } else {
+                  v_char[i]=wind->parameter[x]?:chr;
+                }
+                break;
+              default:
+                if(x>=cur_screen.soft_edge[DIR_W] && x<=cur_screen.soft_edge[DIR_E] && x<cur_screen.soft_edge[DIR_W]+v-linktext) {
+                  v_color[i]=(col&0xF0)|(cmd&0x0F);
+                  v_char[i]=textfile_text[y*TEXTREC+v+x-cur_screen.soft_edge[DIR_W]];
+                }
+                break;
+            }
+          } else if(j=='$') {
+            v_color[i]=(col&0xF0)|(cmd&0x0F);
+            j=cur_screen.view_x-(v-1)/2;
+            if(x<j || x-j>=v-1) {
+              if(wind->command[x]=='A' || wind->command[x]=='S') {
+                v_char[i]=wind->parameter[x]?:chr;
+                if(wind->color[x]!=0x22) v_color[i]=(wind->color[x]==0x11?col:wind->color[x]);
+              }
+              break;
+            }
+            v_char[i]=textfile_text[y*TEXTREC+x+2-j];
+          } else {
+            x-=cur_screen.hard_edge[DIR_W];
+            if(x<0 || x>=v) {
+              if(wind->command[x=i%80]=='A') {
+                v_char[i]=wind->parameter[x]?:chr;
+                if(wind->color[x]!=0x11) v_color[i]=(wind->color[x]==0x22?(col&0xF0)|(cmd&0x0F):wind->color[x]);
+              }
+              break;
+            }
+            v_char[i]=textfile_text[y*TEXTREC+x+1];
+          }
+        }
+        break;
+      case SC_BITS_0_LO ... SC_BITS_3_HI:
+        v_color[i]=col;
+        v=status_vars[(cmd-SC_BITS_0_LO)>>5];
+        v_char[i]=(v&(1UL<<(cmd&0x1F))?chr:32);
+        break;
+    }
+  }
+  if(cur_screen.message_y<25) {
+    if((cur_screen.flag&SF_LEFT_ALIGN_MESSAGE) || cur_screen.message_x-ntextbuf/2<cur_screen.message_l) x=cur_screen.message_l;
+    else x=cur_screen.message_x-ntextbuf/2;
+    for(i=0;i<ntextbuf && x<=cur_screen.message_r && x<80;i++,x++) {
+      y=cur_screen.message_y*80+x;
+      v_char[y]=textbuf[i];
+      v_color[y]=cur_screen.color[y];
+    }
+  }
+}
+
+static char show_text_window(Uint32 xyn) {
+  WindowInfo wind={};
+  FILE*fp;
+  const char*e;
+  int a,b,c;
+  Uint8 scl;
+  char r=0;
+  if(!textfile) return 0;
+  fputc(0,textfile);
+  fclose(textfile);
+  if(!textfile_text) errx(1,"Allocation failed");
+  tnlines=textfile_size/TEXTREC;
+  if(tnlines==1) {
+    memcpy(vtextbuf,textfile_text+1,TEXTREC);
+    nvtextbuf=*vtextbuf;
+    if(vtexttime=(nvtextbuf?config.message_timer:0)) add_message_text();
+  } else if(tnlines>1) {
+    set_timer(0);
+    if((a=xyn>>16) && a<=maxstat && stats[a-1].length && stats[a-1].text[0]=='@') {
+      for(b=0;b<80 && b<stats[a-1].length;b++) {
+        c=stats[a-1].text[b+1];
+        if(c=='=' || c=='\n' || !c) break;
+      }
+      textbuf[ntextbuf=b]=0;
+    } else {
+      ntextbuf=*textbuf=0;
+    }
+    tcursor=0;
+    fp=open_lump_by_number(cur_screen_id=memory[MEM_TEXT_SCREEN],"SCR","r");
+    if(!fp) err(1,"Cannot open %04X.SCR",cur_screen_id);
+    if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
+    fclose(fp);
+    if(fp=open_lump_by_number(cur_screen_id,"WIN","r")) {
+      if(e=load_window(fp,&wind)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
+      fclose(fp);
+    }
+    scl=cur_screen.hard_edge[DIR_S]-cur_screen.hard_edge[DIR_N];
+    if(cur_screen.flag&SF_NO_SCROLL) {
+      a=cur_screen.hard_edge[DIR_N];
+      b=cur_screen.view_y-tnlines/2;
+      tscroll=(b<a?cur_screen.view_y-a:b-a);
+    } else {
+      tscroll=0;
+    }
+    v_status[1]=232;
+    for(;;) {
+      update_text_window(&wind);
+      redisplay();
+      if(!next_event()) errx(0,"No events available.");
+      if(event.type!=SDL_KEYDOWN) continue;
+      switch(event.key.keysym.sym) {
+        case SDLK_ESCAPE: goto close;
+        case SDLK_END: case SDLK_KP1: tcursor=tnlines-1; break;
+        case SDLK_DOWN: case SDLK_KP2: if(tcursor!=tnlines-1) ++tcursor; break;
+        case SDLK_PAGEDOWN: case SDLK_KP3: if(!(cur_screen.flag&SF_NO_SCROLL)) tcursor=(tcursor+scl>=tnlines?tnlines-1:tcursor+scl); break;
+        case SDLK_HOME: case SDLK_KP7: tcursor=0; break;
+        case SDLK_UP: case SDLK_KP8: if(tcursor) --tcursor; break;
+        case SDLK_PAGEUP: case SDLK_KP9: if(!(cur_screen.flag&SF_NO_SCROLL)) tcursor=(tcursor-scl>=0?tcursor-scl:0); break;
+        case SDLK_TAB:
+          for(a=tcursor+1;a<tnlines;a++) if(textfile_text[a*TEXTREC] && textfile_text[a*TEXTREC+1]=='!') break;
+          if(a==tnlines) {
+            for(a=0;a<tcursor;a++) if(textfile_text[a*TEXTREC] && textfile_text[a*TEXTREC+1]=='!') break;
+          }
+          if(a!=tnlines) tcursor=a;
+          break;
+        case SDLK_RETURN: select:
+          a=tcursor*TEXTREC;
+          if(textfile_text[a] && textfile_text[a+1]=='!') {
+            b=2;
+            if(textfile_text[a+b]=='<' && textfile_text[a+b+2]=='>') b=5;
+            for(ntextbuf=0;ntextbuf+b<textfile_text[a] && textfile_text[b+ntextbuf]!=';';ntextbuf++);
+            memcpy(textbuf,textfile_text+a+b,ntextbuf);
+            r=1;
+          } else if(!config.return_cancels) {
+            break;
+          }
+          goto close;
+        case SDLK_F11:
+          lpt_document() {
+            if(ntextbuf) lpt_title(textbuf,ntextbuf);
+            for(a=0;a<tnlines;a++) lpt_script(textfile_text+a*TEXTREC+1,textfile_text[a*TEXTREC]);
+          }
+          break;
+        default:
+          c=event.key.keysym.unicode;
+          if(c>32 && c<127) {
+            for(a=0;a<tnlines;a++) if(textfile_text[b=a*TEXTREC]>4 && textfile_text[b+1]=='!' && textfile_text[b+2]=='<' && textfile_text[b+4]=='>') {
+              if(c==textfile_text[b+3] || (c>='a' && c<='z' && c+'A'-'a'==textfile_text[b+3]) || (c>='A' && c<='Z' && c+'a'-'A'==textfile_text[b+3])) {
+                tcursor=a;
+                goto select;
+              }
+            }
+          }
+          break;
+      }
+      if(!(cur_screen.flag&SF_NO_SCROLL)) tscroll=tcursor;
+    }
+    close:
+    v_status[1]=32;
+    set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:playstate==PLAYSTATE_NORMAL?config.speed:0);
+    fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
+    if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
+    fclose(fp);
+  }
+  free(textfile_text);
+  return r;
+}
+
+static char script_go(Uint16 m,Uint16 n,Stat*s,StatXY*xy,Uint8 dir) {
+  switch(dir) {
+    case 'i': case 'I': return 1;
+    case 'e': case 'E': dir=DIR_E; break;
+    case 'w': case 'W': dir=DIR_W; break;
+    case 'n': case 'N': dir=DIR_N; break;
+    case 's': case 'S': dir=DIR_S; break;
+    default: script_error(m,xy,"Improper direction"); return 2;
+  }
+  general_move(0,(m<<16)+n,xy->x,xy->y,0x0814,0,dir,dir);
+  return condflag;
+}
+
+static void run_script(Uint16 m,Uint16 n,Sint32 u) {
+  // m=stat number, n=XY index, u=(<0 if imply #, =0 if restart, >0 if normal)
+  char buf[128];
+  Stat*s=stats+m-1;
+  StatXY*xy=s->xy+n;
+  Uint16 ip=xy->instptr;
+  Uint8 c,v;
+  Uint8 esc=0;
+  if(!u) xy->instptr=ip=0;
+  if(!s->text) return;
+  if(ip>=s->length) {
+    xy->instptr=0xFFFF;
+    return;
+  }
+  begin:
+  switch(c=s->text[ip]) {
+    case 0: goto stop;
+    case '\r': case '\n': ++ip; goto begin;
+    case '#':
+      ip++; // fall through
+    command:
+      if(s->text[ip]=='=') {
+        ip++;
+        if(s->text[ip]==' ') ip++;
+        send:
+        *buf='*';
+        for(v=1;v<126 && ip<s->length && s->text[ip]>=0x20;v++) {
+          buf[v]=s->text[ip++];
+          if(buf[v]==':') *buf=0;
+        }
+        buf[v]=0;
+        if(s->text[xy->instptr=ip]) ip++;
+        send_message((m<<16)+n,buf+(*buf?0:1),0);
+        ip=xy->instptr;
+      } else {
+        n=0;
+        while((v<64) && (c=s->text[ip++])) {
+          if((c>='A' && c<='Z') || (c>='0' && c<='9')) buf[v++]=c;
+          else if(c>='a' && c<='z') buf[v++]=c+'A'-'a';
+          else break;
+        }
+        buf[v]=0;
+        
+      }
+      break;
+    case '/': case '?':
+      if(!s->text[ip+1]) goto stop;
+      if((v=script_go(m,n,s,xy,s->text[ip+1])) || c=='?') ip+=2;
+      if(v==2) ip=65535;
+      goto stop;
+    case '\'': case ':': case '@':
+      while(s->text[ip] && s->text[ip]!='\n') ip++;
+      if(s->text[ip]) ip++;
+      break;
+    default:
+      if(u<0 && c!='!' && c!='$') goto command;
+      if(!textfile) {
+        textfile_text=0;
+        textfile_size=0;
+        textfile=open_memstream(&textfile_text,&textfile_size);
+        if(!textfile) err(1,"Allocation failed");
+        esc=0;
+      }
+      if(esc) {
+        for(v=0;v<80;) {
+          c=buf[v]=s->text[ip];
+          if(c=='\n' || !c) break;
+          ip++;
+          if(c==0x7B) {
+            
+          } else {
+            v++;
+          }
+        }
+      } else {
+        for(v=0;v<80;v++,ip++) {
+          c=buf[v]=s->text[ip];
+          if(c=='\n' || !c) break;
+        }
+      }
+      buf[v]=0;
+      while(s->text[ip] && s->text[ip]!='\n') ip++;
+      fputc(v,textfile);
+      fwrite(buf,1,80,textfile);
+  }
+  u=0;
+  goto begin;
+  stop:
+  xy->instptr=ip;
+  if(textfile) show_text_window((m<<16)+n);
 }
 
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
@@ -1463,7 +1795,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           }
         }
         break;
-      case OP_SEND: if(so>0 && so<=ngtext) send_message(regs[fo],gtext[so]); else if(!so) send_message(regs[fo],textbuf); break;
+      case OP_SEND: if(so>0 && so<=ngtext) send_message(regs[fo],gtext[so],0); else if(!so) send_message(regs[fo],textbuf,0); break;
       case OP_SEX: so=(Sint16)so; goto store;
       case OP_SFX: if(soundon && so && so<=ngtext) audio_set_sfx(so>=0?gtext[so]:textbuf); break;
       case OP_SGN: so=(so<0?-1:so>0?1:0); goto store;

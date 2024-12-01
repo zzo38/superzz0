@@ -1,0 +1,64 @@
+@Window editor
+The window editor is used for editing some details of screens which are
+only used for text windows and item windows. (For screens that are only
+used to display a board, this info is not used.)
+
+Use left/right arrows to move the cursor; hold shift to copy the current
+cell to where the cursor will be moved to as well.
+
+Set the command by using the letter keys. Use numbers 3 and 4 to set the
+colour and parameter. You can also use 1 and 2 to set the colour to use
+the primary or secondary colour of the cell in the screen instead of using
+a fixed colour code.
+
+F1 is used for editing window-specific flags.
+!flag;Window flags
+
+F5 will save the window info, and F6 will delete it (even if it was already
+present, it will be deleted).
+
+Command codes:
+
+þ A = Always use the window character, in a link line, or outside of the
+hard edge of a normal line, or outside of the text of a $ line.
+
+þ C = A link indicator which is only displayed if the cursor is here,
+otherwise it is blank.
+
+þ K = Key code for a link. Uses the parameter as the character code if it
+is a link with no key code.
+
+þ L = A link indicator. Displayed if it is a link line.
+
+þ P = A link indicator which is only displayed if a key code is present.
+A blank space is displayed if it is a link without a key code.
+
+þ S = Surrounds a $ text in a text window, on both sides.
+
+þ T = The text of a link. The parameter character is used if the text of
+the link is shorter than the window. The first character will be displayed
+at the soft edge.
+
+þ X = No effect; always use the default behaviour. Some of the commands are
+only meaningful in some contexts; if used in a context where it is not
+appropriate then it is treated as X.
+
+If the parameter is character code 0 then it will use the default character
+in the screen. Character code 255 also has some special meanings for some
+commands; see the descriptions above.
+
+Meaningful commands by line types in text windows:
+  Normal   - - - - - - - X
+  Center   A - - - - S - X
+  Link     A C K L P - T X
+
+:flag;Flags
+
+"Single ends" is used in text windows and means that the default characters
+will be used only for the lines immediately before the first line and
+immediately after the last line. If not selected, then all of the lines
+outside of the text will show the default characters.
+
+"Zero-based line numbers" will make line number displays zero-based. If not
+selected then they are one-based.
+
