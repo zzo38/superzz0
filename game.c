@@ -1190,7 +1190,7 @@ static void update_text_window(const WindowInfo*wind) {
               case 'T':
                 if(x>=cur_screen.soft_edge[DIR_W] && x<cur_screen.soft_edge[DIR_W]+v-linktext) {
                   if(wind->color[x]!=0x11) v_color[i]=(wind->color[x]==0x22?(col&0xF0)|(cmd&0x0F):wind->color[x]);
-                  v_char[i]=textfile_text[y*TEXTREC+v+x-cur_screen.soft_edge[DIR_W]];
+                  v_char[i]=textfile_text[y*TEXTREC+linktext+1+x-cur_screen.soft_edge[DIR_W]];
                 } else {
                   v_char[i]=wind->parameter[x]?:chr;
                 }
@@ -1198,7 +1198,7 @@ static void update_text_window(const WindowInfo*wind) {
               default:
                 if(x>=cur_screen.soft_edge[DIR_W] && x<=cur_screen.soft_edge[DIR_E] && x<cur_screen.soft_edge[DIR_W]+v-linktext) {
                   v_color[i]=(col&0xF0)|(cmd&0x0F);
-                  v_char[i]=textfile_text[y*TEXTREC+v+x-cur_screen.soft_edge[DIR_W]];
+                  v_char[i]=textfile_text[y*TEXTREC+linktext+1+x-cur_screen.soft_edge[DIR_W]];
                 }
                 break;
             }
@@ -1264,7 +1264,7 @@ static char show_text_window(Uint32 xyn) {
     set_timer(0);
     if((a=xyn>>16) && a<=maxstat && stats[a-1].length && stats[a-1].text[0]=='@') {
       for(b=0;b<80 && b<stats[a-1].length;b++) {
-        c=stats[a-1].text[b+1];
+        textbuf[b]=c=stats[a-1].text[b+1];
         if(c=='=' || c=='\n' || !c) break;
       }
       textbuf[ntextbuf=b]=0;

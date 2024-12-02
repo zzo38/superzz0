@@ -137,7 +137,8 @@ and they will still be displayed. The hard edges are only used to restrict
 the movement of the camera, not where the board is actually displayed.
 
 For text windows, the east/west hard edges are where the text is aligned
-and the north/south hard edges 
+and the north/south hard edges are the extents of the view, and the soft
+edges are used for aligning the text of links.
 
 :colon;Colon commands
 These colon commands can be used for various batch operations.

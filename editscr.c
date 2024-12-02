@@ -86,8 +86,8 @@ static void edit_window(void) {
       v_color[i+5*80]=0x19; v_char[i+5*80]='-';
     }
   }
-  v_char[cur_screen.soft_edge[DIR_W]+6*80]='('; v_char[cur_screen.soft_edge[DIR_E]+6*80]=')';
-  v_char[cur_screen.hard_edge[DIR_W]+6*80]='['; v_char[cur_screen.hard_edge[DIR_E]+6*80]=']';
+  v_char[cur_screen.soft_edge[DIR_W]+7*80]='('; v_char[cur_screen.soft_edge[DIR_E]+7*80]=')';
+  v_char[cur_screen.hard_edge[DIR_W]+7*80]='['; v_char[cur_screen.hard_edge[DIR_E]+7*80]=']';
   draw_text(0,23,"<A-Z> Command  <1> Primary  <2> Secondary  <3> Color  <4> Parameter",7,-1);
   draw_text(0,24,"<F1> Flags   <F5> Save   <F6> Delete",7,-1);
   for(;;) {
@@ -143,8 +143,11 @@ static void edit_window(void) {
   if(fp=open_lump_by_number(scr_id,"WIN","w")) {
     fputc(wind.flag,fp);
     fputc(0,fp);
-    for(xc=i=0;i<80;i++) {
-      if(!i || wind.command[i]!=wind.command[i-1] || wind.parameter[i]!=wind.parameter[i-1] || wind.color[i]!=wind.color[i-1]) {
+    fputc(wind.command[0]|0xE0,fp);
+    fputc(wind.parameter[0],fp);
+    fputc(wind.color[0],fp);
+    for(xc=0,i=1;i<80;i++) {
+      if(wind.command[i]!=wind.command[i-1] || wind.parameter[i]!=wind.parameter[i-1] || wind.color[i]!=wind.color[i-1]) {
         if(xc) fputc(xc,fp);
         xc=0;
         fputc((wind.command[i]&0x1F)+(wind.parameter[i]==wind.parameter[i-1]?0:0x20)+(wind.color[i]==wind.color[i-1]?0:0x40)+0x80,fp);
