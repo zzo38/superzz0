@@ -630,6 +630,20 @@ static Sint32 convxy(Sint32 xy,Sint32 x,Sint32 y) {
   return -1;
 }
 
+static Uint32 statxy_index_at(Sint32 xy,Uint8 lay,const Tile*ti) {
+  Stat*s;
+  Uint32 n;
+  Sint32 x,y;
+  if(xy==-1) return 0;
+  ti+=xy;
+  if(!ti->stat || ti->stat>maxstat) return 0;
+  x=xy%board_info.width;
+  y=xy/board_info.width;
+  s=stats+ti->stat-1;
+  for(n=0;n<s->count;n++) if(s->xy[n].x==x && s->xy[n].y==y && (s->xy[n].layer&3)==lay) return ti->stat+(n<<16);
+  return 0;
+}
+
 static Sint32 scan_board(Sint32 xy,Uint8 k,Sint32 x,Sint32 y) {
   Uint32 z;
   condflag=1;
@@ -1799,6 +1813,18 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_SEX: so=(Sint16)so; goto store;
       case OP_SFX: if(soundon && so && so<=ngtext) audio_set_sfx(so>=0?gtext[so]:textbuf); break;
       case OP_SGN: so=(so<0?-1:so>0?1:0); goto store;
+      case OP_SIM: so=statxy_index_at(convxy(so,x,y),2,b_main); condflag=(so?1:0); goto store;
+      case OP_SIN:
+        if(!(so&0xFFFF) || (so&0xFFFF)>maxstat) {
+          condflag=so=0;
+        } else if(stats[(so&0xFFFF)-1].count>((so>>16)&0xFFFF)+1) {
+          condflag=1;
+          so+=0x10000;
+        } else {
+          condflag=0;
+          so&=0xFFFF;
+        }
+        goto store;
       case OP_SINK:
         t=convxy(so,x,y);
         if(t!=-1 && !b_under[t].stat) {
@@ -1811,6 +1837,8 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           condflag=0;
         }
         break;
+      case OP_SIO: so=statxy_index_at(convxy(so,x,y),3,b_over); condflag=(so?1:0); goto store;
+      case OP_SIU: so=statxy_index_at(convxy(so,x,y),1,b_under); condflag=(so?1:0); goto store;
       case OP_SIXY: if((rs=get_statxy(so)) && (so=convxy(0,rs->x,rs->y)+1)) condflag=1; else condflag=so=0; goto store;
       case OP_SMOV: general_move(0,regs[fo],x,y,(so&0xF8)+0x8804+(so&7)*0x1100,(so&0xFF00)+1,0,0); break;
       case OP_SUB: regs[fo]-=so; break;
