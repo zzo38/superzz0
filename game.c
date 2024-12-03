@@ -2073,6 +2073,22 @@ static void message_scrollback(void) {
   goto redraw;
 }
 
+static void stat_list_callback(Uint16 n,int y,void*uz) {
+  char buf[81];
+  Stat*s;
+  draw_text(1,y,buf,0x0E,snprintf(buf,4,"%3u",n));
+  if(n) {
+    s=stats+n-1;
+    draw_text(5,y,buf,0x07,snprintf(buf,80,"(%05u,%05u,%05u) Count=%05u Speed=%03u",s->misc1,s->misc2,s->misc3,s->count,s->speed));
+  }
+}
+
+static void statxy_list_callback(Uint16 n,int y,void*uz) {
+  StatXY*o=((Stat*)uz)->xy+n;
+  char buf[81];
+  draw_text(1,y,buf,7,snprintf(buf,80,"%5u: X=%05d Y=%05d Layer=$%02X Inst=%05d Delay=%03d",n,o->x,o->y,o->layer,o->instptr,o->delay));
+}
+
 static void debug_menu(void) {
   int i;
   char buf[81];
@@ -2100,21 +2116,66 @@ static void debug_menu(void) {
     }
     win_command('v',"Status variables...") {
       win_form("Status variables") {
+        buf[1]=':'; buf[2]=0;
+        for(i=0;i<16;i++) win_numeric(*buf=i+(i&8?'S'-8:'A'),buf,status_vars[i],0,-1);
         win_blank();
         win_command_esc(0,"Cancel") break;
       }
     }
     win_command('S',"Stats...") {
-      
+      int n;
+      win_form("Stats") {
+        win_list(maxstat+1,0,stat_list_callback,n) {
+          if(n && stats[n-1].count) win_form("Stat XY list") {
+            win_list(stats[n-1].count,stats+n-1,statxy_list_callback,i);
+            win_blank();
+            win_command_esc(0,"Cancel") break;
+          }
+        }
+        win_blank();
+        win_command_esc(0,"Cancel") break;
+      }
     }
     win_command('R',"Registers...") {
       win_form("Registers") {
+        buf[1]=':'; buf[2]=0;
+        for(i=0;i<8;i++) win_numeric(*buf=i+'A',buf,regs[i],0,-1);
+        win_boolean('i',"Condition flag",condflag,1);
         win_blank();
         win_command_esc(0,"Cancel") break;
       }
     }
     win_command('M',"Memory...") {
-      
+      Uint16 a=0;
+      int x,y;
+      memset(v_color,7,80*25);
+      memset(v_char,32,80*25);
+      for(;;) {
+        for(x=0;x<8;x++) v_char[x*5+7]="0123456789ABCDEF"[x];
+        for(y=0;y<16;y++) {
+          draw_text(0,y+1,buf,0x07,snprintf(buf,81,"%04X:",(a+8*y)&0xFFFF));
+          for(x=0;x<8;x++) {
+            draw_text(x*5+6,y+1,buf,0x0F,snprintf(buf,81,"%04X",memory[(a+8*y+x)&0xFFFF]));
+            v_char[y*80+x+x+128]=memory[(a+8*y+x)&0xFFFF];
+            v_char[y*80+x+x+129]=memory[(a+8*y+x)&0xFFFF]>>8;
+          }
+        }
+        v_color[80]=v_color[81]=v_color[82]=0x17;
+        redisplay();
+        if(!next_event()) errx(0,"No events available.");
+        if(event.type==SDL_KEYDOWN) switch(x=event.key.keysym.unicode) {
+          case 13: case 27: goto endmem;
+          case '0' ... '9': a<<=4; a+=(x-'0')<<4; break;
+          case 'A' ... 'F': a<<=4; a+=(x+10-'A')<<4; break;
+          case 'a' ... 'f': a<<=4; a+=(x+10-'a')<<4; break;
+          case '[': a-=16; break;
+          case ']': a+=16; break;
+          case '{': a-=128; break;
+          case '}': a+=128; break;
+        }
+      }
+      endmem:
+      win_refresh();
     }
     win_command('a',"Set random seed...") {
       *buf=0;
@@ -2123,7 +2184,22 @@ static void debug_menu(void) {
       if(!rseed) reseed(0);
     }
     win_command('C',"Call...") {
-      
+      Uint16 a=0;
+      Uint32 w,x,y,z;
+      win_form("Call") {
+        win_numeric('A',"Address: ",a,0,0xFFFF);
+        win_numeric('W',"W register: ",w,0,-1);
+        win_numeric('X',"X register: ",x,0,-1);
+        win_numeric('Y',"Y register: ",y,0,-1);
+        win_numeric('Z',"Z register: ",z,0,-1);
+        win_blank();
+        win_command('E',"Execute") {
+          snprintf(buf,80,"%lld",(long long)run_program(a,w,x,y,z));
+          alert_text(buf);
+          break;
+        }
+        win_command_esc(0,"Cancel") break;
+      }
     }
     win_command('u',"Sound effect...") {
       *buf=0;
