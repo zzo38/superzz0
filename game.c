@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -c -std=gnu99 -Wno-unused-result -fwrapv game.c `sdl-config --cflags`
+gcc -g -O0 -c -std=gnu99 -Wno-unused-result -fwrapv game.c `sdl-config --cflags`
 exit
 #endif
 
@@ -1036,8 +1036,8 @@ static int match_name(const char*v,const char*name) {
   for(;;) {
     a=v[n];
     b=name[n];
-    if(!b || b==':' || b=='=' || b=='\n' || b=='\r') {
-      return (!a || a==':' || a=='=' || a=='\n' || a=='\r');
+    if(!b || b==':' || b=='=' || b==' ' || b=='<' || b=='\n' || b=='\r') {
+      return (!a || a==':' || a=='=' || a==' ' || a=='<' || a=='\n' || a=='\r');
     }
     if(a>='a') a+='A'-'a';
     if(b>='a') b+='A'-'a';
@@ -1272,7 +1272,7 @@ static char show_text_window(Uint32 xyn) {
   tnlines=textfile_size/TEXTREC;
   if(tnlines==1) {
     memcpy(vtextbuf,textfile_text+1,TEXTREC);
-    nvtextbuf=*vtextbuf;
+    nvtextbuf=*textfile_text;
     if(vtexttime=(nvtextbuf?config.message_timer:0)) add_message_text();
   } else if(tnlines>1) {
     set_timer(0);
@@ -1363,6 +1363,9 @@ static char show_text_window(Uint32 xyn) {
     fclose(fp);
   }
   free(textfile_text);
+  textfile=0;
+  textfile_text=0;
+  textfile_size=0;
   return r;
 }
 
@@ -1379,14 +1382,266 @@ static char script_go(Uint16 m,Uint16 n,Stat*s,StatXY*xy,Uint8 dir) {
   return condflag;
 }
 
+static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
+  char buf[10];
+  Uint8 adj=0;
+  int c,n;
+  condflag=0;
+  again:
+  while(s->text[*ip]==' ') ++*ip;
+  for(n=0;;n++) {
+    if(n==9) {
+      script_error(s+1-stats,xy,"Invalid direction");
+      return -1;
+    }
+    c=s->text[n+*ip];
+    if(c>='A' && c<='Z') buf[n++]=c;
+    else if(c>='a' && c<='z') buf[n++]=c+'A'-'a';
+    else break;
+  }
+  *ip+=n;
+  switch(*buf) {
+    case 'C':
+      if(n==2 && buf[1]=='W') {
+        adj+=3;
+        goto again;
+      } else if(n==3 && buf[1]=='C' && buf[2]=='W') {
+        adj++;
+        goto again;
+      }
+      goto bad;
+    case 'E':
+      if(n==1 || (n==4 && !memcmp(buf+1,"AST",3))) return (condflag=1),((adj+0)&3);
+      goto bad;
+    case 'I':
+      if(n==1 || (n==4 && !memcmp(buf+1,"DLE",3))) return (condflag=1),-1;
+      goto bad;
+    case 'N':
+      if(n==1 || (n==5 && !memcmp(buf+1,"ORTH",4))) return (condflag=1),((adj+1)&3);
+      goto bad;
+    case 'O':
+      if(n==3 && buf[1]=='P' && buf[2]=='P') {
+        adj+=2;
+        goto again;
+      }
+      goto bad;
+    case 'R':
+      if(n==6 && !memcmp(buf+1,"ANDOM",5)) {
+        return (condflag=1),dice(4);
+      } else if(n==4 && !memcmp(buf+1,"NDP",3)) {
+        adj+=2*dice(2)+1;
+        goto again;
+      } else if(n==5 && !memcmp(buf+1,"NDNS",4)) {
+        return (condflag=1),((adj+2*dice(2)+1)&3);
+      } else if(n==5 && !memcmp(buf+1,"NDNE",4)) {
+        return (condflag=1),((adj+dice(2))&3);
+      }
+      goto bad;
+    case 'S':
+      if(n==1 || (n==5 && !memcmp(buf+1,"OUTH",4))) return (condflag=1),((adj+3)&3);
+      if(n>3 && buf[1]=='E' && buf[2]=='E' && buf[3]=='K') {
+        if(!xy || !stats->count || (xy->x==stats->xy->x && xy->y==stats->xy->y)) return (condflag=1),-1;
+        if(n==4) {
+          if(stats->xy->x==xy->x || stats->xy->y==xy->y || dice(2)) goto seek1; else goto seek2;
+        } else if(n==6 && buf[4]=='N' && buf[5]=='S') {
+          seek1:
+          if(stats->xy->y<xy->y) adj+=DIR_N; else if(stats->xy->y>xy->y) adj+=DIR_S;
+          else if(stats->xy->x<xy->x) adj+=DIR_W; else if(stats->xy->x>xy->x) adj+=DIR_E;
+          return (condflag=1),(adj&3);
+        } else if(n==6 && buf[4]=='E' && buf[5]=='W') {
+          seek2:
+          if(stats->xy->x<xy->x) adj+=DIR_W; else if(stats->xy->x>xy->x) adj+=DIR_E;
+          else if(stats->xy->y<xy->y) adj+=DIR_N; else if(stats->xy->y>xy->y) adj+=DIR_S;
+          return (condflag=1),(adj&3);
+        }
+      }
+      goto bad;
+    case 'W':
+      if(n==1 || (n==4 && !memcmp(buf+1,"AST",3))) return (condflag=1),((adj+2)&3);
+      goto bad;
+    default: bad: script_error(s+1-stats,xy,"Invalid direction"); return -1;
+  }
+}
+
+static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
+  Sint32 v=0;
+  Sint32 w=0;
+  char op='+';
+  int c,i;
+  while(s->text[*ip]==' ') ++*ip;
+  c=s->text[*ip];
+  condflag=1;
+  if(c=='$') {
+    ++*ip;
+    while(c=s->text[*ip]) {
+      if(c>='0' && c<='9') v=(v<<4)+c-'0';
+      else if(c>='A' && c<='F') v=(v<<4)+c+10-'A';
+      else if(c>='a' && c<='f') v=(v<<4)+c+10-'a';
+      else break;
+      ++*ip;
+    }
+    return v;
+  } else if((c>='0' && c<='9') || c=='-' || c=='+') {
+    if(c=='-') w=-1; else w=1;
+    if(c=='-' || c=='+') ++*ip;
+    while(c=s->text[*ip]) {
+      if(c>='0' && c<='9') v=10*v+c-'0';
+      else break;
+      ++*ip;
+    }
+    return v*w;
+  } else if(c=='(') {
+    operand:
+    w=0;
+    c=s->text[++*ip];
+    if(c=='$') {
+      ++*ip;
+      while(c=s->text[*ip]) {
+        if(c>='0' && c<='9') w=(w<<4)+c-'0';
+        else if(c>='A' && c<='F') w=(w<<4)+c+10-'A';
+        else if(c>='a' && c<='f') w=(w<<4)+c+10-'a';
+        else break;
+        ++*ip;
+      }
+    } else if(c>='0' && c<='9') {
+      decimal:
+      while(c=s->text[*ip]) {
+        if(c>='0' && c<='9') w=10*w+c-'0';
+        else break;
+        ++*ip;
+      }
+    } else if(c=='+') {
+      ++*ip;
+      goto decimal;
+    } else if(c=='-') {
+      ++*ip;
+      while(c=s->text[*ip]) {
+        if(c>='0' && c<='9') w=10*w+'0'-c;
+        else break;
+        ++*ip;
+      }
+    } else if(c=='#') {
+      c=s->text[++*ip];
+      if(c>='A' && c<='H') w=status_vars[c-'A'];
+      else if(c>='a' && c<='h') w=status_vars[c-'a'];
+      else if(c>='S' && c<='Z') w=status_vars[c+8-'S'];
+      else if(c>='s' && c<='z') w=status_vars[c+8-'s'];
+      ++*ip;
+    } else if(c=='X' || c=='x') {
+      c=s->text[++*ip];
+      if(c=='X' || c=='x') ++*ip,w=stats->count?stats->xy->x:0; else w=xy->x;
+    } else if(c=='Y' || c=='y') {
+      c=s->text[++*ip];
+      if(c=='Y' || c=='y') ++*ip,w=stats->count?stats->xy->y:0; else w=xy->y;
+    } else if(c=='M' || c=='m') {
+      c=s->text[++*ip];
+      if(c=='1') w=s->misc1; else if(c=='2') w=s->misc2; else if(c=='3') w=s->misc3; else goto badexp;
+      ++*ip;
+    } else if(c=='P' || c=='p') {
+      ++*ip;
+      if(xy->x<board_info.width && xy->y<board_info.height && (w=xy->layer&3)) w=(w==1?b_under:w==2?b_main:b_over)[xy->y*board_info.width+xy->x].param;
+    } else if(c=='@') {
+      for(c=0;c<maxstat;c++) if(stats[c].text && match_name(stats[c].text,s->text+*ip+1)) {
+        for(i=0;i<stats[c].count;i++) if(stats[c].xy[i].layer&3) w++;
+      }
+      while((c=s->text[*ip]) && c!=':' && c!='(' && c!=')' && c>32 && c<127) ++*ip;
+      if(c!=':') goto badexp;
+      ++*ip;
+    } else {
+      badexp:
+      condflag=0;
+      script_error(s+1-stats,xy,"Improper numeric expression");
+      *ip=65535;
+      return 0;
+    }
+    switch(op) {
+      case '+': v+=w; break;
+      case '-': v-=w; break;
+      case '*': v*=w; break;
+      case '/': if(!w) { script_error(s+1-stats,xy,"Division by zero"); goto badexp; } v/=w; break;
+      case '%': if(w) v%=w; break;
+      case '&': v&=w; break;
+      case '|': v|=w; break;
+      case '^': v^=w; break;
+      case '<': if(w<32) v<<=w; else v=0; break;
+      case '>': if(w<32) v>>=w; else v=(v<0?-1:0); break;
+      case '?': if(v!=w) v+=dice(w+1-v); break;
+      default: goto badexp;
+    }
+    op=s->text[*ip];
+    if(op==')') {
+      ++*ip;
+      return v;
+    }
+    if(op<33) goto badexp;
+    goto operand;
+  } else {
+    return condflag=0;
+  }
+}
+
+static Sint32 parse_letter(Stat*s,StatXY*xy,Uint16*ip) {
+  int c;
+  while(s->text[*ip]==' ') ++*ip;
+  c=s->text[*ip];
+  condflag=1;
+  if(c>='A' && c<='H') {
+    ++*ip;
+    return c-'A';
+  } else if(c>='S' && c<='Z') {
+    ++*ip;
+    return c+8-'S';
+  } else if(c>='a' && c<='h') {
+    ++*ip;
+    return c-'a';
+  } else if(c>='s' && c<='z') {
+    ++*ip;
+    return c+8-'s';
+  }
+  //script_error(s+1-stats,xy,"Improper status variable name");
+  return condflag=0;
+}
+
+static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
+  int c;
+  while(s->text[*ip]==' ') ++*ip;
+  
+}
+
+typedef struct {
+  Uint8 color,kind,param,stat;
+  Uint8 cmask,kmask,pmask,smask;
+  Uint8 stats[256/8];
+  Uint16 label;
+} ScriptKind;
+
+static char parse_kind(Stat*s,StatXY*xy,Uint16*ip,ScriptKind*sk,char cre) {
+  int c;
+  sk->color=sk->kind=sk->param=sk->stat=0;
+  sk->cmask=sk->kmask=sk->pmask=sk->smask=255;
+  for(c=0;c<256/8;c++) sk->stats[c]=255;
+  sk->label=0;
+  
+}
+
+static void change_to_script_kind(Uint32 x,Uint32 y,Uint8 lay,const ScriptKind*sk) {
+  
+}
+
 static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   // m=stat number, n=XY index, u=(<0 if imply #, =0 if restart, >0 if normal)
   char buf[128];
   Stat*s=stats+m-1;
   StatXY*xy=s->xy+n;
+  StatXY*xy2;
   Uint16 ip=xy->instptr;
+  Uint16 bip;
   Uint8 c,v;
   Uint8 esc=0;
+  Uint8 stop=0;
+  Uint16 w;
+  int i,j;
+  ScriptKind sk;
   if(!u) xy->instptr=ip=0;
   if(!s->text) return;
   if(ip>=s->length) {
@@ -1394,9 +1649,9 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
     return;
   }
   begin:
-  switch(c=s->text[ip]) {
+  switch(c=s->text[bip=ip]) {
     case 0: goto stop;
-    case '\r': case '\n': ++ip; goto begin;
+    case '\r': case '\n': ++ip; u=0; goto begin;
     case '#':
       ip++; // fall through
     command:
@@ -1414,14 +1669,198 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
         send_message((m<<16)+n,buf+(*buf?0:1),0);
         ip=xy->instptr;
       } else {
-        n=0;
-        while((v<64) && (c=s->text[ip++])) {
-          if((c>='A' && c<='Z') || (c>='0' && c<='9')) buf[v++]=c;
-          else if(c>='a' && c<='z') buf[v++]=c+'A'-'a';
+        for(v=0;v<64;v++,ip++) {
+          c=s->text[ip];
+          if((c>='A' && c<='Z') || (c>='0' && c<='9')) buf[v]=c;
+          else if(c>='a' && c<='z') buf[v]=c+'A'-'a';
           else break;
         }
         buf[v]=0;
-        
+        if(s->text[ip]==' ') ip++;
+        if(w=memory[MEM_CUSTOM_COMMAND]) {
+          
+        }
+        switch(*buf) {
+          case 'B':
+            if(!strcmp(buf,"BECOME")) {
+              if(!parse_kind(s,xy,&ip,&sk,1)) {script_error(m,xy,"Improper #BECOME"); return;}
+              change_to_script_kind(xy->x,xy->y,xy->layer,&sk);
+              ip=65535; goto stop;
+            } else if(!strcmp(buf,"BIND")) {
+              for(i=0;i<maxstat;i++) if(stats[i].length && match_name(stats[i].text,s->text+ip)) {
+                if(xy->x<board_info.width && xy->y<board_info.height && (j=xy->layer&3)) {
+                  xy2=add_statxy(i);
+                  *xy2=*xy;
+                  xy2->instptr=0;
+                  (j==1?b_under:j==2?b_main:b_over)[xy->y*board_info.width+xy->x].stat=i;
+                  kill_stat(m,n);
+                }
+                ip=65535; goto stop;
+              }
+            } else goto badcommand; break;
+          case 'C':
+            if(!strcmp(buf,"CHANGE")) {
+              
+            } else if(!strcmp(buf,"CLEAR")) {
+              
+            } else if(!strcmp(buf,"CLEARALL")) {
+              memset(namedflag,0,sizeof(namedflag));
+            } else if(!strcmp(buf,"CLONE")) {
+              
+            } else if(!strcmp(buf,"COLOR")) {
+              if(xy->x<board_info.width && xy->y<board_info.height && (j=xy->layer&3)) {
+                (j==1?b_under:j==2?b_main:b_over)[xy->y*board_info.width+xy->x].color=parse_number(s,xy,&ip);
+              }
+            } else if(!strcmp(buf,"CYCLE")) {
+              s->speed=parse_number(s,xy,&ip);
+            } else goto badcommand; break;
+          case 'D':
+            if(!strcmp(buf,"DIE")) {
+              break_tile(0,0,m,n,0);
+              ip=65535; goto stop;
+            } else if(!strcmp(buf,"DIEITEM")) {
+              i=xy->x; j=xy->y;
+              break_tile(0,0,m,n,0);
+              general_move(0,1,0,0,0x0085,0xFFFF,i,j);
+              ip=65535; goto stop;
+            } else goto badcommand; break;
+          case 'E':
+            if(!strcmp(buf,"END")) {
+              ip=65535; stop=1;
+            } else if(!strcmp(buf,"ERASE")) {
+              
+            } else if(!strcmp(buf,"ESCAPE")) {
+              if(!textfile) {
+                textfile_text=0;
+                textfile_size=0;
+                textfile=open_memstream(&textfile_text,&textfile_size);
+                if(!textfile) err(1,"Allocation failed");
+              }
+              c=s->text[ip++];
+              if(c!='o' && c!='O') {script_error(m,xy,"Improper #ESCAPE"); return;}
+              c=s->text[ip++];
+              if(c=='n' || c=='N') esc=1; else if(c=='f' || c=='F') esc=0; else {script_error(m,xy,"Improper #ESCAPE"); return;}
+            } else goto badcommand; break;
+          case 'G':
+            if(!strcmp(buf,"GIVE")) {
+              
+            } else if(!strcmp(buf,"GO")) {
+              i=parse_direction(s,xy,&ip);
+              if(i!=-1 && condflag) {
+                general_move(0,(m<<16)+n,xy->x,xy->y,0x0814,0,i,i);
+                if(!condflag) {
+                  ip=bip;
+                  goto stop;
+                }
+              }
+              stop=1;
+            } else goto badcommand; break;
+          case 'H':
+            if(!strcmp(buf,"HELP")) {
+              
+            } else goto badcommand; break;
+          case 'I':
+            if(!strcmp(buf,"IDLE")) {
+              stop=1;
+            } else if(!strcmp(buf,"IF")) {
+              
+            } else if(!strcmp(buf,"IFNOT")) {
+              
+            } else goto badcommand; break;
+          case 'L':
+            if(!strcmp(buf,"LOCK")) {
+              xy->layer|=0x80;
+            } else goto badcommand; break;
+          case 'M':
+            if(!buf[5] && !memcmp(buf,"MISC",4) && buf[4]>='1' && buf[4]<='3') {
+              
+            } else goto badcommand; break;
+          case 'P':
+            if(!strcmp(buf,"PARAMETER")) {
+              if(xy->x<board_info.width && xy->y<board_info.height && (j=xy->layer&3)) {
+                (j==1?b_under:j==2?b_main:b_over)[xy->y*board_info.width+xy->x].param=parse_number(s,xy,&ip);
+              }
+            } else if(!strcmp(buf,"PLAY")) {
+              if(soundon) audio_set_sfx(s->text+ip);
+            } else if(!strcmp(buf,"PUSH")) {
+              
+            } else if(!strcmp(buf,"PUT")) {
+              
+            } else if(!strcmp(buf,"PUTAT")) {
+              
+            } else if(!strcmp(buf,"PUTBELOW")) {
+              
+            } else goto badcommand; break;
+          case 'R':
+            if(!strcmp(buf,"RESTART")) {
+              ip=0; u=0; goto begin;
+            } else if(!strcmp(buf,"RESTORE")) {
+              
+            } else goto badcommand; break;
+          case 'S':
+            if(!strcmp(buf,"SEND")) {
+              goto send;
+            } else if(!strcmp(buf,"SENDALL")) {
+              
+            } else if(!strcmp(buf,"SENDDIR")) {
+              
+            } else if(!strcmp(buf,"SET")) {
+              
+            } else if(!strcmp(buf,"SHIFT")) {
+              
+            } else if(!strcmp(buf,"SHOW")) {
+              while(ip<s->length && s->text[ip]!='\n') ip++;
+              if(ip<s->length && s->text[ip]=='\n') ip++;
+              xy->instptr=ip;
+              if(textfile) show_text_window((m<<16)+n);
+              ip=xy->instptr;
+              u=0; goto begin;
+            } else goto badcommand; break;
+          case 'T':
+            if(!strcmp(buf,"TAKE")) {
+              
+            } else if(!strcmp(buf,"TELEPORT")) {
+              
+            } else if(!strcmp(buf,"TRY")) {
+              i=parse_direction(s,xy,&ip);
+              if(i!=-1 && condflag) {
+                general_move(0,(m<<16)+n,xy->x,xy->y,0x0814,0,i,i);
+                if(!condflag) {
+                  u=-1; goto begin;
+                }
+                stop=1;
+              }
+            } else goto badcommand; break;
+          case 'U':
+            if(!strcmp(buf,"UNLOCK")) {
+              xy->layer&=0x7F;
+            } else goto badcommand; break;
+          case 'W':
+            if(!strcmp(buf,"WAIT")) {
+              if(w=parse_number(s,xy,&ip)) {
+                xy->delay=w;
+                stop=1;
+              }
+            } else if(!strcmp(buf,"WARP")) {
+              
+            } else if(!strcmp(buf,"WHEN")) {
+              
+            } else if(!strcmp(buf,"WHENNOT")) {
+              
+            } else goto badcommand; break;
+          case 'Z':
+            if(!strcmp(buf,"ZAP")) {
+              
+            } else goto badcommand; break;
+          default: badcommand:
+            script_error(m,xy,"Bad command");
+            xy->instptr=65535;
+            return;
+        }
+        skip:
+        while(ip<s->length && s->text[ip]!='\n') ip++;
+        if(ip<s->length && s->text[ip]=='\n') ip++;
+        if(stop) goto stop;
       }
       break;
     case '/': case '?':
@@ -1434,7 +1873,8 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
       if(s->text[ip]) ip++;
       break;
     default:
-      if(u<0 && c!='!' && c!='$') goto command;
+      if(u<0 && c!='!' && c!='$' && c!='"') goto command;
+      if(u<0 && c=='"') ++ip;
       if(!textfile) {
         textfile_text=0;
         textfile_size=0;
@@ -1448,7 +1888,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
           if(c=='\n' || !c) break;
           ip++;
           if(c==0x7B) {
-            
+            //TODO
           } else {
             v++;
           }

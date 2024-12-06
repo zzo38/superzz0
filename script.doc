@@ -344,7 +344,7 @@ X or Y are the coordinates of this object
 XX or YY are the coordinates of the player
 M1 or M2 or M3 are the misc values of this stat
 P is the parameter of this object
-@name is how many objects (stat XY records) having the specified name
+@name: is how many objects (stat XY records) having the specified name
 
 A number inside or outside of an expression can also be hexadecimal if
 it has $ at first.
