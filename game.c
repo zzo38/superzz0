@@ -1013,8 +1013,8 @@ static int match_label(const char*v,const char*label) {
   for(;;) {
     a=v[n+1];
     b=label[n];
-    if(!b || b=='\n' || b==' ' || b=='\r') {
-      if(!a || a=='\n' || a==' ' || a=='\r' || a==';') {
+    if(!b || b=='\n' || b==' ' || b=='\r' || b==';' || b=='(' || b==')') {
+      if(!a || a=='\n' || a==' ' || a=='\r' || a==';' || a=='(' || a==')') {
         n++;
         while(v[n] && v[n]!='\n') n++;
         if(v[n]=='\n') n++;
@@ -1053,6 +1053,17 @@ static Sint32 find_label(Stat*s,const char*label) {
   while(v) {
     if(n=match_label(v,label)) return (v-(const char*)s->text)+n;
     v=strstr(v,"\n:"),v+=(v?1:0);
+  }
+  return -1;
+}
+
+static Sint32 find_zapped_label(Stat*s,const char*label) {
+  const char*v=(char*)s->text;
+  int n;
+  if(*v!='\'') v=strstr(v,"\n'"),v+=(v?1:0);
+  while(v) {
+    if(n=match_label(v,label)) return (v-(const char*)s->text)+n;
+    v=strstr(v,"\n'"),v+=(v?1:0);
   }
   return -1;
 }
@@ -1598,14 +1609,8 @@ static Sint32 parse_letter(Stat*s,StatXY*xy,Uint16*ip) {
     ++*ip;
     return c+8-'s';
   }
-  //script_error(s+1-stats,xy,"Improper status variable name");
+  script_error(s+1-stats,xy,"Improper #GIVE or #TAKE");
   return condflag=0;
-}
-
-static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
-  int c;
-  while(s->text[*ip]==' ') ++*ip;
-  
 }
 
 typedef struct {
@@ -1616,16 +1621,364 @@ typedef struct {
 } ScriptKind;
 
 static char parse_kind(Stat*s,StatXY*xy,Uint16*ip,ScriptKind*sk,char cre) {
-  int c;
+  Uint16 bip=*ip;
+  char buf[16];
+  int c,n;
   sk->color=sk->kind=sk->param=sk->stat=0;
   sk->cmask=sk->kmask=sk->pmask=sk->smask=255;
   for(c=0;c<256/8;c++) sk->stats[c]=255;
   sk->label=0;
-  
+  if(s->text[*ip]=='<') {
+    c=s->text[++*ip];
+    if(c>='0' && c<='9') sk->color=(c-'0')<<4,sk->cmask&=0x0F;
+    else if(c>='A' && c<='F') sk->color=(c+10-'A')<<4,sk->cmask&=0x0F;
+    else if(c>='a' && c<='f') sk->color=(c+10-'a')<<4,sk->cmask&=0x0F;
+    else if(c!='?') goto bad;
+    c=s->text[++*ip];
+    if(c>='0' && c<='9') sk->color+=(c-'0'),sk->cmask&=0xF0;
+    else if(c>='A' && c<='F') sk->color+=(c+10-'A'),sk->cmask&=0xF0;
+    else if(c>='a' && c<='f') sk->color+=(c+10-'a'),sk->cmask&=0xF0;
+    else if(c!='?') goto bad;
+    if(s->text[++*ip]!='>') goto bad;
+    ++*ip;
+  }
+  if(s->text[*ip]=='@' && cre!=2) {
+    if(!cre) for(c=0;c<256/8;c++) sk->stats[c]=0;
+    for(n=0;n<maxstat;n++) if(stats[n].length && match_name(stats[n].text,s->text+*ip+1)) {
+      if(cre) {
+        Uint16 w;
+        ScriptKind sk1;
+        sk->stat=n+1;
+        sk->smask=0;
+        for(w=1;;w++) {
+          if(w==stats[n].length || stats[n].text[w]=='\n' || stats[n].text[w]=='\r') goto bad;
+          if(stats[n].text[w]=='=') break;
+        }
+        w++;
+        if(!parse_kind(stats+n,xy,&w,&sk1,2)) goto bad;
+        if(sk->cmask==255) sk->cmask=sk1.cmask,sk->color=sk1.color;
+        sk->kmask=sk1.kmask,sk->kind=sk1.kind;
+        sk->pmask=sk1.pmask,sk->param=sk1.param;
+        if(sk->kmask) goto bad;
+        break;
+      } else {
+        sk->stats[(n+1)/8]|=1<<((n+1)&7);
+      }
+    }
+    if(n==maxstat && !cre) goto bad;
+    while((c=s->text[*ip]) && c!=' ' && c!='=' && c!=':' && c!='<' && c!='\n' && c!='\r') ++*ip;
+    if(cre && s->text[*ip]==':') {
+      Sint32 b;
+      if(!stats[n].text) goto bad;
+      b=find_label(stats+n,s->text+*ip+1);
+      if(b!=-1) sk->label=b;
+      while((c=s->text[*ip]) && c!=' ' && c!='=' && c!=':' && c!='<' && c!='(' && c!=')' && c!='\n' && c!='\r') ++*ip;
+    }
+  } else {
+    for(n=0;n<15;n++) {
+      c=s->text[*ip];
+      if(c>='a' && c<='z') c+='A'-'a';
+      if((c<'0' || c>'9') && (c<'A' || c>'Z') && c!='_') break;
+      buf[n]=c;
+      ++*ip;
+    }
+    buf[n]=0;
+    for(n=0;n<256;n++) if(elem_def[n].name[0]) break;
+    if(n==256) goto bad;
+    sk->kind=n;
+    sk->kmask=0;
+  }
+  if(s->text[*ip]=='<') {
+    sk->param=0,sk->pmask=255;
+    c=s->text[++*ip];
+    if(c>='0' && c<='9') sk->param=(c-'0')<<4,sk->pmask&=0x0F;
+    else if(c>='A' && c<='F') sk->param=(c+10-'A')<<4,sk->pmask&=0x0F;
+    else if(c>='a' && c<='f') sk->param=(c+10-'a')<<4,sk->pmask&=0x0F;
+    else if(c!='?') goto bad;
+    c=s->text[++*ip];
+    if(c>='0' && c<='9') sk->param+=(c-'0'),sk->pmask&=0xF0;
+    else if(c>='A' && c<='F') sk->param+=(c+10-'A'),sk->pmask&=0xF0;
+    else if(c>='a' && c<='f') sk->param+=(c+10-'a'),sk->pmask&=0xF0;
+    else if(c!='?') goto bad;
+    if(s->text[++*ip]!='>') goto bad;
+    ++*ip;
+  } else if(cre && !sk->stat) {
+    sk->pmask=sk->param=0;
+  }
+  if(s->text[*ip]=='!' && !cre) {
+    ++*ip;
+    sk->stats[0]&=0xFE;
+  }
+  return 1;
+  bad: *ip=bip; return 0;
 }
 
 static void change_to_script_kind(Uint32 x,Uint32 y,Uint8 lay,const ScriptKind*sk) {
-  
+  Uint8 zc,zp;
+  Uint32 at=y*board_info.width+x;
+  StatXY*o=0;
+  if(x>=board_info.width || y>=board_info.height || sk->kmask) return;
+  if(lay==2) {
+    // Main
+    zc=b_main[at].color;
+    zp=b_main[at].param;
+    break_tile(at,2,0,0,0);
+    if(sk->stat) {
+      o=add_statxy(sk->stat);
+      o->x=x; o->y=y; o->layer=lay; o->instptr=sk->label;
+    }
+    if(A_FLOOR&elem_def[b_main[at].kind].attrib&~elem_def[sk->kind].attrib) {
+      if(b_main[at].stat) if(o=find_statxy(b_main+at)) o->layer--;
+      b_under[at]=b_main[at];
+    } else if(b_main[at].stat) {
+      break_tile(at,2,0,0,1);
+    }
+    b_main[at].color=(zc&sk->cmask)|sk->color;
+    b_main[at].kind=sk->kind;
+    b_main[at].param=(zc&sk->pmask)|sk->param;
+    b_main[at].stat=sk->stat;
+  } else if(lay==1) {
+    // Under
+    zc=b_under[at].color;
+    zp=b_under[at].param;
+    break_tile(at,1,0,0,0);
+    if(sk->stat) {
+      o=add_statxy(sk->stat);
+      o->x=x; o->y=y; o->layer=lay; o->instptr=sk->label;
+    }
+    b_under[at].color=(zc&sk->cmask)|sk->color;
+    b_under[at].kind=sk->kind;
+    b_under[at].param=(zc&sk->pmask)|sk->param;
+    b_under[at].stat=sk->stat;
+  } else if(lay==3) {
+    // Over; #BECOME, #CHANGE, #PUT, etc should not be used
+    break_tile(at,3,0,0,1);
+    b_over[at].stat=0;
+  }
+}
+
+static void put_script_kind(Uint32 x,Uint32 y,const ScriptKind*sk) {
+  Uint8 zc,zp;
+  Uint32 at=y*board_info.width+x;
+  StatXY*o=0;
+  if(x>=board_info.width || y>=board_info.height || sk->kmask) return;
+  zc=b_main[at].color;
+  zp=b_main[at].param;
+  if(A_FLOOR&elem_def[b_main[at].kind].attrib&~elem_def[sk->kind].attrib) {
+    if(b_main[at].stat) if(o=find_statxy(b_main+at)) o->layer--;
+    b_under[at]=b_main[at];
+  } else if(b_main[at].stat) {
+    break_tile(at,2,0,0,1);
+  }
+  b_main[at].color=(zc&sk->cmask)|sk->color;
+  b_main[at].kind=sk->kind;
+  b_main[at].param=(zc&sk->pmask)|sk->param;
+  b_main[at].stat=sk->stat;
+}
+
+static char match_script_kind(Uint32 at,Uint8 lay,const ScriptKind*sk) {
+  // Return 1 if match or 0 if not match
+  const Tile*t;
+  if(lay==2) t=b_main+at; else if(lay==1) t=b_under+at; else return 0;
+  if((t->kind|sk->kmask)!=(sk->kind|sk->kmask)) return 0;
+  if((t->color|sk->cmask)!=(sk->color|sk->cmask)) return 0;
+  if((t->param|sk->pmask)!=(sk->param|sk->pmask)) return 0;
+  if(!(sk->stats[t->stat/8]&(1<<(t->stat&7)))) return 0;
+  return 1;
+}
+
+static Uint32 count_script_kind(Uint8 lay,const ScriptKind*sk) {
+  Uint32 a,n;
+  Uint32 c=board_info.width*board_info.height;
+  for(a=n=0;a<c;a++) n+=match_script_kind(a,lay,sk);
+  return n;
+}
+
+static inline char check_blocked_at(Uint32 x,Uint32 y) {
+  if(x>=board_info.width || y>=board_info.height) return 1;
+  if(elem_def[b_main[y*board_info.width+x].kind].attrib&A_FLOOR) return 0;
+  return 1;
+}
+
+static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
+  ScriptKind sk;
+  Uint16 bip;
+  char buf[128];
+  char inv=0;
+  char v=0;
+  int c,n;
+  Sint32 z0,z1;
+  Uint32 z;
+  while(s->text[*ip]==' ') ++*ip;
+  if(s->text[*ip]=='!') inv=1,++*ip;
+  bip=*ip;
+  for(n=0;n<127;n++) {
+    c=s->text[*ip];
+    if(c<=32) break;
+    if(c>='a' && c<='z') c+='A'-'a';
+    buf[n]=c;
+    ++*ip;
+  }
+  buf[n]=0;
+  if(*buf=='#') {
+    if(!strcmp(buf+1,"ALIGN")) {
+      if(stats->count && (stats->xy->x==xy->x || stats->xy->y==xy->y)) v=1;
+    } else if(!strncmp(buf+1,"ANY:",4)) {
+      n=5; any: *ip=bip+n;
+      if(!parse_kind(s,xy,ip,&sk,0)) goto bad;
+      if(count_script_kind(1,&sk) || count_script_kind(2,&sk)) v=1;
+    } else if(!strncmp(buf+1,"AT:",3)) {
+      *ip=bip+4;
+      z0=parse_number(s,xy,ip);
+      if(!condflag) goto bad;
+      if(s->text[*ip]!=':') goto bad;
+      ++*ip;
+      z1=parse_number(s,xy,ip);
+      if(!condflag) goto bad;
+      if(s->text[*ip]!=':') goto bad;
+      if(!parse_kind(s,xy,ip,&sk,0)) goto bad;
+      if(z0>=0 && z1>=0 && z0<board_info.width && z1<board_info.height) {
+        z=z1*board_info.width+z0;
+        v=(match_script_kind(z,1,&sk) || match_script_kind(z,2,&sk));
+      }
+    } else if(!strncmp(buf+1,"BENEATH:",8)) {
+      n=9; beneath: *ip=bip+n;
+      if(!parse_kind(s,xy,ip,&sk,0)) goto bad;
+      if((xy->layer&2) && xy->x<board_info.width && xy->y<board_info.height) v=match_script_kind(xy->y*board_info.width+xy->x,1,&sk);
+    } else if(!strncmp(buf+1,"BLOCKED:",8)) {
+      *ip=bip+9;
+      c=parse_direction(s,xy,ip);
+      if(!condflag) goto bad;
+      v=check_blocked_at(xy->x+(c==DIR_E)-(c==DIR_W),xy->y+(c==DIR_S)-(c==DIR_N));
+    } else if(!strncmp(buf+1,"BLOCKEDAT:",10)) {
+      *ip=bip+11;
+      z0=parse_number(s,xy,ip);
+      if(!condflag) goto bad;
+      if(s->text[*ip]!=':') goto bad;
+      ++*ip;
+      z1=parse_number(s,xy,ip);
+      if(!condflag) goto bad;
+      v=check_blocked_at(z0,z1);
+    } else if(!strcmp(buf+1,"CONTACT")) {
+      if(xy->x<board_info.width && xy->y<board_info.height) {
+        z=xy->y*board_info.width+xy->x;
+        if(xy->x>0 && b_main[z-1].stat==1) v=1;
+        if(xy->x<board_info.width-1 && b_main[z+1].stat==1) v=1;
+        if(xy->y>0 && b_main[z-board_info.width].stat==1) v=1;
+        if(xy->y<board_info.height-1 && b_main[z+board_info.width].stat==1) v=1;
+        if(b_main[z].stat==1 || b_under[z].stat==1 || b_over[z].stat==1) v=1;
+      }
+    } else if(!strcmp(buf+1,"FULL")) {
+      for(v=1,n=0;n<16 && v;n++) if(!namedflag[n].name[0]) v=0;
+    } else if(!strcmp(buf+1,"LOCKED")) {
+      if(xy->layer&0x80) v=1;
+    } else if(!strncmp(buf+1,"MAIN:",5)) {
+      n=6; main: *ip=bip+n;
+      if(count_script_kind(2,&sk)) v=1;
+    } else if(!strcmp(buf+1,"OVERLAY")) {
+      if(board_info.flag&BF_OVERLAY) v=1;
+    } else if(!strcmp(buf+1,"PERSIST")) {
+      if(board_info.flag&BF_PERSIST) v=1;
+    } else if(!strncmp(buf+1,"PLAYER:",7)) {
+      n=8; player: *ip=bip+n;
+      if(!parse_kind(s,xy,ip,&sk,0)) goto bad;
+      for(z=0;z<stats->count && !v;z++)
+       if((stats->xy[z].layer&3)==2 && stats->xy[z].x<board_info.width && stats->xy[z].y<board_info.height && match_script_kind(stats->xy[z].y*board_info.width+stats->xy[z].x,1,&sk)) v=1;
+    } else if(!strcmp(buf+1,"RANDOM")) {
+      v=dice(2);
+    } else if(!strncmp(buf+1,"UNDER:",6)) {
+      n=7; under: *ip=bip+n;
+      if(count_script_kind(1,&sk)) v=1;
+    } else if(!strcmp(buf+1,"USER")) {
+      if(xy->layer&0x40) v=1;
+    } else {
+      bad: script_error(s+1-stats,xy,"Improper condition");
+    }
+  } else if(*buf=='@') {
+    n=1; goto any;
+  } else if(buf[1]=='@') {
+    n=3;
+    if(*buf=='B') goto beneath;
+    if(*buf=='M') goto main;
+    if(*buf=='P') goto player;
+    if(*buf=='U') goto under;
+    goto bad;
+  } else if(*buf>='A' && *buf<='Z' && buf[1]!='@' && !buf[15]) {
+    for(n=0;n<16 && !v;n++) if(!strcmp(namedflag[n].name,buf)) v=1;
+  } else if((*buf>='0' && *buf<='9') || *buf=='$' || *buf=='-' || *buf=='+' || *buf=='(') {
+    *ip=bip;
+    z0=parse_number(s,xy,ip);
+    if(!condflag) goto bad;
+    z=0;
+    if(s->text[*ip]=='<') z|=2,++*ip;
+    if(s->text[*ip]=='>') z|=4,++*ip;
+    if(s->text[*ip]=='=') z|=1,++*ip;
+    if(z==7 || !z) goto bad;
+    z1=parse_number(s,xy,ip);
+    if(!condflag) goto bad;
+    if(z0==z1 && (z&1)) v=1;
+    if(z0<z1 && (z&2)) v=1;
+    if(z0>z1 && (z&4)) v=1;
+  } else {
+    goto bad;
+  }
+  return v^inv;
+}
+
+static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
+  char buf[128]={};
+  int c,n;
+  while(s->text[*ip]==' ') ++*ip;
+  if(s->text[*ip]=='!') v^=1,++*ip;
+  for(n=0;n<127;n++) {
+    c=s->text[*ip];
+    if(c<=32) break;
+    if(c>='a' && c<='z') c+='A'-'a';
+    buf[n]=c;
+    ++*ip;
+  }
+  if(!n) return;
+  buf[n]=0;
+  if(*buf=='#') {
+    if(!strcmp(buf+1,"LOCKED")) {
+      if(v) xy->layer|=0x80; else xy->layer&=0x7F;
+    } else if(!strcmp(buf+1,"OVERLAY")) {
+      if(v) board_info.flag|=BF_OVERLAY; else board_info.flag&=~BF_OVERLAY;
+    } else if(!strcmp(buf+1,"PERSIST")) {
+      if(v) board_info.flag|=BF_PERSIST; else board_info.flag&=~BF_PERSIST;
+    } else if(!strcmp(buf+1,"USER")) {
+      if(v) xy->layer|=0x40; else xy->layer&=0xBF;
+    } else {
+      bad: script_error(s+1-stats,xy,"Improper #SET or #CLEAR");
+    }
+  } else if(*buf>='A' && *buf<='Z' && buf[1]!='@' && !buf[15]) {
+    c=16;
+    for(n=0;n<16;n++) {
+      if(!strcmp(namedflag[n].name,buf)) return;
+      if(c==16 && !namedflag[n].name[0]) c=n;
+    }
+    if(c!=16) memcpy(namedflag[n].name,buf,16);
+  } else {
+    goto bad;
+  }
+}
+
+static void script_do_erase(const ScriptKind*sk) {
+  Uint32 at;
+  Uint32 m=board_info.width*board_info.height;
+  for(at=0;at<m;at++) {
+    if(match_script_kind(at,1,sk)) break_tile(at,1,0,0,0);
+    if(match_script_kind(at,2,sk)) break_tile(at,2,0,0,0);
+  }
+}
+
+static void script_do_change(const ScriptKind*sk,const ScriptKind*sk1) {
+  Uint32 at;
+  Uint32 m=board_info.width*board_info.height;
+  for(at=0;at<m;at++) {
+    if(match_script_kind(at,1,sk)) change_to_script_kind(at%board_info.width,at/board_info.width,1,sk1);
+    if(match_script_kind(at,2,sk)) change_to_script_kind(at%board_info.width,at/board_info.width,2,sk1);
+  }
 }
 
 static void run_script(Uint16 m,Uint16 n,Sint32 u) {
@@ -1641,7 +1994,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   Uint8 stop=0;
   Uint16 w;
   int i,j;
-  ScriptKind sk;
+  ScriptKind sk,sk1;
   if(!u) xy->instptr=ip=0;
   if(!s->text) return;
   if(ip>=s->length) {
@@ -1677,12 +2030,27 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
         }
         buf[v]=0;
         if(s->text[ip]==' ') ip++;
-        if(w=memory[MEM_CUSTOM_COMMAND]) {
-          
+        if(w=memory[MEM_CUSTOM_COMMAND]) while(w && w<0xFFFE) {
+          if(memory[w+1]<ngtext || strcmp(buf,gtext[memory[w+1]])) {
+            w=memory[w];
+          } else {
+            xy->instptr=ip;
+            v=run_program(w+2,n,xy->x,xy->y,s->speed);
+            if(v&1) stop=1;
+            if(v&4) xy->instptr=ip=65535;
+            if(v&8) return;
+            if(v&2) {
+              u=-1;
+              ip=xy->instptr;
+              goto begin;
+            }
+            goto skip;
+          }
         }
         switch(*buf) {
           case 'B':
             if(!strcmp(buf,"BECOME")) {
+              become:
               if(!parse_kind(s,xy,&ip,&sk,1)) {script_error(m,xy,"Improper #BECOME"); return;}
               change_to_script_kind(xy->x,xy->y,xy->layer,&sk);
               ip=65535; goto stop;
@@ -1700,9 +2068,10 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else goto badcommand; break;
           case 'C':
             if(!strcmp(buf,"CHANGE")) {
-              
+              if(!parse_kind(s,xy,&ip,&sk,0) || !parse_kind(s,xy,&ip,&sk1,1)) {script_error(m,xy,"Improper #CHANGE"); return;}
+              script_do_change(&sk,&sk1);
             } else if(!strcmp(buf,"CLEAR")) {
-              
+              script_set_flag(s,xy,&ip,0);
             } else if(!strcmp(buf,"CLEARALL")) {
               memset(namedflag,0,sizeof(namedflag));
             } else if(!strcmp(buf,"CLONE")) {
@@ -1718,17 +2087,13 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             if(!strcmp(buf,"DIE")) {
               break_tile(0,0,m,n,0);
               ip=65535; goto stop;
-            } else if(!strcmp(buf,"DIEITEM")) {
-              i=xy->x; j=xy->y;
-              break_tile(0,0,m,n,0);
-              general_move(0,1,0,0,0x0085,0xFFFF,i,j);
-              ip=65535; goto stop;
             } else goto badcommand; break;
           case 'E':
             if(!strcmp(buf,"END")) {
               ip=65535; stop=1;
             } else if(!strcmp(buf,"ERASE")) {
-              
+              if(!parse_kind(s,xy,&ip,&sk,0)) {script_error(m,xy,"Improper #ERASE"); return;}
+              script_do_erase(&sk);
             } else if(!strcmp(buf,"ESCAPE")) {
               if(!textfile) {
                 textfile_text=0;
@@ -1743,7 +2108,11 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else goto badcommand; break;
           case 'G':
             if(!strcmp(buf,"GIVE")) {
-              
+              i=parse_letter(s,xy,&ip);
+              if(condflag) {
+                u=parse_number(s,xy,&ip);
+                if(0<=(Sint32)(status_vars[i]+u)) status_vars[i]+=u;
+              }
             } else if(!strcmp(buf,"GO")) {
               i=parse_direction(s,xy,&ip);
               if(i!=-1 && condflag) {
@@ -1763,9 +2132,9 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             if(!strcmp(buf,"IDLE")) {
               stop=1;
             } else if(!strcmp(buf,"IF")) {
-              
-            } else if(!strcmp(buf,"IFNOT")) {
-              
+              if(parse_condition(s,xy,&ip)) {
+                u=-1; goto begin;
+              }
             } else goto badcommand; break;
           case 'L':
             if(!strcmp(buf,"LOCK")) {
@@ -1773,7 +2142,10 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else goto badcommand; break;
           case 'M':
             if(!buf[5] && !memcmp(buf,"MISC",4) && buf[4]>='1' && buf[4]<='3') {
-              
+              w=parse_number(s,xy,&ip);
+              if(buf[4]=='1') s->misc1=w;
+              if(buf[4]=='2') s->misc2=w;
+              if(buf[4]=='3') s->misc3=w;
             } else goto badcommand; break;
           case 'P':
             if(!strcmp(buf,"PARAMETER")) {
@@ -1782,32 +2154,44 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               }
             } else if(!strcmp(buf,"PLAY")) {
               if(soundon) audio_set_sfx(s->text+ip);
-            } else if(!strcmp(buf,"PUSH")) {
-              
             } else if(!strcmp(buf,"PUT")) {
-              
+              i=parse_direction(s,xy,&ip);
+              if(condflag) {
+                if(i==-1) goto become;
+                if(parse_kind(s,xy,&ip,&sk,1)) put_script_kind(xy->x+(i==DIR_E)-(i==DIR_W),xy->y+(i==DIR_S)-(i==DIR_N),&sk);
+              }
             } else if(!strcmp(buf,"PUTAT")) {
-              
+              i=parse_number(s,xy,&ip);
+              j=parse_number(s,xy,&ip);
+              if(parse_kind(s,xy,&ip,&sk,1)) put_script_kind(i,j,&sk);
             } else if(!strcmp(buf,"PUTBELOW")) {
-              
+              if(xy->layer&2) {
+                if(!parse_kind(s,xy,&ip,&sk,1)) {script_error(m,xy,"Improper #PUTBELOW"); return;}
+                change_to_script_kind(xy->x,xy->y,1,&sk);
+              }
             } else goto badcommand; break;
           case 'R':
             if(!strcmp(buf,"RESTART")) {
               ip=0; u=0; goto begin;
             } else if(!strcmp(buf,"RESTORE")) {
-              
+              while(s->text[ip]==' ') ip++;
+              while((u=find_zapped_label(s,s->text+ip))!=-1) s->text[u]=':';
             } else goto badcommand; break;
           case 'S':
             if(!strcmp(buf,"SEND")) {
               goto send;
             } else if(!strcmp(buf,"SENDALL")) {
-              
+              for(v=0;v<126 && ip<s->length && s->text[ip]>=0x20;v++) {
+                buf[v]=s->text[ip++];
+              }
+              buf[v]=0;
+              if(s->text[xy->instptr=ip]) ip++;
+              send_message(0,buf,0);
+              ip=xy->instptr;
             } else if(!strcmp(buf,"SENDDIR")) {
               
             } else if(!strcmp(buf,"SET")) {
-              
-            } else if(!strcmp(buf,"SHIFT")) {
-              
+              script_set_flag(s,xy,&ip,1);
             } else if(!strcmp(buf,"SHOW")) {
               while(ip<s->length && s->text[ip]!='\n') ip++;
               if(ip<s->length && s->text[ip]=='\n') ip++;
@@ -1818,9 +2202,15 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else goto badcommand; break;
           case 'T':
             if(!strcmp(buf,"TAKE")) {
-              
-            } else if(!strcmp(buf,"TELEPORT")) {
-              
+              i=parse_letter(s,xy,&ip);
+              if(condflag) {
+                u=parse_number(s,xy,&ip);
+                if(status_vars[i]>=u) {
+                  status_vars[i]-=u;
+                } else {
+                  u=-1; goto begin;
+                }
+              }
             } else if(!strcmp(buf,"TRY")) {
               i=parse_direction(s,xy,&ip);
               if(i!=-1 && condflag) {
@@ -1835,22 +2225,10 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             if(!strcmp(buf,"UNLOCK")) {
               xy->layer&=0x7F;
             } else goto badcommand; break;
-          case 'W':
-            if(!strcmp(buf,"WAIT")) {
-              if(w=parse_number(s,xy,&ip)) {
-                xy->delay=w;
-                stop=1;
-              }
-            } else if(!strcmp(buf,"WARP")) {
-              
-            } else if(!strcmp(buf,"WHEN")) {
-              
-            } else if(!strcmp(buf,"WHENNOT")) {
-              
-            } else goto badcommand; break;
           case 'Z':
             if(!strcmp(buf,"ZAP")) {
-              
+              while(s->text[ip]==' ') ip++;
+              while((u=find_label(s,s->text+ip))!=-1) s->text[u]='\'';
             } else goto badcommand; break;
           default: badcommand:
             script_error(m,xy,"Bad command");

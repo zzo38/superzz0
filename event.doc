@@ -65,8 +65,11 @@ X = X coordinate
 Y = Y coordinate
 Z = Stat's speed
 
-The return value is the new delay value; if it is zero then it will
-continue executing the script.
+The return value uses the bits:
+  bit0 = Script execution will not continue until next turn.
+  bit1 = Do not skip the rest of the current line.
+  bit2 = Stop script execution.
+  bit3 = Unconditionally stop immediately.
 
 
 === Element events ===

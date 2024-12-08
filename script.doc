@@ -89,10 +89,6 @@ are not allowed in this case.
 #DIE
   Delete this object and stop executing.
 
-#DIEITEM
-  Delete this object and stop executing, but also move the tile denoted by
-  the first XY record of stat 1 to this object's location.
-
 #END
   Stop executing this object.
 
@@ -126,9 +122,6 @@ are not allowed in this case.
 #IF condition command
   Execute the command only if the condition is true.
 
-#IFNOT condition command
-  Execute the command only if the condition is false.
-
 #LOCK
   Lock the program from receiving messages.
 
@@ -146,10 +139,6 @@ are not allowed in this case.
 
 #PLAY sfx_music
   See the below section about sound effects.
-
-#PUSH dir
-  If the tile in the specified direction is pushable in that direction,
-  then it will be moved out of the way if possible.
 
 #PUT dir kind
   Like #PUTAT but the adjacent cell in the specified direction.
@@ -184,9 +173,6 @@ are not allowed in this case.
 #SET flag
   Set a flag.
 
-#SHIFT dir kind
-  Move everything of the specified kind in the specified direction.
-
 #SHOW
   Show the text now, instead of waiting to accumulate further text.
 
@@ -195,24 +181,9 @@ are not allowed in this case.
   specified number. If the current value is less than the number, then it
   will leave it unchanged and will instead execute the specified command.
 
-#TELEPORT number number
-  Move this object to the specified coordinates (ends the turn).
-
 #TRY dir [command]
   Try to move in the direction; if it cannot go, then it will execute the
   specified command (or do nothing).
-
-#WAIT number
-  Wait for the specified number of turns (ignoring this stat's speed).
-
-#WARP number
-  Set a warp to the specified board (ends the turn).
-
-#WHEN condition
-  Wait until the specified condition is true.
-
-#WHENNOT condition
-  Wait until the specified condition is not true.
 
 #UNLOCK
   Unlock the program to allow it to receive messages.
@@ -232,7 +203,7 @@ allowed for #IF.
 name
   Any name not with a punctuation sign represents a global named flag. The
   name can be up to fifteen characters long, and up to sixteen such flags
-  can be set at once.
+  can be set at once. It must start with a letter.
 
 #ALIGN
   True if this object is aligned with the player, either horizontally or
