@@ -3,6 +3,7 @@ gcc -g -O0 -o ~/bin/superzz0 -Wno-unused-result main.c audio.o display.o edit.o 
 exit
 #endif
 
+#define USING_RW_DATA
 #include "common.h"
 
 Config config={
@@ -147,6 +148,15 @@ void run_test_game(int b) {
   // This sequence of writes must match the sequence of reads below.
     fwrite(&b,1,sizeof(b),fp);
     fwrite(&config,1,sizeof(config),fp);
+#define B(n,t,d)
+#define F(n,t,d)
+#define I(n,t,d)
+#define S(n,t,d) if(config.n) { write32(fp,strlen(config.n)); fwrite(config.n,1,strlen(config.n),fp); }
+#include "config.inc"
+#undef B
+#undef F
+#undef I
+#undef S
   pclose(fp);
   unlink(".superzz0_testgame");
   *v_status=r;
@@ -187,6 +197,15 @@ int main(int argc,char**argv) {
   if(o&0x80) {
     fread(&b,1,sizeof(b),stdin);
     fread(&config,1,sizeof(config),stdin);
+#define B(n,t,d)
+#define F(n,t,d)
+#define I(n,t,d)
+#define S(n,t,d) if(config.n) { char*s; i=read32(stdin); config.n=s=malloc(i+1); if(!s) err(1,"Allocation failed"); fread(s,1,i,stdin); s[i]=0; }
+#include "config.inc"
+#undef B
+#undef F
+#undef I
+#undef S
   }
   if(open_world(argv[optind])) err(1,"Error opening world");
   if(editor && o) switch(o&0x7F) {
