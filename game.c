@@ -1287,7 +1287,7 @@ static char show_text_window(Uint32 xyn) {
     if(vtexttime=(nvtextbuf?config.message_timer:0)) add_message_text();
   } else if(tnlines>1) {
     set_timer(0);
-    if((a=xyn>>16) && a<=maxstat && stats[a-1].length && stats[a-1].text[0]=='@') {
+    if((a=xyn&0xFFFF) && a<=maxstat && stats[a-1].length && stats[a-1].text[0]=='@') {
       for(b=0;b<80 && b<stats[a-1].length;b++) {
         textbuf[b]=c=stats[a-1].text[b+1];
         if(c=='=' || c=='\n' || !c) break;
@@ -1389,7 +1389,7 @@ static char script_go(Uint16 m,Uint16 n,Stat*s,StatXY*xy,Uint8 dir) {
     case 's': case 'S': dir=DIR_S; break;
     default: script_error(m,xy,"Improper direction"); return 2;
   }
-  general_move(0,(m<<16)+n,xy->x,xy->y,0x0814,0,dir,dir);
+  general_move(0,(n<<16)+m,xy->x,xy->y,0x0814,0,dir,dir);
   return condflag;
 }
 
@@ -2019,7 +2019,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
         }
         buf[v]=0;
         if(s->text[xy->instptr=ip]) ip++;
-        send_message((m<<16)+n,buf+(*buf?0:1),0);
+        send_message((n<<16)+m,buf+(*buf?0:1),0);
         ip=xy->instptr;
       } else {
         for(v=0;v<64;v++,ip++) {
@@ -2116,7 +2116,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else if(!strcmp(buf,"GO")) {
               i=parse_direction(s,xy,&ip);
               if(i!=-1 && condflag) {
-                general_move(0,(m<<16)+n,xy->x,xy->y,0x0814,0,i,i);
+                general_move(0,(n<<16)+m,xy->x,xy->y,0x0814,0,i,i);
                 if(!condflag) {
                   ip=bip;
                   goto stop;
@@ -2196,7 +2196,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               while(ip<s->length && s->text[ip]!='\n') ip++;
               if(ip<s->length && s->text[ip]=='\n') ip++;
               xy->instptr=ip;
-              if(textfile) show_text_window((m<<16)+n);
+              if(textfile) show_text_window((n<<16)+m);
               ip=xy->instptr;
               u=0; goto begin;
             } else goto badcommand; break;
@@ -2214,7 +2214,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else if(!strcmp(buf,"TRY")) {
               i=parse_direction(s,xy,&ip);
               if(i!=-1 && condflag) {
-                general_move(0,(m<<16)+n,xy->x,xy->y,0x0814,0,i,i);
+                general_move(0,(n<<16)+m,xy->x,xy->y,0x0814,0,i,i);
                 if(!condflag) {
                   u=-1; goto begin;
                 }
@@ -2286,7 +2286,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   goto begin;
   stop:
   xy->instptr=ip;
-  if(textfile) show_text_window((m<<16)+n);
+  if(textfile) show_text_window((n<<16)+m);
 }
 
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
