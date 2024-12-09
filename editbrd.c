@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -c -Wno-unused-result -std=gnu99 editbrd.c `sdl-config --cflags`
+gcc -g -O0 -c -Wno-unused-result -std=gnu99 editbrd.c `sdl-config --cflags`
 exit
 #endif
 
@@ -1746,6 +1746,7 @@ Uint16 edit_board(Uint16 id) {
         case -SDLK_r: resize_board(); break;
         case -SDLK_t:
           if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
+          esave();
           run_test_game(brd_id);
           break;
         case ' ': set_mark(xcur,ycur,1); break;
