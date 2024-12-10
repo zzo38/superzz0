@@ -1400,7 +1400,7 @@ static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
   condflag=0;
   again:
   while(s->text[*ip]==' ') ++*ip;
-  for(n=0;;n++) {
+  for(n=0;;) {
     if(n==9) {
       script_error(s+1-stats,xy,"Invalid direction");
       return -1;
