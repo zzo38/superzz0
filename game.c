@@ -1106,6 +1106,53 @@ static void add_message_text(void) {
   if(++nscrback==config.message_scrollback) nscrback=0;
 }
 
+static char load_help_file(const Uint8*name) {
+  FILE*fp;
+  char buf[82];
+  int i,c;
+  free(textfile_text);
+  textfile=0;
+  textfile_text=0;
+  textfile_size=0;
+  for(i=0;i<8;i++) {
+    if(name[i]=='.' || name[i]==';' || name[i]<39) break;
+    buf[i]=name[i];
+  }
+  buf[i]='.'; buf[i+1]='H'; buf[i+2]='L'; buf[i+3]='P'; buf[i+4]=0;
+  fp=open_lump(buf,"r");
+  if(!fp) return 0;
+  textfile=open_memstream(&textfile_text,&textfile_size);
+  if(!textfile) err(1,"Cannot open memory stream for text file");
+  c=fgetc(fp);
+  if(c=='@') {
+    for(i=0;i<79;i++) {
+      c=fgetc(fp);
+      if(c=='\n' || c==EOF) break;
+      textbuf[i]=c;
+    }
+    textbuf[ntextbuf=i]=0;
+  } else {
+    ungetc(c,fp);
+  }
+  for(i=0;;) {
+    c=fgetc(fp);
+    if(c=='\n' || (c==EOF && i)) {
+      buf[i]=0;
+      fputc(i,textfile);
+      fwrite(buf,1,80,textfile);
+      i=0;
+    }
+    if(c==EOF) break;
+    if(c!='\n' && i<79) buf[i++]=c;
+  }
+  fclose(fp);
+  fputc(0,textfile);
+  fclose(textfile);
+  if(!textfile_text) errx(1,"Allocation failed");
+  tnlines=textfile_size/TEXTREC;
+  return 1;
+}
+
 static void update_text_window(const WindowInfo*wind) {
   int i,j;
   Uint8 top=cur_screen.hard_edge[DIR_N];
@@ -1276,6 +1323,7 @@ static char show_text_window(Uint32 xyn) {
   int a,b,c;
   Uint8 scl;
   char r=0;
+  char help=0;
   if(!textfile) return 0;
   fputc(0,textfile);
   fclose(textfile);
@@ -1314,6 +1362,7 @@ static char show_text_window(Uint32 xyn) {
       tscroll=0;
     }
     v_status[1]=232;
+    open:
     for(;;) {
       update_text_window(&wind);
       redisplay();
@@ -1339,8 +1388,18 @@ static char show_text_window(Uint32 xyn) {
           if(textfile_text[a] && textfile_text[a+1]=='!') {
             b=2;
             if(textfile_text[a+b]=='<' && textfile_text[a+b+2]=='>') b=5;
-            for(ntextbuf=0;ntextbuf+b<textfile_text[a] && textfile_text[b+ntextbuf]!=';';ntextbuf++);
+            for(ntextbuf=0;ntextbuf+b<textfile_text[a] && textfile_text[a+b+ntextbuf]!=';' && ntextbuf<80;ntextbuf++);
             memcpy(textbuf,textfile_text+a+b,ntextbuf);
+            textbuf[ntextbuf]=0;
+            if(help) {
+              for(tcursor=0;tcursor<tnlines;tcursor++) {
+                a=tcursor*TEXTREC;
+                if(textfile_text[a]>2 && textfile_text[a+1]==':' && match_label(textfile_text+a+1,textbuf)) {
+                  if(!(cur_screen.flag&SF_NO_SCROLL)) tscroll=tcursor;
+                  goto open;
+                }
+              }
+            }
             r=1;
           } else if(!config.return_cancels) {
             break;
@@ -1367,6 +1426,15 @@ static char show_text_window(Uint32 xyn) {
       if(!(cur_screen.flag&SF_NO_SCROLL)) tscroll=tcursor;
     }
     close:
+    if(r && ntextbuf && *textbuf=='-') {
+      if(load_help_file(textbuf+1)) {
+        tcursor=0;
+        if(!(cur_screen.flag&SF_NO_SCROLL)) tscroll=0;
+        help=1;
+        r=0;
+        goto open;
+      }
+    }
     v_status[1]=32;
     set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:playstate==PLAYSTATE_NORMAL?config.speed:0);
     fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");

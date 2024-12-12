@@ -47,6 +47,16 @@ editor_scroll_y
   Amount by which to scroll the board editor window if the cursor is moved
   out of the range of the screen.
 
+extra_lump_file
+  See extra_lump_name.
+
+extra_lump_name
+  If defined as a lump name (which must be in all uppercase), and the lump
+  is not found within the world file, then it will read it from the file
+  named by the extra_lump_file option instead. This is mainly only useful
+  for testing Super ZZ Zero itself, although there is the possibility that
+  other uses for this may also be found.
+
 full_screen
   Set to 1 for full screen or 0 (default) for windowed. (If no windowing
   system is present, then it would be ignored.)

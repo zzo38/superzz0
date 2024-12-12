@@ -131,7 +131,7 @@ layer field of the corresponding stat XY record is updated.
 A help file.
 
 This has the format of the script file but the set of commands is limited:
-  @ : ' $ ! !- #END #ESCAPE #IF
+  @ : $ ! !-
 (normal text is also allowed)
 
 Any ! command can have, if not a label name in this help file and not the
@@ -139,6 +139,9 @@ name of another help file, a command number which is the return value. This
 may be either decimal, or hexadecimal with $ at front.
 
 Line breaks are LF only. The text is not compressed.
+
+(Support for # commands in help file is not currently implemented; if it
+is implemented in future, only a few commands are likely to work.)
 
 
 === *.SCR ===
@@ -678,7 +681,7 @@ used in the editor.)
 
 === START ===
 
-This lump is mandatory.
+This lump is mandatory in world files.
 
 It contains:
 

@@ -135,7 +135,10 @@ FILE*open_lump(const char*name,const char*mode) {
   obj=bsearch(&key,lumps,nlumps,sizeof(Lump),compare_lump_name);
   if(!obj) {
     notfound:
-    if(*mode=='r') return 0;
+    if(*mode=='r') {
+      if(!mode[1] && config.extra_lump_name && !strcmp(config.extra_lump_name,key.name)) return fopen(config.extra_lump_file,"r");
+      return 0;
+    }
     lumps=realloc(lumps,(nlumps+1)*sizeof(Lump));
     if(!lumps) err(1,"Allocation failed");
     lumps[nlumps]=key;
