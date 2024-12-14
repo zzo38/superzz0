@@ -6,8 +6,8 @@ editbrd.c common.h config.inc -> editbrd.o : bash editbrd.c
 editscr.c common.h config.inc -> editscr.o : bash editscr.c
 edittext.c common.h config.inc -> edittext.o : bash edittext.c
 game.c opcodes.h common.h config.inc -> game.o : bash game.c
-lumped.c common.h -> lumped.o : bash lumped.c
-printer.c common.h -> printer.o : bash printer.c
-window.c common.h -> window.o : bash window.c
+lumped.c common.h config.inc -> lumped.o : bash lumped.c
+printer.c common.h config.inc -> printer.o : bash printer.c
+window.c common.h config.inc -> window.o : bash window.c
 world.c common.h config.inc -> world.o : bash world.c
 opcodes.doc -> opcodes.h : sed -rn 's/^\[(...) (.*)]$/#define OP_\2 0x\1/p' < opcodes.doc > opcodes.h

@@ -39,7 +39,7 @@ t          Text entry
 u          Unmark all
 v          Block mode
 y          Copy tile at cursor (place with p)
-:          Colon commands
+ :         Colon commands
 F1         Menu: Backgrounds, Tiles, Windows
 F2         Menu: Indicators, Bits
 F3         Menu: Numbers (status variables)
