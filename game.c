@@ -1285,9 +1285,23 @@ static void update_text_window(const WindowInfo*wind) {
               break;
             }
             v_char[i]=textfile_text[y*TEXTREC+x+2-j];
+          } else if(j==':' && v>1) {
+            if(linkline!=y) {
+              linkline=y;
+              linktext=0;
+              for(j=1;j<v;j++) if(textfile_text[y*TEXTREC+j+1]==';') {
+                linktext=j+1;
+                break;
+              }
+            }
+            v_color[i]=(col&0xF0)|(cmd&0x0F);
+            x-=cur_screen.hard_edge[DIR_W];
+            if(x<0 || x>=v-linktext) goto outer;
+            v_char[i]=textfile_text[y*TEXTREC+x+1+linktext];
           } else {
             x-=cur_screen.hard_edge[DIR_W];
             if(x<0 || x>=v) {
+              outer:
               if(wind->command[x=i%80]=='A') {
                 v_char[i]=wind->parameter[x]?:chr;
                 if(wind->color[x]!=0x11) v_color[i]=(wind->color[x]==0x22?(col&0xF0)|(cmd&0x0F):wind->color[x]);
@@ -1316,14 +1330,13 @@ static void update_text_window(const WindowInfo*wind) {
   }
 }
 
-static char show_text_window(Uint32 xyn) {
+static char show_text_window(Uint32 xyn,char help) {
   WindowInfo wind={};
   FILE*fp;
   const char*e;
   int a,b,c;
   Uint8 scl;
   char r=0;
-  char help=0;
   if(!textfile) return 0;
   fputc(0,textfile);
   fclose(textfile);
@@ -2264,7 +2277,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               while(ip<s->length && s->text[ip]!='\n') ip++;
               if(ip<s->length && s->text[ip]=='\n') ip++;
               xy->instptr=ip;
-              if(textfile) show_text_window((n<<16)+m);
+              if(textfile) show_text_window((n<<16)+m,0);
               ip=xy->instptr;
               u=0; goto begin;
             } else goto badcommand; break;
@@ -2354,7 +2367,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   goto begin;
   stop:
   xy->instptr=ip;
-  if(textfile) show_text_window((n<<16)+m);
+  if(textfile) show_text_window((n<<16)+m,0);
 }
 
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
