@@ -2866,6 +2866,7 @@ static int system_menu(void) {
   set_timer(0);
   v_status[1]='F';
   redraw0:
+  config.menu_x=x; config.menu_y=y;
   update_screen();
   if(vtexttime) display_message_text();
   draw_border(0x19,x,y,x+40,y+16);
@@ -2880,9 +2881,9 @@ static int system_menu(void) {
   // =PAUSE=   Pause/resume
   // =INS=     Next frame
   // =DEL=     Clear message
-  // (speed)
+  // =S=       Speed: _____
   // =-/+=     Volume: ___
-  // (message-time)
+  // =M=       Msg. time: _____
   // (???)
   // (???)
   // =^v<>=    Menu position
@@ -2905,18 +2906,24 @@ static int system_menu(void) {
   draw_text(x+2,y+8," INS ",0x70,-1); draw_text(x+12,y+8,"Next frame",0x1F,-1);
   draw_text(x+2,y+9," DEL ",0x30,-1); draw_text(x+12,y+9,"Clear message",0x1F,-1);
   draw_text(x+2,y+15," \x18\x19\x1B\x1A ",0x30,-1); draw_text(x+12,y+15,"Menu position",0x1F,-1);
+  draw_text(x+2,y+10,"  S  ",0x70,-1); draw_text(x+12,y+10,"Speed:",0x1F,-1);
+  if(playstate==PLAYSTATE_PAUSED) draw_text(x+21,y+10," ----",0x1A,5);
+  else draw_text(x+22,y+10,buf,0x1A,snprintf(buf,16,"%5d",playstate==PLAYSTATE_FAST?config.speed_fast:config.speed));
   if(!(vm&0x800000)) {
     draw_text(x+8,y+2,"Sound:",0x1F,-1);
     draw_text(x+15,y+2,mu?"MUTE":"ON  ",0x1A,-1);
     draw_text(x+2,y+11," -/+ ",0x30,-1); draw_text(x+12,y+11,"Volume:",0x1F,-1);
-    draw_text(x+20,y+11,buf,0x1A,snprintf(buf,16,"%3d",(vol+100)/327));
+    draw_text(x+24,y+11,buf,0x1A,snprintf(buf,16,"%3d",(vol+100)/327));
   }
+  draw_text(x+2,y+12,"  M  ",0x70,-1); draw_text(x+12,y+12,"Msg. time:",0x1F,-1);
+  draw_text(x+22,y+12,buf,0x1A,snprintf(buf,16,"%5d",config.message_timer));
   redisplay();
   do { if(!next_event()) errx(0,"No events available."); } while(event.type!=SDL_KEYDOWN);
   switch(event.key.keysym.sym) {
     case SDLK_ESCAPE: case SDLK_F1: case SDLK_SPACE: case SDLK_RETURN: return 0;
     case SDLK_F2: if(mu<2) mu^=1; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
-    case SDLK_F3: case SDLK_F4: case SDLK_F5: case SDLK_F6: case SDLK_F7: case SDLK_F9: case SDLK_F10: case SDLK_INSERT: return 1;
+    case SDLK_F3: case SDLK_F4: case SDLK_F5: case SDLK_F7: case SDLK_F9: case SDLK_F10: case SDLK_INSERT: return 1;
+    case SDLK_F6: if(config.debug) return 1; break;
     case SDLK_F12: *v_status=playstate=(playstate==PLAYSTATE_NORMAL?PLAYSTATE_FAST:PLAYSTATE_NORMAL); break;
     case SDLK_PAUSE: *v_status=playstate=(playstate==PLAYSTATE_PAUSED?PLAYSTATE_NORMAL:PLAYSTATE_PAUSED); break;
     case SDLK_DELETE: vtexttime=nvtextbuf=*vtextbuf=0; goto redraw0;
@@ -2926,6 +2933,17 @@ static int system_menu(void) {
     case SDLK_RIGHT: case SDLK_KP6: if(x<37) x+=3; goto redraw0;
     case SDLK_KP_MINUS: case SDLK_MINUS: if(vol>327) vol-=327; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
     case SDLK_KP_PLUS: case SDLK_PLUS: case SDLK_EQUALS: if(vol<32400) vol+=327; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
+    case SDLK_m:
+      *buf=0;
+      ask_text("Message time?",buf,5);
+      config.message_timer=((Uint16)strtol(buf,0,10))?:config.message_timer;
+      goto redraw0;
+    case SDLK_s:
+      *buf=0;
+      if(playstate!=PLAYSTATE_PAUSED) ask_text("Speed?",buf,5);
+      if(playstate==PLAYSTATE_FAST && *buf) config.speed_fast=((Uint16)strtol(buf,0,10))?:config.speed_fast;
+      if(playstate==PLAYSTATE_NORMAL && *buf) config.speed=((Uint16)strtol(buf,0,10))?:config.speed;
+      goto redraw0;
   }
   goto redraw1;
 }
