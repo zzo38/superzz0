@@ -1337,9 +1337,11 @@ static char show_text_window(Uint32 xyn,char help) {
   int a,b,c;
   Uint8 scl;
   char r=0;
-  if(!textfile) return 0;
-  fputc(0,textfile);
-  fclose(textfile);
+  if(!help) {
+    if(!textfile) return 0;
+    fputc(0,textfile);
+    fclose(textfile);
+  }
   if(!textfile_text) errx(1,"Allocation failed");
   tnlines=textfile_size/TEXTREC;
   if(tnlines==1) {
@@ -3118,7 +3120,7 @@ int run_game(void) {
   soundon=(audio_get_volume()<0x10000?1:0);
   if(config.message_scrollback && config.message_scrollback<24) config.message_scrollback=24;
   warp_to_board(cur_board_id,1);
-  set_timer(config.speed);
+  if(config.pause) playstate=PLAYSTATE_PAUSED; else set_timer(config.speed);
   gameloop:
   while(a=memory[MEM_WARP_CALL]) {
     memory[MEM_WARP_CALL]=0;

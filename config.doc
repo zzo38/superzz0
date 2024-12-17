@@ -91,6 +91,10 @@ message_timer
 overwrite_stats
   Set to 1 to allow overwriting stats by space or draw mode in the editor.
 
+pause
+  Set to 1 to automatically pause the game when starting; 0 (default) means
+  that the game starts working immediately.
+
 printer_begin
   Optional; specifies a name of a file with commands that will be sent to
   the printer at the beginning of a print job. In continuous mode, this
@@ -146,4 +150,11 @@ text_editor_insert
   Controls the initial insert/overwrite mode in the text editor (not
   meaningful if text_editor_command is set). Set to 1 for insert mode
   or 0 for overwrite mode. This can be toggled by ^V at run time.
+
+time_format
+  The format to use for date/time display, in the same format of the
+  strftime function in C.
+
+time_utc
+  Set to 1 to display date/time as UTC, or 0 (default) for local time.
 
