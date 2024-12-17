@@ -3096,6 +3096,13 @@ static void debug_menu(void) {
       endmem:
       win_refresh();
     }
+    win_command('f',"Named flags...") {
+      win_form("Named flags") {
+        for(i=0;i<16;i++) win_text_restrict(0," ",namedflag[i].name);
+        win_blank();
+        win_command_esc(0,"Cancel") break;
+      }
+    }
     win_command('a',"Set random seed...") {
       *buf=0;
       ask_text("New random seed:",buf,32);
