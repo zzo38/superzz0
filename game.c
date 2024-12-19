@@ -2040,7 +2040,7 @@ static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
       if(!strcmp(namedflag[n].name,buf)) return;
       if(c==16 && !namedflag[n].name[0]) c=n;
     }
-    if(c!=16) memcpy(namedflag[n].name,buf,16);
+    if(c!=16) memcpy(namedflag[c].name,buf,16);
   } else {
     goto bad;
   }
@@ -2085,6 +2085,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
     return;
   }
   begin:
+  if(u<0) while(s->text[ip]==' ') ++ip;
   switch(c=s->text[bip=ip]) {
     case 0: goto stop;
     case '\r': case '\n': ++ip; u=0; goto begin;
