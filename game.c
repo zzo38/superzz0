@@ -2037,10 +2037,13 @@ static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
   } else if(*buf>='A' && *buf<='Z' && buf[1]!='@' && !buf[15]) {
     c=16;
     for(n=0;n<16;n++) {
-      if(!strcmp(namedflag[n].name,buf)) return;
+      if(!strcmp(namedflag[n].name,buf)) {
+        if(!v) memset(namedflag[n].name,0,16);
+        return;
+      }
       if(c==16 && !namedflag[n].name[0]) c=n;
     }
-    if(c!=16) memcpy(namedflag[c].name,buf,16);
+    if(v && c!=16) memcpy(namedflag[c].name,buf,16);
   } else {
     goto bad;
   }
@@ -2280,8 +2283,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               while(ip<s->length && s->text[ip]!='\n') ip++;
               if(ip<s->length && s->text[ip]=='\n') ip++;
               xy->instptr=ip;
-              if(textfile) show_text_window((n<<16)+m,0);
-              ip=xy->instptr;
+              if(textfile && show_text_window((n<<16)+m,0) && (u=find_label(s,textbuf))>=0) ip=u; else ip=xy->instptr;
               u=0; goto begin;
             } else goto badcommand; break;
           case 'T':
@@ -2370,7 +2372,11 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   goto begin;
   stop:
   xy->instptr=ip;
-  if(textfile) show_text_window((n<<16)+m,0);
+  if(textfile && show_text_window((n<<16)+m,0) && (u=find_label(s,textbuf))>=0) {
+    ip=u;
+    u=0;
+    goto begin;
+  }
 }
 
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
