@@ -11,13 +11,15 @@ Uint16 maxscreen;
 
 static void write_start_lump(void) {
   int i;
-  FILE*fp=open_lump("START","r+");
-  if(!fp) fp=open_lump("START","w");
+  Uint16 v=0;
+  FILE*fp=open_lump("START","w");
   if(!fp) errx(1,"Cannot open START lump for writing");
-  write16(fp,SUPER_ZZ_ZERO_VERSION);
+  write16(fp,1);
   write16(fp,cur_board_id);
-  fseek(fp,12,SEEK_SET);
-  for(i=0;i<16;i++) write32(fp,status_vars[i]);
+  for(i=0;i<16;i++) if(!status_vars[i]) v|=1<<i;
+  write32(fp,v);
+  write32(fp,0);
+  for(i=0;i<16;i++) if(status_vars[i]) write32(fp,status_vars[i]);
   fclose(fp);
 }
 
@@ -578,7 +580,18 @@ int run_editor(void) {
       run_test_game(-1);
       win_refresh();
     }
-    win_command('S',"Save") save_world(0);
+    win_command('S',"Save") {
+      FILE*fp=open_lump("!SZ0","w");
+      time_t ti=time(0);
+      if(fp) {
+        fputc(0x01,fp); // (unpublished world file)
+        fputc(42,fp); fputc(SDL_GetTicks(),fp);
+        fputc(ti>>8,fp); fputc(ti>>16,fp); fputc(ti>>0,fp); fputc(ti>>24,fp);
+        fclose(fp);
+      }
+      if(fp=open_lump("CATALOG.DER","w")) fclose(fp);
+      save_world(0);
+    }
     win_command('Q',"Quit") break;
     win_blank();
     win_command(0,"Help (ALT+?)") online_help("edit",0);

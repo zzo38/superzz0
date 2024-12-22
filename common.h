@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 // === Configuration ===
@@ -48,8 +49,6 @@ Sint32 audio_get_volume(void); // volume + (0x000000=on, 0x010000=mute, 0xFF0000
 void audio_set_sfx(const char*m);
 
 // === Miscellaneous ===
-
-#define SUPER_ZZ_ZERO_VERSION 1
 
 #define DIR_E 0
 #define DIR_N 1

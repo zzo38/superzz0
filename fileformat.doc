@@ -1,5 +1,31 @@
 All numbers are small-endian (except lump sizes, which are PDP-endian).
 
+Some lumps use DER format. Except where otherwise specified, object
+identifiers may be absolute or relative, and if they are relative, are
+relative to 2.25.196954517921581521497869385664052876310 (which is the
+base OID for Super ZZ Zero). (Some fields are relative to a different OID;
+these are noted explicitly where they occur.)
+
+
+=== !SZ0 ===
+
+This lump identifies the file as a Super ZZ Zero file.
+
+This lump is always the first lump (due to starting with a exclamation
+mark, since Super ZZ Zero will sort the lumps in order by name), and always
+contains exactly seven bytes of data.
+
+The first byte specifies the kind of file:
+  0 = Save game
+  1 = Unpublished world
+  3 = Published world
+
+The other six bytes are a ID which changes whenever the world file is
+modified (although it is not globally unique, it is unlikely to be the
+same as it was before when modified), in order that the game engine can
+check if a save game file does not match the world file. In a save game
+file, these six bytes match those in the world file.
+
 
 === *.BRD ===
 
@@ -358,6 +384,17 @@ board zero). (Note that it is possible for a board to have a name even
 though there is no such board, or to lack a name even if it exists.)
 
 
+=== CATALOG.DER ===
+
+This lump contains metadata which is not used by Super ZZ Zero itself,
+but may be used by external programs such as catalog services. This lump
+is present if and only if the !SZ0 lump specifies that the file is a
+published world file. If the world file is modified, this lump will
+automatically be deleted and it will be marked as unpublished.
+
+This lump (and the associated "side file") is documented separately.
+
+
 === CURRENT.BRD ===
 
 Same as the *.BRD format; used only in save game files, which contains the
@@ -405,17 +442,22 @@ be AP_PARAM and the minor code will be zero. Otherwise, whichever code is
 not set will be zero (if it is the major code, zero is AP_FIXED).
 
 
-=== FEATURE.OPT ===
+=== GENERAL.DER ===
 
-Same as FEATURE.REQ but it means it uses those features optionally; if the
-feature is not available then it will still be loaded and it will not use
-that feature.
+This lump is optional, and is only needed if any of the features specified
+by this lump are used. This contains a ASN.1X sequence with the fields:
 
+* A set of object identifiers specifying features which are mandatory. If
+this set contains an unrecognized object identifier, then it is an error.
 
-=== FEATURE.REQ ===
+* A set of object identifiers specifying features which are used by this
+world file but are optional. It is not an error if it contains an
+unrecognized object identifier, but it may warn the user about it.
 
-A sequence of 32-bit numbers, each of which denotes a required feature. If
-it is not available, then it is an error and the world cannot be loaded.
+All of the further fields are optional, but none are currently defined.
+
+(This lump is not currently implemented. When it is, the optional fields
+might include: high score format, joypad mapping, etc.)
 
 
 === GLOBAL ===
@@ -502,72 +544,6 @@ possible command codes are:
 * 3 = (Reserved)
 
 
-=== METADATA ===
-
-Contains a sequence of null-terminated metadata strings. Each metadata
-string consists of three characters being the key, and then the value.
-
-The third character of the key is the type (although it still counts as
-a part of the key, too):
-
-* B = Boolean, must be exactly 0 (false) or 1 (true), with no other
-characters in the value.
-
-* D = Date/time, given as uppercase hexadecimal number of seconds
-(excluding leap seconds) since January 1, 1985, 00:00:00 UTC.
-
-* H = Hash, given as two uppercase hexadecimal strings with a slash
-in between; the first is the multicodec number identifying the hash
-algorithm to use, and afterward is the hash value.
-
-* M = Multi line, being text in PC character encoding, with line feeds
-only as the line breaks.
-
-* N = Numeric, unsigned 32-bit integer, in decimal notation. Leading
-zeros are allowed.
-
-* R = Right-to-left text encoded as TRON-8.
-
-* S = Single line, being text in PC character encoding.
-
-* T = Left-to-right text encoded as TRON-8.
-
-Possible keys are listed below. Any one with * after the name does not
-mean that the name actually has * on it but rather that such a key should
-not occur in embedded metadata and is only valid for external metadata.
-
-* AUS = Author name.
-
-* AUT = Author name. (Alternative of AUS, in case the name needs to include
-characters that are not in the PC character set.)
-
-* DEM = Long description.
-
-* DES = Short description.
-
-* MOD = Modification date.
-
-* NVH* = Hash of next version of the world file.
-
-* PUD = Publication date.
-
-* PVH = Hash of previous version of the world file.
-
-* TIS = Title of the game world.
-
-* WXH = Hash of the world file excluding the METADATA lump. (This can be
-used to detect if any part of the world has been changed since the metadata
-has been changed.)
-
-* ZCN* = Compressed size of world file.
-
-* ZZH* = Hash of world file.
-
-* ZZN* = Total size of the world file, in bytes.
-
-Metadata is used by external programs and is not for Super ZZ Zero itself.
-
-
 === NUMFORM ===
 
 The numeric formats. There are sixteen records, each of which contains:
@@ -644,13 +620,20 @@ the division is made).
 * NF_BOARD_NAME_EXT 'N' = The last half of the board name.
 
 
+=== PACK ===
+
+Not currently used. In future, might be used for storing the .asm file and
+some editor-only lumps in a compressed pack, for distributing the game when
+you want to include the editor-related stuff; it is omitted if you are not
+including editor-related stuff. An external program is used to unpack it.
+
+
 === SAVE ===
 
-This lump is only for save game files.
+This lump is only for save game files. (This is not currently used, and
+it may be changed in future before it is used.)
 
 It contains:
-
-* Version number (16-bits): Must be 1.
 
 * Flags (16-bits). Only the low bit is used and means condition flag.
 
@@ -668,6 +651,10 @@ It contains:
 
 * Text buffer.
 
+* Length of visible text buffer (one byte).
+
+* Visible text buffer.
+
 * Sixteen named flags; each is a null-terminated string, with no more
 than fifteen characters (which cannot be lowercase; this fifteen characters
 does not include the null terminator).
@@ -681,19 +668,22 @@ used in the editor.)
 
 === START ===
 
-This lump is mandatory in world files.
+This lump is mandatory in world files; it is omitted in save game files.
 
 It contains:
 
-* Version number (16-bits): Must be 1.
+* Two reserved bytes; the first must be 1 and the second must be 0.
 
 * Starting board number (16-bits).
 
-* Reserved (32-bits).
+* A 16-bit number, where any bit which is set means that the status
+variable is initialized to zero and is not included in this lump; if the
+bit is clear then the value is specified explicitly (see below).
 
-* Reserved (32-bits).
+* Six reserved bytes which must be set to zero.
 
-* Status variables (sixteen, of 32-bits each).
+* Status variables (sixteen, of 32-bits each). One of the above fields has
+bits to specify if any of these are omitted.
 
 
 === TEXT ===

@@ -158,3 +158,7 @@ time_format
 time_utc
   Set to 1 to display date/time as UTC, or 0 (default) for local time.
 
+version_check
+  If set to 1 (which is the default value) then it checks the world
+  version and file type by the !SZ0 lump; if 0 then it ignores them.
+

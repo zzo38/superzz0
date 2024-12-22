@@ -6,31 +6,22 @@ exit
 #define USING_RW_DATA
 #include "common.h"
 
-#define N_FEATURES 1
-static const Uint32 feature_avail[N_FEATURES]={0x00000000};
-static Uint8 feature_bits[(N_FEATURES+7)/8];
-
 const char*init_world(void) {
   // Returns 0 if OK, error message if error
   int i,j;
-  Uint32 u;
+  Uint32 u,v;
   FILE*fp;
-  // "FEATURE.REQ"
-  if(fp=open_lump("FEATURE.REQ","r")) {
-    while(u=read32(fp)) {
-      for(i=0;i<N_FEATURES;i++) if(feature_avail[i]==u) break;
-      if(i==N_FEATURES) return "Feature unavailable";
-      feature_bits[i>>3]|=1<<(i&7);
+  // "!SZ0"
+  if(config.version_check) {
+    fp=open_lump("!SZ0","r");
+    if(!fp) return "Cannot open !SZ0 lump";
+    if(lump_size!=7) {
+      fclose(fp);
+      return "Wrong size of !SZ0 lump";
     }
+    i=fgetc(fp);
     fclose(fp);
-  }
-  // "FEATURE.OPT"
-  if(fp=open_lump("FEATURE.OPT","r")) {
-    while(u=read32(fp)) {
-      for(i=0;i<N_FEATURES;i++) if(feature_avail[i]==u) break;
-      if(i!=N_FEATURES) feature_bits[i>>3]|=1<<(i&7);
-    }
-    fclose(fp);
+    if((i^1)&0xF1) return "Wrong file type";
   }
   // "MEMORY"
   if(!editor) {
@@ -60,12 +51,12 @@ const char*init_world(void) {
   fp=open_lump("START","r");
   if(!fp) return "Cannot open START lump";
   u=read16(fp);
-  if(u<1 || u>SUPER_ZZ_ZERO_VERSION) return "Wrong version";
+  if(u!=1) return "Unrecognized data in START lump";
   cur_screen.message_l=222;
   cur_board_id=read16(fp);
-  read32(fp); // used later
-  read32(fp); // used later
-  for(i=0;i<16;i++) status_vars[i]=read32(fp);
+  v=read32(fp);
+  if((v&~0xFFFF) || read32(fp)) return "Unrecognized data in START lump";
+  for(i=0;i<16;i++) status_vars[i]=(v&(1<<i))?0:read32(fp);
   for(i=0;i<16;i++) namedflag[i].name[0]=0;
   fclose(fp);
   // "NUMFORM"
