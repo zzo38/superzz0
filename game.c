@@ -2213,7 +2213,8 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else goto badcommand; break;
           case 'H':
             if(!strcmp(buf,"HELP")) {
-              
+              while(s->text[ip]==' ') ++ip;
+              if(load_help_file(s->text+ip) && show_text_window((n<<16)+m,1)) goto selection;
             } else goto badcommand; break;
           case 'I':
             if(!strcmp(buf,"IDLE")) {
@@ -2373,9 +2374,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   stop:
   xy->instptr=ip;
   if(textfile && show_text_window((n<<16)+m,0) && (u=find_label(s,textbuf))>=0) {
-    ip=u;
-    u=0;
-    goto begin;
+    selection: ip=u; u=0; goto begin;
   }
 }
 
