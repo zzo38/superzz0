@@ -630,18 +630,17 @@ including editor-related stuff. An external program is used to unpack it.
 
 === SAVE ===
 
-This lump is only for save game files. (This is not currently used, and
-it may be changed in future before it is used.)
+This lump is only for save game files.
 
 It contains:
 
-* Flags (16-bits). Only the low bit is used and means condition flag.
+* Flags (16-bits). See the list of flag bits below.
 
 * Current board number (16-bits).
 
 * Current screen number (16-bits).
 
-* Scroll position (two numbers, of 16-bits each).
+* Scroll position (two signed numbers, of 32-bits each).
 
 * Status variables (sixteen, of 32-bits each).
 
@@ -655,9 +654,14 @@ It contains:
 
 * Visible text buffer.
 
+* Message timer (16-bits).
+
 * Sixteen named flags; each is a null-terminated string, with no more
 than fifteen characters (which cannot be lowercase; this fifteen characters
 does not include the null terminator).
+
+The flag bits are:
+  0001 = Condition flag
 
 
 === SCR.NAM ===

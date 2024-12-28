@@ -26,6 +26,10 @@ block_color
 brd_edit_status
   Set to 1 (default) to display the editor status line, or 0 to suppress.
 
+confirm_overwrite
+  Set to 1 (default) to ask to confirm overwriting an existing save file
+  when using the F3 save menu (it never asks if you use F5).
+
 debug
   Set debug mode. The -e and -d switches both enable this automatically;
   this option allows it to be permanently enabled if desired.
@@ -56,6 +60,13 @@ extra_lump_name
   named by the extra_lump_file option instead. This is mainly only useful
   for testing Super ZZ Zero itself, although there is the possibility that
   other uses for this may also be found.
+
+file_list
+  Specifies how files should be listed in a file list (currently, this
+  means the save game file list). Use 0 to hide directories, 1 to show
+  directories, 2 to list directories before regular files, and 3 to list
+  directories after regular files. Add 4 to sort regular files descending
+  by last modified time instead of by name. Add 8 to show hidden files.
 
 full_screen
   Set to 1 for full screen or 0 (default) for windowed. (If no windowing
@@ -122,6 +133,9 @@ return_cancels
   Set to 1 (default) if the return key in a text window in the game play
   will cancel if the cursor is not at a link, like escape will do. If set
   to 0 then the return key will do nothing in such a circumstance.
+
+save_dir
+  Default directory to use for save game files.
 
 scr_edit_status
   Set to 1 (default) to display the editor status line, or 0 to suppress.

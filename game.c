@@ -3224,7 +3224,11 @@ int run_game(void) {
             soundon=(audio_get_volume()<0x10000?1:0);
             audio_set_sfx("@0ZCX");
             break;
+          case SDLK_F3: if(ask_save_file(1)) save_state(); goto resume;
+          case SDLK_F4: if(ask_save_file(0)) load_state(); goto resume;
+          case SDLK_F5: save_state(); goto resume;
           case SDLK_F6: if(config.debug) debug_menu(); a=0; goto resume;
+          case SDLK_F7: load_state(); goto resume;
           case SDLK_F9: set_timer(0); v_status[1]=24; message_scrollback(); a=0; goto resume;
           case SDLK_F10: return 0;
           case SDLK_F12:

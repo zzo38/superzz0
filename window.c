@@ -65,6 +65,24 @@ void ask_text(const char*prompt,Uint8*buf,int len) {
   }
 }
 
+int ask_yn(const char*prompt,int d) {
+  int i;
+  v_xcur=v_ycur=128;
+  cwin=0;
+  draw_border(0x6E,1,20,78,23);
+  draw_text(3,21,prompt,0x6F,-1);
+  draw_text(3,22,"<Y> Yes  <N> No",0x6E,-1);
+  for(;;) {
+    redisplay();
+    if(!next_event()) break;
+    if(event.type!=SDL_KEYDOWN) continue;
+    i=event.key.keysym.unicode;
+    if(i=='Y' || i=='y') return 1;
+    if(i=='N' || i=='n') return 0;
+    if(i==27 && d>=0) return d;
+  }
+}
+
 Uint8 ask_color_char(Uint8 m,Uint8 v) {
   int x;
   v_xcur=v_ycur=128;

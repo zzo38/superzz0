@@ -543,6 +543,12 @@ static inline void write32(FILE*fp,Uint32 v) {
 
 #endif
 
+// === Save games ===
+
+int ask_save_file(char issave);
+void save_state(void);
+void load_state(void);
+
 // === Printer ===
 
 int lpt_begin(void); // returns 1 to begin printing or 0 to disable printing
@@ -561,6 +567,7 @@ void lpt_script(const Uint8*p,int w);
 void draw_border(Uint8 c,Uint8 x0,Uint8 y0,Uint8 x1,Uint8 y1);
 void alert_text(const char*text);
 void ask_text(const char*prompt,Uint8*buf,int len);
+int ask_yn(const char*prompt,int d);
 Uint8 ask_color_char(Uint8 m,Uint8 v);
 void online_help(const char*major,const char*minor);
 
