@@ -2472,19 +2472,19 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_CLAU: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=elem_def[b_under[t].kind].attrib&15; else condflag=0; break;
       case OP_CORU:
         if(so>=256) memory[MEM_COROUTINE_U_PC]=so;
+        so=(memory[MEM_COROUTINE_U_W_HI]<<16)|memory[MEM_COROUTINE_U_W_LO];
         memory[MEM_COROUTINE_U_W_HI]=w>>16; memory[MEM_COROUTINE_U_W_LO]=w;
         memory[MEM_COROUTINE_U_X_HI]=x>>16; memory[MEM_COROUTINE_U_X_LO]=x;
         memory[MEM_COROUTINE_U_Y_HI]=y>>16; memory[MEM_COROUTINE_U_Y_LO]=y;
         memory[MEM_COROUTINE_U_Z_HI]=z>>16; memory[MEM_COROUTINE_U_Z_LO]=z;
-        so=(memory[MEM_COROUTINE_U_W_HI]<<16)|memory[MEM_COROUTINE_U_W_LO];
         goto store;
       case OP_CORV:
         if(so>=256) memory[MEM_COROUTINE_V_PC]=so;
+        so=(memory[MEM_COROUTINE_V_W_HI]<<16)|memory[MEM_COROUTINE_V_W_LO];
         memory[MEM_COROUTINE_V_W_HI]=w>>16; memory[MEM_COROUTINE_V_W_LO]=w;
         memory[MEM_COROUTINE_V_X_HI]=x>>16; memory[MEM_COROUTINE_V_X_LO]=x;
         memory[MEM_COROUTINE_V_Y_HI]=y>>16; memory[MEM_COROUTINE_V_Y_LO]=y;
         memory[MEM_COROUTINE_V_Z_HI]=z>>16; memory[MEM_COROUTINE_V_Z_LO]=z;
-        so=(memory[MEM_COROUTINE_V_W_HI]<<16)|memory[MEM_COROUTINE_V_W_LO];
         goto store;
       case OP_COUN: regs[fo]=do_change(0,regs[fo],so); break;
       case OP_CWOE: t=regs[fo]&0xFF; cwoe: t=(elem_def[t].attrib); if(t&A_FLOOR) condflag=((1<<(t&15))&so)?1:0; else condflag=0; break;
