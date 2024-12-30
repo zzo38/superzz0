@@ -15,7 +15,7 @@ static char*savename;
 
 static char init_savegame(void) {
   FILE*fp;
-  char ok=0;
+  static char ok=0;
   if(ok) return 0;
   if(fp=open_lump("!SZ0","r+")) {
     fputc(0,fp);
@@ -23,7 +23,36 @@ static char init_savegame(void) {
   } else if(config.version_check) {
     goto error;
   }
-  if(config.save_dir && chdir(config.save_dir)) warn("Cannot change directory");
+  if(config.save_dir && config.save_dir[0]) {
+    if(config.save_dir[0]=='!' && !config.save_dir[1]) {
+      char*v;
+      int n;
+      if(!world_name) goto error;
+      n=strlen(world_name);
+      if(n>4 && world_name[n-4]=='.' && (world_name[n-3]=='S' || world_name[n-3]=='s') && (world_name[n-2]=='Z' || world_name[n-2]=='z') && world_name[n-1]=='0') {
+        v=malloc(n+3);
+        if(!v) errx(1,"Allocation failed");
+        memcpy(v,world_name,n-3);
+        v[n-3]='s'; v[n-2]='a'; v[n-1]='v'; v[n]='e'; v[n+1]=0;
+        if(mkdir(v,0777) && errno!=EEXIST) warn("Cannot create directory");
+        if(chdir(v)) warn("Cannot change directory");
+        free(v);
+      }
+    } else if(config.save_dir[0]=='~' && config.save_dir[1]=='/') {
+      char*v=getenv("HOME");
+      if(v) {
+        if(chdir(v)) {
+          warn("Cannot change to home directory");
+        } else if(chdir(config.save_dir+2)) {
+          warn("Cannot change directory");
+        }
+      } else {
+        warnx("Cannot determine home directory");
+      }
+    } else {
+      if(chdir(config.save_dir)) warn("Cannot change directory");
+    }
+  }
   ok=1;
   return 0;
   error: alert_text("Error initializing save game data"); return 1;

@@ -140,7 +140,12 @@ return_cancels
   to 0 then the return key will do nothing in such a circumstance.
 
 save_dir
-  Default directory to use for save game files.
+  Default directory to use for save game files. If not present, then the
+  current directory will be used. If it starts with ~/ then it is relative
+  to the current user's home directory. If it is ! then it will use a
+  directory whose name is based on the world file name; it will replace
+  ".sz0" with ".save" and use that directory, and will automatically create
+  that directory if it does not already exist.
 
 scr_edit_status
   Set to 1 (default) to display the editor status line, or 0 to suppress.
