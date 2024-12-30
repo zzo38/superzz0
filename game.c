@@ -2913,7 +2913,7 @@ static int system_menu(void) {
   draw_text(x+2,y+9," DEL ",0x30,-1); draw_text(x+12,y+9,"Clear message",0x1F,-1);
   draw_text(x+2,y+15," \x18\x19\x1B\x1A ",0x30,-1); draw_text(x+12,y+15,"Menu position",0x1F,-1);
   draw_text(x+2,y+10,"  S  ",0x70,-1); draw_text(x+12,y+10,"Speed:",0x1F,-1);
-  if(playstate==PLAYSTATE_PAUSED) draw_text(x+21,y+10," ----",0x1A,5);
+  if(playstate==PLAYSTATE_PAUSED) draw_text(x+21,y+10," ---- ",0x1A,6);
   else draw_text(x+22,y+10,buf,0x1A,snprintf(buf,16,"%5d",playstate==PLAYSTATE_FAST?config.speed_fast:config.speed));
   if(!(vm&0x800000)) {
     draw_text(x+8,y+2,"Sound:",0x1F,-1);
