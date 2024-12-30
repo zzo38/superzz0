@@ -58,11 +58,12 @@ int ask_save_file(char issave) {
   char buf[81];
   char*q;
   Uint8 xc;
-  int i,j,yc,ys;
+  int i,j,k,yc,ys;
   set_timer(0);
   v_status[1]="RS"[issave];
   if(init_savegame()) return 0;
   config.file_list&=0x7F;
+  if(config.file_list&32) pattern[1]=0;
   if(savename) {
     xc=snprintf(entry,81,"%s",savename);
   } else {
@@ -100,9 +101,11 @@ int ask_save_file(char issave) {
   redraw0:
   draw_border(0x19,0,0,79,24);
   draw_text(issave?35:33,0,issave?" Save Game ":" Restore Game ",0x1B,-1);
+  draw_text(3,24,"F1=Parent F2=Order F3=Dirs/Files F4=Mkdir F5=Refresh RET=Accept ESC=Cancel",0x13,-1);
   if(getcwd(buf,78) && *buf) {
     i=strlen(buf);
-    if(i<76) snprintf(buf+i,77-i,"%s%s",buf[i-1]=='/'?"":"/",pattern);
+    if(config.file_list&0x80) snprintf(buf+i,77-i,"...");
+    else if(i<76) snprintf(buf+i,77-i,"%s%s",i && buf[i-1]=='/'?"":"/",pattern);
     draw_text(2,2,buf,0x17,76);
     if(i>76) v_color[158]=0x14,v_char[158]='>';
   }
@@ -124,6 +127,8 @@ int ask_save_file(char issave) {
       draw_text(2,i+3,"(Not found)",8,-1);
     }
   }
+  if(ys) v_color[318]=0x15,v_char[318]=30;
+  if(nitems>ys+21) v_color[1918]=0x15,v_char[1918]=31;
   redraw1:
   for(i=0;i<76 && entry[i];i++) {
     v_color[i+82]=0x0F;
@@ -138,19 +143,34 @@ int ask_save_file(char issave) {
       v_char[i+82]=250;
     }
   }
-  
   redisplay();
   do { if(!next_event()) errx(0,"No events available."); } while(event.type!=SDL_KEYDOWN);
   switch(event.key.keysym.sym) {
     case SDLK_ESCAPE: escape:
       free(items);
       return 0;
-    case SDLK_F5: entry[xc=0]=0; goto list;
-    
+    case SDLK_F1: config.file_list&=0x7F; chdir(".."); goto list;
+    case SDLK_F2: config.file_list^=4; config.file_list&=0x7F; goto list;
+    case SDLK_F3: config.file_list^=0x80; goto list;
+    case SDLK_F4:
+      *entry=*buf=0;
+      ask_text("Name of new directory?",buf,70);
+      if(*buf) {
+        if(mkdir(buf,0777)) {
+          alert_text(strerror(errno));
+        } else {
+          chdir(buf);
+          config.file_list&=0x7F;
+        }
+      }
+      goto list;
+    case SDLK_F5: *entry=0; goto list;
     case SDLK_HOME: yc=ys=0; goto moved;
     case SDLK_END: yc=nitems-1; goto moved;
     case SDLK_UP: if(yc==nitems) yc=0; else yc--; goto moved;
     case SDLK_DOWN: if(yc==nitems) yc=0; else yc++; goto moved;
+    case SDLK_PAGEUP: if(yc==nitems) break; ys-=20; yc-=20; goto moved;
+    case SDLK_PAGEDOWN: ys+=20; yc+=20; goto moved;
     default:
       i=event.key.keysym.unicode;
       if(i>32 && i<127 && xc<76) {
@@ -162,7 +182,29 @@ int ask_save_file(char issave) {
         entry[xc=0]=0;
       } else if(i==27) {
         goto escape;
+      } else if(i==9 && nitems && (!(config.file_list&0x86) || config.file_list>=0x80)) {
+        for(i=0;i<nitems;i++) if(!strncmp(entry,items[i].name,xc)) break;
+        if(i==nitems) break;
+        yc=i;
+        if(yc<0) yc=0;
+        if(yc>=nitems) yc=nitems-1;
+        if(nitems<21) ys=0; else if(ys>nitems-21) ys=nitems-21;
+        if(ys<yc-20) ys=yc-20;
+        if(ys>yc) ys=yc;
+        if(ys<0) ys=0;
+        k=strlen(items[i].name);
+        for(j=yc+1;j<nitems;j++) {
+          if(strncmp(entry,items[j].name,xc)) break;
+          for(i=xc;i<75 && i<k && items[j].name[i] && items[j].name[i]==items[yc].name[i];i++);
+          if(i<k) k=i;
+        }
+        if(k>xc) {
+          memcpy(entry+xc,items[yc].name+xc,k-xc);
+          entry[k]=0;
+        }
+        goto redraw0;
       } else if((i==10 || i==13) && *entry) {
+        config.file_list&=0x7F;
         if(q=strrchr(entry,'/')) {
           *q++=0;
           if(chdir(*entry?entry:"/")) {
@@ -179,17 +221,16 @@ int ask_save_file(char issave) {
           *entry=0;
           goto list;
         } else {
+          xc=strlen(entry);
+          if(xc<77 && config.auto_suffix && (xc<4 || memcmp(entry+xc-4,".sav",4)) && !(yc!=nitems && !strcmp(items[yc].name,entry))) memcpy(entry+xc,".sav",5);
           i=lstat(entry,&st);
-          if(issave && !i) goto ok;
-          if(i && errno==ENOENT && issave) {
-            if(config.confirm_overwrite) {
-              snprintf(buf,74,"File \"%s\" already exists. Overwrite?",entry);
-              if(!ask_yn(buf,0)) {
-                *entry=0;
-                goto redraw0;
-              }
+          if(issave && i && errno==ENOENT) goto ok;
+          if(issave && !i && config.confirm_overwrite && !S_ISDIR(st.st_mode)) {
+            snprintf(buf,74,"File \"%s\" already exists. Overwrite?",entry);
+            if(!ask_yn(buf,0)) {
+              *entry=0;
+              goto redraw0;
             }
-            goto ok;
           }
           if(i) {
             alert_text(strerror(errno));
@@ -213,8 +254,10 @@ int ask_save_file(char issave) {
   }
   if(yc<0) yc=0;
   if(yc>=nitems) yc=nitems-1;
+  if(nitems<21) ys=0; else if(ys>nitems-21) ys=nitems-21;
   if(ys<yc-20) ys=yc-20;
   if(ys>yc) ys=yc;
+  if(ys<0) ys=0;
   if(yc<nitems) snprintf(entry,77,"%s",items[yc].name);
   goto redraw0;
   ok:
@@ -227,7 +270,7 @@ int ask_save_file(char issave) {
 
 void save_state(void) {
   FILE*fp;
-  Uint32 v;
+  Uint32 u,v;
   int i;
   if(init_savegame()) return;
   if(!savename) {
@@ -238,6 +281,7 @@ void save_state(void) {
   draw_text(0,0," Saving... ",0x6F,-1);
   redisplay();
   errno=0;
+  //  SAVE
   if(!(fp=open_lump("SAVE","w"))) goto error;
   v=(condflag?1:0);
   write16(fp,v);
@@ -252,9 +296,16 @@ void save_state(void) {
   for(i=0;i<16;i++) fwrite(namedflag[i].name,1,strlen(namedflag[i].name)+1,fp);
   write16(fp,vtexttime);
   fclose(fp);
+  //  CURRENT.BRD
   if(!(fp=open_lump("CURRENT.BRD","w"))) goto error;
   save_board(fp,1);
   fclose(fp);
+  //  MEMORY
+  if(!(fp=open_lump("MEMORY","w"))) goto error;
+  for(u=0x10000;u>0x100 && !memory[u-1];u--);
+  for(v=0;v<u;v++) write16(fp,memory[v]);
+  fclose(fp);
+  //
   fp=fopen(savename,"w");
   if(!fp) goto error;
   save_game(fp);
@@ -266,7 +317,7 @@ void save_state(void) {
 void load_state(void) {
   Uint8 buf[32]={'!','S','Z','0',0,0,0,7,0,0};
   FILE*fp;
-  Uint32 v;
+  Uint32 u,v;
   int i;
   if(init_savegame()) return;
   if(!savename) {
@@ -276,6 +327,7 @@ void load_state(void) {
   v_status[1]='$';
   draw_text(0,0," Restoring... ",0x6F,-1);
   redisplay();
+  audio_set_sfx("@65536ZX");
   if(config.version_check) {
     if(fp=open_lump("!SZ0","r")) {
       fread(buf+9,1,7,fp);
@@ -299,6 +351,7 @@ void load_state(void) {
     }
   }
   restore_game(fp);
+  //  SAVE
   if(!(fp=open_lump("SAVE","r"))) errx(1,"Invalid save game file (missing SAVE lump)");
   v=read16(fp);
   if(v&~1) errx(1,"Invalid data in save game file");
@@ -317,11 +370,20 @@ void load_state(void) {
   if(vtexttime) ++vtexttime;
   if(vtexttime>config.message_timer) vtexttime=config.message_timer;
   fclose(fp);
+  //  MEMORY
+  if(fp=open_lump("MEMORY","r")) {
+    u=lump_size>>1;
+    if(u>0x10000) errx(1,"Invalid data in save game file");
+    for(v=0;v<u;v++) memory[v]=read16(fp);
+    for(;v<0x10000;v++) memory[v]=0;
+    fclose(fp);
+  }
+  //  ????.SCR
   fp=open_lump_by_number(cur_screen_id,"SCR","r");
   if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
   fclose(fp);
+  //  CURRENT.BRD
   if(!(fp=open_lump("CURRENT.BRD","r"))) errx(1,"Invalid save game file (missing CURRENT.BRD lump)");
   if(load_board(fp)) errx(1,"Error loading CURRENT.BRD lump from save game file");
   fclose(fp);
 }
-

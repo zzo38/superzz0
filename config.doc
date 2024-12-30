@@ -19,6 +19,10 @@ audio_rate
 audio_volume
   Initial audio volume from 0 to 32767.
 
+auto_suffix
+  Set to 1 to automatically add the ".sav" suffix to entered file names
+  that do not already have that suffix, or 0 to disable this feature.
+
 block_color
   Colour of the selected block (in block mode) in the board editor. Zero
   means to just use the inverse colour.
@@ -67,6 +71,7 @@ file_list
   directories, 2 to list directories before regular files, and 3 to list
   directories after regular files. Add 4 to sort regular files descending
   by last modified time instead of by name. Add 8 to show hidden files.
+  Add 32 if you want the default pattern to be "*" instead of "*.sav".
 
 full_screen
   Set to 1 for full screen or 0 (default) for windowed. (If no windowing
@@ -153,6 +158,10 @@ speed_fast
 template_board
   The board number to use as the template for new boards; the default value
   is zero.
+
+test_mode
+  Used for internal testing. The meaning of the value is undocumented (and
+  may change in future), except that zero is used for normal operation.
 
 text_editor_command
   If defined, an external command to execute for the text editor; the
