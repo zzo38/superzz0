@@ -65,13 +65,16 @@ static void audiocb(void*userdata,Uint8*stream,int len) {
       while(pos<len && cpos<cmax) cpos++,buf[pos++]=vol*(prf*=fil);
       if(cpos>=cmax) cfreq=-1;
     }
-    if(cfreq==-1 && qfirst!=qlast) {
-      priority=0;
-      cfreq=queue[qfirst].note;
-      cpos=0;
-      cmax=queue[qfirst].len;
-      qfirst=(qfirst+1)&MAXQUEUE_MASK;
-      pha=0.0;
+    if(cfreq==-1) {
+      if(qfirst==qlast) {
+        priority=0;
+      } else {
+        cfreq=queue[qfirst].note;
+        cpos=0;
+        cmax=queue[qfirst].len;
+        qfirst=(qfirst+1)&MAXQUEUE_MASK;
+        pha=0.0;
+      }
     }
   }
 }
