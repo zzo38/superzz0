@@ -990,6 +990,14 @@ CENMOV	LET D,Z
 	PTMK A,0
 	LET S,0
 
+; **** Script commands ****
+
+	COM "CHAR"
+	PARN A,W
+	JF A,0
+	PTSP A,W
+	LET S,0
+
 ; **** Light shape ****
 	TA $E3
 	ASS @,65487

@@ -2118,11 +2118,11 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
         buf[v]=0;
         if(s->text[ip]==' ') ip++;
         if(w=memory[MEM_CUSTOM_COMMAND]) while(w && w<0xFFFE) {
-          if(memory[w+1]<ngtext || strcmp(buf,gtext[memory[w+1]])) {
+          if(memory[w+1]>=ngtext || strcmp(buf,gtext[memory[w+1]])) {
             w=memory[w];
           } else {
             xy->instptr=ip;
-            v=run_program(w+2,n,xy->x,xy->y,s->speed);
+            v=run_program(w+2,(n<<16)+m,xy->x,xy->y,s->speed);
             if(v&1) stop=1;
             if(v&4) xy->instptr=ip=65535;
             if(v&8) return;
@@ -2638,6 +2638,20 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           condflag=0;
         }
         goto store;
+      case OP_PARD:
+        condflag=0;
+        if((rs=get_statxy(so)) && rs->instptr<stats[(so&0xFFFF)-1].length) {
+          so=parse_direction(stats+(so&0xFFFF)-1,rs,&rs->instptr);
+          if(condflag) regs[fo]=so;
+        }
+        break;
+      case OP_PARN:
+        condflag=0;
+        if((rs=get_statxy(so)) && rs->instptr<stats[(so&0xFFFF)-1].length) {
+          so=parse_number(stats+(so&0xFFFF)-1,rs,&rs->instptr);
+          if(condflag) regs[fo]=so;
+        }
+        break;
       case OP_PBF: board_info.flag=so; break;
       case OP_PBU: board_info.userdata=so; break;
       case OP_PEEK: regs[fo]=memory[so&0xFFFF]; break;
@@ -2690,6 +2704,20 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PTOK: if((t=convxy(so,x,y))!=-1) condflag=1,b_over[t].kind=regs[fo]; else condflag=0; break;
       case OP_PTOP: if((t=convxy(so,x,y))!=-1) condflag=1,b_over[t].param=regs[fo]; else condflag=0; break;
       case OP_PTOS: if((t=convxy(so,x,y))!=-1) condflag=1,b_over[t].stat=regs[fo]; else condflag=0; break;
+      case OP_PTSC:
+        if(rs=get_statxy(so)) {
+          x=rs->x; y=rs->y;
+          if(x<0 || x>board_info.width || y<0 || y>board_info.height || !(rs->layer&3)) break;
+          u=x+y*board_info.width;
+          ((rs->layer&3)==1?b_under:(rs->layer&3)==2?b_main:b_over)[u].color=regs[fo];
+        } break;
+      case OP_PTSP:
+        if(rs=get_statxy(so)) {
+          x=rs->x; y=rs->y;
+          if(x<0 || x>board_info.width || y<0 || y>board_info.height || !(rs->layer&3)) break;
+          u=x+y*board_info.width;
+          ((rs->layer&3)==1?b_under:(rs->layer&3)==2?b_main:b_over)[u].param=regs[fo];
+        } break;
       case OP_PTUC: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].color=regs[fo]; else condflag=0; break;
       case OP_PTUK: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].kind=regs[fo]; else condflag=0; break;
       case OP_PTUP: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].param=regs[fo]; else condflag=0; break;

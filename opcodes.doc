@@ -643,6 +643,15 @@ numbers are treated as unsigned.
   flag is set or clear according to the result of the condition. If not
   successful, does not skip, and the condition flag is unchanged.
 
+[08C PTSC]
+  Sets the colour of the tile corresponding to the stat XY index of the
+  second operand. The new colour will be the low 8-bits of the first
+  operand. This acts like PTUC, PTMC, or PTOC, depending on which layer
+  the stat is on.
+
+[08D PTSP]
+  Like PTSP but sets the parameter instead of the colour.
+
 [08E ICG]
   Increment first operand and compare if new value greater than second.
 

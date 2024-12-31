@@ -848,6 +848,7 @@ int main(int argc,char**argv) {
     nhlabel[i]=0;
   }
   pass=1;
+  mem[0xE2]=0;
   do_pass();
   fclose(infile);
   if(option&0x0008) {
