@@ -27,6 +27,7 @@
  ^S   left
  @S   copy character from left
  ^T   delete word right
+ ^U   delete to beginning of line
  ^V   toggle insert/overwrite
  ^W   scroll line up
  @W   copy line from above

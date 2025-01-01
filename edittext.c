@@ -267,6 +267,7 @@ static Uint8*text_editor_1(Uint8*text) {
     case_CTRLQ('S'): case -SDLK_HOME: xc=0; break;
     case -SDLK_s: if(xc) xc+=ins_char(yc,xc,lines[yc].ptr[xc-1]); break;
     case_CTRL('T'): del_word(xc,yc); break;
+    case_CTRL('U'): if(xc && xc<lines[yc].len) memmove(lines[yc].ptr,lines[yc].ptr+xc,lines[yc].len-xc); lines[yc].len-=xc; xc=0; break;
     case_CTRL('V'): case -SDLK_INSERT: config.text_editor_insert^=1; break;
     case_CTRL('W'): if(scrol) --scrol; if(yc>scrol+23) --yc; goto display;
     case -SDLK_w: case -SDLK_F3: xc=copy_above(xc,yc); break;
