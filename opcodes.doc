@@ -643,6 +643,12 @@ numbers are treated as unsigned.
   flag is set or clear according to the result of the condition. If not
   successful, does not skip, and the condition flag is unchanged.
 
+[085 PAR]
+  Reads a single character from a script selected from the second operand.
+  The character is written to the first operand. If it is a line break or
+  null then it is not skipped past but otherwise it is skipped past. The
+  condition flag is true if it skipped past or false if it doesn't.
+
 [08C PTSC]
   Sets the colour of the tile corresponding to the stat XY index of the
   second operand. The new colour will be the low 8-bits of the first

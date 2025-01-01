@@ -2123,6 +2123,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
           } else {
             xy->instptr=ip;
             v=run_program(w+2,(n<<16)+m,xy->x,xy->y,s->speed);
+            if(v&16) xy->instptr=ip=bip;
             if(v&1) stop=1;
             if(v&4) xy->instptr=ip=65535;
             if(v&8) return;
@@ -2131,7 +2132,9 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               ip=xy->instptr;
               goto begin;
             }
-            goto skip;
+            if(!(v&16)) goto skip;
+            u=0;
+            goto begin;
           }
         }
         switch(*buf) {
@@ -2638,16 +2641,37 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           condflag=0;
         }
         goto store;
+      case OP_PAR:
+        if((rs=get_statxy(so)) && stats[(so&0xFFFF)-1].text && rs->instptr<stats[(so&0xFFFF)-1].length) {
+          regs[fo]=stats[(so&0xFFFF)-1].text[rs->instptr];
+          if(regs[fo] && regs[fo]!='\n') condflag=1; else condflag=0;
+          rs->instptr+=condflag;
+        } else {
+          condflag=regs[fo]=0;
+        }
+        break;
+      case OP_PARC:
+        if((rs=get_statxy(so)) && stats[(so&0xFFFF)-1].text && rs->instptr<stats[(so&0xFFFF)-1].length) {
+          condflag=parse_condition(stats+(so&0xFFFF)-1,rs,&rs->instptr);
+        }
+        break;
       case OP_PARD:
         condflag=0;
-        if((rs=get_statxy(so)) && rs->instptr<stats[(so&0xFFFF)-1].length) {
+        if((rs=get_statxy(so)) && stats[(so&0xFFFF)-1].text && rs->instptr<stats[(so&0xFFFF)-1].length) {
           so=parse_direction(stats+(so&0xFFFF)-1,rs,&rs->instptr);
+          if(condflag) regs[fo]=so;
+        }
+        break;
+      case OP_PARG:
+        condflag=0;
+        if((rs=get_statxy(so)) && stats[(so&0xFFFF)-1].text && rs->instptr<stats[(so&0xFFFF)-1].length) {
+          so=parse_letter(stats+(so&0xFFFF)-1,rs,&rs->instptr);
           if(condflag) regs[fo]=so;
         }
         break;
       case OP_PARN:
         condflag=0;
-        if((rs=get_statxy(so)) && rs->instptr<stats[(so&0xFFFF)-1].length) {
+        if((rs=get_statxy(so)) && stats[(so&0xFFFF)-1].text && rs->instptr<stats[(so&0xFFFF)-1].length) {
           so=parse_number(stats+(so&0xFFFF)-1,rs,&rs->instptr);
           if(condflag) regs[fo]=so;
         }

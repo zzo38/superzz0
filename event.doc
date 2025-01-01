@@ -70,6 +70,7 @@ The return value uses the bits:
   bit1 = Do not skip the rest of the current line.
   bit2 = Stop script execution.
   bit3 = Unconditionally stop immediately.
+  bit4 = Go back to the beginning of the current line.
 
 
 === Element events ===
