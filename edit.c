@@ -78,6 +78,16 @@ void combine_assembled(void) {
   Uint8 buf[0x1000];
   Uint32 len;
   int c,i;
+  if(fp=open_lump("!SZ0","r+")) {
+    time_t ti=time(0);
+    fread(buf,1,7,fp);
+    rewind(fp);
+    buf[0]=0x01; buf[1]--;
+    buf[3]=ti>>8; buf[4]=ti>>16; buf[5]=ti>>0; buf[6]=ti>>24;
+    fwrite(buf,1,7,fp);
+    fclose(fp);
+  }
+  if(fp=open_lump("CATALOG.DER","w")) fclose(fp);
   for(;;) {
     i=0;
     while((c=getchar())>0 && i<15) nam[i++]=(c>='a' && c<='z'?c+'A'-'a':c);
