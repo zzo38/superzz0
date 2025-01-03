@@ -386,6 +386,13 @@ static void do_pass(void) {
           v|=parse_reg16()<<4;
           parse_comma();
           v|=parse_numeric(1)&7;
+        } else if(j=='OF-' || j=='OT-') {
+          if(*linept>='A' && *linept<='H' && (linept[1]<=32 || linept[1]==';')) {
+            v=parse_reg16()+8;
+          } else {
+            v=parse_numeric(0)+3;
+            if(v&~7) errx(1,"Operand out of range on line %d",linenum);
+          }
         } else {
           v=parse_numeric(0);
         }
@@ -477,6 +484,12 @@ static void do_pass(void) {
             break;
           case 'Y--':
             i|=0x0B00;
+            break;
+          case 'OT-':
+            i|=0x0DC0;
+            break;
+          case 'OF-':
+            i|=0x0DD0;
             break;
           default: errx(1,"Invalid extended operand on line %d",linenum);
         }

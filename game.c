@@ -597,6 +597,8 @@ static Sint32 xop_special(Sint32 so,Uint16 ex) {
     case XOP_S_SCREEN_ID: return cur_screen_id;
     case XOP_S_SCROLL_X: return scroll_x+cur_screen.view_x+so+(ex&15)-8;
     case XOP_S_SCROLL_Y: return scroll_y+cur_screen.view_y+so+(ex&15)-8;
+    case XOP_S_IF_TRUE: return condflag?so:(ex&8?regs[ex&7]:(ex&7)-3);
+    case XOP_S_IF_FALSE: return condflag?(ex&8?regs[ex&7]:(ex&7)-3):so;
     default: return 0;
   }
 }

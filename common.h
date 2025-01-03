@@ -417,6 +417,8 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define XOP_S_SCREEN_ID 0x0D90 // current screen number
 #define XOP_S_SCROLL_X 0x0DA0 // scroll X plus (source+(value&15)-8)
 #define XOP_S_SCROLL_Y 0x0DB0 // scroll Y plus (source+(value&15)-8)
+#define XOP_S_IF_TRUE 0x0DC0 // (source) if true, (value) if false (-3 to +4, A to H)
+#define XOP_S_IF_FALSE 0x0DD0 // (source) if false, (value) if true (-3 to +4, A to H)
 
 #define MEM_TRANSPORT_EVENT 0xC8
 #define MEM_DEFAULT_OVERLAY 0xC9

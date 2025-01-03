@@ -88,6 +88,12 @@ read a 16-bit number from. The value can be -256 to +255.
 
 * %M = Subtract the source from the value. The value can be -256 to +255.
 
+* %OF = Use the source if the condition flag is false or the value if the
+condition flag is true. The value can be -3 to +4 or A to H.
+
+* %OT = Use the source if the condition flag is true or the value if the
+condition flag is false. The value can be -3 to +4 or A to H.
+
 * %R = A random number from 0 up to source+value-1. The value can be in
 range 0 to 255.
 
