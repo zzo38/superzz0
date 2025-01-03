@@ -2800,6 +2800,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_SIU: so=statxy_index_at(convxy(so,x,y),1,b_under); condflag=(so?1:0); goto store;
       case OP_SIXY: if((rs=get_statxy(so)) && (so=convxy(0,rs->x,rs->y)+1)) condflag=1; else condflag=so=0; goto store;
       case OP_SMOV: general_move(0,regs[fo],x,y,(so&0xF8)+0x8804+(so&7)*0x1100,(so&0xFF00)+1,0,0); break;
+      case OP_SPOK: memory[so&0xFFFF]=fo; break;
       case OP_SUB: regs[fo]-=so; break;
       case OP_SWPA: t=regs[0]; regs[0]=so; so=t; goto store;
       case OP_SWPB: t=regs[1]; regs[1]=so; so=t; goto store;

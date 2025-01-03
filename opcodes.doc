@@ -339,6 +339,10 @@ numbers are treated as unsigned.
   to access. The target board number is written to the first operand, and
   the condition flag will be true if it is nonzero or false otherwise.
 
+[046 SPOK]
+  Second operand is the address; write a 3-bit number into memory at that
+  address. The first operand is A for 0, B for 1, etc, up to H for 7.
+
 [047 REVB]
   Revert the board number specified by the second operand to the board
   stored in the world file with that number. This does not affect the
