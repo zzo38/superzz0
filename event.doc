@@ -1,8 +1,79 @@
 
-=== Global events ===
+=== Zero page ===
 
-Memory addresses $00C0 to $00FF are the system area, some of which are used
-for global events.
+Memory addresses $00C0 to $00FF are the system area. The meaning of the
+addresses with a currently defined meaning are listed here. The initial
+values can be set using the assembler, and they can also be changed at
+run time.
+
+$C9 = The default overlay, which is used when objects within the overlay
+are moved out of the way or deleted. The low byte specifies the character
+code and the high byte specifies the colour code.
+
+$CA = Instruction pointer for global scripts. (Not currently implemented)
+
+$CB = Global control flags. (None are currently meaningful)
+
+$CC = J register. This is mostly like a general-purpose register (except
+that it is only 16-bits long), although some instructions may use it for
+additional arguments and/or results.
+
+$CD = K register. This is like the J register.
+
+$CE = Saved program counter for U coroutine.
+
+$CF = Saved program counter for V coroutine.
+
+$D0 to $D7 = Saved WXYZ registers for U coroutine.
+
+$D8 to $DF = Saved WXYZ registers for V coroutine.
+
+$E0 = Keyboard event (see below).
+
+$E1 = Frame event (see below).
+
+$E2 = Used for custom commands. If it is nonzero, then it is the address
+of a record with two cells being the address of the next record (or zero
+if this is the last record) and the global string number which is the name
+of a custom script command; this string should consist only of uppercase
+letters. Immediately following the record is the code to be executed when
+that command is encountered in a script; see "script command events" below.
+
+$E3 = Address of memory for light shape to suppress overlay around the
+player. If this is 65488 or more then the overlay is not suppressed. This
+points to a block of forty-nine cells. The first 24 cells are north of the
+player, the next one is for the same row as the player, and the rest are
+then south of the player; they are in order north to south. Each cell has
+the high byte for the left edge and the low byte for the right edge of the
+light; these values have 128 for the player's location, lesser numbers for
+west and higher numbers for east.
+
+$E4 = The target board number for a warp. (The WARP instruction will
+automatically set this, as well as $E5 to $EB; you will not normally
+need to touch these by yourself, but you might have a use for them.)
+
+$E5 = The subroutine to call after a warp occurs. If this is nonzero then
+a warp will occur before the next turn; it is automatically reset to zero
+before calling the subroutine. The return value is ignored.
+
+$E6 to $EB = The WARP instruction saves the values of the XYZ registers
+here so that the warp subroutine will receive these values.
+
+$EC = Frame counter. This is automatically incremented by the game engine
+after each frame, and its value is used for time-based animations.
+
+$ED = Screen number to use for text windows.
+
+$EE = X scroll rate. Set to 65535 to scroll instantly. Lesser numbers will
+limit the amount of scrolling per frame.
+
+$EF = Y scroll rate.
+
+Anything in the range $00C0 to $00FF which is not listed here should be
+left at zero for compatibility with future versions of Super ZZ Zero.
+
+
+=== Global events ===
 
 $00C8
   This event occurs whenever something tries to move through a transporter,
