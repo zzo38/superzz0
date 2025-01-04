@@ -997,12 +997,14 @@ CENMOV	LET D,Z
 
 ; **** Script commands ****
 
+	; #CHAR <number>
 	COM "CHAR"
 	PARN A,W
 	JF A,0
 	PTSP A,W
 	LET S,0
 
+	; #SHOOT <direction>
 	COM "SHOOT"
 	PARD A,W
 	JF A,0
@@ -1011,17 +1013,41 @@ CENMOV	LET D,Z
 	CALL A,SHOOT
 	LET S,1
 
+	; #WAIT <number>
 	COM "WAIT"
 	PARN A,W
 	JF A,0
 	POKE A,NWAITS
 	LET S,1
 
+	; #WAITFOR <condition>
 	COM "WAITFOR"
 	PARC A,W
 	JT A,0
 	SPOK B,NWAITS
 	LET S,$18
+
+	; #THROWSTAR <direction> [<duration>]
+	COM "THROWSTAR"
+	PARD A,W
+	JF A,0
+	JNEG A,1
+	FORW A,A
+	PARN B,W
+	FLET B,127
+	GTMK C,0
+	EMAT D,C
+	JT C,1F
+	CWOE C,$0017
+	JF C,1
+	SINK C,0
+	JF C,1
+	LSH B,16
+	ADD B,$02000F00+_STAR
+	PTM B,0
+	LET S,1
+1H	CALM S,0
+	LET S,1
 
 ; **** Light shape ****
 	TA $E3
