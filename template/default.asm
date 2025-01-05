@@ -38,6 +38,11 @@
 ; Stat uses:
 ;   1 = player
 ;   2 = bullets/stars
+; Predefined stat names (not necessarily present on all boards):
+;   _1 = Creatures with speed 1 (Runner)
+;   _2 = Creatures with speed 2 (Lion, Tiger, Bear, Shark)
+;   _4 = Creatures with speed 4 (Pusher)
+;   _C = Centipedes
 
 ; **** Global variables ****
 INITPX	IS $00
@@ -564,54 +569,53 @@ POTION	FILL $10,1
 ; ***** Chest *****
 	EV T,_CHEST
 	GTMP A,0
-	LESS A,$10
-	JT A,0
-	SFX A,"@29T<D>DA>DX"
-	TEXT E,"Inside the chest you find "
-	LET B,%UR,A,4
+	DEC B,%UR,A,4
+	JNEG B,0
 	AND A,$0F
 	PTMP A,0
+	SFX A,"@29T<D>DA>DX"
+	TEXT E,"Inside the chest you find "
 	CASE B,CHEST
 
-CHEST	FILL $10,0
+CHEST	FILL $0F,0
 
-	TA CHEST+1 ; Ammo (x5)
+	TA CHEST+1-1 ; Ammo (x5)
 	MUL A,5
 	TEXT D,A
-	MESS G," pieces of ammunition!"
+	MESS G," pieces of ammunition."
 	GIVE A,A
 	LET S,0
 
-	TA CHEST+2 ; Money (x5)
+	TA CHEST+2-1 ; Money (x5)
 	MUL A,5
 	TEXT D,A
-	MESS G," pieces of money!"
+	MESS G," pieces of money."
 	GIVE C,A
 	LET S,0
 
-	TA CHEST+3 ; Gems (x5)
+	TA CHEST+3-1 ; Gems (x5)
 	MUL A,5
 	TEXT D,A
-	MESS G," gems!"
+	MESS G," gems."
 	GIVE G,A
 	GIVE S,A
 	LET S,0
 
-	TA CHEST+4 ; Stones
+	TA CHEST+4-1 ; Stones
 	TEXT D,A
-	MESS G," stones!"
+	MESS G," stones."
 	GIVE Z,A
 	LET S,0
 
-	TA CHEST+5 ; Torches
+	TA CHEST+5-1 ; Torches
 	TEXT D,A
-	MESS G," torches!"
+	MESS G," torches."
 	GIVE T,A
 	LET S,0
 
-	TA CHEST+6 ; Trap
+	TA CHEST+6-1 ; Trap
 	CALL A,OUCH
-	MESS G," This chest is trapped!"
+	MESS G," It is a trap!"
 	LET S,0
 
 ; **** Stars ****
@@ -1160,6 +1164,16 @@ CENMOV	LET D,Z
 	ED 'K',"Fake",_FAKE,$0000
 	ED 2
 
+	ED1 4
+	ED 1,"Puzzles:"
+	ED '0',"Boulder",_BOULDER,$0000
+	ED '1',"Slider \x12",_SLIDERNS,$0000
+	ED '2',"Slider \x1D",_SLIDEREW,$0000
+	ED '3',"Pusher",E_PUSH,_PUSHER+$8200
+	ED 1,"Miscellaneous:"
+	ED 'T',"Transporter",_TRANSPORTER,$0000
+	ED 2
+
 	ED1 5
 	ED 1,"Projectiles:"
 	ED 'B',"Bullet",_BULLET+$0200,$010F
@@ -1293,6 +1307,11 @@ E_CENT	ED '=',"K-MP"
 	ED2 'O',"T~rap",6
 	ED 'H',0
 	ED2 'N',"Amo~unt: ",$0030,0,15
+	ED 0
+
+E_PUSH	ED '=',"K-MP"
+	ED '@',"_4",4
+	ED 'P',$FFFF,$4800
 	ED 0
 
 ; **** Editor board info ****
