@@ -451,10 +451,11 @@ SHOOT	FORW H,Z
 ; **** Ricochet ****
 	EV S,_RICOCHET
 	GSXY A,W
-	JF A,OUCH
+	JF A,1
 	GTMP A,0
 	XOR A,2
 	PTMP A,0
+	SFX A,"@10T.`"
 	LET S,1
 
 ; **** Invisible walls ****
@@ -559,6 +560,59 @@ POTION	FILL $10,1
 	TA POTION+6 ; Time
 	GIVE T,25
 	LET S,1
+
+; ***** Chest *****
+	EV T,_CHEST
+	GTMP A,0
+	LESS A,$10
+	JT A,0
+	SFX A,"@29T<D>DA>DX"
+	TEXT E,"Inside the chest you find "
+	LET B,%UR,A,4
+	AND A,$0F
+	PTMP A,0
+	CASE B,CHEST
+
+CHEST	FILL $10,0
+
+	TA CHEST+1 ; Ammo (x5)
+	MUL A,5
+	TEXT D,A
+	MESS G," pieces of ammunition!"
+	GIVE A,A
+	LET S,0
+
+	TA CHEST+2 ; Money (x5)
+	MUL A,5
+	TEXT D,A
+	MESS G," pieces of money!"
+	GIVE C,A
+	LET S,0
+
+	TA CHEST+3 ; Gems (x5)
+	MUL A,5
+	TEXT D,A
+	MESS G," gems!"
+	GIVE G,A
+	GIVE S,A
+	LET S,0
+
+	TA CHEST+4 ; Stones
+	TEXT D,A
+	MESS G," stones!"
+	GIVE Z,A
+	LET S,0
+
+	TA CHEST+5 ; Torches
+	TEXT D,A
+	MESS G," torches!"
+	GIVE T,A
+	LET S,0
+
+	TA CHEST+6 ; Trap
+	CALL A,OUCH
+	MESS G," This chest is trapped!"
+	LET S,0
 
 ; **** Stars ****
 ; Parameter: duration
@@ -1066,10 +1120,11 @@ CENMOV	LET D,Z
 	ED 'K',"Key",_KEY,$0000
 	ED 'D',"Door",_DOOR,$040F
 	ED 'Z',"Stone",_STONE,$0000
-	ED 'E',"Energizer",_ENERGIZER,$0307
+	ED 'E',"Energizer",_ENERGIZER,$0305
 	ED 'P',"Potion",_POTION,$0200
 	ED 'S',"Scroll",_SCROLL,$0800
 	ED 'Q',"Checkpoint",_CHECKPOINT,$0309
+	ED 'C',"Chest",_CHEST,$0106
 	ED 2
 
 	ED1 2
@@ -1224,6 +1279,20 @@ E_CENT	ED '=',"K-MP"
 	ED 'H',0
 	ED2 'N',"~Intelligence: ",$1170,0,128
 	ED2 'N',"~Deviance: ",$1270,0,128
+	ED 0
+
+	ED0 _CHEST
+	ED 'H',"Contents of chest:"
+	ED 'O',$0034
+	ED2 'O',"~Nothing",0
+	ED2 'O',"~Ammo (x5)",1
+	ED2 'O',"~Money (x5)",2
+	ED2 'O',"~Gems (x5)",3
+	ED2 'O',"~Stones",4
+	ED2 'O',"~Torches",5
+	ED2 'O',"T~rap",6
+	ED 'H',0
+	ED2 'N',"Amo~unt: ",$0030,0,15
 	ED 0
 
 ; **** Editor board info ****

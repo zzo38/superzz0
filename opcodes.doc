@@ -307,7 +307,8 @@ numbers are treated as unsigned.
 
 [041 MESS]
   Has the same effect as the TEXT instruction, and then replaces the
-  message line text with the contents of the text buffer.
+  message line text with the contents of the text buffer. (The text
+  buffer will remain unchanged after this.)
 
 [042 HELP]
   Display a help file. The second operand is the number of the help file
