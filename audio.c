@@ -35,6 +35,26 @@ static Uint16 qfirst=0;
 static Uint16 qlast=0;
 
 static float note_table[NOTE_MASK+1];
+static float drum_table[256];
+
+static const Uint16 drum_const_table[256]={
+  [0x00]= /* ` */ 3200,800,0,
+  [0x10]= /* unused */ 0,
+  [0x20]= /* unused */ 0,
+  [0x30]= /* * */ 500,2556,1929,3776,3386,4517,1385,1103,4895,3396,874,1616,5124,606,
+  [0x40]= /* unused */ 0,
+  [0x50]= /* \ */ 2400,2300,2200,2100,2000,1900,1800,1700,1600,1500,1400,1300,1200,1100,
+  [0x60]= /* ~ */ 800,1000,1234,1567,1000,800,200,250,200,600,800,1000,1200,1500,
+  [0x70]= /* ^ */ 4800,4780,8000,1600,4800,4780,8000,1600,4800,4800,8000,1600,4800,4800,8001,
+  [0x80]= /* / */ 1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2100,2200,2300,2400,
+  [0x90]= /* ! */ 1600,1514,1600,821,1600,1715,1600,911,1600,1968,1600,1490,1600,1722,1600,
+  [0xA0]= /* : */ 2200,1760,1760,1320,2640,880,2200,1760,1760,1320,2640,880,2200,1760,
+  [0xB0]= /* ; */ 688,676,664,652,640,628,616,604,592,580,568,556,544,532,
+  [0xC0]= /* $ */ 1207,1224,1163,1127,1159,1236,1269,1314,1127,1224,1320,1332,1257,1327,
+  [0xD0]= /* % */ 378,331,316,230,224,384,480,320,358,412,376,621,554,426,
+  [0xE0]= /* & */ 100,200,300,400,800,700,600,500,450,1210,
+  [0xF0]= /* ? */ 1500,1450,1400,1350,1300,1250,1300,1400,1600,1801,2111,2511,2811,3111,
+};
 
 static void audiocb(void*userdata,Uint8*stream,int len) {
   static float prf=0.0;
@@ -58,9 +78,21 @@ static void audiocb(void*userdata,Uint8*stream,int len) {
         buf[pos++]=vol*prf;
       }
       if(cpos>=cmax) cfreq=-1;
-    } else if(cfreq) {
-      //TODO
-      return;
+    } else if(cfreq>=DRUM_NOTE) {
+      x=sqrt(fil);
+      while(pos<len && cpos<cmax) {
+        if((cpos*577ULL)/whole_note>=16 || !drum_const_table[(cfreq&15)*16+(cpos*577ULL)/whole_note]) {
+          cfreq=0;
+          break;
+        }
+        pha+=drum_table[(cfreq&15)*16+(cpos*577ULL)/whole_note];
+        if(pha>=1.0) pha-=1.0;
+        prf=(1.0-x)*(pha<0.5?-1.0:1.0)+x*prf;
+        if(pha<0.1) prf*=-1.0;
+        if(!cpos++) prf*=0.5;
+        buf[pos++]=vol*prf;
+      }
+      if(cpos>=cmax) cfreq=-1;
     } else {
       while(pos<len && cpos<cmax) cpos++,buf[pos++]=vol*(prf*=fil);
       if(cpos>=cmax) cfreq=-1;
@@ -87,6 +119,7 @@ void audio_init(void) {
   for(i=0;i<128;i++) note_table[i]=32.0*pow(2.0,i/12.0)/(float)config.audio_rate;
   for(i=OVERTONE;i<UNDERTONE;i++) note_table[i]=(32.0*(i+2-OVERTONE))/(float)config.audio_rate;
   for(i=UNDERTONE;i<=NOTE_MASK;i++) note_table[i]=(2048.0/(i+2-UNDERTONE))/(float)config.audio_rate;
+  for(i=0;i<256;i++) drum_table[i]=drum_const_table[i]/(float)config.audio_rate;
   // Initialize SDL audio
   spec.freq=config.audio_rate;
   spec.format=AUDIO_S16SYS;
@@ -211,7 +244,7 @@ void audio_set_sfx(const char*m) {
       // Percussions
       case '!': case '$': case '%': case '^': case '&': case '*': case '/':
       case '?': case '\\': case '`': case '~': case ':': case ';':
-        //TODO
+        c%=24; n=(c&15)+(c/16)+DRUM_NOTE;
         goto noted;
     }
   }
