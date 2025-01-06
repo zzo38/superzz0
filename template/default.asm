@@ -417,6 +417,24 @@ SHOOT	FORW H,Z
 	SFX A,"@12T<<F"
 	LET S,1
 
+; **** Rock ****
+	EV T,_ROCK
+	XOR A,A
+	LET B,Z
+	MOVE A,$0041
+	JF A,0
+	SFX A,"@12T<<F"
+	GTUK A,A
+	EQ A,_WATER
+	JF A,1
+	FLOA A,0
+	FLOA A,0
+	SFX A,"@13TF#C<F#C<F#"
+	LET S,1
+
+; **** Spike ****
+	EV T,_SPIKE,OUCH
+
 ; **** Harmful objects ****
 	EV T,_BULLET
 	EV T,_STAR
@@ -427,6 +445,7 @@ SHOOT	FORW H,Z
 	EV T,_RUNNER
 	EV T,_HEAD
 	EV T,_SEGMENT
+	EV T,_MOUSE
 	CALL W,OUCH
 	KILM D,0
 
@@ -538,7 +557,7 @@ SHOOT	FORW H,Z
 	SFX A,"@24Z.U4U5U6U7U8U9U10U12U14U16U18U20U18U16U14U12U10U9U8U7U6U5U4U3"
 	CASE A,POTION
 1H	DATA "Dud","Healing","Poison","Energy"
-	DATA "Reveal Walls","Extra Healing","Time"
+	DATA "Reveal Walls","Extra Healing","Time","Avalanche"
 POTION	FILL $10,1
 
 	TA POTION+1 ; Healing
@@ -566,7 +585,24 @@ POTION	FILL $10,1
 	GIVE T,25
 	LET S,1
 
-; ***** Chest *****
+	TA POTION+7 ; Avalanche
+	LET A,%W,,0
+	MUL A,%H,,0
+	INC B,A
+	DIV B,20
+1H	INC C,%R,A,0
+	CWOT C,$0015
+	JF C,2F
+	SINK D,C
+	LET D,$00000700+_ROCK
+	PTM D,C
+2H	LOOP B,1B
+	LET S,1
+
+; **** Chest ****
+; Parameter:
+;   bit7-bit4 = Kind
+;   bit3-bit0 = Amount
 	EV T,_CHEST
 	GTMP A,0
 	DEC B,%UR,A,4
@@ -617,6 +653,28 @@ CHEST	FILL $0F,0
 	CALL A,OUCH
 	MESS G," It is a trap!"
 	LET S,0
+
+; **** Pouch ****
+; Parameter:
+;   bit7-bit4 = Money (5x)
+;   bit3-bit0 = Gems (5x)
+	EV T,_POUCH
+	GTMP B,0
+	SFX A,"@29Z.CGEC'G>ECGEC'G>EC"
+	TEXT E,"This pouch contains "
+	LET A,%B,B,$40
+	MUL A,5
+	GIVE G,A
+	GIVE S,A
+	TEXT D,A
+	TEXT G," gems and "
+	LET A,%B,B,$44
+	MUL A,5
+	GIVE C,A
+	GIVE S,A
+	TEXT D,A
+	MESS G," coins."
+	KILM D,0
 
 ; **** Stars ****
 ; Parameter: duration
@@ -790,6 +848,7 @@ CHEST	FILL $0F,0
 	EV S,_SHARK
 	EV S,_HEAD
 	EV S,_SEGMENT
+	EV S,_MOUSE
 	FLET S,0
 	GIVE S,1
 	SFX A,"@20O4CO1CO5CO3C"
@@ -809,7 +868,7 @@ CHEST	FILL $0F,0
 	PTMP A,0
 	LET S,0
 
-; **** Lion, Tiger, Shark ****
+; **** Lion, Tiger, Shark, Mouse ****
 ; Parameter:
 ;   bit3-bit0 = Intelligence
 ;   bit7-bit4 = Firing rate (Tiger only)
@@ -830,11 +889,17 @@ CHEST	FILL $0F,0
 1H	LET B,Z
 	AND B,$0F
 	SEEK A,1
-	GRTR C,%R,,16
+1H	GRTR B,%R,,16
 	TLET A,%R,,4
 	LET B,0
 	CALL C,MOVCRE
 	LET S,0
+
+	EV B,_MOUSE
+	LET B,Z
+	SEEK A,1
+	XOR A,2
+	GOTO A,1B
 
 ; **** Bear ****
 ; Parameter: Range (0-255)
@@ -1129,6 +1194,7 @@ CENMOV	LET D,Z
 	ED 'S',"Scroll",_SCROLL,$0800
 	ED 'Q',"Checkpoint",_CHECKPOINT,$0309
 	ED 'C',"Chest",_CHEST,$0106
+	ED 'U',"Pouch",_POUCH,$0000
 	ED 2
 
 	ED1 2
@@ -1139,6 +1205,7 @@ CENMOV	LET D,Z
 	ED 'K',"Shark",E_LION,_SHARK+$8600
 	ED 'R',"Runner",E_RUNN,$8200
 	ED 'V',"Slime",_SLIME,$0000
+	ED 'M',"Mouse",E_LION,_MOUSE+$8600
 	ED 1,"Centipedes:"
 	ED 'H',"Head",E_CENT,_HEAD+$8200
 	ED 'S',"Segment",E_CENT,_SEGMENT+$8200
@@ -1150,6 +1217,7 @@ CENMOV	LET D,Z
 	ED 'F',"Forest",_FOREST,$0320
 	ED 'I',"Ice",_ICE,$0331
 	ED 'X',"Web",_WEB,$0000
+	ED 'Y',"Tree",_TREE,$030A
 	ED 1,"Walls:"
 	ED 'S',"Solid",_SOLID,$0000
 	ED 'N',"Normal",_NORMAL,$0000
@@ -1157,7 +1225,6 @@ CENMOV	LET D,Z
 	ED 'B',"Breakable",_BREAKABLE,$0000
 	ED 'T',"Text",_TEXT,$0000
 	ED 'V',"Invisible",_INVISIBLE,$0000
-	ED 'R',"Ricochet",_RICOCHET,$030A
 	ED 1,"Floors:"
 	ED 'E',"Empty",_EMPTY,$0300
 	ED 'O',"Floor",_FLOOR,$0000
@@ -1166,12 +1233,15 @@ CENMOV	LET D,Z
 
 	ED1 4
 	ED 1,"Puzzles:"
+	ED 'O',"Rock",_ROCK,$0307
 	ED '0',"Boulder",_BOULDER,$0000
 	ED '1',"Slider \x12",_SLIDERNS,$0000
 	ED '2',"Slider \x1D",_SLIDEREW,$0000
 	ED '3',"Pusher",E_PUSH,_PUSHER+$8200
 	ED 1,"Miscellaneous:"
 	ED 'T',"Transporter",_TRANSPORTER,$0000
+	ED 'R',"Ricochet",_RICOCHET,$030A
+	ED 'K',"Spike",_SPIKE,$0000
 	ED 2
 
 	ED1 5
@@ -1190,6 +1260,7 @@ CENMOV	LET D,Z
 ; **** Parameter edit ****
 
 	ED0 _TEXT,$0100
+	ED0 _SPIKE,$0100
 
 	ED0 _OBJECT
 	ED 'C'
@@ -1225,9 +1296,10 @@ CENMOV	LET D,Z
 	ED2 'O',"Re~veal Walls",4
 	ED2 'O',"E~xtra Healing",5
 	ED2 'O',"~Time",6
+	ED2 'O',"~Avalanche",7
 	ED 0
 
-E_LION	ED3 _LION,$0C,_TIGER,$0B,_BEAR,$06,_SHARK,$07
+E_LION	ED3 _LION,$0C,_TIGER,$0B,_BEAR,$06,_SHARK,$07,_MOUSE,$0F
 	ED '=',"K-MPaT"
 	ED '@',"_2",2
 	ED 'P',$FFFF,$4800
@@ -1247,6 +1319,7 @@ E_RUNN	ED '=',"-MP"
 
 	ED0 _LION
 	ED0 _SHARK
+	ED0 _MOUSE
 	ED 1,$0008
 	ED 'H',"Creature"
 	ED2 'N',"~Intelligence: ",$0030,0,15
@@ -1312,6 +1385,12 @@ E_CENT	ED '=',"K-MP"
 E_PUSH	ED '=',"K-MP"
 	ED '@',"_4",4
 	ED 'P',$FFFF,$4800
+	ED 0
+
+	ED0 _POUCH
+	ED 'H',"Contents of pouch:"
+	ED2 'N',"~Gems: 5x",$0030,0,15
+	ED2 'N',"~Money: 5x",$0034,0,15
 	ED 0
 
 ; **** Editor board info ****

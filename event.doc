@@ -6,6 +6,8 @@ addresses with a currently defined meaning are listed here. The initial
 values can be set using the assembler, and they can also be changed at
 run time.
 
+$C8 = Transport event (see below).
+
 $C9 = The default overlay, which is used when objects within the overlay
 are moved out of the way or deleted. The low byte specifies the character
 code and the high byte specifies the colour code.
