@@ -317,7 +317,8 @@ typedef struct {
 #define SC_SPEC_USERDATA 0x3E
 
 #define SC_IND_CURSOR 0x51
-#define SC_IND_SCROLL 0x52
+#define SC_IND_SCROLL_Y 0x52
+#define SC_IND_SCROLL_X 0x53
 #define SC_IND_EXIT_E 0x58
 #define SC_IND_EXIT_N 0x59
 #define SC_IND_EXIT_W 0x5A
