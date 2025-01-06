@@ -324,6 +324,7 @@ SHOOT	FORW H,Z
 	EV T,_FAKE,1
 	EV T,_WEB,1
 	EV T,_ICE,1
+	EV T,_OPENGATE,1
 
 ; **** Keys/doors ****
 	EV T,_KEY
@@ -1118,6 +1119,27 @@ CENMOV	LET D,Z
 	PTMK A,0
 	LET S,0
 
+; **** Gate ****
+; Parameter: duration (open gate only)
+
+	EV T,_GATE
+	SFX A,"@22<<C#>C#>C#"
+	LET A,_OPENGATE
+	PTMK A,0
+	LET A,18
+	PTMP A,0
+	LET S,0
+
+	EV A,_OPENGATE
+	GTMP A,0
+	LOOP A,1F
+	LET A,_GATE
+	PTMK A,0
+	SFX A,"@22`<<C#"
+	LET S,0
+1H	PTMP A,0
+	LET S,0
+
 ; **** Script commands ****
 
 	; #CHAR <number>
@@ -1242,6 +1264,7 @@ CENMOV	LET D,Z
 	ED 'T',"Transporter",_TRANSPORTER,$0000
 	ED 'R',"Ricochet",_RICOCHET,$030A
 	ED 'K',"Spike",_SPIKE,$0000
+	ED 'G',"Gate",_GATE,$0000
 	ED 2
 
 	ED1 5
