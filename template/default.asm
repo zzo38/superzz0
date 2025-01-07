@@ -308,7 +308,7 @@ SHOOT	FORW H,Z
 1H	GTMK H,0
 	LET W,0
 	LET T,0
-	EJMP H,0
+	EJMP S,H
 
 ; **** Player ****
 	EV S,_PLAYER,OUCH
@@ -604,6 +604,7 @@ POTION	FILL $10,1
 ; Parameter:
 ;   bit7-bit4 = Kind
 ;   bit3-bit0 = Amount
+	EV X,_CHEST,1
 	EV T,_CHEST
 	GTMP A,0
 	DEC B,%UR,A,4
