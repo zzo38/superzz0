@@ -2458,10 +2458,10 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_BLOC: switch(fo) {
         case 0 ... 7: regs[fo]=so; return pc;
         case 9: condflag=so?1:0; return pc;
-        case 12: pc=run_program(pc,so,x,y,z); if(pc<256) return pc;
-        case 13: pc=run_program(pc,w,so,y,z); if(pc<256) return pc;
-        case 14: pc=run_program(pc,w,x,so,z); if(pc<256) return pc;
-        case 15: pc=run_program(pc,w,x,y,so); if(pc<256) return pc;
+        case 12: pc=run_program(pc,so,x,y,z); if(pc<256) return pc; break;
+        case 13: pc=run_program(pc,w,so,y,z); if(pc<256) return pc; break;
+        case 14: pc=run_program(pc,w,x,so,z); if(pc<256) return pc; break;
+        case 15: pc=run_program(pc,w,x,y,so); if(pc<256) return pc; break;
       } break;
       case OP_BTAK: condflag=(status_vars[fo]&(1<<(so&31))?1:0); status_vars[fo]&=~(1<<(so&31)); break;
       case OP_BTST: condflag=((1L<<(so&31))&regs[fo])?1:0; break;
@@ -2497,6 +2497,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_CWOT: if((t=convxy(regs[fo],x,y))!=-1) { t=b_main[t].kind; goto cwoe; } else condflag=0; break;
       case OP_DCL: condflag=(--regs[fo]<so?1:0); break;
       case OP_DEC: --so; goto store;
+      case OP_DECL: --so; goto lstore;
       case OP_DIE: if(so&0xFF) break_tile(0,0,so&0xFFFF,so>>16,fo&4); died: if(fo&=3) return fo-2; break;
       case OP_DIR:
         if(regs[fo]) t=(regs[fo]-1)%board_info.width,u=(regs[fo]-1)/board_info.width; else t=x,u=y;
@@ -2587,6 +2588,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_GTUS: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].stat; else condflag=0; break;
       case OP_ICG: condflag=(++regs[fo]>so?1:0); break;
       case OP_INC: ++so; goto store;
+      case OP_INCL: ++so; goto lstore;
       case OP_JEV: if(!(regs[fo]&1)) goto jump; break;
       case OP_JF: if(!condflag) goto jump; break;
       case OP_JNEG: if(regs[fo]<0) goto jump; break;
@@ -2601,6 +2603,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_LAY: if(rs=get_statxy(so)) { condflag=1; so=rs->layer; goto store; } else condflag=0; break;
       case OP_LESS: condflag=(regs[fo]<so?1:0); break;
       case OP_LET: goto store;
+      case OP_LETL: goto lstore;
       case OP_LITE: calc_light(fo,so); break;
       case OP_LOCK: if(rs=get_statxy(so)) rs->layer=(rs->layer&0x3F)|(regs[fo]&0xC0); break;
       case OP_LOG: if(config.debug) debug_log(fo,so,w,x,y,z,pc); break;
@@ -2682,6 +2685,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PBF: board_info.flag=so; break;
       case OP_PBU: board_info.userdata=so; break;
       case OP_PEEK: regs[fo]=memory[so&0xFFFF]; break;
+      case OP_PEEL: so=memory[so&0xFFFF]; goto lstore;
       case OP_PEER: regs[fo]=memory[(so+regs[fo])&0xFFFF]; break;
       case OP_PICK:
         condflag=0;
@@ -2908,6 +2912,12 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case 15: z=so; break;
     }
     continue;
+    lstore:
+    t=regs[fo];
+    regs[fo]=so;
+    u=run_program(pc,w,x,y,z);
+    regs[fo]=t;
+    return u;
     setxy:
     if(regs[fo]) regs[fo]=so; else so--,x=so%board_info.width,y=so/board_info.width;
     continue;

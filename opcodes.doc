@@ -725,6 +725,24 @@ numbers are treated as unsigned.
 [097 KILO]
   Like KILU but over layer instead of under layer.
 
+[0A0 LETL]
+  Like LET but saves the old value of the register; once this subroutine
+  returns then the old value is restored. (Note that each use of LETL,
+  INCL, DECL, and PEEL adds another entry to the call stack, so you should
+  not use too many in one subroutine. It should not be used in a loop.)
+
+[0A1 INCL]
+  Like INC but saves the old value of the register; once this subroutine
+  returns then the old value is restored.
+
+[0A2 DECL]
+  Like DEC but saves the old value of the register; once this subroutine
+  returns then the old value is restored.
+
+[0A3 PEEL]
+  Like PEEK but saves the old value of the register; once this subroutine
+  returns then the old value is restored.
+
 [100 LET]
   Copy second operand to first.
 
