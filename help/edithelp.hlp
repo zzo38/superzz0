@@ -1,0 +1,20 @@
+@Help lump editor
+In this help lump editor, you can edit help lumps which can be accessed by
+scripts using the !- and #HELP commands, and by the HELP instruction.
+
+The .HLP suffix will automatically be added to any lumps you create.
+
+Once you create one, you can edit it using the text editor. This help
+lump can contain a limited subset of the commands available in scripts:
+
+  @name
+  text
+  $text
+  :label
+  !label;text
+  !-help;text
+
+The label referenced by a link can be another label within the same help
+file, in which case it will move the cursor to that position when that
+link is selected.
+

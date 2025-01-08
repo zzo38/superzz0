@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -c -Wno-unused-result -std=gnu99 edit.c `sdl-config --cflags`
+gcc -g -O0 -c -Wno-unused-result -std=gnu99 edit.c `sdl-config --cflags`
 exit
 #endif
 
@@ -364,6 +364,111 @@ static char edit_appearance_mapping(void) {
   }
 }
 
+static void edit_one_help_lump(const char*name) {
+  FILE*f=open_lump(name,"r");
+  Uint8*t=0;
+  if(f) {
+    t=malloc(lump_size+1);
+    if(!t) err(1,"Allocation failed");
+    fread(t,1,lump_size,f);
+    t[lump_size]=0;
+    fclose(f);
+  }
+  t=text_editor(t);
+  f=open_lump(name,"w");
+  if(!f) errx(1,"Unexpected error");
+  fputs(t?:(Uint8*)"\n",f);
+  fclose(f);
+}
+
+static void edit_help_lumps(void) {
+  char buf[40];
+  char name[9];
+  FILE*f;
+  const char**list=0;
+  int cur,scr,i,j,n,count,xc;
+  start:
+  cur=scr=xc=0;
+  free(list);
+  list_lumps("*.HLP",&list,&count);
+  draw0:
+  memset(v_char,32,80*25);
+  memset(v_color+80,0x07,80*24);
+  memset(v_color,0x30,80);
+  strcpy(v_char,"Help lumps");
+  memset(v_color+24*80,0x30,80);
+  strcpy(v_char+24*80+2,"<RET> Edit  <INS> Add  <DEL> Delete  <ESC> Done");
+  draw1:
+  while(cur<scr*23) --scr;
+  while(cur>=scr*23+115) ++scr;
+  for(i=0;i<115;i++) {
+    n=i+scr*23;
+    if(n<count) {
+      draw_text(14*(i/23)+3,i%23+1,"        ",n==cur?0x2E:0x0E,8);
+      draw_text(14*(i/23)+3,i%23+1,list[n],n==cur?0x2E:0x0E,strlen(list[n])-4);
+    } else {
+      draw_text(14*(i/23)+3,i%23+1,"--------",n==cur?0x28:0x08,8);
+    }
+    j=14*(i/23)+80*(i%23)+82;
+    if(n==cur) {
+      v_char[j]=0x10; v_color[j]=0x0F;
+      if(xc) memset(v_color+j+1,0x6F,xc);
+    } else {
+      v_char[j]=0xFA; v_color[j]=0x08;
+    }
+  }
+  draw_text(52,24,buf,0x3B,snprintf(buf,20,"%5d/%5d",cur+1,count));
+  redisplay();
+  for(;;) {
+    if(!next_event()) return;
+    if(event.type==SDL_KEYDOWN) switch(event.key.keysym.sym) {
+      case SDLK_ESCAPE: free(list); return;
+      case SDLK_HOME: cur=scr=xc=0; goto draw0;
+      case SDLK_END: scr=xc=0; if(count) cur=count-1; goto draw0;
+      case SDLK_UP: xc=0; if(cur) --cur; goto draw1;
+      case SDLK_DOWN: xc=0; if(cur+1<count) ++cur; goto draw1;
+      case SDLK_LEFT: xc=0; cur-=23; if(cur<0) cur=0; goto draw1;
+      case SDLK_RIGHT: xc=0; cur+=23; if(cur>=count) cur=(count?count-1:0); goto draw1;
+      case SDLK_PAGEUP: xc=0; scr-=115; if(scr<0) scr=0; cur-=115; if(cur<0) cur=0; goto draw1;
+      case SDLK_PAGEDOWN: xc=0; scr+=115; cur+=115; if(cur>=count) cur=(count?count-1:0); goto draw1;
+      case SDLK_RETURN: xc=0; if(cur<count) edit_one_help_lump(list[cur]); goto draw0;
+      case SDLK_INSERT:
+        if(count>10000) {
+          alert_text("Too many lumps");
+        } else {
+          *name=0;
+          ask_text_restrict("Add new help lump:",name,8);
+          if(*name && snprintf(buf,16,"%s.HLP",name)) edit_one_help_lump(buf);
+        }
+        goto start;
+      case SDLK_DELETE:
+        if(cur>=count) break;
+        snprintf(buf,40,"Delete %s?",list[cur]);
+        if(ask_yn(buf,0)) {
+          if(f=open_lump(list[cur],"w")) fclose(f);
+          goto start;
+        }
+        goto draw0;
+      case SDLK_SLASH: case SDLK_QUESTION: online_help("edithelp",0); goto draw0;
+      default:
+        i=event.key.keysym.unicode;
+        if(i==8 && xc) {
+          --xc;
+          while(cur && !memcmp(list[cur-1],list[cur],xc)) --cur;
+          goto draw1;
+        }
+        if(i>='a' && i<='z') i+='A'-'a';
+        if(xc<8 && i!='.' && i>32 && i<127) for(n=(xc?cur:0);n<count && !memcmp(list[n],list[cur],xc);n++) {
+          if(list[n][xc]==i) {
+            ++xc;
+            cur=n;
+            goto draw1;
+          }
+        }
+    }
+  }
+}
+
 static int copy_board(Uint16 inb,Uint16 outb) {
   FILE*in=open_lump_by_number(inb,"BRD","r");
   Uint32 s=lump_size;
@@ -584,6 +689,10 @@ int run_editor(void) {
         win_command_esc(0,"Done") break;
       }
       if(c) write_numform_lump();
+    }
+    win_command('H',"Help lumps...") {
+      edit_help_lumps();
+      win_refresh();
     }
     win_blank();
     win_command('R',"Run") {

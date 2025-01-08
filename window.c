@@ -65,6 +65,39 @@ void ask_text(const char*prompt,Uint8*buf,int len) {
   }
 }
 
+void ask_text_restrict(const char*prompt,Uint8*buf,int len) {
+  int i,n;
+  v_xcur=v_ycur=128;
+  cwin=0;
+  draw_border(0x2A,1,20,78,23);
+  draw_text(3,21,prompt,0x2E,-1);
+  for(;;) {
+    for(i=0;i<len && buf[i];i++) v_color[i+22*80+3]=0x1F,v_char[i+22*80+3]=buf[i];
+    n=i;
+    if(i<len) v_color[i+22*80+3]=0x13,v_char[i+22*80+3]=177;
+    for(i++;i<len;i++) v_color[i+22*80+3]=0x10,v_char[i+22*80+3]=0xFA;
+    redisplay();
+    if(!next_event()) break;
+    if(event.type!=SDL_KEYDOWN) continue;
+    if(event.key.keysym.sym==SDLK_RETURN) break;
+    i=event.key.keysym.unicode;
+    if(i==0x0D || i==0x0A) break;
+    if(n<len && i==0x10) {
+      memcpy(sv_char,v_char,80*25);
+      memcpy(sv_color,v_color,80*25);
+      buf[n++]=ask_color_char(1,128);
+      buf[n]=0;
+      memcpy(v_char,sv_char,80*25);
+      memcpy(v_color,sv_color,80*25);
+    }
+    if(n && i==0x08) buf[n-1]=0;
+    if(i==0x15) *buf=0;
+    if(i>='a' && i<='z') i+='A'-'a';
+    if((i<'A' || i>'Z') && (i<'0' || i>'9') && i!='_') i=0;
+    if(n<len && i>=0x20 && i<0x7F) buf[n++]=i,buf[n]=0;
+  }
+}
+
 int ask_yn(const char*prompt,int d) {
   int i;
   v_xcur=v_ycur=128;

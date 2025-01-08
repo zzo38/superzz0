@@ -4,6 +4,7 @@ exit
 #endif
 
 #include "common.h"
+#include <fnmatch.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -420,5 +421,22 @@ size_t copy_stream(FILE*in,FILE*out,size_t len) {
     t+=s;
   }
   return t;
+}
+
+void list_lumps(const char*pat,const char***list,int*count) {
+  int n;
+  size_t s=0;
+  char*c=0;
+  const char*x;
+  FILE*f=open_memstream(&c,&s);
+  *list=0;
+  *count=0;
+  if(!f) return;
+  for(n=0;n<nlumps;n++) if(lumps[n].length && !fnmatch(pat,x=lumps[n].name,FNM_NOESCAPE|FNM_CASEFOLD)) {
+    fwrite(&x,1,sizeof(const char*),f);
+    ++*count;
+  }
+  fclose(f);
+  *list=(void*)c;
 }
 

@@ -502,6 +502,7 @@ int save_world(const char*name); // set name to null to overwrite the current fi
 int save_game(FILE*fp);
 int restore_game(FILE*fp);
 size_t copy_stream(FILE*in,FILE*out,size_t len);
+void list_lumps(const char*pat,const char***list,int*count);
 
 // === File access (data) ===
 
@@ -570,6 +571,7 @@ void lpt_script(const Uint8*p,int w);
 void draw_border(Uint8 c,Uint8 x0,Uint8 y0,Uint8 x1,Uint8 y1);
 void alert_text(const char*text);
 void ask_text(const char*prompt,Uint8*buf,int len);
+void ask_text_restrict(const char*prompt,Uint8*buf,int len);
 int ask_yn(const char*prompt,int d);
 Uint8 ask_color_char(Uint8 m,Uint8 v);
 void online_help(const char*major,const char*minor);

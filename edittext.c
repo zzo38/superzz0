@@ -302,6 +302,7 @@ static Uint8*text_editor_1(Uint8*text) {
   xc=q-lines[yc=i].ptr;
   goto display;
   exit:
+  v_ycur=127;
   if(nchars<=1) {
     for(i=0;i<nlines;i++) if(lines[i].own) free(lines[i].ptr);
     free(lines);

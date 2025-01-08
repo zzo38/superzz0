@@ -403,9 +403,7 @@ static void stat_edit(int n) {
       }
     }
     if(maxstat>1) win_command('D',"Delete") {
-      *buf=0;
-      ask_text("Delete? (y/n)",buf,2);
-      if(*buf=='Y' || *buf=='y') {
+      if(ask_yn("Delete?",0)) {
         for(at=0;at<board_info.width*board_info.height*3;at++) {
           if(b_under[at].stat==n) b_under[at].stat=0; else if(b_under[at].stat>n) --b_under[at].stat;
         }
