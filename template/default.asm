@@ -4,6 +4,7 @@
 ;   2 = web
 ;   3 = player only
 ;   4 = ice
+;   5 = fire
 ; Events:
 ;   A = frame
 ;   B = stat
@@ -141,7 +142,7 @@ MOVEPL1	XOR A,A
 1H	GSXY A,1
 	FORW E,Z
 	XOR E,E
-	CWOT E,$0017
+	CWOT E,$0037
 	JF A,1F
 	; Add bullet
 	SINK E,0
@@ -257,7 +258,7 @@ OUCH1	ROB H,10
 	MESS E,"Ouch!"
 	SFX A,"@30Z<<CC'C#D#'X"
 	; Restart if zapped
-	BFLG A,0
+REZAP	BFLG A,0
 	JF A,0
 	PICK A,1
 	LET X,%I,,INITPX
@@ -295,7 +296,7 @@ MOVCRE	FORW A,A
 	; Z = direction
 SHOOT	FORW H,Z
 	XOR H,H
-	CWOT H,$0017
+	CWOT H,$0037
 	JF A,1F
 	; Add bullet
 	SINK H,0
@@ -324,6 +325,7 @@ SHOOT	FORW H,Z
 	EV T,_FAKE,1
 	EV T,_WEB,1
 	EV T,_ICE,1
+	EV T,_FIRE,1
 	EV T,_OPENGATE,1
 
 ; **** Keys/doors ****
@@ -406,6 +408,12 @@ SHOOT	FORW H,Z
 	SFX A,"@20ZATA"
 	KILM D,0
 
+; **** Heart ****
+	EV T,_HEART
+	GIVE H,5
+	SFX A,"@20TK4K5K6K12K20"
+	KILM D,0
+
 ; **** Energizer ****
 	EV T,_ENERGIZER
 	VSET E,75
@@ -417,6 +425,13 @@ SHOOT	FORW H,Z
 	EV T,_SLIDEREW
 	SFX A,"@12T<<F"
 	LET S,1
+
+; **** Indirect Push ****
+	EV C,_INDIRECTPUSH
+	BACK A,W
+	GTMK A,0
+	EQ A,_PLAYER
+	LET S,%OF,,1
 
 ; **** Rock ****
 	EV T,_ROCK
@@ -447,6 +462,8 @@ SHOOT	FORW H,Z
 	EV T,_HEAD
 	EV T,_SEGMENT
 	EV T,_MOUSE
+	EV T,_SNAKE
+	EV T,_LANDMINE
 	CALL W,OUCH
 	KILM D,0
 
@@ -772,6 +789,27 @@ CHEST	FILL $0F,0
 	LET Z,%I,,FACING
 	GOTO A,MOVEPL1
 
+; **** Fire ****
+	EV A,_FIRE
+	PEEK A,$EC
+	ADD A,X
+	ADD A,Y
+	JOD A,0
+	LET A,%R,,4
+	JZ A,0
+	INC A,Z
+	MOD A,3
+	PTMP A,0
+	LET S,0
+
+	EV U,_FIRE
+	ROB E,0
+	JT E,0
+	ROB H,5
+	MESS E,"Ouch!"
+	SFX A,"@30Z<C<D#GC"
+	GOTO A,REZAP
+
 ; **** Forest ****
 	EV T,_FOREST
 	LET A,_FLOOR
@@ -851,9 +889,10 @@ CHEST	FILL $0F,0
 	EV S,_HEAD
 	EV S,_SEGMENT
 	EV S,_MOUSE
+	EV S,_SNAKE
 	FLET S,0
 	GIVE S,1
-	SFX A,"@20O4CO1CO5CO3C"
+	SFX A,"@24O4CO1CO5CO3C"
 	KILM C,0
 
 ; **** Runner ****
@@ -867,6 +906,24 @@ CHEST	FILL $0F,0
 	JNZ C,0
 	INC A,1
 	XOR A,Z
+	PTMP A,0
+	LET S,0
+
+; **** Snake ****
+; Parameter:
+;   bit1-bit0 = Direction
+;   bit7-bit4 = Intelligence
+	EV B,_SNAKE
+	LET A,Z
+	XOR B,B
+	CALL C,MOVCRE
+	JNZ C,0
+	SEEK C,1
+	RSH A,4
+	GRTR A,%R,,16
+	TLET C,%R,,4
+	LSH A,4
+	ADD A,C
 	PTMP A,0
 	LET S,0
 
@@ -1141,6 +1198,17 @@ CENMOV	LET D,Z
 1H	PTMP A,0
 	LET S,0
 
+; **** One Step ****
+	EV T,_ONESTEP
+	PACK B,0
+	PICK A,1
+	UNPC B,B
+	DROP A,1
+	SFX A,"@30Z.K3K5K7K9K11"
+	LET A,_NORMAL
+	PTUK A,0
+	LET S,0
+
 ; **** Script commands ****
 
 	; #CHAR <number>
@@ -1209,6 +1277,7 @@ CENMOV	LET D,Z
 	ED 'O',"Money",_MONEY,$030E
 	ED 'A',"Ammo",_AMMO,$0303
 	ED 'T',"Torch",_TORCH,$0306
+	ED 'H',"Heart",_HEART,$0304
 	ED 'K',"Key",_KEY,$0000
 	ED 'D',"Door",_DOOR,$040F
 	ED 'Z',"Stone",_STONE,$0000
@@ -1229,9 +1298,10 @@ CENMOV	LET D,Z
 	ED 'R',"Runner",E_RUNN,$8200
 	ED 'V',"Slime",_SLIME,$0000
 	ED 'M',"Mouse",E_LION,_MOUSE+$8600
+	ED 'S',"Snake",E_SNAK,$8600
 	ED 1,"Centipedes:"
-	ED 'H',"Head",E_CENT,_HEAD+$8200
-	ED 'S',"Segment",E_CENT,_SEGMENT+$8200
+	ED '1',"Head",E_CENT,_HEAD+$8200
+	ED '2',"Segment",E_CENT,_SEGMENT+$8200
 	ED 2
 
 	ED1 3
@@ -1241,6 +1311,7 @@ CENMOV	LET D,Z
 	ED 'I',"Ice",_ICE,$0331
 	ED 'X',"Web",_WEB,$0000
 	ED 'Y',"Tree",_TREE,$030A
+	ED 'R',"Fire",_FIRE,$034E
 	ED 1,"Walls:"
 	ED 'S',"Solid",_SOLID,$0000
 	ED 'N',"Normal",_NORMAL,$0000
@@ -1261,11 +1332,14 @@ CENMOV	LET D,Z
 	ED '1',"Slider \x12",_SLIDERNS,$0000
 	ED '2',"Slider \x1D",_SLIDEREW,$0000
 	ED '3',"Pusher",E_PUSH,_PUSHER+$8200
+	ED '4',"Indirect Push",_INDIRECTPUSH,$0000
 	ED 1,"Miscellaneous:"
 	ED 'T',"Transporter",_TRANSPORTER,$0000
 	ED 'R',"Ricochet",_RICOCHET,$030A
 	ED 'K',"Spike",_SPIKE,$0000
 	ED 'G',"Gate",_GATE,$0000
+	ED 'Q',"One Step",_ONESTEP,$0000
+	ED 'X',"Land Mine",_LANDMINE,$0000
 	ED 2
 
 	ED1 5
@@ -1390,6 +1464,22 @@ E_CENT	ED '=',"K-MP"
 	ED 'H',0
 	ED2 'N',"~Intelligence: ",$1170,0,128
 	ED2 'N',"~Deviance: ",$1270,0,128
+	ED 0
+
+E_SNAK	ED '=',"-MP2.T"
+	ED '@',"_1",1
+	ED 'P',_SNAKE,$5800
+	ED 0
+
+	ED0 _SNAKE
+	ED 'H',"Direction:"
+	ED 'O',$0010
+	ED2 'O',"~East",0
+	ED2 'O',"~North",1
+	ED2 'O',"~West",2
+	ED2 'O',"~South",3
+	ED 'H',0
+	ED2 'N',"~Intelligence: ",$0034,0,15
 	ED 0
 
 	ED0 _CHEST
