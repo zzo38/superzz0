@@ -36,7 +36,19 @@ In the F1 menu, "Light" suppresses the overlay and "Dark" displays it (if
 there is an overlay).
 
 :w;Windows
-(TODO)
+There are two kind of windows, being text windows and item windows (item
+windows are not implemented yet).
+
+A text window tile is specified by the default character, and the primary
+and secondary colours.
+
+The default character is used for the top and bottom of the text window,
+beyond the ends of the text; the window flags can be used to specify if
+they appear only once at each end or everywhere with no text.
+
+The primary colour is used for normal text, while the secondary colour is
+used for centered text. The window definition can override these in some
+cases for centered text and for links.
 
 :i;Indicators
 An indicator has a character code to display if it is "set"; if the
