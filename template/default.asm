@@ -463,6 +463,9 @@ SHOOT	FORW H,Z
 	EV T,_SEGMENT
 	EV T,_MOUSE
 	EV T,_SNAKE
+	EV T,_SPIDER
+	EV T,_BIRD
+	EV T,_LUMBERJACK
 	EV T,_LANDMINE
 	CALL W,OUCH
 	KILM D,0
@@ -890,6 +893,9 @@ CHEST	FILL $0F,0
 	EV S,_SEGMENT
 	EV S,_MOUSE
 	EV S,_SNAKE
+	EV S,_SPIDER
+	EV S,_BIRD
+	EV S,_LUMBERJACK
 	FLET S,0
 	GIVE S,1
 	SFX A,"@24O4CO1CO5CO3C"
@@ -927,7 +933,7 @@ CHEST	FILL $0F,0
 	PTMP A,0
 	LET S,0
 
-; **** Lion, Tiger, Shark, Mouse ****
+; **** Lion, Tiger, Shark, Mouse, Spider, Bird, Lumberjack ****
 ; Parameter:
 ;   bit3-bit0 = Intelligence
 ;   bit7-bit4 = Firing rate (Tiger only)
@@ -945,10 +951,12 @@ CHEST	FILL $0F,0
 
 	EV B,_LION
 	EV B,_SHARK
+	EV B,_BIRD
+	EV B,_SPIDER
 1H	LET B,Z
 	AND B,$0F
 	SEEK A,1
-1H	GRTR B,%R,,16
+2H	GRTR B,%R,,16
 	TLET A,%R,,4
 	LET B,0
 	CALL C,MOVCRE
@@ -958,7 +966,23 @@ CHEST	FILL $0F,0
 	LET B,Z
 	SEEK A,1
 	XOR A,2
-	GOTO A,1B
+	GOTO A,2B
+
+	EV B,_LUMBERJACK
+	CALL C,1B
+	JNZ C,0
+	FORW C,A
+	GTMK D,0
+	EQ D,_TREE
+	JT D,1F
+	EQ D,_FOREST
+	JF D,0
+1H	SFX A,"@18&"
+	LET D,_FLOOR
+	PTMK D,0
+	LET D,$02
+	PTMC D,0
+	LET S,0
 
 ; **** Bear ****
 ; Parameter: Range (0-255)
@@ -1299,6 +1323,9 @@ CENMOV	LET D,Z
 	ED 'V',"Slime",_SLIME,$0000
 	ED 'M',"Mouse",E_LION,_MOUSE+$8600
 	ED 'S',"Snake",E_SNAK,$8600
+	ED 'P',"Spider",E_LION,_SPIDER+$8600
+	ED 'I',"Bird",E_LION,_BIRD+$8600
+	ED 'J',"Lumberjack",E_LION,_LUMBERJACK+$8600
 	ED 1,"Centipedes:"
 	ED '1',"Head",E_CENT,_HEAD+$8200
 	ED '2',"Segment",E_CENT,_SEGMENT+$8200
@@ -1397,7 +1424,7 @@ CENMOV	LET D,Z
 	ED2 'O',"~Avalanche",7
 	ED 0
 
-E_LION	ED3 _LION,$0C,_TIGER,$0B,_BEAR,$06,_SHARK,$07,_MOUSE,$0F
+E_LION	ED3 _LION,$0C,_TIGER,$0B,_BEAR,$06,_SHARK,$07,_MOUSE,$0F,_LUMBERJACK,$0A,_SPIDER,$07,_BIRD,$0E
 	ED '=',"K-MPaT"
 	ED '@',"_2",2
 	ED 'P',$FFFF,$4800
@@ -1418,6 +1445,9 @@ E_RUNN	ED '=',"-MP"
 	ED0 _LION
 	ED0 _SHARK
 	ED0 _MOUSE
+	ED0 _LUMBERJACK
+	ED0 _SPIDER
+	ED0 _BIRD
 	ED 1,$0008
 	ED 'H',"Creature"
 	ED2 'N',"~Intelligence: ",$0030,0,15
