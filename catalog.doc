@@ -1,0 +1,74 @@
+
+(Note that the below is a DRAFT version and is not finalized yet. It is
+likely to be changed in future before it is implemented.)
+
+See oid.ter for a list of OIDs and some other notes.
+
+
+=== CATALOG.DER ===
+
+The format of the CATALOG.DER lump is a ASN.1X DER sequence with fields:
+
+* The game title, which is a PC string.
+
+* Publication date (UTC-based timestamp).
+
+* The set of authors. Each author is a set of the names of that author;
+each name can be a PC String, TRON String, Visible String, or Object
+Identifier. If it is a Visible String then it is interpreted as a URL
+(any scheme is possible, e.g. "mailto:" for a email address). OIDs are
+relative to base.1 (author identifiers).
+
+* A long description, which is a PC string, or null. This text may
+contain line breaks.
+
+* Set of positive classifications (OIDs). (This means that the author
+claims that these classifications do apply to this world.)
+
+* Set of negative classifications (OIDs). (This means that the author
+claims that these classifications do not apply to this world.)
+
+* A OID to identify the hash algorithm. This may be relative to
+2.16.840.1.101.3.4.2 (not to the Super ZZ Zero base OID).
+
+* A set of Visible strings, which are URLs for downloading current or new
+versions of the world file. This set may be empty, but if it is not empty
+then all URLs must be direct download links. Any scheme may be used.
+
+* A key/value list of extensions. The keys are OIDs and the values are
+the values of those extensions.
+
+
+=== Side file ===
+
+The side file is also a DER file, and is a sequence with fields:
+
+* Service identifier (a OID). This may be null if not applicable.
+
+* A OID to identify the hash algorithm. This may be relative to
+2.16.840.1.101.3.4.2 (not to the Super ZZ Zero base OID).
+
+* The hash of the world file. The hash is stored as a octet string.
+
+* A sequence, which is a copy of the sequence in the CATALOG.DER lump of
+the world file.
+
+* Set of positive classificaitions (OIDs). (This is like the set of
+classifications in the CATALOG.DER lump, but what the service claims
+instead of what the author claims.)
+
+* Set of negative classifications (OIDs).
+
+* A copy of the first field of GENERAL.DER (or an empty set if that
+lump is not present in the world file).
+
+* A copy of the second field of GENERAL.DER (or an empty set if that
+lump is not present in the world file).
+
+* A key/value list of extensions. The keys are OIDs and the values are
+the values of those extensions. Some extensions are meaningful in both
+the world file and side file, but some are only one or the other.
+
+Object identifiers can be relative or absolute like CATALOG.DER; the
+same rules are followed.
+
