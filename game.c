@@ -2830,7 +2830,8 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         if(rs=get_statxy(regs[fo])) {
           if((rs->layer&3)!=2 || rs->x>=board_info.width || rs->y>=board_info.height) break;
           t=convxy(so,x,y);
-          if(t==-1 || !(elem_def[b_main[t].kind].attrib&A_FLOOR)) break;
+          if(t==-1) break;
+          if(b_under[t].stat && !(elem_def[b_main[t].kind].attrib&A_FLOOR)) break;
           u=rs->x+rs->y*board_info.width;
           if(!b_main[u].stat) break;
           if(t==u) {

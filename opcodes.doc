@@ -415,8 +415,8 @@ numbers are treated as unsigned.
   Teleport the stat XY list record specified by first operand to the
   coordinates specified by the second operand; the condition flag is true
   if successful, or false if it cannot (coordinates are out of range, or
-  there is no such stat, or the target tile isn't FLOOR). (The class of
-  the target tile is ignored.)
+  there is no such stat). (The class of the target tile is ignored; the
+  FLOOR attribute is also ignored in most circumstances.)
 
 [055 PSPD]
   Set speed of stat specified by second operand to the first operand.
