@@ -15,6 +15,7 @@
 ;   U = under player
 ;   X = explosive (ret nonzero to destroy object)
 ; Element attributes:
+;   B = burns
 ;   C = creature
 ;   D = damaged by stars
 ; Status variables:
@@ -311,6 +312,34 @@ SHOOT	FORW H,Z
 	LET T,0
 	EJMP S,H
 
+	; Spit fire
+	; H = temporary use
+	; X,Y = coordinates
+	; Z = direction
+SPFIRE	FORW H,Z
+	XOR H,H
+	CWOT H,$0031
+	JF A,1F
+	; Add projectile
+	SINK H,0
+	JF H,0
+	LET H,%L,Z,16
+	ADD H,$02000C00+_SPITFIRE
+	PTM H,0
+	LET S,0
+	; Check if player
+1H	GTMK H,0
+	EQ H,_PLAYER
+	JT H,OUCH
+	; Check if burnable
+1H	EMAT B,H
+	JF B,0
+	KILM A,0
+	KILM A,0
+	LET A,_FIRE+$4E00
+	PTM A,0
+	LET S,0
+
 ; **** Player ****
 	EV S,_PLAYER,OUCH
 	EV X,_PLAYER,OUCH
@@ -467,6 +496,7 @@ SHOOT	FORW H,Z
 	EV T,_BIRD
 	EV T,_LUMBERJACK
 	EV T,_LANDMINE
+	EV T,_SPITFIRE
 	CALL W,OUCH
 	KILM D,0
 
@@ -492,6 +522,32 @@ SHOOT	FORW H,Z
 	DIE A,W
 	SFX A,"@10Z.<C"
 	KILM C,0
+
+; **** Spit Fire ****
+; Parameter:
+;   bit1-bit0 = Direction
+	EV B,_SPITFIRE
+	LET A,W
+	LET B,Z
+	GTMC C,0
+	XOR C,8
+	PTMC C,0
+	SMOV A,$0001
+	JT A,0
+	FORW H,Z
+	JF A,1F
+	GTMK A,0
+	EQ A,_PLAYER
+	JT A,2F
+	EMAT B,A
+	JF B,1F
+	KILM A,0
+	KILM A,0
+	LET A,_FIRE+$4E00
+	PTM A,0
+	DIE D,W
+2H	CALL A,OUCH
+1H	DIE D,W
 
 ; **** Ricochet ****
 	EV S,_RICOCHET
@@ -992,7 +1048,7 @@ CHEST	FILL $0F,0
 1H	SFX A,"@18&"
 	LET D,_FLOOR
 	PTMK D,0
-	LET D,$02
+	INC D,1
 	PTMC D,0
 	LET S,0
 
@@ -1016,6 +1072,45 @@ CHEST	FILL $0F,0
 	KILM A,0
 	SFX A,"@20O4CO1CO5CO3C"
 	DIE C,W
+
+; **** Dragon ****
+; Parameter:
+;   bit2-bit0 = Hit points
+;   bit5-bit3 = Firing rate
+;   bit7 = Random movement (1/8 of the time)
+
+	EV T,_DRAGON,OUCH
+
+	EV S,_DRAGON
+	JF A,0
+	GIVE S,1
+	GTMP A,0
+	LET B,A
+	AND B,$07
+	LOOP B,1F
+	SFX A,"@24O4CO1CO5CO3C"
+	KILM C,0
+1H	DEC A,A
+	PTMP A,0
+	SFX A,"@24O4CO1CC#"
+	LET S,0
+
+	EV B,_DRAGON
+	SEEK A,1
+	LET T,%B,Z,$17
+	JF A,1F
+	LET T,%R,,8
+	JT A,1F
+	LET A,%R,,4
+1H	XOR B,B
+	LET C,%B,Z,$33
+	GRTR C,%R,,16
+	LET Z,A
+	JT C,SPFIRE
+	; Move
+	LET E,W
+	SMOV E,0
+	LET S,0
 
 ; **** Centipedes ****
 ; Parameter: Direction (0-3)
@@ -1338,6 +1433,7 @@ CENMOV	LET D,Z
 	ED 'P',"Spider",E_LION,_SPIDER+$8600
 	ED 'I',"Bird",E_LION,_BIRD+$8600
 	ED 'J',"Lumberjack",E_LION,_LUMBERJACK+$8600
+	ED 'D',"Dragon",E_LION,_DRAGON+$8600
 	ED 1,"Centipedes:"
 	ED '1',"Head",E_CENT,_HEAD+$8200
 	ED '2',"Segment",E_CENT,_SEGMENT+$8200
@@ -1385,6 +1481,7 @@ CENMOV	LET D,Z
 	ED 1,"Projectiles:"
 	ED 'B',"Bullet",_BULLET+$0200,$010F
 	ED 'S',"Star",_STAR+$0200,$010F
+	ED 'F',"Fire",_SPITFIRE+$0200,$010C
 	ED 1,"Special:"
 	ED 'E',"Empty",_EMPTY,$0300
 	ED 'Z',"Player",_PLAYER+$0100,$031F
@@ -1437,7 +1534,7 @@ CENMOV	LET D,Z
 	ED2 'O',"~Destroy Creatures",8
 	ED 0
 
-E_LION	ED3 _LION,$0C,_TIGER,$0B,_BEAR,$06,_SHARK,$07,_MOUSE,$0F,_LUMBERJACK,$0A,_SPIDER,$07,_BIRD,$0E
+E_LION	ED3 _LION,$0C,_TIGER,$0B,_BEAR,$06,_SHARK,$07,_MOUSE,$0F,_LUMBERJACK,$0A,_SPIDER,$07,_BIRD,$0E,_DRAGON,$0C
 	ED '=',"K-MPaT"
 	ED '@',"_2",2
 	ED 'P',$FFFF,$4800
@@ -1483,6 +1580,7 @@ E_RUNN	ED '=',"-MP"
 	ED0 _TRANSPORTER
 	ED0 _PUSHER
 	ED0 _RUNNER
+	ED0 _SPITFIRE
 	ED 'H',"Direction:"
 	ED 'O',$0010
 	ED2 'O',"~East",0
@@ -1548,6 +1646,13 @@ E_PUSH	ED '=',"K-MP"
 	ED 'H',"Contents of pouch:"
 	ED2 'N',"~Gems: 5x",$0030,0,15
 	ED2 'N',"~Money: 5x",$0034,0,15
+	ED 0
+
+	ED0 _DRAGON
+	ED 'H',"Dragon"
+	ED2 'N',"~Hit points: ",$0020,0,7
+	ED2 'N',"~Firing rate: ",$0023,0,7
+	ED2 'B',"~Random movement",$0007
 	ED 0
 
 ; **** Editor board info ****
