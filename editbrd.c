@@ -9,10 +9,10 @@ exit
 static Uint16 brd_id;
 static Uint16 xcur,ycur,xcur2,ycur2;
 static Uint8 status_on=255;
-static Tile clip;
+static Tile clip,overclip;
 static Uint8 apparent_clip;
 static Uint16 numprefix;
-static Uint8 emode;
+static Uint8 emode,vmode;
 static Uint8*markgrid;
 static Uint16 markwidth,markheight,markskip;
 
@@ -182,8 +182,7 @@ static Uint8 new_stat(void) {
   return ++maxstat;
 }
 
-static void edit_tile(void) {
-  char lay=1;
+static void edit_tile(char lay) {
   Tile*p;
   win_form("Tile") {
     win_numeric('X',"X: ",xcur,0,board_info.width-1) win_refresh();
@@ -599,6 +598,9 @@ static void set_apparent_clip(void) {
 }
 
 static void estatus(void) {
+  // 00000000001111111111222222222233333333334444444444555555555566666666667777777777
+  // 01234567890123456789012345678901234567890123456789012345678901234567890123456789
+  // _____ee<c>_______________<pp>s*umo_____  VE                +____+____(____,____)
   char buf[80];
   int y=24;
   if(board_info.height>24 && v_ycur>12) y=0;
@@ -622,6 +624,46 @@ static void estatus(void) {
   if(markgrid && xcur<markwidth && ycur<markheight) {
     if(markgrid[(xcur>>3)+ycur*markskip]&(1<<(xcur&7))) v_char[y*80+39]=7,v_color[y*80+39]=0x1A;
   }
+  if(vmode) v_char[y*80+41]='V',v_color[y*80+41]=0x1D;
+  v_char[y*80+42]=emode;
+  v_color[y*80+42]=0x1C;
+  draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
+  v_char[y*80+69]="(\x11\x10\x04"[(scroll_x?1:0)+(scroll_x+80<board_info.width?2:0)];
+  v_char[y*80+79]=")\x1E\x1F\x04"[(scroll_y?1:0)+(scroll_y+25<board_info.height?2:0)];
+  if(emode=='v') {
+    draw_text(59,y,buf,0x19,snprintf(buf,80,"%c%04d%c%04d",xcur2>xcur?'-':'+',abs(xcur2-xcur),ycur2>ycur?'-':'+',abs(ycur2-ycur)));
+  }
+}
+
+static void estatus_over(void) {
+  // 00000000001111111111222222222233333333334444444444555555555566666666667777777777
+  // 01234567890123456789012345678901234567890123456789012345678901234567890123456789
+  // _____^^<c>________________<p>s umo_____  VE                +____+____(____,____)
+  char buf[80];
+  int y=24;
+  int x;
+  if(board_info.height>24 && v_ycur>12) y=0;
+  memset(v_color+y*80,0x11,80);
+  draw_text(0,y,buf,0x1B,snprintf(buf,80,"%5d",brd_id));
+  v_color[y*80+5]=v_color[y*80+6]=0x14;
+  v_char[y*80+5]=v_char[y*80+6]='^';
+  draw_text(7,y,"<\xFE>",0x17,3);
+  v_color[y*80+8]=overclip.color;
+  draw_text(10,y,"overlay:",0x1B,-1);
+  for(x=0;x<8;x++) if(overclip.kind&(1<<x)) v_color[y*80+x+18]=0x1B,v_char[y*80+x+18]="1248SRBV"[x];
+  draw_text(26,y,"<\xFE>",0x17,3);
+  v_char[y*80+27]=overclip.param;
+  v_color[y*80+27]=0x1F;
+  v_char[y*80+29]=(overclip.stat?'s':' ');
+  v_color[y*80+29]=0x1A;
+  if(b_under[ycur*board_info.width+xcur].kind) v_char[y*80+31]='u',v_color[y*80+31]=0x13;
+  if(b_main[ycur*board_info.width+xcur].kind) v_char[y*80+32]='m',v_color[y*80+32]=0x13;
+  if(b_over[ycur*board_info.width+xcur].kind) v_char[y*80+33]='o',v_color[y*80+33]=0x13;
+  if(numprefix) draw_text(34,y,buf,0x1E,snprintf(buf,80,"%5d",numprefix));
+  if(markgrid && xcur<markwidth && ycur<markheight) {
+    if(markgrid[(xcur>>3)+ycur*markskip]&(1<<(xcur&7))) v_char[y*80+39]=7,v_color[y*80+39]=0x1A;
+  }
+  if(vmode) v_char[y*80+41]='V',v_color[y*80+41]=0x1D;
   v_char[y*80+42]=emode;
   v_color[y*80+42]=0x1C;
   draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
@@ -674,6 +716,12 @@ static void delete_at(Uint16 x,Uint16 y) {
   find_stat(x,y,b_main[at].stat,1,2);
 }
 
+static void over_delete_at(Uint16 x,Uint16 y) {
+  Uint32 at=y*board_info.width+x;
+  find_stat(x,y,b_main[at].stat,3,0);
+  b_over[at].kind=b_over[at].color=b_over[at].param=b_over[at].stat=0;
+}
+
 static void place_at(Uint16 x,Uint16 y,Tile t) {
   Uint32 at=y*board_info.width+x;
   if(b_main[at].kind==t.kind && b_main[at].color==t.color && b_main[at].param==t.param) return;
@@ -688,6 +736,15 @@ static void place_at(Uint16 x,Uint16 y,Tile t) {
   }
   b_main[at]=t;
   if(t.stat) find_stat(x,y,t.stat,0,2);
+}
+
+static void over_place_at(Uint16 x,Uint16 y,Tile t) {
+  Uint32 at=y*board_info.width+x;
+  if(b_over[at].kind==t.kind && b_over[at].color==t.color && b_over[at].param==t.param) return;
+  if(b_over[at].stat && !config.overwrite_stats) return;
+  find_stat(x,y,b_over[at].stat,3,0);
+  b_over[at]=t;
+  if(t.stat) find_stat(x,y,t.stat,0,3);
 }
 
 static void write_at(Uint16 x,Uint16 y,Tile t) {
@@ -718,6 +775,21 @@ static void cursor_move(Sint32 xd,Sint32 yd) {
     if(!numprefix) numprefix=1;
     while(numprefix-- && xcur+xd>=0 && xcur+xd<board_info.width && ycur+yd>=0 && ycur+yd<board_info.height) {
       place_at(xcur+=xd,ycur+=yd,clip);
+    }
+  }
+  numprefix=0;
+}
+
+static void over_cursor_move(Sint32 xd,Sint32 yd) {
+  Sint32 x=xcur+xd*(numprefix?:1);
+  Sint32 y=ycur+yd*(numprefix?:1);
+  if(emode!='*') {
+    if(x<0) xcur=0; else if(x>=board_info.width) xcur=board_info.width-1; else xcur=x;
+    if(y<0) ycur=0; else if(y>=board_info.height) ycur=board_info.height-1; else ycur=y;
+  } else {
+    if(!numprefix) numprefix=1;
+    while(numprefix-- && xcur+xd>=0 && xcur+xd<board_info.width && ycur+yd>=0 && ycur+yd<board_info.height) {
+      over_place_at(xcur+=xd,ycur+=yd,clip);
     }
   }
   numprefix=0;
@@ -960,6 +1032,19 @@ static void cc_markonly_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*a
   markgrid=ccdata;
 }
 
+static void cc_overcolor_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  if(*arg) cctmp=strtol(arg,0,16); else cctmp=overclip.color;
+}
+
+static void cc_overcolor_step(Uint16 x,Uint16 y,const char*arg) {
+  Uint32 at=y*board_info.width+x;
+  b_over[at].color=cctmp;
+}
+
+static void cc_overdelete_step(Uint16 x,Uint16 y,const char*arg) {
+  over_delete_at(x,y);
+}
+
 static void cc_place_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   if(*arg) cctile=read_tile(arg); else cctile=clip;
 }
@@ -1029,6 +1114,10 @@ static const ColonCommand colon_commands[]={
   {"mark",'.',0,0,cc_mark_step,0},
   {"markonly",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
   {"mo",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
+  {"oc",'.',0,cc_overcolor_begin,cc_overcolor_step,0},
+  {"od",'.',0,0,cc_overdelete_step,0},
+  {"overcolor",'.',0,cc_overcolor_begin,cc_overcolor_step,0},
+  {"overdelete",'.',0,0,cc_overdelete_step,0},
   {"p",'.',0,cc_place_begin,cc_place_step,0},
   {"place",'.',0,cc_place_begin,cc_place_step,0},
   {"status",0,cc_status,0,0,0},
@@ -1327,6 +1416,81 @@ static void show_selection(void) {
   if(x1>79) x1=79;
   if(y1>24) y1=24;
   for(z=y0*80;y0<=y1;y0++,z+=80) for(x=x0;x<=x1;x++) v_color[z+x]=(config.block_color?:~v_color[z+x]);
+}
+
+static void update_over_screen(void) {
+  int a,b,x,y;
+  memset(v_color,0x01,80*25);
+  memset(v_char,177,80*25);
+  for(y=0;y<25;y++) {
+    if(y+scroll_y>=board_info.height) break;
+    a=y*80;
+    b=(y+scroll_y)*board_info.width+scroll_x;
+    for(x=0;x<80;x++) {
+      if(x+scroll_x>=board_info.width) break;
+      v_char[a+x]=b_over[b+x].param;
+      v_color[a+x]=b_over[b+x].color;
+    }
+  }
+}
+
+static void ed_update_over_screen(void) {
+  Uint8*g=markgrid;
+  int a,b,x,y;
+  memset(v_color,0x01,80*25);
+  memset(v_char,177,80*25);
+  for(y=0;y<25;y++) {
+    if(y+scroll_y>=board_info.height) break;
+    if(y+scroll_y>=markheight) g=0; else if(g) g=markgrid+markskip*(y+scroll_y);
+    a=y*80;
+    b=(y+scroll_y)*board_info.width+scroll_x;
+    for(x=0;x<80;x++) {
+      if(x+scroll_x>=board_info.width) break;
+      v_color[a+x]=0x08;
+      v_char[a+x]=0xF9;
+      if(g && x+scroll_x<markwidth && (g[(x+scroll_x)>>3]&(1<<((x+scroll_x)&7)))) v_color[a+x]^=0x20;
+      if(b_main[b+x].kind || b_under[b+x].kind) v_color[a+x]^=0x10;
+      if(b_over[b+x].kind&OVER_VISIBLE) v_char[a+x]='*',v_color[a+x]^=0x02;
+      if(b_over[b+x].kind&OVER_BG_THRU) v_color[a+x]^=0x01;
+      if(b_over[b+x].kind&OVER_SOLID) v_char[a+x]='#',v_color[a+x]^=0x04;
+    }
+  }
+}
+
+static void ed_update_screen(void) {
+  Uint8*g=markgrid;
+  int a,b,x,y;
+  memset(v_color,0x01,80*25);
+  memset(v_char,177,80*25);
+  for(y=0;y<25;y++) {
+    if(y+scroll_y>=board_info.height) break;
+    if(y+scroll_y>=markheight) g=0; else if(g) g=markgrid+markskip*(y+scroll_y);
+    a=y*80;
+    b=(y+scroll_y)*board_info.width+scroll_x;
+    for(x=0;x<80;x++) {
+      if(x+scroll_x>=board_info.width) break;
+      v_color[a+x]=0x08;
+      if(g && x+scroll_x<markwidth && (g[(x+scroll_x)>>3]&(1<<((x+scroll_x)&7)))) {
+        v_char[a+x]=0x0F;
+      } else if(!b_main[b+x].kind) {
+        v_char[a+x]=0xF9;
+      } else if(b_main[b+x].kind==clip.kind) {
+        v_char[a+x]=(elem_def[b_main[b+x].kind].attrib&A_FLOOR?'+':'@');
+      } else if(clip.kind && b_under[b+x].kind==clip.kind) {
+        v_char[a+x]=(elem_def[b_main[b+x].kind].attrib&A_FLOOR?'-':'%');
+      } else if(b_main[b+x].stat && b_main[b+x].stat<10) {
+        v_char[a+x]=b_main[b+x].stat+'0';
+      } else {
+        v_char[a+x]=(elem_def[b_main[b+x].kind].attrib&A_FLOOR?'=':'#');
+      }
+      if(b_main[b+x].kind) v_color[a+x]^=0x01;
+      if(!(elem_def[b_main[b+x].kind].attrib&A_FLOOR)) v_color[a+x]^=0x02;
+      if(b_main[b+x].stat) v_color[a+x]^=0x07;
+      if(b_under[b+x].kind) v_color[a+x]^=0x10;
+      if(!(elem_def[b_under[b+x].kind].attrib&A_FLOOR)) v_color[a+x]^=0x20;
+      if(b_under[b+x].stat) v_color[a+x]^=0x70;
+    }
+  }
 }
 
 static Uint8 parameter_calc(Uint8 par,Uint8 sta,const char*calc) {
@@ -1716,12 +1880,17 @@ Uint16 edit_board(Uint16 id) {
   goto_board(id);
   scroll_x=scroll_y=0;
   v_status[1]='B';
-  for(;;) {
+  norm:
+  for(emode=numprefix=0;;) {
     escroll();
-    update_screen();
-    v_xcur=xcur-scroll_x; v_ycur=ycur-scroll_y;
-    if(markgrid) show_marks();
+    if(!vmode) {
+      update_screen();
+      if(markgrid) show_marks();
+    } else {
+      ed_update_screen();
+    }
     if(emode=='v') show_selection();
+    v_xcur=xcur-scroll_x; v_ycur=ycur-scroll_y;
     if(status_on) estatus();
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
@@ -1738,9 +1907,11 @@ Uint16 edit_board(Uint16 id) {
           }
           break;
         case 0x0F: stat_list(numprefix); numprefix=0; break;
+        case 0x16: vmode^=1; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
         case -SDLK_i: edit_board_info(); break;
+        case -SDLK_o: goto over; break;
         case -SDLK_r: resize_board(); break;
         case -SDLK_t:
           if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
@@ -1750,7 +1921,7 @@ Uint16 edit_board(Uint16 id) {
         case ' ': set_mark(xcur,ycur,1); break;
         case 'c': case 0x03: clip.color=ask_color_char(0,clip.color); break;
         case 'd': case -SDLK_DELETE: delete_at(xcur,ycur); break;
-        case 'e': edit_tile(); break;
+        case 'e': edit_tile(1); break;
         case 'h': case -SDLK_LEFT: cursor_move(-1,0); break;
         case 'j': case -SDLK_DOWN: cursor_move(0,1); break;
         case 'k': case -SDLK_UP: cursor_move(0,-1); break;
@@ -1789,7 +1960,7 @@ Uint16 edit_board(Uint16 id) {
       } break;
       case 't': switch(k) {
         case 0x08: if(xcur) --xcur; break;
-        case 0x0A: case 0x0D: xcur=xcur2; if(ycur<24) ++ycur; break;
+        case 0x0A: case 0x0D: xcur=xcur2; if(ycur<board_info.height-1) ++ycur; break;
         case 0x10: if(k=ask_color_char(1,' ')) goto text; break;
         case 0x20 ... 0x7E: text: write_at(xcur,ycur,(Tile){.kind=clip.kind,.color=clip.color,.param=k,.stat=clip.stat}); if(xcur<board_info.width) ++xcur; break;
         default: goto no_mode;
@@ -1807,5 +1978,70 @@ Uint16 edit_board(Uint16 id) {
   v_status[1]=0;
   esave();
   return brd_id;
+  over:
+  for(emode=numprefix=0;;) {
+    escroll();
+    if(!vmode) {
+      update_over_screen();
+      if(markgrid) show_marks();
+    } else {
+      ed_update_over_screen();
+    }
+    if(emode=='v') show_selection();
+    v_xcur=xcur-scroll_x; v_ycur=ycur-scroll_y;
+    if(status_on) estatus_over();
+    redisplay();
+    do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
+    k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+    switch(emode) {
+      case 0: case '*': no_mode1: switch(k) {
+        case 0x08: numprefix/=10; break;
+        case 0x09: if(emode=(emode?0:'*')) over_place_at(xcur,ycur,overclip); break;
+        case 0x0F: stat_list(numprefix); numprefix=0; break;
+        case 0x16: vmode^=1; break;
+        case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
+        case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
+        case -SDLK_i: edit_board_info(); break;
+        case -SDLK_o: goto norm; break;
+        case -SDLK_t:
+          if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
+          esave();
+          run_test_game(brd_id);
+          break;
+        case ' ': set_mark(xcur,ycur,1); break;
+        case 'c': case 0x03: overclip.color=ask_color_char(0,overclip.color); break;
+        case 'd': case -SDLK_DELETE: over_delete_at(xcur,ycur); break;
+        case 'e': edit_tile(2); break;
+        case 'h': case -SDLK_LEFT: over_cursor_move(-1,0); break;
+        case 'j': case -SDLK_DOWN: over_cursor_move(0,1); break;
+        case 'k': case -SDLK_UP: over_cursor_move(0,-1); break;
+        case 'l': case -SDLK_RIGHT: over_cursor_move(1,0); break;
+        case 'p': over_place_at(xcur,ycur,overclip); break;
+        case 't': emode='t'; xcur2=xcur; break;
+        case 'T': overclip.kind|=OVER_VISIBLE; emode='t'; xcur2=xcur; break;
+        case 'u': unmark1: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
+        case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
+        case 'y': overclip=b_over[xcur+ycur*board_info.width]; break;
+        case -SDLK_HOME: xcur=ycur=0; break;
+        case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
+        case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd","over"); break;
+      }
+      case 't': switch(k) {
+        case 0x08: if(xcur) --xcur; break;
+        case 0x0A: case 0x0D: xcur=xcur2; if(ycur<board_info.height-1) ++ycur; break;
+        case 0x10: if(k=ask_color_char(1,' ')) goto text1; break;
+        case 0x20 ... 0x7E: text1: over_place_at(xcur,ycur,(Tile){.kind=overclip.kind,.color=overclip.color,.param=k,.stat=0}); if(xcur<board_info.width) ++xcur; break;
+        default: goto no_mode1;
+      } break;
+      case 'v': switch(k) {
+        case 0x0D: case 'm': do_colon_command("<:>mark"); emode='m'; break;
+        case ' ': do_colon_command("<:>toggle"); emode=0; break;
+        case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
+        default: goto no_mode;
+      } break;
+      default: emode=0;
+    }
+  }
+  goto exit;
 }
 

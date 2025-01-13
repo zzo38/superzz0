@@ -1,0 +1,251 @@
+@Board editor
+The board editor is editing boards. The initial mode is normal mode; some
+commands change modes, as described below.
+
+The possible modes are:
+!norm;Normal mode / draw mode
+!mass;Mass mode
+!text;Text mode
+!bloc;Block mode
+
+Others:
+!mark;Marks
+!info;Board info
+!colon;Colon commands
+!stat;Stats
+!resize;Resizing
+
+:norm;Normal mode / draw mode
+ESC        Exit
+TAB        Toggle normal/draw mode
+RETURN     Pick and edit parameter of tile at cursor
+0-9        Numeric prefix
+ALT+I      Board info
+ALT+O      Toggle overlay editing
+ALT+R      Resize board
+ALT+T      Test game
+^O         Stat list
+^V         Toggle view mode
+SPACE      Toggle mark
+c          Select drawing colour
+d          Delete tile at cursor
+e          Edit tile
+h j k l    Move cursor
+m          Mass mode
+p          Place tile in main layer
+q          Write tile in main layer
+Q          Write tile in under layer
+t          Text entry mode
+u          Unmark all
+v          Block mode
+y          Copy tile from main layer (place with p)
+Y          Copy tile from under layer
+ :         Colon commands
+F1-F12     Custom menus
+[ ]        Go to previous/next board
+{ }        Go to first/last board
+
+:mass;Mass mode
+
+:text;Text mode
+
+:stat;Stats
+The stat list (CTRL+O) displays a list of all of the stats; each line is
+displayed in a format like:
+  1  Name         (00000,00000,00000) L=00000 C=00000 S=00000
+
+Their meanings are, in order:
+
+* The stat number (1-based).
+
+* The name of the stat, if it has one (i.e. the first line of that stat's
+script starts with a at sign).
+
+* The (Misc1,Misc2,Misc3) values, which have no built-in meanings and can
+be used for your own use.
+
+* L is the length of the script.
+
+* C is the number of tiles that use this stat.
+
+* S is the speed of the stat (the number of turns between the stat update
+events for tiles belonging to that stat).
+
+The order of execution for stats is always in their numerical order,
+although some stat numbers may also have special meanings according to
+the templates in use.
+
+Stat 1 generally has a special meaning; it represents the player. Many
+features in the game engine treat it in a special way.
+
+If you push enter then you can edit that stat. Most of the settings are the
+same as explained above; "Text" allows to edit the script.
+
+"XY List" will display a list of the tiles that use this stat. In this
+submenu, "Sort stat XY list" allows sorting them according to your own
+criteria, and "Reverse" will reverse the order of this list; this can be
+useful to change the order of execution.
+
+You can also use "Exchange" to exchange a stat with another one of a
+different number (and all tiles of those stats are automatically updated),
+and "Delete" to delete this stat.
+
+:resize;Resizing
+The resize menu (accessed by ALT+R in the main board editor screen) can be
+used to resize a board.
+
+You can specify the new width and height; the smallest possible size is 1x1
+and the biggest possible size is 9999x9999. Select "Use cursor position" to
+automatically set the new size so that the bottom-right corner will be at
+the cursor position.
+
+You can also specify what it should do with the existing grid:
+
+* If you select one of the four diagonal compass directions then that
+corner will remain as that corner of the resized board; the rest of the
+board is truncated if made smaller, or filled with empty slace if larger.
+
+* If you select "Center" then it is the center of the current board which
+will be the center of the resized board, but is otherwise like the above.
+
+* "Tile" and "Tile with duplicate stats" will tile the newly added cells
+with the existing board; their differences is how stats are affected (the
+former does not add stats to the new tiles, but the latter will add new
+stat XY items (with the same stat numbers) as existing tiles).
+
+For the first five options, you may select two additional options:
+
+* "Fill main with current" fills the main layer of the newly added space
+with the captured tile (with the "y" command) instead of blank space.
+
+* "Fill overlay with NW tile" fills the overlay of the newly added space
+with a copy of the overlay tile at (0,0).
+
+Neither fill option will copy stats.
+
+:over;Overlay editing
+
+:colon;Colon commands
+These colon commands can be used for various batch operations.
+
+Most of these commands allow a prefix; this can be & for marked cells only,
+~& for unmarked cells only, % for all cells, . for the cell at the cursor,
+or one or two coordinate pairs. If there are coordinate pairs, put : in
+between. Each coordinate pair otherwise uses two numbers with a comma in
+between, being the zero-based X and Y coordinates. If a number is preceded
+by - or + then it is relative to the cursor.
+
+There can be zero or more filters (with no spaces in between). A filter
+preceded by ~ is inverted. They can be:
+
+* A colour/kind/parameter in square brackets. Inside of the brackets, it
+can optionally be preceded by = for main layer only or _ for under layer
+only; if neither, then it checks both layers. This will match only tiles
+that have the specified colour/kind/parameter. The colour and parameter are
+both optional; if they are omitted then they are not checked.
+
+* An ampersand to match only marked tiles (like the & in the prefix).
+
+* Two numbers both with + or - in front. These are relative X and Y
+coordinates, and cause further filters to operate on the new coordinates;
+the command listed at the end also operates on the new coordinates if they
+have not been explicitly reset at the end of the filter list. If the new
+coordinates are out of range of the board, then it will not match at all.
+(This can result in a syntax ambiguity. This filter is allowed to have a ~
+prefix to avoid the ambiguity, although the ~ prefix has no effect.)
+
+* A slash followed by a uppercase or lowercase letter denoting the filter
+type, followed by zero or more numeric arguments of the filter. The numeric
+arguments have commas in between, and can have an optional minus sign.
+
+* /C will override the colour of the argument tile with the colour of the
+current tile. (This can be used with commands such as "place", together
+with offset filters, to copy colours of nearby tiles.)
+
+* /T is like /C but overrides the entire tile and not only the colour.
+
+* /m will select only some tiles, according to a pattern. The first two
+arguments are the X and Y multiplier, the third argument is the modulus,
+and the rest specify what values of remainders of the above calculation
+denote tiles to be selected.
+
+* /r will select tiles at random. The first argument is the denominator
+and the second argument is the numerator of a probability. If the arguments
+are omitted, then "/r2,1" is assumed.
+
+* /s will select only tiles with stats. If an argument is specified, then
+only tiles whose stat are the specified stat number are selected (zero will
+select tiles where at least one layer does not have stats); otherwise it
+will select tiles with any stats at all. It looks on both layers.
+
+An optional space is allowed after the last filter and before the command.
+
+The format of a tile specification (a colour/kind/parameter) is like that
+in scripts but it is less elaborate. It is an optional colour (two hex
+digits with <> around), a element kind name, and an optional parameter
+(two hex digits with <> around; which is the same format as the colour).
+
+Many colon commands have abbreviations; these are listed after the slash in
+the below listings of the commands.
+
+board/b
+  Switch to a board number specified as the argument (in decimal).
+
+color/c
+  Changes the colour of main layer cells. The argument can be a hexadecimal
+  colour code; if not specified then the current colour is used.
+
+count/co
+  Tells you how many cells in range match the filter.
+
+debug
+  This command is for debugging Super ZZ Zero and the meaning might be
+  changed in future implementations. It is not fully documented here.
+
+delete/d
+  Delete main layer cells. (Whatever is in the under layer will be moved to
+  the main layer.)
+
+exchangelayer/xl
+  Exchanges the main layer with the under layer.
+
+export/ex
+  Exports the board to the file specified as the argument; it is an error
+  if the file already exists. If it starts with | then instead it is a
+  operating system command to execute, and the board data is written to
+  that command's standard input. (See fileformat.doc for documentation
+  about the format of this file.)
+
+import/im
+  Imports the board from a file specified as the argument. If it starts
+  with | then it is an operating system command to execute, and that
+  command's output will be treated as the board data to be imported.
+
+mark/m
+  Marks cells.
+
+markonly/mo
+  Marks cells, but unmarks any cells not marked by this command.
+
+overdelete/od
+  Delete overlay cells.
+
+place/p
+  Place a tile. This is either the current tile or a specified tile.
+
+status
+  Toggles the status display. If the argument is 0 then it turns off the
+  status display, if 1 then turns on, if omitted then toggled.
+
+toggle/t
+  Toggles marks.
+
+unmark/u
+  Unmarks cells.
+
+write/w
+  
+
+writeunder/wu
+  
+
