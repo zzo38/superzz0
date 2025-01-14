@@ -21,7 +21,6 @@ TAB        Toggle normal/draw mode
 RETURN     Pick and edit parameter of tile at cursor
 0-9        Numeric prefix
 ALT+I      Board info
-ALT+O      Toggle overlay editing
 ALT+R      Resize board
 ALT+T      Test game
 ^O         Stat list
@@ -30,8 +29,10 @@ SPACE      Toggle mark
 c          Select drawing colour
 d          Delete tile at cursor
 e          Edit tile
+g          Get colour from cursor
 h j k l    Move cursor
 m          Mass mode
+o          Toggle overlay editing
 p          Place tile in main layer
 q          Write tile in main layer
 Q          Write tile in under layer
@@ -44,10 +45,43 @@ Y          Copy tile from under layer
 F1-F12     Custom menus
 [ ]        Go to previous/next board
 { }        Go to first/last board
+< >        Go to northwest/southeast corner of board
+
+:bloc;Block mode
+Most commands in normal mode are also available.
+
+ESC        Cancel block mode
+;          Exchange corners
+m          Mark block and enter mass mode
+SPACE      Toggle marks in block and cancel
 
 :mass;Mass mode
+Most commands in normal mode are also available.
+
+Some commands (marked by ø below) can be entered in uppercase or lowercase.
+All of them will affect marked tiles and then cancel the mass mode, but the
+lowercase commands also unmark the affected tiles while uppercase commands
+leave them marked.
+
+Cursor movement in mass mode will also move the marks, and will copy the
+marked tiles from where the mark was to the new position of the marks.
+
+ESC        Cancel mass mode
+cø         Set colour
+dø         Delete
+fø         Place floor
+pø         Place
+
+"Place floor" will place in the main layer if it is empty, but otherwise
+will place in the under layer. Existing floors will be unaffected.
 
 :text;Text mode
+In text mode, printable ASCII characters will enter that character of text
+and automatically moves the cursor right. Pushing return will go to the
+next line, at the horizontal position that you entered text mode.
+
+ESC        Cancel text mode
+^P         Enter special character
 
 :stat;Stats
 The stat list (CTRL+O) displays a list of all of the stats; each line is
@@ -124,6 +158,23 @@ with a copy of the overlay tile at (0,0).
 Neither fill option will copy stats.
 
 :over;Overlay editing
+The overlay editing mode allows editing the overlay, which uses the same
+coordinates as the main board but is independent from it; objects can move
+in the main layer without affecting or being affected by the overlay.
+
+Most commands are like the normal mode but there are some differences.
+Some of the commands which are only applicable to the main layer are not
+available in overlay mode.
+
+;          Select drawing character
+T          Text entry mode; set as visible
+F1-F4      Toggle user flags
+F5         Toggle solid
+F6         Toggle reserved
+F7         Toggle bg thru
+F8         Toggle visible
+F9         Clear flags
+F10        Clear flags; set visible flag only
 
 :colon;Colon commands
 These colon commands can be used for various batch operations.

@@ -995,6 +995,18 @@ static void cc_export(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   }
 }
 
+static void cc_floorplace_step(Uint16 x,Uint16 y,const char*arg) {
+  Tile*u=b_under+y*board_info.width+x;
+  Tile*m=b_main+y*board_info.width+x;
+  if(u->kind) return;
+  if(m->kind) {
+    if(elem_def[m->kind].attrib&A_FLOOR) return;
+    write_under(x,y,cctile);
+  } else {
+    write_at(x,y,cctile);
+  }
+}
+
 static void cc_import(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   char buf[75];
   const char*e;
@@ -1043,6 +1055,10 @@ static void cc_overcolor_step(Uint16 x,Uint16 y,const char*arg) {
 
 static void cc_overdelete_step(Uint16 x,Uint16 y,const char*arg) {
   over_delete_at(x,y);
+}
+
+static void cc_overplace_step(Uint16 x,Uint16 y,const char*arg) {
+  over_place_at(x,y,overclip);
 }
 
 static void cc_place_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
@@ -1108,6 +1124,8 @@ static const ColonCommand colon_commands[]={
   {"ex",0,cc_export,0,0,0},
   {"exchangelayer",'.',0,0,cc_exchangelayer_step,0},
   {"export",0,cc_export,0,0,0},
+  {"floorplace",'.',0,cc_place_begin,cc_floorplace_step,0},
+  {"fp",'.',0,cc_place_begin,cc_floorplace_step,0},
   {"im",0,cc_import,0,0,0},
   {"import",0,cc_import,0,0,0},
   {"m",'.',0,0,cc_mark_step,0},
@@ -1116,8 +1134,10 @@ static const ColonCommand colon_commands[]={
   {"mo",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
   {"oc",'.',0,cc_overcolor_begin,cc_overcolor_step,0},
   {"od",'.',0,0,cc_overdelete_step,0},
+  {"op",'.',0,0,cc_overplace_step,0},
   {"overcolor",'.',0,cc_overcolor_begin,cc_overcolor_step,0},
   {"overdelete",'.',0,0,cc_overdelete_step,0},
+  {"overplace",'.',0,0,cc_overplace_step,0},
   {"p",'.',0,cc_place_begin,cc_place_step,0},
   {"place",'.',0,cc_place_begin,cc_place_step,0},
   {"status",0,cc_status,0,0,0},
@@ -1911,7 +1931,6 @@ Uint16 edit_board(Uint16 id) {
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
         case -SDLK_i: edit_board_info(); break;
-        case -SDLK_o: goto over; break;
         case -SDLK_r: resize_board(); break;
         case -SDLK_t:
           if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
@@ -1922,11 +1941,13 @@ Uint16 edit_board(Uint16 id) {
         case 'c': case 0x03: clip.color=ask_color_char(0,clip.color); break;
         case 'd': case -SDLK_DELETE: delete_at(xcur,ycur); break;
         case 'e': edit_tile(1); break;
+        case 'g': clip.color=b_main[xcur+ycur*board_info.width].color; break;
         case 'h': case -SDLK_LEFT: cursor_move(-1,0); break;
         case 'j': case -SDLK_DOWN: cursor_move(0,1); break;
         case 'k': case -SDLK_UP: cursor_move(0,-1); break;
         case 'l': case -SDLK_RIGHT: cursor_move(1,0); break;
         case 'm': emode='m'; break;
+        case 'o': goto over; break;
         case 'p': place_at(xcur,ycur,clip); break;
         case 'q': write_at(xcur,ycur,clip); break;
         case 'Q': write_under(xcur,ycur,clip); break;
@@ -1935,8 +1956,8 @@ Uint16 edit_board(Uint16 id) {
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
         case 'y': clip=b_main[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case 'Y': clip=b_under[xcur+ycur*board_info.width]; set_apparent_clip(); break;
-        case -SDLK_HOME: xcur=ycur=0; break;
-        case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
+        case '<': case -SDLK_HOME: xcur=ycur=0; break;
+        case '>': case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
         case '[': switch_to_board(brd_id-(numprefix?:1)); numprefix=0; break;
         case ']': switch_to_board(brd_id+(numprefix?:1)); numprefix=0; break;
         case '{': switch_to_board(numprefix); numprefix=0; break;
@@ -1950,6 +1971,8 @@ Uint16 edit_board(Uint16 id) {
         case 'C': do_colon_command("&color"); emode=0; break;
         case 'd': do_colon_command("&delete"); goto unmark;
         case 'D': do_colon_command("&delete"); emode=0; break;
+        case 'f': do_colon_command("&floorplace"); goto unmark;
+        case 'F': do_colon_command("&floorplace"); emode=0; break;
         case 'p': do_colon_command("&place"); goto unmark;
         case 'P': do_colon_command("&place"); emode=0; break;
         case 'h': case -SDLK_LEFT: mass_move(-(numprefix?:1),0); cursor_move(-1,0); break;
@@ -1997,12 +2020,18 @@ Uint16 edit_board(Uint16 id) {
       case 0: case '*': no_mode1: switch(k) {
         case 0x08: numprefix/=10; break;
         case 0x09: if(emode=(emode?0:'*')) over_place_at(xcur,ycur,overclip); break;
+        case 0x0D:
+          if(!emode) {
+            overclip=b_over[xcur+ycur*board_info.width];
+            b_over[xcur+ycur*board_info.width].param=overclip.param=ask_color_char(1,overclip.param);
+          }
+          break;
         case 0x0F: stat_list(numprefix); numprefix=0; break;
         case 0x16: vmode^=1; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
         case -SDLK_i: edit_board_info(); break;
-        case -SDLK_o: goto norm; break;
+        case -SDLK_r: resize_board(); break;
         case -SDLK_t:
           if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
           esave();
@@ -2012,20 +2041,42 @@ Uint16 edit_board(Uint16 id) {
         case 'c': case 0x03: overclip.color=ask_color_char(0,overclip.color); break;
         case 'd': case -SDLK_DELETE: over_delete_at(xcur,ycur); break;
         case 'e': edit_tile(2); break;
+        case 'g': overclip.color=b_over[xcur+ycur*board_info.width].color; break;
         case 'h': case -SDLK_LEFT: over_cursor_move(-1,0); break;
         case 'j': case -SDLK_DOWN: over_cursor_move(0,1); break;
         case 'k': case -SDLK_UP: over_cursor_move(0,-1); break;
         case 'l': case -SDLK_RIGHT: over_cursor_move(1,0); break;
+        case 'o': goto norm; break;
         case 'p': over_place_at(xcur,ycur,overclip); break;
         case 't': emode='t'; xcur2=xcur; break;
         case 'T': overclip.kind|=OVER_VISIBLE; emode='t'; xcur2=xcur; break;
         case 'u': unmark1: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
         case 'y': overclip=b_over[xcur+ycur*board_info.width]; break;
-        case -SDLK_HOME: xcur=ycur=0; break;
-        case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
+        case ';': overclip.param=ask_color_char(1,overclip.param); break;
+        case '<': case -SDLK_HOME: xcur=ycur=0; break;
+        case '>': case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
+        case -SDLK_F1: overclip.kind^=0x01; break;
+        case -SDLK_F2: overclip.kind^=0x02; break;
+        case -SDLK_F3: overclip.kind^=0x04; break;
+        case -SDLK_F4: overclip.kind^=0x08; break;
+        case -SDLK_F5: overclip.kind^=OVER_SOLID; break;
+        case -SDLK_F6: overclip.kind^=OVER_RESERVED; break;
+        case -SDLK_F7: overclip.kind^=OVER_BG_THRU; break;
+        case -SDLK_F8: overclip.kind^=OVER_VISIBLE; break;
+        case -SDLK_F9: overclip.kind=0; break;
+        case -SDLK_F10: overclip.kind=OVER_VISIBLE; break;
         case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd","over"); break;
-      }
+      } break;
+      case 'm': switch(k) {
+        case 'c': do_colon_command("&overcolor"); goto unmark1;
+        case 'C': do_colon_command("&overcolor"); emode=0; break;
+        case 'd': do_colon_command("&overdelete"); goto unmark1;
+        case 'D': do_colon_command("&overdelete"); emode=0; break;
+        case 'p': do_colon_command("&overplace"); goto unmark1;
+        case 'P': do_colon_command("&overplace"); emode=0; break;
+        default: goto no_mode1;
+      } break;
       case 't': switch(k) {
         case 0x08: if(xcur) --xcur; break;
         case 0x0A: case 0x0D: xcur=xcur2; if(ycur<board_info.height-1) ++ycur; break;
@@ -2037,7 +2088,7 @@ Uint16 edit_board(Uint16 id) {
         case 0x0D: case 'm': do_colon_command("<:>mark"); emode='m'; break;
         case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
-        default: goto no_mode;
+        default: goto no_mode1;
       } break;
       default: emode=0;
     }
