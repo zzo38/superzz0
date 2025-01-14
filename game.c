@@ -2586,6 +2586,14 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_GTUK: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].kind; else condflag=0; break;
       case OP_GTUP: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].param; else condflag=0; break;
       case OP_GTUS: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_under[t].stat; else condflag=0; break;
+      case OP_HELP:
+        condflag=0;
+        if(so>=0) ntextbuf=snprintf(textbuf,8,"%04X",so&0xFFFF);
+        if(load_help_file(textbuf) && show_text_window(1,1)) {
+          condflag=1;
+          regs[fo]=(*textbuf=='$'?strtol(textbuf+1,0,16):strtol(textbuf,0,10));
+        }
+        break;
       case OP_ICG: condflag=(++regs[fo]>so?1:0); break;
       case OP_INC: ++so; goto store;
       case OP_INCL: ++so; goto lstore;
