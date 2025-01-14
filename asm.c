@@ -452,12 +452,8 @@ static void do_pass(void) {
             i|=0x0DB0;
             break;
           case 'BRD':
-            v&=15;
+            v=0;
             i|=0x0D80;
-            break;
-          case 'SCR':
-            v&=15;
-            i|=0x0D90;
             break;
           case 'XP-':
             v+=8;

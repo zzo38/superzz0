@@ -97,8 +97,6 @@ condition flag is false. The value can be -3 to +4 or A to H.
 * %R = A random number from 0 up to source+value-1. The value can be in
 range 0 to 255.
 
-* %SCR = The current screen ID. Source and value are not used.
-
 * %SM = A status variable indicated by the value (0 to 15), minus the
 source value.
 
