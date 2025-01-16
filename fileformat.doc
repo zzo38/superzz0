@@ -625,7 +625,7 @@ This lump is mandatory in world files; it is omitted in save game files.
 
 It contains:
 
-* Two reserved bytes; the first must be 1 and the second must be 0.
+* Flags (16-bits).
 
 * Starting board number (16-bits).
 
@@ -637,6 +637,10 @@ bit is clear then the value is specified explicitly (see below).
 
 * Status variables (sixteen, of 32-bits each). One of the above fields has
 bits to specify if any of these are omitted.
+
+The flags are:
+
+* bit0 = Clear to automatically pause the game when it starts.
 
 
 === TEXT ===

@@ -19,4 +19,18 @@ The main screen of the editor contains the following submenus:
 !-anima;Animations
 !-numform;Numeric formats
 !-edithelp;Help lumps
+!global;Global script
+!more;More
+
+:global
+The global script can be shared by any board that does not have the
+"suppress global scripts" flag.
+
+:more
+The "More" submenu contains:
+
+þ Auto pause: If selected, then the game is automatically paused when it
+starts (you can still push the pause key to toggle it, whether or not this
+is selected). While it is paused, a turn is only advanced when a key is
+pushed, and otherwise does nothing.
 

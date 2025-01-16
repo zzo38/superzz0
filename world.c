@@ -51,7 +51,8 @@ const char*init_world(void) {
   fp=open_lump("START","r");
   if(!fp) return "Cannot open START lump";
   u=read16(fp);
-  if(u!=1) return "Unrecognized data in START lump";
+  if(!(u&0x0001)) config.pause|=128;
+  if(u&~0x0001) return "Unrecognized data in START lump";
   cur_screen.message_l=222;
   cur_board_id=read16(fp);
   v=read32(fp);
@@ -59,6 +60,34 @@ const char*init_world(void) {
   for(i=0;i<16;i++) status_vars[i]=(v&(1<<i))?0:read32(fp);
   for(i=0;i<16;i++) namedflag[i].name[0]=0;
   fclose(fp);
+#if 0
+  // (not fully implemented or usable yet; may be completed in future)
+  // "GENERAL.DER"
+  if(fp=open_lump("GENERAL.DER","r")) {
+    ASN1_Value a1,a2,a3;
+    ASN1_Iterator i1,i2;
+    if(asn1_read_item(fp,&a1,0)) {
+      fclose(fp);
+      return "ASN.1 error in GENERAL.DER lump";
+    }
+    fclose(fp);
+    asn1_rewind(&i1,&a1);
+    // Mandatory features
+    if(asn1_next(&i1,&a2)) return "ASN.1 error in GENERAL.DER lump";
+    if(a2.class || a2.type!=ASN1_SET || !a2.constructed) return "Improper type in GENERAL.DER lump";
+    asn1_foreach(j,&i2,&a2,&a3) {
+      
+    }
+    // Optional features
+    if(asn1_next(&i1,&a2)) return "ASN.1 error in GENERAL.DER lump";
+    if(a2.class || a2.type!=ASN1_SET || !a2.constructed) return "Improper type in GENERAL.DER lump";
+    asn1_foreach(j,&i2,&a2,&a3) {
+      
+    }
+    // Done
+    asn1_free(&a1);
+  }
+#endif
   // "NUMFORM"
   if(fp=open_lump("NUMFORM","r")) {
     for(i=0;i<16;i++) {

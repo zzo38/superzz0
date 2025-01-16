@@ -11,11 +11,13 @@ Uint16 maxscreen;
 
 static void write_start_lump(void) {
   int i;
-  Uint16 v=0;
+  Uint16 v;
   FILE*fp=open_lump("START","w");
   if(!fp) errx(1,"Cannot open START lump for writing");
-  write16(fp,1);
+  v=(config.pause&128?0x0000:0x0001);
+  write16(fp,v);
   write16(fp,cur_board_id);
+  v=0;
   for(i=0;i<16;i++) if(!status_vars[i]) v|=1<<i;
   write32(fp,v);
   write32(fp,0);
@@ -377,7 +379,7 @@ static void edit_one_help_lump(const char*name) {
   t=text_editor(t);
   f=open_lump(name,"w");
   if(!f) errx(1,"Unexpected error");
-  fputs(t?:(Uint8*)"\n",f);
+  if(t || strcmp(name,"GLOBAL")) fputs(t?:(Uint8*)"\n",f);
   fclose(f);
 }
 
@@ -587,7 +589,6 @@ int run_editor(void) {
         win_blank();
         win_command_esc(0,"Done") break;
       }
-      write_start_lump();
     }
     win_command('E',"Elements...") {
       c=0;
@@ -694,6 +695,18 @@ int run_editor(void) {
       edit_help_lumps();
       win_refresh();
     }
+    win_command('G',"Global script...") {
+      edit_one_help_lump("GLOBAL");
+      win_refresh();
+    }
+    win_command('.',"More...") {
+      win_form("Editor") {
+        win_help("edit","more");
+        win_boolean('p',"Auto pause",config.pause,128);
+        win_blank();
+        win_command_esc(0,"Go back") break;
+      }
+    }
     win_blank();
     win_command('R',"Run") {
       run_test_game(-1);
@@ -709,6 +722,7 @@ int run_editor(void) {
         fclose(fp);
       }
       if(fp=open_lump("CATALOG.DER","w")) fclose(fp);
+      write_start_lump();
       save_world(0);
     }
     win_command('Q',"Quit") break;
