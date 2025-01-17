@@ -799,10 +799,15 @@ static void copy_cell(Sint32 x0,Sint32 y0,Sint32 x1,Sint32 y1) {
   place_at(x1,y1,b_main[y0*board_info.width+x0]);
 }
 
-static void mass_move(Sint32 xd,Sint32 yd) {
-  Sint32 x,y,z;
+static void over_copy_cell(Sint32 x0,Sint32 y0,Sint32 x1,Sint32 y1) {
+  over_place_at(x1,y1,b_over[y0*board_info.width+x0]);
+}
+
+static void mass_move(Sint32 xd,Sint32 yd,void(*f)(Sint32,Sint32,Sint32,Sint32)) {
+  Sint32 x,y;
   Uint32 w=board_info.width;
   Uint32 h=board_info.height;
+  Uint8 z;
   if(!markgrid) return;
   if(xd>0) {
     if(xd>=w) return;
@@ -819,27 +824,9 @@ static void mass_move(Sint32 xd,Sint32 yd) {
     //for(y=0;y<-yd;y++) for(x=0;x<w;x++) if(set_mark(x,y,2)) return;
     for(y=0;y<markheight && y<-yd;y++) for(x=0;x<markskip;x++) if(markgrid[y*markskip+x]) return;
   }
-  if(xd && yd) {
-    mass_move(0,yd);
-    yd=0;
-  }
-  if(yd>0 && !xd) {
-    
-  } else if(yd<0 && !xd) {
-    for(y=0;y<h+yd && y<markheight+yd;y++) {
-      memcpy(markgrid+y*markskip,markgrid+(y-yd)*markskip,markskip);
-      for(z=0;z<markskip;z++) {
-        for(x=0;x<8;x++) {
-          if(x+z*8>=w) break;
-          if(markgrid[y*markskip+z]&(1<<x)) copy_cell(x,y,x,y+yd);
-        }
-      }
-    }
-    if(markheight>-yd) markheight+=yd; else markheight=1;
-  } else if(xd>0 && !yd) {
-    
-  } else if(xd<0 && !yd) {
-    
+  for(x=(xd>0?w-1:0);x>=0 && x<w;x+=(xd>0?-1:1)) for(y=(yd>0?h-1:0);y>=0 && y<h;y+=(yd>0?-1:1)) {
+    set_mark(x,y,z=3*set_mark(x-xd,y-yd,2));
+    if(z) f(x-xd,y-yd,x,y);
   }
 }
 
@@ -1943,6 +1930,7 @@ Uint16 edit_board(Uint16 id) {
         case 'e': edit_tile(1); break;
         case 'g': clip.color=b_main[xcur+ycur*board_info.width].color; break;
         case 'h': case -SDLK_LEFT: cursor_move(-1,0); break;
+        case 'i': do_colon_command("%toggle"); break;
         case 'j': case -SDLK_DOWN: cursor_move(0,1); break;
         case 'k': case -SDLK_UP: cursor_move(0,-1); break;
         case 'l': case -SDLK_RIGHT: cursor_move(1,0); break;
@@ -1975,10 +1963,10 @@ Uint16 edit_board(Uint16 id) {
         case 'F': do_colon_command("&floorplace"); emode=0; break;
         case 'p': do_colon_command("&place"); goto unmark;
         case 'P': do_colon_command("&place"); emode=0; break;
-        case 'h': case -SDLK_LEFT: mass_move(-(numprefix?:1),0); cursor_move(-1,0); break;
-        case 'j': case -SDLK_DOWN: mass_move(0,numprefix?:1); cursor_move(0,1); break;
-        case 'k': case -SDLK_UP: mass_move(0,-(numprefix?:1)); cursor_move(0,-1); break;
-        case 'l': case -SDLK_RIGHT: mass_move(numprefix?:1,0); cursor_move(1,0); break;
+        case 'h': case -SDLK_LEFT: mass_move(-(numprefix?:1),0,copy_cell); cursor_move(-1,0); break;
+        case 'j': case -SDLK_DOWN: mass_move(0,numprefix?:1,copy_cell); cursor_move(0,1); break;
+        case 'k': case -SDLK_UP: mass_move(0,-(numprefix?:1),copy_cell); cursor_move(0,-1); break;
+        case 'l': case -SDLK_RIGHT: mass_move(numprefix?:1,0,copy_cell); cursor_move(1,0); break;
         default: goto no_mode;
       } break;
       case 't': switch(k) {
@@ -1989,7 +1977,8 @@ Uint16 edit_board(Uint16 id) {
         default: goto no_mode;
       } break;
       case 'v': switch(k) {
-        case 0x0D: case 'm': do_colon_command("<:>mark"); emode='m'; break;
+        case 0x0D: do_colon_command("<:>mark"); emode=0; break;
+        case 'm': do_colon_command("<:>mark"); emode='m'; break;
         case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode;
@@ -2043,9 +2032,11 @@ Uint16 edit_board(Uint16 id) {
         case 'e': edit_tile(2); break;
         case 'g': overclip.color=b_over[xcur+ycur*board_info.width].color; break;
         case 'h': case -SDLK_LEFT: over_cursor_move(-1,0); break;
+        case 'i': do_colon_command("%toggle"); break;
         case 'j': case -SDLK_DOWN: over_cursor_move(0,1); break;
         case 'k': case -SDLK_UP: over_cursor_move(0,-1); break;
         case 'l': case -SDLK_RIGHT: over_cursor_move(1,0); break;
+        case 'm': emode='m'; break;
         case 'o': goto norm; break;
         case 'p': over_place_at(xcur,ycur,overclip); break;
         case 't': emode='t'; xcur2=xcur; break;
@@ -2075,6 +2066,10 @@ Uint16 edit_board(Uint16 id) {
         case 'D': do_colon_command("&overdelete"); emode=0; break;
         case 'p': do_colon_command("&overplace"); goto unmark1;
         case 'P': do_colon_command("&overplace"); emode=0; break;
+        case 'h': case -SDLK_LEFT: mass_move(-(numprefix?:1),0,over_copy_cell); cursor_move(-1,0); break;
+        case 'j': case -SDLK_DOWN: mass_move(0,numprefix?:1,over_copy_cell); cursor_move(0,1); break;
+        case 'k': case -SDLK_UP: mass_move(0,-(numprefix?:1),over_copy_cell); cursor_move(0,-1); break;
+        case 'l': case -SDLK_RIGHT: mass_move(numprefix?:1,0,over_copy_cell); cursor_move(1,0); break;
         default: goto no_mode1;
       } break;
       case 't': switch(k) {
@@ -2085,7 +2080,8 @@ Uint16 edit_board(Uint16 id) {
         default: goto no_mode1;
       } break;
       case 'v': switch(k) {
-        case 0x0D: case 'm': do_colon_command("<:>mark"); emode='m'; break;
+        case 0x0D: do_colon_command("<:>mark"); emode=0; break;
+        case 'm': do_colon_command("<:>mark"); emode='m'; break;
         case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode1;

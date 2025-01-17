@@ -31,6 +31,7 @@ d          Delete tile at cursor
 e          Edit tile
 g          Get colour from cursor
 h j k l    Move cursor
+i          Invert mark
 m          Mass mode
 o          Toggle overlay editing
 p          Place tile in main layer
