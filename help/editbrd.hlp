@@ -9,6 +9,7 @@ The possible modes are:
 !bloc;Block mode
 
 Others:
+!flood;Flood fills
 !mark;Marks
 !info;Board info
 !colon;Colon commands
@@ -29,6 +30,8 @@ SPACE      Toggle mark
 c          Select drawing colour
 d          Delete tile at cursor
 e          Edit tile
+f          Flood prefix
+F          Flood prefix
 g          Get colour from cursor
 h j k l    Move cursor
 i          Invert mark
@@ -53,7 +56,15 @@ Most commands in normal mode are also available.
 
 ESC        Cancel block mode
 ;          Exchange corners
+c          Unmark block and cancel
+d          Delete in block and cancel
+H          Flip horizontal and cancel
+i          Toggle marks in block and cancel
 m          Mark block and enter mass mode
+p          Masked paste and cancel
+s          Mark block and cancel
+u          Unmark entire board grid and cancel
+V          Flip vertical and cancel
 SPACE      Toggle marks in block and cancel
 
 :mass;Mass mode
@@ -83,6 +94,25 @@ next line, at the horizontal position that you entered text mode.
 
 ESC        Cancel text mode
 ^P         Enter special character
+
+:flood;Flooding
+The f or F prefix is used for the flooding commands. You can optionally
+add a numeric prefix (before f or F) to limit the maximum range of the
+flood. After f or F you must specify the flood type, which can be:
+
+;          Don't care
+cø         Match kind and colour
+kø         Match kind
+pø         Match kind, colour, and parameter
+
+Any command marked ø above can be entered in uppercase in order to require
+matching both the main layer and the under layer.
+
+The matching tiles will be marked. Regardless of the flood type, any tiles
+that are already marked will stop the flood from propagating.
+
+Also, using the f prefix will flood in four directions (not diagonally),
+but F prefix will flood in eight directions.
 
 :stat;Stats
 The stat list (CTRL+O) displays a list of all of the stats; each line is
@@ -268,6 +298,10 @@ export/ex
   that command's standard input. (See fileformat.doc for documentation
   about the format of this file.)
 
+hflip
+  Flip the area horizontally. Marks and filters cannot be used, but you
+  can specify the coordinates of a rectangular area.
+
 import/im
   Imports the board from a file specified as the argument. If it starts
   with | then it is an operating system command to execute, and that
@@ -294,6 +328,10 @@ toggle/t
 
 unmark/u
   Unmarks cells.
+
+vflip
+  Flip the area vertically. Marks and filters cannot be used, but you can
+  specify the coordinates of a rectangular area.
 
 write/w
   

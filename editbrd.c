@@ -795,6 +795,39 @@ static void over_cursor_move(Sint32 xd,Sint32 yd) {
   numprefix=0;
 }
 
+static void flood(Sint32 x,Sint32 y,Sint32 x0,Sint32 y0,Uint16 m) {
+  Uint32 a,a0;
+  if(x<0 || x>=board_info.width || y<0 || y>=board_info.height) return;
+  a=y*board_info.width+x; a0=y0*board_info.width+x0;
+  if(m&0x0001) {
+    if(b_main[a].kind!=b_main[a0].kind) return;
+    if(m&0x0080) if(b_under[a].kind!=b_under[a0].kind) return;
+  }
+  if(m&0x0002) {
+    if(b_main[a].color!=b_main[a0].color) return;
+    if(m&0x0080) if(b_under[a].color!=b_under[a0].color) return;
+  }
+  if(m&0x0004) {
+    if(b_main[a].param!=b_main[a0].param) return;
+    if(m&0x0080) if(b_under[a].param!=b_under[a0].param) return;
+  }
+  if(m&0x0010) if(b_over[a].kind!=b_over[a0].kind) return;
+  if(m&0x0020) if(b_over[a].color!=b_over[a0].color) return;
+  if(m&0x0040) if(b_over[a].param!=b_over[a0].param) return;
+  if(set_mark(x,y,3)) return;
+  if(numprefix && abs(x-x0)+abs(y-y0)>=numprefix) return;
+  if(emode=='F') {
+    flood(x+1,y+1,x0,y0,m);
+    flood(x-1,y+1,x0,y0,m);
+    flood(x-1,y-1,x0,y0,m);
+    flood(x+1,y-1,x0,y0,m);
+  }
+  flood(x+1,y,x0,y0,m);
+  flood(x-1,y,x0,y0,m);
+  flood(x,y-1,x0,y0,m);
+  flood(x,y+1,x0,y0,m);
+}
+
 static void copy_cell(Sint32 x0,Sint32 y0,Sint32 x1,Sint32 y1) {
   place_at(x1,y1,b_main[y0*board_info.width+x0]);
 }
@@ -994,6 +1027,32 @@ static void cc_floorplace_step(Uint16 x,Uint16 y,const char*arg) {
   }
 }
 
+static void cc_hflip(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  Sint32 x,y;
+  Uint32 a,b;
+  Tile t;
+  StatXY*sa;
+  StatXY*sb;
+  if(x0>x1) a=x0,x0=x1,x1=a;
+  if(y0>y1) a=y0,y0=y1,y1=a;
+  for(y=y0;y<=y1;y++) {
+    for(x=x0;x<(x0+x1+1)/2;x++) {
+      a=y*board_info.width+x;
+      b=y*board_info.width+x0+x1-x;
+      sa=find_stat(x,y,b_main[a].stat,2,2);
+      sb=find_stat(x,y,b_main[b].stat,2,2);
+      if(sa) sa->x=x0+x1-x;
+      if(sb) sb->x=x;
+      t=b_main[a]; b_main[a]=b_main[b]; b_main[b]=t;
+      sa=find_stat(x,y,b_under[a].stat,1,1);
+      sb=find_stat(x,y,b_under[b].stat,1,1);
+      if(sa) sa->x=x0+x1-x;
+      if(sb) sb->x=x;
+      t=b_under[a]; b_under[a]=b_under[b]; b_under[b]=t;
+    }
+  }
+}
+
 static void cc_import(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   char buf[75];
   const char*e;
@@ -1031,6 +1090,27 @@ static void cc_markonly_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*a
   markgrid=ccdata;
 }
 
+static void cc_ohflip(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  Sint32 x,y;
+  Uint32 a,b;
+  Tile t;
+  StatXY*sa;
+  StatXY*sb;
+  if(x0>x1) a=x0,x0=x1,x1=a;
+  if(y0>y1) a=y0,y0=y1,y1=a;
+  for(y=y0;y<=y1;y++) {
+    for(x=x0;x<(x0+x1+1)/2;x++) {
+      a=y*board_info.width+x;
+      b=y*board_info.width+x0+x1-x;
+      sa=find_stat(x,y,b_over[a].stat,3,3);
+      sb=find_stat(x,y,b_over[b].stat,3,3);
+      if(sa) sa->x=x0+x1-x;
+      if(sb) sb->x=x;
+      t=b_over[a]; b_over[a]=b_over[b]; b_over[b]=t;
+    }
+  }
+}
+
 static void cc_overcolor_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   if(*arg) cctmp=strtol(arg,0,16); else cctmp=overclip.color;
 }
@@ -1046,6 +1126,27 @@ static void cc_overdelete_step(Uint16 x,Uint16 y,const char*arg) {
 
 static void cc_overplace_step(Uint16 x,Uint16 y,const char*arg) {
   over_place_at(x,y,overclip);
+}
+
+static void cc_ovflip(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  Sint32 x,y;
+  Uint32 a,b;
+  Tile t;
+  StatXY*sa;
+  StatXY*sb;
+  if(x0>x1) a=x0,x0=x1,x1=a;
+  if(y0>y1) a=y0,y0=y1,y1=a;
+  for(y=y0;y<(y0+y1+1)/2;y++) {
+    for(x=x0;x<=x1;x++) {
+      a=y*board_info.width+x;
+      b=(y0+y1-y)*board_info.width+x;
+      sa=find_stat(x,y,b_over[a].stat,3,3);
+      sb=find_stat(x,y,b_over[b].stat,3,3);
+      if(sa) sa->y=y0+y1+y;
+      if(sb) sb->y=y;
+      t=b_over[a]; b_over[a]=b_over[b]; b_over[b]=t;
+    }
+  }
 }
 
 static void cc_place_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
@@ -1090,6 +1191,32 @@ static void cc_unmark(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   }
 }
 
+static void cc_vflip(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  Sint32 x,y;
+  Uint32 a,b;
+  Tile t;
+  StatXY*sa;
+  StatXY*sb;
+  if(x0>x1) a=x0,x0=x1,x1=a;
+  if(y0>y1) a=y0,y0=y1,y1=a;
+  for(y=y0;y<(y0+y1+1)/2;y++) {
+    for(x=x0;x<=x1;x++) {
+      a=y*board_info.width+x;
+      b=(y0+y1-y)*board_info.width+x;
+      sa=find_stat(x,y,b_main[a].stat,2,2);
+      sb=find_stat(x,y,b_main[b].stat,2,2);
+      if(sa) sa->y=y0+y1+y;
+      if(sb) sb->y=y;
+      t=b_main[a]; b_main[a]=b_main[b]; b_main[b]=t;
+      sa=find_stat(x,y,b_under[a].stat,1,1);
+      sb=find_stat(x,y,b_under[b].stat,1,1);
+      if(sa) sa->y=y0+y1-y;
+      if(sb) sb->y=y;
+      t=b_under[a]; b_under[a]=b_under[b]; b_under[b]=t;
+    }
+  }
+}
+
 static void cc_write_step(Uint16 x,Uint16 y,const char*arg) {
   write_at(x,y,cctile);
 }
@@ -1113,6 +1240,7 @@ static const ColonCommand colon_commands[]={
   {"export",0,cc_export,0,0,0},
   {"floorplace",'.',0,cc_place_begin,cc_floorplace_step,0},
   {"fp",'.',0,cc_place_begin,cc_floorplace_step,0},
+  {"hflip",'%',cc_hflip,0,0,0},
   {"im",0,cc_import,0,0,0},
   {"import",0,cc_import,0,0,0},
   {"m",'.',0,0,cc_mark_step,0},
@@ -1121,10 +1249,12 @@ static const ColonCommand colon_commands[]={
   {"mo",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
   {"oc",'.',0,cc_overcolor_begin,cc_overcolor_step,0},
   {"od",'.',0,0,cc_overdelete_step,0},
+  {"ohflip",'%',cc_ohflip,0,0,0},
   {"op",'.',0,0,cc_overplace_step,0},
   {"overcolor",'.',0,cc_overcolor_begin,cc_overcolor_step,0},
   {"overdelete",'.',0,0,cc_overdelete_step,0},
   {"overplace",'.',0,0,cc_overplace_step,0},
+  {"ovflip",'%',cc_ovflip,0,0,0},
   {"p",'.',0,cc_place_begin,cc_place_step,0},
   {"place",'.',0,cc_place_begin,cc_place_step,0},
   {"status",0,cc_status,0,0,0},
@@ -1132,6 +1262,7 @@ static const ColonCommand colon_commands[]={
   {"toggle",'.',0,0,cc_toggle_step,0},
   {"u",'.',cc_unmark,0,cc_unmark_step,0},
   {"unmark",'.',cc_unmark,0,cc_unmark_step,0},
+  {"vflip",'%',cc_vflip,0,0,0},
   {"w",'.',0,cc_place_begin,cc_write_step,0},
   {"write",'.',0,cc_place_begin,cc_write_step,0},
   {"writeunder",'.',0,cc_place_begin,cc_writeunder_step,0},
@@ -1330,6 +1461,7 @@ static void do_colon_command(char*text) {
   }
   ccerror=0;
   if(nfil || ra=='~' || ra=='&') {
+    if(!found->step) { alert_text("Filters/marks cannot be used with this command"); return; }
     if(found->begin) found->begin(x0,y0,x1,y1,text);
     if(ra!='&' || markgrid) for(x=x0,y=y0;;) {
       if(ccerror) return;
@@ -1928,6 +2060,7 @@ Uint16 edit_board(Uint16 id) {
         case 'c': case 0x03: clip.color=ask_color_char(0,clip.color); break;
         case 'd': case -SDLK_DELETE: delete_at(xcur,ycur); break;
         case 'e': edit_tile(1); break;
+        case 'f': case 'F': emode=k; break;
         case 'g': clip.color=b_main[xcur+ycur*board_info.width].color; break;
         case 'h': case -SDLK_LEFT: cursor_move(-1,0); break;
         case 'i': do_colon_command("%toggle"); break;
@@ -1954,6 +2087,16 @@ Uint16 edit_board(Uint16 id) {
         case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd",0); break;
         case -SDLK_F12 ... -SDLK_F1: f_menu(1-k-SDLK_F1); break;
       } break;
+      case 'f': case 'F': switch(k) {
+        case 'c': flood(xcur,ycur,xcur,ycur,0x0003); break;
+        case 'C': flood(xcur,ycur,xcur,ycur,0x0083); break;
+        case 'k': flood(xcur,ycur,xcur,ycur,0x0001); break;
+        case 'K': flood(xcur,ycur,xcur,ycur,0x0081); break;
+        case 'p': flood(xcur,ycur,xcur,ycur,0x0007); break;
+        case 'P': flood(xcur,ycur,xcur,ycur,0x0087); break;
+        case ';': flood(xcur,ycur,xcur,ycur,0x0000); break;
+        case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd","flood"); break;
+      } emode=numprefix=0; break;
       case 'm': switch(k) {
         case 'c': do_colon_command("&color"); goto unmark;
         case 'C': do_colon_command("&color"); emode=0; break;
@@ -1977,9 +2120,14 @@ Uint16 edit_board(Uint16 id) {
         default: goto no_mode;
       } break;
       case 'v': switch(k) {
-        case 0x0D: do_colon_command("<:>mark"); emode=0; break;
+        case 'c': do_colon_command("<:>unmark"); emode=0; break;
+        case 'd': do_colon_command("<:>delete"); emode=0; break;
+        case 'H': do_colon_command("<:>hflip"); emode=0; break;
+        case 'i': case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case 'm': do_colon_command("<:>mark"); emode='m'; break;
-        case ' ': do_colon_command("<:>toggle"); emode=0; break;
+        case 'p': do_colon_command("<:>~&place"); emode=0; break;
+        case 's': case 0x0D: do_colon_command("<:>mark"); emode=0; break;
+        case 'V': do_colon_command("<:>vflip"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode;
       } break;
@@ -2030,6 +2178,7 @@ Uint16 edit_board(Uint16 id) {
         case 'c': case 0x03: overclip.color=ask_color_char(0,overclip.color); break;
         case 'd': case -SDLK_DELETE: over_delete_at(xcur,ycur); break;
         case 'e': edit_tile(2); break;
+        case 'f': case 'F': emode=k; break;
         case 'g': overclip.color=b_over[xcur+ycur*board_info.width].color; break;
         case 'h': case -SDLK_LEFT: over_cursor_move(-1,0); break;
         case 'i': do_colon_command("%toggle"); break;
@@ -2059,6 +2208,13 @@ Uint16 edit_board(Uint16 id) {
         case -SDLK_F10: overclip.kind=OVER_VISIBLE; break;
         case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd","over"); break;
       } break;
+      case 'f': case 'F': switch(k) {
+        case 'c': flood(xcur,ycur,xcur,ycur,0x0030); break;
+        case 'k': flood(xcur,ycur,xcur,ycur,0x0010); break;
+        case 'p': flood(xcur,ycur,xcur,ycur,0x0070); break;
+        case ';': flood(xcur,ycur,xcur,ycur,0x0000); break;
+        case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd","flood"); break;
+      } emode=numprefix=0; break;
       case 'm': switch(k) {
         case 'c': do_colon_command("&overcolor"); goto unmark1;
         case 'C': do_colon_command("&overcolor"); emode=0; break;
@@ -2080,9 +2236,14 @@ Uint16 edit_board(Uint16 id) {
         default: goto no_mode1;
       } break;
       case 'v': switch(k) {
-        case 0x0D: do_colon_command("<:>mark"); emode=0; break;
+        case 'c': do_colon_command("<:>unmark"); emode=0; break;
+        case 'd': do_colon_command("<:>overdelete"); emode=0; break;
+        case 'H': do_colon_command("<:>ohflip"); emode=0; break;
+        case 'i': case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case 'm': do_colon_command("<:>mark"); emode='m'; break;
-        case ' ': do_colon_command("<:>toggle"); emode=0; break;
+        case 'p': do_colon_command("<:>~&overplace"); emode=0; break;
+        case 's': case 0x0D: do_colon_command("<:>mark"); emode=0; break;
+        case 'V': do_colon_command("<:>ovflip"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode1;
       } break;
