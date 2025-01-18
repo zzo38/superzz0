@@ -301,7 +301,7 @@ static void edit_tile(void) {
     win_option('k',"Background",h,SC_BACKGROUND) win_refresh();
     win_option('B',"Board tiles",h,SC_BOARD) win_refresh();
     win_option('N',"Numeric variable",h,SC_NUMERIC) win_refresh();
-    win_option('S',"Special numeric vaariable",h,SC_NUMERIC_SPECIAL) win_refresh();
+    win_option('S',"Special numeric variable",h,SC_NUMERIC_SPECIAL) win_refresh();
     win_option('M',"Memory",h,SC_MEMORY) win_refresh();
     win_option('I',"Indicator",h,SC_INDICATOR) win_refresh();
     win_option('w',"Text window",h,SC_TEXT) win_refresh();
@@ -553,6 +553,39 @@ static void cursor_move(Sint32 xd,Sint32 yd) {
     }
   }
   numprefix=0;
+}
+
+static void far_cursor_move(Sint32 xd,Sint32 yd,char hi) {
+  Uint32 w=board_info.width;
+  Uint16 x0=xcur;
+  Uint16 y0=ycur;
+  Sint32 x,y;
+  char r;
+  repeat:
+  r=1;
+  x=xcur+xd*(numprefix?:1);
+  y=ycur+yd*(numprefix?:1);
+  numprefix=0;
+  if(x<0) r=0,xcur=0; else if(x>=80) r=0,xcur=79; else xcur=x;
+  if(y<0) r=0,ycur=0; else if(y>=25) r=0,ycur=24; else ycur=y;
+  if(r && cur_screen.command[y0*80+x0]==cur_screen.command[y*80+x] && (!hi || cur_screen.color[y0*80+x0]==cur_screen.color[y*80+x])) goto repeat;
+}
+
+static void find_next_marked(Sint32 dir) {
+  Sint16 x=xcur;
+  Sint16 y=ycur;
+  while(dir>0 && y<25) {
+    if(++x==80) x=0,++y;
+    if(set_mark(x,y,2)) --dir;
+  }
+  while(dir<0 && y>=0) {
+    if(!x--) x=79,--y;
+    if(set_mark(x,y,2)) ++dir;
+  }
+  if(x>=0 && x<80 && y>=0 && y<25) {
+    xcur=x;
+    ycur=y;
+  }
 }
 
 static void digit_move(Sint32 xd,Sint32 yd) {
@@ -955,6 +988,7 @@ Uint16 edit_screen(Uint16 id) {
         case 0x08: numprefix/=10; break;
         case 0x09: if(emode=(emode?0:15)) place_at(xcur,ycur,clip); break;
         case 0x16: viewmode^=1; break;
+        case 0x1A: xcur=cur_screen.view_x; ycur=cur_screen.view_y; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
         case -SDLK_i: edit_screen_info(); break;
@@ -977,13 +1011,16 @@ Uint16 edit_screen(Uint16 id) {
         case 'l': case -SDLK_RIGHT: if(event.key.keysym.mod&KMOD_SHIFT) goto shift_l; cursor_move(1,0); break;
         case 'L': shift_l: digit_move(1,0); break;
         case 'm': emode='m'; break;
+        case 'n': find_next_marked(numprefix?:1); numprefix=0; break;
+        case 'N': find_next_marked(-(numprefix?:1)); numprefix=0; break;
         case 'p': place_at(xcur,ycur,clip); break;
         case 't': emode='t'; xcur2=xcur; break;
         case 'u': unmark: if(emode!=15) emode=0; memset(markgrid,0,250); break;
         case 'v': xcur2=xcur; ycur2=ycur; emode='v'; break;
         case 'y': clip.com=cur_screen.command[ycur*80+xcur]; clip.col=cur_screen.color[ycur*80+xcur]; clip.par=cur_screen.parameter[ycur*80+xcur]; break;
-        case -SDLK_HOME: xcur=ycur=0; break;
-        case -SDLK_END: xcur=79; ycur=24; break;
+        case 'z': case 'Z': emode=k; break;
+        case '<': case -SDLK_HOME: xcur=ycur=0; break;
+        case '>': case -SDLK_END: xcur=79; ycur=24; break;
         case ':': ask_colon_command(); break;
         case -SDLK_F1: f_menu(1); break;
         case -SDLK_F2: f_menu(2); break;
@@ -1012,13 +1049,21 @@ Uint16 edit_screen(Uint16 id) {
       case 'v': switch(k) {
         case -SDLK_h: set_edges(cur_screen.hard_edge); emode=0; break;
         case -SDLK_s: set_edges(cur_screen.soft_edge); emode=0; break;
-        case 0x0D: case 'm': do_colon_command("<:>mark"); emode='m'; break;
-        case ' ': do_colon_command("<:>toggle"); emode=0; break;
+        case 'c': do_colon_command("<:>unmark"); emode=0; break;
+        case 'i': case ' ': do_colon_command("<:>toggle"); emode=0; break;
+        case 'm': do_colon_command("<:>mark"); emode='m'; break;
+        case 's': case 0x0D: do_colon_command("<:>mark"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         case 'b': make_border(0); emode=0; break;
         case 'B': make_border(8); emode=0; break;
         default: goto no_mode;
       } break;
+      case 'z': case 'Z': switch(k) {
+        case 'h': case -SDLK_LEFT: far_cursor_move(-1,0,emode=='Z'); break;
+        case 'j': case -SDLK_DOWN: far_cursor_move(0,1,emode=='Z'); break;
+        case 'k': case -SDLK_UP: far_cursor_move(0,-1,emode=='Z'); break;
+        case 'l': case -SDLK_RIGHT: far_cursor_move(1,0,emode=='Z'); break;
+      } emode=numprefix=0; break;
       default: emode=0;
     }
   }

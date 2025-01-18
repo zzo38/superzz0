@@ -26,6 +26,7 @@ ALT+R      Resize board
 ALT+T      Test game
 ^O         Stat list
 ^V         Toggle view mode
+^Z         Find player or numbered stat
 SPACE      Toggle mark
 c          Select drawing colour
 d          Delete tile at cursor
@@ -36,6 +37,8 @@ g          Get colour from cursor
 h j k l    Move cursor
 i          Invert mark
 m          Mass mode
+n          Find next mark
+N          Find previous mark
 o          Toggle overlay editing
 p          Place tile in main layer
 q          Write tile in main layer
@@ -45,6 +48,7 @@ u          Unmark all
 v          Block mode
 y          Copy tile from main layer (place with p)
 Y          Copy tile from under layer
+z          Far movement prefix
  :         Colon commands
 F1-F12     Custom menus
 [ ]        Go to previous/next board

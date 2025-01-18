@@ -34,11 +34,14 @@ e          Edit tile at cursor
 h j k l    Move cursor (arrows can also be used)
 H J K L    Move cursor and extend numeric display
 m          Mass mode
+n          Find next mark
+N          Find previous mark
 p          Place tile
 t          Text entry
 u          Unmark all
 v          Block mode
 y          Copy tile at cursor (place with p)
+z          Far movement prefix
  :         Colon commands
 F1         Menu: Backgrounds, Tiles, Windows
 F2         Menu: Indicators, Bits
@@ -66,7 +69,7 @@ ESC        Leave text mode; switch to normal mode
 Block mode is used for selecting a rectangular block.
 
 SPACE      Toggle marks in selected block; leave block mode
-RETURN     Same as 'm'
+RETURN     Mark selected block and cancel
 b          Draw thin border; leave block mode
 B          Draw thick border; leave block mode
 m          Mark selected block and switch to mass mode

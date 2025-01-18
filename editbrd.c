@@ -795,6 +795,40 @@ static void over_cursor_move(Sint32 xd,Sint32 yd) {
   numprefix=0;
 }
 
+static void far_cursor_move(Sint32 xd,Sint32 yd,char hi,char ov) {
+  Tile*b=(ov?b_over:b_main);
+  Uint32 w=board_info.width;
+  Uint16 x0=xcur;
+  Uint16 y0=ycur;
+  Sint32 x,y;
+  char r;
+  repeat:
+  r=1;
+  x=xcur+xd*(numprefix?:1);
+  y=ycur+yd*(numprefix?:1);
+  numprefix=0;
+  if(x<0) r=0,xcur=0; else if(x>=board_info.width) r=0,xcur=board_info.width-1; else xcur=x;
+  if(y<0) r=0,ycur=0; else if(y>=board_info.height) r=0,ycur=board_info.height-1; else ycur=y;
+  if(r && b[y0*w+x0].kind==b[y*w+x].kind && (!hi || b[y0*w+x0].color==b[y*w+x].color)) goto repeat;
+}
+
+static void find_next_marked(Sint32 dir) {
+  Sint32 x=xcur;
+  Sint32 y=ycur;
+  while(dir>0 && y<board_info.height) {
+    if(++x==board_info.width) x=0,++y;
+    if(set_mark(x,y,2)) --dir;
+  }
+  while(dir<0 && y>=0) {
+    if(!x--) x=board_info.width-1,--y;
+    if(set_mark(x,y,2)) ++dir;
+  }
+  if(x>=0 && x<board_info.width && y>=0 && y<board_info.height) {
+    xcur=x;
+    ycur=y;
+  }
+}
+
 static void flood(Sint32 x,Sint32 y,Sint32 x0,Sint32 y0,Uint16 m) {
   Uint32 a,a0;
   if(x<0 || x>=board_info.width || y<0 || y>=board_info.height) return;
@@ -2047,6 +2081,14 @@ Uint16 edit_board(Uint16 id) {
           break;
         case 0x0F: stat_list(numprefix); numprefix=0; break;
         case 0x16: vmode^=1; break;
+        case 0x1A:
+          if(!numprefix) numprefix=1;
+          if(numprefix<=maxstat && stats[numprefix-1].count) {
+            xcur=stats[numprefix-1].xy->x;
+            ycur=stats[numprefix-1].xy->y;
+          }
+          numprefix=0;
+          break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
         case -SDLK_i: edit_board_info(); break;
@@ -2068,6 +2110,8 @@ Uint16 edit_board(Uint16 id) {
         case 'k': case -SDLK_UP: cursor_move(0,-1); break;
         case 'l': case -SDLK_RIGHT: cursor_move(1,0); break;
         case 'm': emode='m'; break;
+        case 'n': find_next_marked(numprefix?:1); numprefix=0; break;
+        case 'N': find_next_marked(-(numprefix?:1)); numprefix=0; break;
         case 'o': goto over; break;
         case 'p': place_at(xcur,ycur,clip); break;
         case 'q': write_at(xcur,ycur,clip); break;
@@ -2077,6 +2121,7 @@ Uint16 edit_board(Uint16 id) {
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
         case 'y': clip=b_main[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case 'Y': clip=b_under[xcur+ycur*board_info.width]; set_apparent_clip(); break;
+        case 'z': case 'Z': emode=k; break;
         case '<': case -SDLK_HOME: xcur=ycur=0; break;
         case '>': case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
         case '[': switch_to_board(brd_id-(numprefix?:1)); numprefix=0; break;
@@ -2131,6 +2176,12 @@ Uint16 edit_board(Uint16 id) {
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode;
       } break;
+      case 'z': case 'Z': switch(k) {
+        case 'h': case -SDLK_LEFT: far_cursor_move(-1,0,emode=='Z',0); break;
+        case 'j': case -SDLK_DOWN: far_cursor_move(0,1,emode=='Z',0); break;
+        case 'k': case -SDLK_UP: far_cursor_move(0,-1,emode=='Z',0); break;
+        case 'l': case -SDLK_RIGHT: far_cursor_move(1,0,emode=='Z',0); break;
+      } emode=numprefix=0; break;
       default: emode=0;
     }
   }
@@ -2186,6 +2237,8 @@ Uint16 edit_board(Uint16 id) {
         case 'k': case -SDLK_UP: over_cursor_move(0,-1); break;
         case 'l': case -SDLK_RIGHT: over_cursor_move(1,0); break;
         case 'm': emode='m'; break;
+        case 'n': find_next_marked(numprefix?:1); numprefix=0; break;
+        case 'N': find_next_marked(-(numprefix?:1)); numprefix=0; break;
         case 'o': goto norm; break;
         case 'p': over_place_at(xcur,ycur,overclip); break;
         case 't': emode='t'; xcur2=xcur; break;
@@ -2193,6 +2246,7 @@ Uint16 edit_board(Uint16 id) {
         case 'u': unmark1: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
         case 'y': overclip=b_over[xcur+ycur*board_info.width]; break;
+        case 'z': case 'Z': emode=k; break;
         case ';': overclip.param=ask_color_char(1,overclip.param); break;
         case '<': case -SDLK_HOME: xcur=ycur=0; break;
         case '>': case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
@@ -2247,6 +2301,12 @@ Uint16 edit_board(Uint16 id) {
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode1;
       } break;
+      case 'z': case 'Z': switch(k) {
+        case 'h': case -SDLK_LEFT: far_cursor_move(-1,0,emode=='Z',1); break;
+        case 'j': case -SDLK_DOWN: far_cursor_move(0,1,emode=='Z',1); break;
+        case 'k': case -SDLK_UP: far_cursor_move(0,-1,emode=='Z',1); break;
+        case 'l': case -SDLK_RIGHT: far_cursor_move(1,0,emode=='Z',1); break;
+      } emode=numprefix=0; break;
       default: emode=0;
     }
   }
