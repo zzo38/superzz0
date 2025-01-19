@@ -48,7 +48,8 @@ u          Unmark all
 v          Block mode
 y          Copy tile from main layer (place with p)
 Y          Copy tile from under layer
-z          Far movement prefix
+z          Far movement prefix (match kind only)
+Z          Far movement prefix (match kind and colour)
  :         Colon commands
 F1-F12     Custom menus
 [ ]        Go to previous/next board
@@ -62,14 +63,23 @@ ESC        Cancel block mode
 ;          Exchange corners
 c          Unmark block and cancel
 d          Delete in block and cancel
+f          Block tiling (floor)
+F          Block tiling (floor) and unmark
 H          Flip horizontal and cancel
 i          Toggle marks in block and cancel
 m          Mark block and enter mass mode
 p          Masked paste and cancel
 s          Mark block and cancel
+t          Block tiling (normal)
+T          Block tiling (normal) and unmark
 u          Unmark entire board grid and cancel
 V          Flip vertical and cancel
 SPACE      Toggle marks in block and cancel
+
+The block tiling commands will also cancel the block mode. All of them will
+copy tiles from inside the block into the marked cells; they will be tiled
+in the marked cells. A numeric prefix specifies how much randomness should
+be applied for selecting the tiles to be copied.
 
 :mass;Mass mode
 Most commands in normal mode are also available.
@@ -317,11 +327,22 @@ mark/m
 markonly/mo
   Marks cells, but unmarks any cells not marked by this command.
 
+ohflip
+  Like "hflip" but affects the overlay.
+
 overdelete/od
   Delete overlay cells.
 
+overplace/op
+  Place the current overlay tile into the overlay.
+
+ovflip
+  Like "vflip" but affects the overlay.
+
 place/p
-  Place a tile. This is either the current tile or a specified tile.
+  Place a tile into the main layer. This is either the current tile or a
+  specified tile. This command will move what is in the main layer into
+  the under layer if a non-floor is being placed where there is a floor.
 
 status
   Toggles the status display. If the argument is 0 then it turns off the
@@ -338,8 +359,10 @@ vflip
   specify the coordinates of a rectangular area.
 
 write/w
-  
+  Write a tile into the main layer, like the "place" command but it does
+  not affect the under layer.
 
 writeunder/wu
-  
+  Write a tile into the under layer, like the "place" command but only
+  affects the under layer.
 

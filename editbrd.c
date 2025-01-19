@@ -897,6 +897,31 @@ static void mass_move(Sint32 xd,Sint32 yd,void(*f)(Sint32,Sint32,Sint32,Sint32))
   }
 }
 
+static void block_tiling(char q) {
+  // q: 0(normal) 1(floor) 2(over)
+  Tile c;
+  Uint16 x,y;
+  Uint32 x0=xcur;
+  Uint32 y0=ycur;
+  Sint32 xn=xcur2-xcur;
+  Sint32 yn=ycur2-ycur;
+  Sint32 z;
+  if(xn<0) x0=xcur2,xn=-xn;
+  if(yn<0) y0=ycur2,yn=-yn;
+  ++xn; ++yn;
+  for(y=0;y<markheight;y++) for(x=0;x<markwidth;x++) if((x<x0 || x>=x0+xn) && (y<y0 || y>=y0+yn) && set_mark(x,y,2)) {
+    z=((numprefix?y+(dice(numprefix+1)+7)/8:y)%yn+y0)*board_info.width+((numprefix?x+(dice(numprefix+1)+7)/8:x)%xn+x0);
+    c=(q==2?b_over:q?(elem_def[b_main[z].kind].attrib&A_FLOOR?b_main:b_under):b_main)[z];
+    z=y*board_info.width+x;
+    switch(q) {
+      case 0: place_at(x,y,c); break;
+      case 1: if(elem_def[b_main[z].kind].attrib&A_FLOOR) write_under(x,y,c); else write_at(x,y,c); break;
+      case 2: over_place_at(x,y,c); break;
+    }
+  }
+  numprefix=0;
+}
+
 static Sint32 cctmp;
 static Tile cctile;
 static Uint8*ccdata;
@@ -2167,11 +2192,15 @@ Uint16 edit_board(Uint16 id) {
       case 'v': switch(k) {
         case 'c': do_colon_command("<:>unmark"); emode=0; break;
         case 'd': do_colon_command("<:>delete"); emode=0; break;
+        case 'f': block_tiling(1); emode=0; cc_unmark(0,0,markwidth,markheight,""); break;
+        case 'F': block_tiling(1); emode=0; break;
         case 'H': do_colon_command("<:>hflip"); emode=0; break;
         case 'i': case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case 'm': do_colon_command("<:>mark"); emode='m'; break;
         case 'p': do_colon_command("<:>~&place"); emode=0; break;
         case 's': case 0x0D: do_colon_command("<:>mark"); emode=0; break;
+        case 't': block_tiling(0); emode=0; cc_unmark(0,0,markwidth,markheight,""); break;
+        case 'T': block_tiling(0); emode=0; break;
         case 'V': do_colon_command("<:>vflip"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode;
@@ -2297,6 +2326,8 @@ Uint16 edit_board(Uint16 id) {
         case 'm': do_colon_command("<:>mark"); emode='m'; break;
         case 'p': do_colon_command("<:>~&overplace"); emode=0; break;
         case 's': case 0x0D: do_colon_command("<:>mark"); emode=0; break;
+        case 't': block_tiling(2); emode=0; cc_unmark(0,0,markwidth,markheight,""); break;
+        case 'T': block_tiling(2); emode=0; break;
         case 'V': do_colon_command("<:>ovflip"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode1;
