@@ -2123,6 +2123,7 @@ Uint16 edit_board(Uint16 id) {
           esave();
           run_test_game(brd_id);
           break;
+        case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'c': case 0x03: clip.color=ask_color_char(0,clip.color); break;
         case 'd': case -SDLK_DELETE: delete_at(xcur,ycur); break;
@@ -2254,6 +2255,7 @@ Uint16 edit_board(Uint16 id) {
           esave();
           run_test_game(brd_id);
           break;
+        case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'c': case 0x03: overclip.color=ask_color_char(0,overclip.color); break;
         case 'd': case -SDLK_DELETE: over_delete_at(xcur,ycur); break;

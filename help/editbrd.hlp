@@ -24,6 +24,7 @@ RETURN     Pick and edit parameter of tile at cursor
 ALT+I      Board info
 ALT+R      Resize board
 ALT+T      Test game
+ALT+Z      Maximum numeric prefix
 ^O         Stat list
 ^V         Toggle view mode
 ^Z         Find player or numbered stat

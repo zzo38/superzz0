@@ -997,6 +997,7 @@ Uint16 edit_screen(Uint16 id) {
         case -SDLK_r: cur_screen.message_r=xcur; break;
         case -SDLK_v: cur_screen.view_x=xcur; cur_screen.view_y=ycur; break;
         case -SDLK_w: edit_window(); break;
+        case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'c': case 0x03: clip.col=ask_color_char(0,clip.col); break;
         case 'C': cur_screen.color[ycur*80+xcur]=ask_color_char(0,cur_screen.color[ycur*80+xcur]); break;
