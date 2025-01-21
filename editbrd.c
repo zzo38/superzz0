@@ -2116,12 +2116,19 @@ static void gradient_menu(Uint8 lay) {
     {4,{0x224,0x262,0x228,0x202}},
     {4,{0x000,0x108,0x207,0x30F}},
     {4,{0x000,0x104,0x20C,0x30E}},
+    {4,{0x000,0x102,0x20A,0x30F}},
+    {4,{0x000,0x101,0x209,0x30B}},
+    {4,{0x000,0x108,0x206,0x30E}},
+    {7,{0x000,0x108,0x000,0x207,0x000,0x308,0x000}},
+    {7,{0x200,0x208,0x288,0x287,0x277,0x27F,0x2FF}},
     {11,{0x319,0x219,0x119,0x014,0x114,0x214,0x314,0x414,0x3C4,0x2C4,0x1C4}},
     {11,{0x319,0x219,0x119,0x013,0x113,0x213,0x313,0x413,0x3B3,0x2B3,0x1B3}},
     {11,{0x32A,0x22A,0x12A,0x026,0x126,0x226,0x326,0x426,0x3E6,0x2E6,0x1E6}},
     {11,{0x32A,0x22A,0x12A,0x024,0x124,0x224,0x324,0x424,0x3C4,0x2C4,0x1C4}},
     {11,{0x319,0x219,0x119,0x015,0x115,0x215,0x315,0x415,0x3D5,0x2D5,0x1D5}},
-    {11,{0x37F,0x27F,0x17F,0x075,0x175,0x275,0x375,0x415,0x3D5,0x2D5,0x1D5}},
+    {11,{0x37F,0x27F,0x17F,0x075,0x175,0x275,0x375,0x475,0x3D5,0x2D5,0x1D5}},
+    {11,{0x37F,0x27F,0x17F,0x073,0x173,0x273,0x373,0x473,0x3B3,0x2B3,0x1B3}},
+    {11,{0x35D,0x25D,0x15D,0x053,0x153,0x253,0x353,0x453,0x3B3,0x2B3,0x1B3}},
     {25,{0x102,0x102,0x102,0x102,0x102,0x102,0x108,0x202,0x208,0x206,0x10A,0x20A,0x102,0x102,0x102,0x102,0x102,0x102,0x108,0x202,0x208,0x206,0x10A,0x20A,0x103}},
     {23,{0x2CC,0x2CE,0x2EE,0x2EA,0x2AA,0x2AB,0x2BB,0x2B9,0x299,0x29D,0x2DD,0x2DC,0x2CC,0x2CE,0x2EE,0x2EA,0x2AA,0x2AB,0x2BB,0x2B9,0x299,0x29D,0x2DD}},
   };
@@ -2139,6 +2146,9 @@ static void gradient_menu(Uint8 lay) {
   Uint8 repm=0;
   Uint8 chess=0;
   Uint8 divis=1;
+  Uint8 xi=1;
+  Uint8 yi=1;
+  Uint8 km=0;
   Uint16 patso=0;
   Uint16 pateo=0;
   Uint16 x1=xcur2;
@@ -2178,6 +2188,7 @@ static void gradient_menu(Uint8 lay) {
   win_form("Gradient") {
     win_help("gradient",0);
     win_command('S',"Shape...") win_form("Gradient shape") {
+      win_help("gradient","s");
       win_heading("Coordinates:");
       win_numeric('X',"X1: ",x1,0,board_info.width-1);
       win_numeric('1',"Y1: ",y1,0,board_info.height-1);
@@ -2188,19 +2199,24 @@ static void gradient_menu(Uint8 lay) {
       }
       win_blank();
       win_heading("Shape:");
-      win_option('L',"Linear gradient",sh,1);
-      win_option('E',"Euclidean radius",sh,2);
-      win_option('C',"Chebyshev radius",sh,3);
-      win_option('h',"Manhattan radius",sh,4);
-      win_option('D',"Distance from line",sh,5);
-      win_option('p',"Distance from points",sh,6);
-      win_option('m',"Random",sh,0);
+      win_option('L',"Linear gradient",sh,1) win_refresh();
+      win_option('u',"Circular gradient",sh,8) win_refresh();
+      win_option('E',"Euclidean radius",sh,2) win_refresh();
+      win_option('C',"Chebyshev radius",sh,3) win_refresh();
+      win_option('h',"Manhattan radius",sh,4) win_refresh();
+      win_option('D',"Distance from line",sh,5) win_refresh();
+      win_option('p',"Distance from points",sh,6) win_refresh();
+      win_option('I',"Integer",sh,7) win_refresh();
+      win_option('m',"Random",sh,0) win_refresh();
       win_blank();
-      win_numeric('D',"Divisor",divis,0,255);
+      if("   !  !! "[sh]&1) win_numeric('f',"X factor: ",xi,0,255);
+      if("   !  !! "[sh]&1) win_numeric('a',"Y factor: ",yi,0,255);
+      if(sh) win_numeric('v',"Divisor",divis,1,255);
       win_blank();
       win_command_esc(0,"Done") break;
     }
     win_command('P',"Pattern...") win_form("Gradient pattern") {
+      win_help("gradient","p");
       win_heading("Pattern type:");
       win_option('c',"Current color",pat,0) win_refresh();
       win_option('w',"Current color with string",pat,1) win_refresh();
@@ -2244,6 +2260,7 @@ static void gradient_menu(Uint8 lay) {
       win_command_esc(0,"Done") break;
     }
     win_command('O',"Option...") win_form("Gradient option") {
+      win_help("gradient","o");
       win_heading("Layer:");
       win_option('F',"Floor",lay,0);
       win_option('U',"Under",lay,1);
@@ -2257,6 +2274,8 @@ static void gradient_menu(Uint8 lay) {
       win_blank();
       win_boolean('s',"Clear stats",aff,0x10);
       win_boolean('A',"Avoid stats",aff,0x20);
+      win_blank();
+      win_boolean('R',"Retain marks",km,2);
       win_blank();
       win_command_esc(0,"Done") break;
     }
@@ -2272,11 +2291,13 @@ static void gradient_menu(Uint8 lay) {
     goto restart;
   }
   switch(sh) {
+    case 1: g=atan2(y2-y1,x2-x1); break;
     case 2: g=hypot(abs(x2-x1)+1,abs(y2-y1)+1); break;
     case 5: g=hypot(y2-y1,x2-x1); g*=g*0.5; break;
+    case 8: g=atan2(y2-y1,x2-x1); break;
   }
   for(y=0;y<markheight;y++) for(x=0;x<markwidth;x++) {
-    if(!set_mark(x,y,0)) continue;
+    if(!set_mark(x,y,km)) continue;
     b=(lay==3?b_over:lay==2?b_main:b_under)+y*w+x;
     if(!lay) {
       if(b_under[y*w+x].kind) continue;
@@ -2296,16 +2317,23 @@ static void gradient_menu(Uint8 lay) {
       }
       if(aff&0x20) continue;
     }
-    if(sh) {
+    if(sh==7) {
+      k=(x-x1)*xi+(y-y1)*yi;
+      if(patran) k+=dice(patran+1)>>3;
+      if(patrev) k=-k;
+      while(k<0) k+=patmax-patso-pateo;
+      if(divis) k/=divis;
+      k=k%(patmax-patso-pateo)+patso;
+    } else if(sh) {
       switch(sh) {
         case 1:
-          //TODO
+          f=((x-x1)*cos(g)+(y-y1)*sin(g))/hypot(x2-x1,y2-y1);
           break;
         case 2:
           f=hypot(x-x1,y-y1)/g;
           break;
         case 3:
-          f=fmax(fabs(x-x1)/(fabs(x2-x1)+1.0),fabs(y-y1)/(fabs(y2-y1)+1.0));
+          f=fmax(xi*fabs(x-x1)/(fabs(x2-x1)+1.0),yi*fabs(y-y1)/(fabs(y2-y1)+1.0));
           break;
         case 4:
           f=0.5*fabs(x-x1)/(fabs(x2-x1)+1.0)+0.5*fabs(y-y1)/(fabs(y2-y1)+1.0);
@@ -2316,6 +2344,9 @@ static void gradient_menu(Uint8 lay) {
         case 6:
           f=hypot(x-x1,y-y1)/hypot(x-x2,y-y2);
           if(isinf(f)) f=1.0; else f/=f+1.0;
+          break;
+        case 8:
+          f=fmod(atan2(x-x1,y-y1)+M_PI,2*M_PI)/(2*M_PI);
           break;
       }
       k=patconv(f);
@@ -2577,6 +2608,7 @@ Uint16 edit_board(Uint16 id) {
         case ';': overclip.param=ask_color_char(1,overclip.param); break;
         case '<': case -SDLK_HOME: xcur=ycur=0; break;
         case '>': case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
+        case ':': ask_colon_command(); break;
         case -SDLK_F1: overclip.kind^=0x01; break;
         case -SDLK_F2: overclip.kind^=0x02; break;
         case -SDLK_F3: overclip.kind^=0x04; break;

@@ -1,0 +1,98 @@
+@Gradient
+The gradient menu can be used to make a gradient fill. There are two ways
+to be used:
+
+þ Mark the tiles that you want to fill, and then push v and select the
+rectangular area (to use as the default end points) and then push g.
+
+þ Mark any tiles to exclude from the fill (optional), and then push v and
+select the rectangular area to be filled and then push G.
+
+This menu has three submenus:
+!s;Shape
+!p;Pattern
+!o;Option
+
+:s;Shape
+
+The options in this menu will be used to decide a number which is then used
+as the pattern offset. The range is normally 0 to 1.
+
+You must specify the coordinates of the end points for the gradient; by
+default, the rectangular area will be specified. If you select "Reverse"
+then the two end points are exchanged, which effectively reverses the
+order of the pattern (although this does not affect the "Integer" shape).
+
+You must also select one of the following types of shapes:
+
+þ Linear gradient: Makes a linear gradient from the first end point to the
+second end point.
+
+þ Circular gradient: Makes a circular gradient according to the angle,
+starting from the first end point. The first direction will be toward
+the second end point.
+
+þ Euclidean radius: Uses the Euclidean distance from one end point.
+
+þ Chebyshev radius: Uses the Chebyshev distance from one end point.
+
+þ Manhattan radius: Uses the Manhattan distance from one end point.
+
+þ Distance from line: Uses the distance from the point to the line
+specified by the two end points.
+
+þ Distance from points: Based on the sum of the distance from the point
+to each of the two end points.
+
+þ Integer: Uses integer arithmetic only. Multiplies the X coordinate by the
+X factor and the Y coordinate by the Y factor and is modulo the number of
+pieces of the pattern.
+
+þ Random: Ignores coordinates entirely and uses the pieces of the selected
+pattern at random.
+
+The following additional options are available (which ones are available
+depends on the type of shape):
+
+þ X/Y factors: Some shapes use these as multipliers for the X and Y
+coordinates of the tile when deciding the pattern offset.
+
+þ Divisor: This number will divide the generated number in order to
+effectively stretch the pattern.
+
+:p;Pattern
+
+The following types of patterns are available:
+
+þ Current color: Uses the current color and kind with a fixed pattern of
+characters (which is displayed in the preview area).
+
+þ Current color with string: Like above but you can specify your own
+sequence of characters to use.
+
+þ Preset: You can select one of the built-in pattern sequences of colours
+and characters. The current kind is used.
+
+þ Block area: Uses the tiles in the block area as the pattern. (This is
+not affected by changes to the shape coordinates; it will always use the
+originally selected block.)
+
+You can specify the start/end offsets, which will truncate the pattern at
+the start or end by removing that many pieces. (You can see the effect of
+this in the preview area.)
+
+:o;Option
+
+You can select the layer to apply the gradient to. (It will automatically
+select the main layer or over layer if that is the layer that is currently
+being edited, but you can change this.)
+
+You can select what properties of the tiles should be affected, which can
+be the kind, colour, and/or parameter. See the above section about patterns
+for how each of these is decided.
+
+For stats, you can select whether to clear stats in the gradient area or
+to avoid overwriting stats. If you select both, then any stats will be
+cleared but will otherwise remain unchanged. If you do not clear the stats,
+then the tiles will continue to belong to the stats that they already are.
+
