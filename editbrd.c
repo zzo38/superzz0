@@ -5,6 +5,7 @@ exit
 
 #define USING_RW_DATA
 #include "common.h"
+#include <math.h>
 
 static Uint16 brd_id;
 static Uint16 xcur,ycur,xcur2,ycur2;
@@ -632,6 +633,8 @@ static void estatus(void) {
   v_char[y*80+79]=")\x1E\x1F\x04"[(scroll_y?1:0)+(scroll_y+25<board_info.height?2:0)];
   if(emode=='v') {
     draw_text(59,y,buf,0x19,snprintf(buf,80,"%c%04d%c%04d",xcur2>xcur?'-':'+',abs(xcur2-xcur),ycur2>ycur?'-':'+',abs(ycur2-ycur)));
+  } else if(emode=='w' && xcur2) {
+    draw_text(59,y,buf,0x19,snprintf(buf,80,"%05d",xcur2));
   }
 }
 
@@ -1216,6 +1219,10 @@ static void cc_place_step(Uint16 x,Uint16 y,const char*arg) {
   place_at(x,y,cctile);
 }
 
+static void cc_reseed(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  reseed(strtoll(arg,0,10));
+}
+
 static void cc_status(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   if(*arg=='1') status_on=1;
   if(*arg=='0') status_on=0;
@@ -1316,6 +1323,7 @@ static const ColonCommand colon_commands[]={
   {"ovflip",'%',cc_ovflip,0,0,0},
   {"p",'.',0,cc_place_begin,cc_place_step,0},
   {"place",'.',0,cc_place_begin,cc_place_step,0},
+  {"reseed",0,cc_reseed,0,0,0},
   {"status",0,cc_status,0,0,0},
   {"t",'.',0,0,cc_toggle_step,0},
   {"toggle",'.',0,0,cc_toggle_step,0},
@@ -2066,6 +2074,272 @@ static void f_menu(Uint16 f) {
   set_apparent_clip();
 }
 
+typedef struct {
+  Uint8 n;
+  Uint16 c[31];
+} Gradient;
+#define GRADIENT1(a) {9,{0x000+a,0x100+a,0x200+a,0x300+a,0x400+a,0x108+a*0x11,0x208+a*0x11,0x308+a*0x11,0x408+a*0x11}}
+
+static void gradient_menu(Uint8 lay) {
+  static const Gradient grads[]={
+    GRADIENT1(0),
+    GRADIENT1(1),
+    GRADIENT1(2),
+    GRADIENT1(3),
+    GRADIENT1(4),
+    GRADIENT1(5),
+    GRADIENT1(6),
+    GRADIENT1(7),
+    {13,{0x008,0x108,0x208,0x308,0x408,0x187,0x287,0x387,0x487,0x17F,0x27F,0x37F,0x47F}},
+    {17,{0x002,0x102,0x202,0x302,0x402,0x12E,0x22E,0x32E,0x42E,0x1EA,0x2EA,0x3EA,0x4EA,0x1A0,0x2A0,0x3A0,0x4A0}},
+    {17,{0x004,0x104,0x204,0x304,0x404,0x14C,0x24C,0x34C,0x44C,0x1CE,0x2CE,0x3CE,0x4CE,0x1EF,0x2EF,0x3EF,0x4EF}},
+    {17,{0x002,0x102,0x202,0x302,0x402,0x12A,0x22A,0x32A,0x42A,0x1AE,0x2AE,0x3AE,0x4AE,0x1EF,0x2EF,0x3EF,0x4EF}},
+    {21,{0x001,0x101,0x201,0x301,0x401,0x119,0x219,0x319,0x419,0x193,0x293,0x393,0x493,0x13B,0x23B,0x33B,0x43B,0x1BF,0x2BF,0x3BF,0x4BF}},
+    {16,{0x400,0x401,0x402,0x403,0x404,0x405,0x406,0x407,0x408,0x409,0x40A,0x40B,0x40C,0x40D,0x40E,0x40F}},
+    {16,{0x300,0x301,0x302,0x303,0x304,0x305,0x306,0x307,0x308,0x309,0x30A,0x30B,0x30C,0x30D,0x30E,0x30F}},
+    {8,{0x308,0x319,0x32A,0x33B,0x34C,0x35D,0x36E,0x37F}},
+    {8,{0x208,0x219,0x22A,0x23B,0x24C,0x25D,0x26E,0x27F}},
+    {8,{0x108,0x119,0x12A,0x13B,0x14C,0x15D,0x16E,0x17F}},
+    {6,{0x011,0x011,0x112,0x213,0x213,0x313}},
+    {6,{0x000,0x102,0x10A,0x202,0x20A,0x302}},
+    {8,{0x102,0x202,0x302,0x402,0x126,0x226,0x326,0x426}},
+    {5,{0x17C,0x276,0x274,0x268,0x260}},
+    {4,{0x21A,0x232,0x212,0x112}},
+    {9,{0x27E,0x27A,0x27B,0x21B,0x239,0x279,0x23D,0x27D,0x27C}},
+    {7,{0x271,0x371,0x118,0x218,0x201,0x101,0x001}},
+    {7,{0x274,0x374,0x148,0x248,0x204,0x104,0x004}},
+    {7,{0x272,0x372,0x128,0x228,0x202,0x102,0x002}},
+    {7,{0x32A,0x22A,0x372,0x228,0x202,0x102,0x002}},
+    {6,{0x34E,0x24E,0x14E,0x148,0x248,0x240}},
+    {5,{0x339,0x239,0x139,0x21B,0x31B}},
+    {7,{0x32A,0x22A,0x12A,0x122,0x302,0x202,0x228}},
+    {4,{0x224,0x262,0x228,0x202}},
+    {4,{0x000,0x108,0x207,0x30F}},
+    {4,{0x000,0x104,0x20C,0x30E}},
+    {11,{0x319,0x219,0x119,0x014,0x114,0x214,0x314,0x414,0x3C4,0x2C4,0x1C4}},
+    {11,{0x319,0x219,0x119,0x013,0x113,0x213,0x313,0x413,0x3B3,0x2B3,0x1B3}},
+    {11,{0x32A,0x22A,0x12A,0x026,0x126,0x226,0x326,0x426,0x3E6,0x2E6,0x1E6}},
+    {11,{0x32A,0x22A,0x12A,0x024,0x124,0x224,0x324,0x424,0x3C4,0x2C4,0x1C4}},
+    {11,{0x319,0x219,0x119,0x015,0x115,0x215,0x315,0x415,0x3D5,0x2D5,0x1D5}},
+    {11,{0x37F,0x27F,0x17F,0x075,0x175,0x275,0x375,0x415,0x3D5,0x2D5,0x1D5}},
+    {25,{0x102,0x102,0x102,0x102,0x102,0x102,0x108,0x202,0x208,0x206,0x10A,0x20A,0x102,0x102,0x102,0x102,0x102,0x102,0x108,0x202,0x208,0x206,0x10A,0x20A,0x103}},
+    {23,{0x2CC,0x2CE,0x2EE,0x2EA,0x2AA,0x2AB,0x2BB,0x2B9,0x299,0x29D,0x2DD,0x2DC,0x2CC,0x2CE,0x2EE,0x2EA,0x2AA,0x2AB,0x2BB,0x2B9,0x299,0x29D,0x2DD}},
+  };
+  Uint32 w=board_info.width;
+  Tile*b;
+  Tile t;
+  float f,g;
+  Uint8 aff=0x17;
+  Uint8 pat=0;
+  Uint8 patn=0;
+  Uint8 pats[42]={};
+  Uint8 patrev=0;
+  Uint8 sh=1;
+  Uint8 rep=0;
+  Uint8 repm=0;
+  Uint8 chess=0;
+  Uint8 divis=1;
+  Uint16 patso=0;
+  Uint16 pateo=0;
+  Uint16 x1=xcur2;
+  Uint16 y1=ycur2;
+  Uint16 x2=xcur;
+  Uint16 y2=ycur;
+  Uint16 patran=0;
+  Uint32 patmax=0;
+  Uint32 k;
+  Sint32 i,x,y;
+  void set_patmax(void) {
+    switch(pat) {
+      case 0: patmax=14; break;
+      case 1: patmax=strlen(pats)?:1; break;
+      case 2: patmax=grads[patn].n; break;
+      case 3: patmax=(abs(xcur2-xcur)+1)*(abs(ycur2-ycur)+1); break;
+    }
+  }
+  Uint32 patconv(float m) {
+    Sint32 u,v;
+    m/=divis;
+    if(patran) m+=1.e-4*(dice(patran+1)-0.5*(patran+1));
+    if(m<=0.0) m=0.0; else if(m>=1.0) m=1.0;
+    if(rep>1) {
+      m*=rep;
+      if(repm && (1&(int)m)) m=1.0-fmod(m,1.0); else m=fmod(m,1.0);
+      if(m<=0.0) m=0.0; else if(m>=1.0) m=1.0;
+    }
+    if(patrev) m=1.0-m;
+    if(chess && ((x^y)&1)) m=1.0-m;
+    u=patmax-patso-pateo;
+    if(u<1) u=1;
+    v=m*u;
+    return (v<0?0:v>=u?u-1:v)+patso;
+  }
+  restart:
+  win_form("Gradient") {
+    win_help("gradient",0);
+    win_command('S',"Shape...") win_form("Gradient shape") {
+      win_heading("Coordinates:");
+      win_numeric('X',"X1: ",x1,0,board_info.width-1);
+      win_numeric('1',"Y1: ",y1,0,board_info.height-1);
+      win_numeric('2',"X2: ",x2,0,board_info.width-1);
+      win_numeric('Y',"Y2: ",y2,0,board_info.height-1);
+      win_command('R',"Reverse") {
+        x=x1; y=y1; x1=x2; y1=y2; x2=x; y2=y;
+      }
+      win_blank();
+      win_heading("Shape:");
+      win_option('L',"Linear gradient",sh,1);
+      win_option('E',"Euclidean radius",sh,2);
+      win_option('C',"Chebyshev radius",sh,3);
+      win_option('h',"Manhattan radius",sh,4);
+      win_option('D',"Distance from line",sh,5);
+      win_option('p',"Distance from points",sh,6);
+      win_option('m',"Random",sh,0);
+      win_blank();
+      win_numeric('D',"Divisor",divis,0,255);
+      win_blank();
+      win_command_esc(0,"Done") break;
+    }
+    win_command('P',"Pattern...") win_form("Gradient pattern") {
+      win_heading("Pattern type:");
+      win_option('c',"Current color",pat,0) win_refresh();
+      win_option('w',"Current color with string",pat,1) win_refresh();
+      win_option('P',"Preset",pat,2) win_refresh();
+      win_option('B',"Block area",pat,3) win_refresh();
+      win_blank();
+      switch(pat) {
+        case 1: win_text('s',"Pattern string: ",pats) win_refresh(); break;
+        case 2: win_numeric('S',"Select preset: ",patn,0,(sizeof(grads)/sizeof(*grads))-1) win_refresh(); break;
+      }
+      win_numeric('o',"Start offset: ",patso,0,75) win_refresh();
+      win_numeric('f',"End offset: ",pateo,0,75) win_refresh();
+      win_boolean('v',"Reverse pattern",patrev,1);
+      win_numeric('R',"Repeats: ",rep,0,63);
+      win_boolean('i',"Mirror repeats",repm,1);
+      win_blank();
+      win_picture(1) {
+        set_patmax();
+        memset(v_color+1,7,78);
+        memset(v_char+1,'-',78);
+        if(patso) v_char[patso]='(';
+        if(pateo && pateo<patmax) v_char[patmax+1-pateo]=')';
+        if(patso<patmax && patmax-patso-pateo>0) switch(pat) {
+          case 0: case 1:
+            memcpy(v_char+patso+1,(pat?pats:(Uint8*)"\x20\x20\x20\x20\xB0\xB0\xB1\xB1\xB2\xB2\xDB\xDB\xDB\xDB")+patso,patmax-patso-pateo);
+            memset(v_color+patso+1,(lay==3?overclip.color:clip.color),patmax-patso-pateo);
+            break;
+          case 2:
+            for(i=patso;i<patmax-pateo;i++) {
+              v_char[i+1]="\x20\xB0\xB1\xB2\xDB"[grads[patn].c[i]>>8];
+              v_color[i+1]=grads[patn].c[i];
+            }
+            break;
+          case 3: /* ignored */ break;
+        }
+      }
+      win_blank();
+      win_numeric('m',"Randomization: ",patran,0,9999);
+      win_boolean('h',"Chess",chess,1);
+      win_blank();
+      win_command_esc(0,"Done") break;
+    }
+    win_command('O',"Option...") win_form("Gradient option") {
+      win_heading("Layer:");
+      win_option('F',"Floor",lay,0);
+      win_option('U',"Under",lay,1);
+      win_option('M',"Main",lay,2);
+      win_option('O',"Over",lay,3);
+      win_blank();
+      win_heading("Affect:");
+      win_boolean('K',"Kind",aff,1);
+      win_boolean('C',"Color",aff,2);
+      win_boolean('P',"Parameter",aff,4);
+      win_blank();
+      win_boolean('s',"Clear stats",aff,0x10);
+      win_boolean('A',"Avoid stats",aff,0x20);
+      win_blank();
+      win_command_esc(0,"Done") break;
+    }
+    win_blank();
+    win_command('x',"Execute") break;
+    win_command_esc(0,"Cancel") return;
+  }
+  t=(lay==3?overclip:clip);
+  if(!divis) divis=1;
+  set_patmax();
+  if(patmax<=patso+pateo) {
+    alert_text("Start offset and end offset are overlapping");
+    goto restart;
+  }
+  switch(sh) {
+    case 2: g=hypot(abs(x2-x1)+1,abs(y2-y1)+1); break;
+    case 5: g=hypot(y2-y1,x2-x1); g*=g*0.5; break;
+  }
+  for(y=0;y<markheight;y++) for(x=0;x<markwidth;x++) {
+    if(!set_mark(x,y,0)) continue;
+    b=(lay==3?b_over:lay==2?b_main:b_under)+y*w+x;
+    if(!lay) {
+      if(b_under[y*w+x].kind) continue;
+      if(elem_def[b_main[y*w+x].kind].attrib&A_FLOOR) continue;
+      b=(b_main[y*w+x].kind?b_under:b_main)+y*w+x;
+    }
+    if(i=(lay?b->stat:(b_main[y*w+x].stat|b_under[y*w+x].stat))) {
+      if(aff&0x10) {
+        if(lay) {
+          find_stat(x,y,i,lay,0);
+          b->stat=0;
+        } else {
+          find_stat(x,y,b_main[y*w+x].stat,2,0);
+          find_stat(x,y,b_under[y*w+x].stat,1,0);
+          b_main[y*w+x].stat=b_under[y*w+x].stat=0;
+        }
+      }
+      if(aff&0x20) continue;
+    }
+    if(sh) {
+      switch(sh) {
+        case 1:
+          //TODO
+          break;
+        case 2:
+          f=hypot(x-x1,y-y1)/g;
+          break;
+        case 3:
+          f=fmax(fabs(x-x1)/(fabs(x2-x1)+1.0),fabs(y-y1)/(fabs(y2-y1)+1.0));
+          break;
+        case 4:
+          f=0.5*fabs(x-x1)/(fabs(x2-x1)+1.0)+0.5*fabs(y-y1)/(fabs(y2-y1)+1.0);
+          break;
+        case 5:
+          f=fabs((y2-y1)*1.0*x-(x2-x1)*1.0*y+x2*1.0*y1-y2*1.0*x1)/g;
+          break;
+        case 6:
+          f=hypot(x-x1,y-y1)/hypot(x-x2,y-y2);
+          if(isinf(f)) f=1.0; else f/=f+1.0;
+          break;
+      }
+      k=patconv(f);
+    } else {
+      k=dice(patmax-patso-pateo)+patso;
+    }
+    switch(pat) {
+      case 0: case 1:
+        t.param=(pat?pats:(Uint8*)"\x20\x20\x20\x20\xB0\xB0\xB1\xB1\xB2\xB2\xDB\xDB\xDB\xDB")[k];
+        break;
+      case 2:
+        t.param="\x20\xB0\xB1\xB2\xDB"[grads[patn].c[k]>>8];
+        t.color=grads[patn].c[k];
+        break;
+      case 3:
+        t=(lay==3?b_over:lay==1?b_under:b_main)[k%abs(xcur2+1-xcur)+(k/abs(ycur2+1-ycur))*w];
+        break;
+    }
+    if(aff&1) b->kind=t.kind;
+    if(aff&2) b->color=t.color;
+    if(aff&4) b->param=t.param;
+  }
+}
+
 Uint16 edit_board(Uint16 id) {
   int i;
   Sint32 k;
@@ -2145,6 +2419,7 @@ Uint16 edit_board(Uint16 id) {
         case 't': emode='t'; xcur2=xcur; break;
         case 'u': unmark: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
+        case 'w': emode='w'; xcur2=ycur2=numprefix; numprefix=0; break;
         case 'y': clip=b_main[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case 'Y': clip=b_under[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case 'z': case 'Z': emode=k; break;
@@ -2195,6 +2470,8 @@ Uint16 edit_board(Uint16 id) {
         case 'd': do_colon_command("<:>delete"); emode=0; break;
         case 'f': block_tiling(1); emode=0; cc_unmark(0,0,markwidth,markheight,""); break;
         case 'F': block_tiling(1); emode=0; break;
+        case 'g': gradient_menu(2); emode=0; break;
+        case 'G': do_colon_command("<:>~&markonly"); gradient_menu(2); emode=0; break;
         case 'H': do_colon_command("<:>hflip"); emode=0; break;
         case 'i': case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case 'm': do_colon_command("<:>mark"); emode='m'; break;
@@ -2205,6 +2482,25 @@ Uint16 edit_board(Uint16 id) {
         case 'V': do_colon_command("<:>vflip"); emode=0; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode;
+      } break;
+      case 'w': switch(k) {
+        case 0x0D: emode=0; break;
+        case -SDLK_e: board_info.exits[DIR_E]=0; break;
+        case -SDLK_n: board_info.exits[DIR_N]=0; break;
+        case -SDLK_s: board_info.exits[DIR_S]=0; break;
+        case -SDLK_w: board_info.exits[DIR_W]=0; break;
+        case 'e': if(board_info.exits[DIR_E]) { xcur2=brd_id; goto_board(board_info.exits[DIR_E]); } break;
+        case 'E': if(xcur2) board_info.exits[DIR_E]=xcur2; break;
+        case 'm': xcur2=brd_id; break;
+        case 'M': xcur2=numprefix; numprefix=0; break;
+        case 'n': if(board_info.exits[DIR_N]) { xcur2=brd_id; goto_board(board_info.exits[DIR_N]); } break;
+        case 'N': if(xcur2) board_info.exits[DIR_N]=xcur2; break;
+        case 'q': ycur2=xcur2; xcur2=brd_id; goto_board(ycur2); break;
+        case 's': if(board_info.exits[DIR_S]) { xcur2=brd_id; goto_board(board_info.exits[DIR_S]); } break;
+        case 'S': if(xcur2) board_info.exits[DIR_S]=xcur2; break;
+        case 'u': xcur2=0; break;
+        case 'w': if(board_info.exits[DIR_W]) { xcur2=brd_id; goto_board(board_info.exits[DIR_W]); } break;
+        case 'W': if(xcur2) board_info.exits[DIR_W]=xcur2; break;
       } break;
       case 'z': case 'Z': switch(k) {
         case 'h': case -SDLK_LEFT: far_cursor_move(-1,0,emode=='Z',0); break;
@@ -2323,6 +2619,8 @@ Uint16 edit_board(Uint16 id) {
       case 'v': switch(k) {
         case 'c': do_colon_command("<:>unmark"); emode=0; break;
         case 'd': do_colon_command("<:>overdelete"); emode=0; break;
+        case 'g': gradient_menu(3); emode=0; break;
+        case 'G': do_colon_command("<:>~&markonly"); gradient_menu(3); emode=0; break;
         case 'H': do_colon_command("<:>ohflip"); emode=0; break;
         case 'i': case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case 'm': do_colon_command("<:>mark"); emode='m'; break;

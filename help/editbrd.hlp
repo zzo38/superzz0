@@ -7,6 +7,7 @@ The possible modes are:
 !mass;Mass mode
 !text;Text mode
 !bloc;Block mode
+!walk;Boardwalk mode
 
 Others:
 !flood;Flood fills
@@ -15,6 +16,7 @@ Others:
 !colon;Colon commands
 !stat;Stats
 !resize;Resizing
+!-gradient;Gradients
 
 :norm;Normal mode / draw mode
 ESC        Exit
@@ -47,6 +49,7 @@ Q          Write tile in under layer
 t          Text entry mode
 u          Unmark all
 v          Block mode
+w          Boardwalk mode
 y          Copy tile from main layer (place with p)
 Y          Copy tile from under layer
 z          Far movement prefix (match kind only)
@@ -66,6 +69,8 @@ c          Unmark block and cancel
 d          Delete in block and cancel
 f          Block tiling (floor)
 F          Block tiling (floor) and unmark
+g          Gradient fill marked
+G          Gradient fill area except marked
 H          Flip horizontal and cancel
 i          Toggle marks in block and cancel
 m          Mark block and enter mass mode
@@ -109,6 +114,20 @@ next line, at the horizontal position that you entered text mode.
 
 ESC        Cancel text mode
 ^P         Enter special character
+
+:walk;Boardwalk mode
+This mode is used for traversing and linking boards. Commands below marked
+with ø can use any of the letters "e", "n", "w", "s" to link in the east,
+north, west, and south directions.
+
+ESC       Cancel boardwalk mode
+ALT+Eø    Unlink east
+eø        Go east
+Eø        Link east
+m         Mark current board
+M         Mark numbered board
+q         Swap current with marked board
+u         Unmark board
 
 :flood;Flooding
 The f or F prefix is used for the flooding commands. You can optionally
@@ -344,6 +363,10 @@ place/p
   Place a tile into the main layer. This is either the current tile or a
   specified tile. This command will move what is in the main layer into
   the under layer if a non-floor is being placed where there is a floor.
+
+reseed
+  Resets the random number seed. You can optionally specify what number
+  to reset it to; if you do not, then the current time is used.
 
 status
   Toggles the status display. If the argument is 0 then it turns off the
