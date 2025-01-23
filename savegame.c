@@ -334,6 +334,12 @@ void save_state(void) {
   for(u=0x10000;u>0x100 && !memory[u-1];u--);
   for(v=0;v<u;v++) write16(fp,memory[v]);
   fclose(fp);
+  //  GLOBAL
+  if(global_text) {
+    if(!(fp=open_lump("GLOBAL","w"))) goto error;
+    fwrite(global_text,1,global_length,fp);
+    fclose(fp);
+  }
   //
   fp=fopen(savename,"w");
   if(!fp) goto error;
@@ -383,7 +389,8 @@ void load_state(void) {
   //  SAVE
   if(!(fp=open_lump("SAVE","r"))) errx(1,"Invalid save game file (missing SAVE lump)");
   v=read16(fp);
-  if(v&~1) errx(1,"Invalid data in save game file");
+  if(v&~3) errx(1,"Invalid data in save game file");
+  condflag=v&1;
   cur_board_id=read16(fp);
   cur_screen_id=read16(fp);
   scroll_x=read32(fp);
@@ -415,4 +422,16 @@ void load_state(void) {
   if(!(fp=open_lump("CURRENT.BRD","r"))) errx(1,"Invalid save game file (missing CURRENT.BRD lump)");
   if(load_board(fp)) errx(1,"Error loading CURRENT.BRD lump from save game file");
   fclose(fp);
+  //  GLOBAL
+  if(fp=open_lump("GLOBAL","r")) {
+    global_text=realloc(global_text,(global_length=lump_size)+1);
+    if(!global_text) err(1,"Allocation failed");
+    fread(global_text,1,lump_size,fp);
+    global_text[lump_size]=0;
+    if(v && maxstat) {
+      stats->text=global_text;
+      stats->length=global_length;
+    }
+    fclose(fp);
+  }
 }

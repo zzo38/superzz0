@@ -202,6 +202,19 @@ const char*init_world(void) {
     }
     fclose(fp);
   }
+  // "GLOBAL"
+  if(global_text) free(global_text);
+  global_text=0;
+  global_length=0;
+  if(!editor && (fp=open_lump("GLOBAL","r"))) {
+    if(lump_size>=0xFFFE) errx(1,"Global script is too long");
+    global_length=lump_size;
+    global_text=malloc(lump_size+1);
+    if(!global_text) err(1,"Allocation failed");
+    fread(global_text,1,lump_size,fp);
+    global_text[lump_size]=0;
+    fclose(fp);
+  }
   // done
   return 0;
 }
@@ -451,6 +464,10 @@ const char*save_board(FILE*fp,int m) {
   write8(fp,maxstat);
   if(ef&0x0400) layer_inversion();
   // Stats
+  if(!editor && global_text && maxstat && stats->text==global_text) {
+    stats->text=0;
+    stats->length=0;
+  }
   for(i=0;i<maxstat;i++) {
     write16(fp,stats[i].misc1);
     write16(fp,stats[i].misc2);

@@ -611,6 +611,7 @@ does not include the null terminator).
 
 The flag bits are:
   0001 = Condition flag
+  0002 = Enable global script
 
 
 === SCR.NAM ===

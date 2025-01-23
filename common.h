@@ -165,6 +165,9 @@ extern ElementDef elem_def[256];
 extern Uint8 appearance_mapping[128];
 extern Animation animation[4];
 
+extern Uint8*global_text;
+extern Uint16 global_length;
+
 // === Board/stats ===
 
 typedef union {

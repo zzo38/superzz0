@@ -12,7 +12,10 @@ $C9 = The default overlay, which is used when objects within the overlay
 are moved out of the way or deleted. The low byte specifies the character
 code and the high byte specifies the colour code.
 
-$CA = Instruction pointer for global scripts. (Not currently implemented)
+$CA = Instruction pointer for global scripts. This is updated upon leaving
+a board, if on the board that was previously active, global scripts are
+allowed to execute and stat 1 has at least one instance and stat 1 does
+not have any text.
 
 $CB = Global control flags. (None are currently meaningful)
 

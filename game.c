@@ -37,6 +37,8 @@ Uint8 vtextbuf[81];
 Uint8 nvtextbuf;
 Uint16 vtexttime;
 NamedFlag namedflag[16];
+Uint8*global_text;
+Uint16 global_length;
 
 static uint64_t rseed;
 static char soundon;
@@ -116,6 +118,7 @@ Uint32 reseed(uint64_t n) {
 const char*select_board(Uint16 b) {
   FILE*fp=open_lump_by_number(b,"BRD","r");
   const char*e;
+  if(maxstat && stats->text==global_text) stats->text=0;
   if(fp) {
     e=load_board(fp);
     fclose(fp);
@@ -129,6 +132,7 @@ static void warp_to_board(Uint16 b,char m) {
   FILE*fp;
   const char*e;
   Sint32 x,y;
+  if(maxstat && stats->text==global_text && stats->count) memory[MEM_GLOBAL_INSTPTR]=stats->xy->instptr;
   if((board_info.flag&BF_PERSIST) && !m) {
     for(x=0;x<maxstat;x++) {
       if(stats[x].xy) for(y=0;y<stats[x].count;y++) {
@@ -145,6 +149,11 @@ static void warp_to_board(Uint16 b,char m) {
   }
   if(cur_board_id!=b || !board_info.width || (!m && !(board_info.flag&BF_PERSIST))) {
     if(e=select_board(cur_board_id=b)) errx(1,"Error loading board #%d: %s",b,e);
+  }
+  if(global_text && maxstat && !stats->text && !(board_info.flag&BF_NO_GLOBAL)) {
+    stats->text=global_text;
+    stats->length=global_length;
+    if(stats->count) stats->xy->instptr=memory[MEM_GLOBAL_INSTPTR];
   }
   if(m || cur_screen_id!=board_info.screen) {
     fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
