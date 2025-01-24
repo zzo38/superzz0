@@ -384,7 +384,7 @@ static void stat_edit(int n) {
           }
         }
         win_command('R',"Reverse") {
-          for(i=0;i<=s->count/2;i++) exchange_statxy(s,i,s->count-i-1);
+          if(s->count) for(i=0;i<=s->count/2;i++) exchange_statxy(s,i,s->count-i-1);
         }
         win_command_esc(0,"Done") break;
       }
@@ -1051,6 +1051,11 @@ static void cc_delete_step(Uint16 x,Uint16 y,const char*arg) {
   delete_at(x,y);
 }
 
+static void cc_deletex_step(Uint16 x,Uint16 y,const char*arg) {
+  delete_at(x,y);
+  delete_at(x,y);
+}
+
 static void cc_exchangelayer_step(Uint16 x,Uint16 y,const char*arg) {
   Tile*u=b_under+y*board_info.width+x;
   Tile*m=b_main+y*board_info.width+x;
@@ -1301,6 +1306,8 @@ static const ColonCommand colon_commands[]={
   {"d",'.',0,0,cc_delete_step,0},
   {"debug",'.',0,cc_debug_begin,cc_debug_step,cc_debug_end},
   {"delete",'.',0,0,cc_delete_step,0},
+  {"deletex",'.',0,0,cc_deletex_step,0},
+  {"dx",'.',0,0,cc_deletex_step,0},
   {"ex",0,cc_export,0,0,0},
   {"exchangelayer",'.',0,0,cc_exchangelayer_step,0},
   {"export",0,cc_export,0,0,0},
@@ -2499,6 +2506,7 @@ Uint16 edit_board(Uint16 id) {
       case 'v': switch(k) {
         case 'c': do_colon_command("<:>unmark"); emode=0; break;
         case 'd': do_colon_command("<:>delete"); emode=0; break;
+        case 'D': do_colon_command("<:>deletex"); emode=0; break;
         case 'f': block_tiling(1); emode=0; cc_unmark(0,0,markwidth,markheight,""); break;
         case 'F': block_tiling(1); emode=0; break;
         case 'g': gradient_menu(2); emode=0; break;

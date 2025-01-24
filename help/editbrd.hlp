@@ -67,6 +67,7 @@ ESC        Cancel block mode
 ;          Exchange corners
 c          Unmark block and cancel
 d          Delete in block and cancel
+D          Delete in block (both layers) and cancel
 f          Block tiling (floor)
 F          Block tiling (floor) and unmark
 g          Gradient fill marked
@@ -321,6 +322,9 @@ debug
 delete/d
   Delete main layer cells. (Whatever is in the under layer will be moved to
   the main layer.)
+
+deletex/dx
+  Delete both the main layer and under layer cells.
 
 exchangelayer/xl
   Exchanges the main layer with the under layer.
