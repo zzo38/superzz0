@@ -18,6 +18,7 @@
 ;   B = burns
 ;   C = creature
 ;   D = damaged by stars
+;   H = cannot be duplicated
 ; Status variables:
 ;   A = ammo
 ;   C = money
@@ -1338,6 +1339,55 @@ CENMOV	LET D,Z
 	PTUK A,0
 	LET S,0
 
+; **** Duplicator ****
+; Parameter:
+;   bit2-bit0 = Phase
+;   bit5-bit3 = Duplication rate
+;   bit7-bit6 = Source direction
+	EV A,_DUPLICATOR
+	; Timing
+	INC A,1
+	LSH A,%B,Z,$33
+	DEC A,A
+	AND A,%I,,$EC
+	JNZ A,0
+	; Set phase
+	LET A,%B,Z,$30
+	EQ A,5
+	JT A,1F
+	; Not time to do duplication, yet
+	INC A,Z
+	PTMP A,0
+	LET S,0
+	; Reset phase
+1H	LET A,Z
+	AND A,$F8
+	PTMP A,0
+	; Check duplication
+	LET D,%B,Z,$26 ; direction
+	BACK A,D
+	JF A,1F
+	XOR D,2
+	PACK F,0
+	PUSH F,$0013
+	PACK F,0
+	CWOT F,$11
+	JF F,1F
+	BACK A,D
+	BACK A,D
+	JF A,1F
+	MTIL A,0
+	EMAT H,A
+	JT H,1F
+	; Duplication OK
+	SFX A,"@30SCDEFG"
+	SINK G,F
+	PTM A,F
+	LET S,0
+	; Duplication failed
+1H	SFX A,"@30<<G#F#"
+	LET S,0
+
 ; **** Script commands ****
 
 	; #CHAR <number>
@@ -1473,6 +1523,7 @@ CENMOV	LET D,Z
 	ED 'G',"Gate",_GATE,$0000
 	ED 'Q',"One Step",_ONESTEP,$0000
 	ED 'X',"Land Mine",_LANDMINE,$0000
+	ED 'D',"Duplicator",_DUPLICATOR,$030F
 	ED 2
 
 	ED1 5
@@ -1651,6 +1702,18 @@ E_PUSH	ED '=',"K-MP"
 	ED2 'N',"~Hit points: ",$0020,0,7
 	ED2 'N',"~Firing rate: ",$0023,0,7
 	ED2 'B',"~Random movement",$0007
+	ED 0
+
+	ED0 _DUPLICATOR
+	ED 'H',"Duplicator"
+	ED2 'N',"~Phase: ",$0020,0,5
+	ED2 'N',"~Duplication rate: ",$0023,0,7
+	ED 'H',"Source direction:"
+	ED 'O',$0016
+	ED2 'O',"~East",0
+	ED2 'O',"~North",1
+	ED2 'O',"~West",2
+	ED2 'O',"~South",3
 	ED 0
 
 ; **** Editor board info ****
