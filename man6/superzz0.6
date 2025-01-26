@@ -1,0 +1,49 @@
+.TH SUPERZZ0 6 "January 25, 2025"
+.SH NAME
+superzz0 \- A ZZT-like game creation system
+.SH SYNOPSIS
+.B superzz0
+.RI "[" "switches" "] " "filename" " [" "configurations" "]"
+.SH DESCRIPTION
+Super ZZ Zero is a ZZT-like game creation system.
+This program is used for both editing and for playing Super ZZ Zero game worlds.
+.SH OPTIONS
+The following switches are available.
+An asterisk means that this switch requires a parameter.
+.IP -a
+Receive input from the assembler on stdin, and include it in the world file.
+This switch must be combined with -e.
+.IP -b*
+Start on the specified board (given by number) instead of the default starting board for the world.
+.IP -c*
+Use the specified file as the configuration file.
+.IP -d
+Enable debugging; push F6 at run time to display the debug menu.
+This is automatically enabled if you run the game from the editor or if you have debug=1 in the configuration file.
+.IP -e
+Start the editor instead of starting the game.
+.IP -n
+Do not read the configuration file; use the default settings.
+.IP -q*
+Test the random number generator.
+The argument must be three numbers with commas in between.
+First is the random number seed; specify 0 to use the current time.
+Second is the number of sides of the dice (the numbers on the dice are from 0 up to one less than the number of sides).
+Third is the number of times to roll the dice.
+.IP -r
+Receive a Hamster archive from stdin, and copy all lumps from it into the world file.
+This does not process the lumps in any way; it merely copies them.
+An empty lump in the input will cause the corresponding lump to be deleted from the world file.
+Be careful if you use this; incorrect use may result in a corrupted world file.
+This switch must be combined with -e.
+.IP -t*
+Create a new world file, using a specified file as the template.
+It is an error if the file already exists, and the file will not be overwritten.
+This switch must be combined with -e.
+.IP -w
+Create a new empty world file.
+It is an error if the file already exists, and the file will not be overwritten.
+This switch must be combined with -e.
+.SH "SEE ALSO"
+.BR sz0asm (6),
+.BR sz0publish (6)
