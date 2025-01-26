@@ -169,20 +169,62 @@ static void random_test(const char*s) {
   while(c--) printf("%lu\n",(unsigned long)dice(b));
 }
 
+static void create_world(const char*template,const char*name) {
+  static const Uint8 data[]={
+    '!','S','Z','0', 0, 0,0,7,0,
+      1,1,1,1,1,1,1,
+    'E','L','E','M','E','N','T', 0, 0,0,1,0,
+      0,
+    'S','T','A','R','T', 0, 0,0,12,0,
+      1,0, 0,0, 255,255, 0,0,0,0,0,0,
+  };
+  Uint8 buf[256];
+  FILE*f;
+  FILE*ft=0;
+  if(template) {
+    ft=fopen(template,"r");
+    if(!ft) err(1,"Cannot open template file");
+  }
+  f=fopen(name,"wx");
+  if(!f) err(1,"Cannot create world file");
+  if(template) {
+    if(fread(buf,1,16,ft)!=16 || memcmp(buf,data,9)) errx(1,"Not a real template file");
+    fwrite(data,1,16,f);
+    copy_stream(ft,f,-1);
+    fclose(ft);
+  } else {
+    fwrite(data,1,sizeof(data),f);
+  }
+  fclose(f);
+  if(template) {
+    if(open_world(name)) err(1,"Cannot open world");
+    if(f=open_lump("CATALOG.DER","w")) fclose(f);
+    if(f=open_lump("HISTORY.DER","w")) fclose(f);
+    if(f=open_lump("TEMPLATE","r")) {
+      warnx("TEMPLATE lump is not currently implemented, and will be ignored.");
+      fclose(f);
+      if(f=open_lump("TEMPLATE","w")) fclose(f);
+    }
+    save_world(0);
+  }
+}
+
 int main(int argc,char**argv) {
   Uint8 o=0;
   int b=-1;
   int i;
   char*configname=0;
-  const char*s;
-  while((i=getopt(argc,argv,"+Tab:c:denq:r\\"))>0) switch(i) {
+  const char*s=0;
+  while((i=getopt(argc,argv,"+Tab:c:denq:rt:w\\"))>0) switch(i) {
     case 'T': case 'a': case 'r': o=(o&0x80)|i; break;
-    case 'c': configname=optarg; break;
     case 'b': b=strtol(optarg,0,10); break;
+    case 'c': configname=optarg; break;
     case 'd': config.debug=1; break;
     case 'e': editor=1; break;
     case 'n': configname=""; break;
     case 'q': random_test(optarg); return 0;
+    case 't': o=1; s=optarg; break;
+    case 'w': o=1; break;
     case '\\': o|=0x80; break;
     default: errx(1,"Wrong switches");
   }
@@ -193,6 +235,10 @@ int main(int argc,char**argv) {
     init_display();
     puts(text_editor(0)?:(Uint8*)"");
     return 0;
+  }
+  if(o==1) {
+    if(!editor) errx(1,"Cannot use -w or -t without -e");
+    create_world(s,argv[optind]);
   }
   if(o&0x80) {
     fread(&b,1,sizeof(b),stdin);
