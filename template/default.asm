@@ -1524,6 +1524,7 @@ CENMOV	LET D,Z
 	ED 'Q',"One Step",_ONESTEP,$0000
 	ED 'X',"Land Mine",_LANDMINE,$0000
 	ED 'D',"Duplicator",_DUPLICATOR,$030F
+	ED 'P',"Passage",_PASSAGE,$040F
 	ED 2
 
 	ED1 5
