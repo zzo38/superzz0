@@ -1102,6 +1102,20 @@ static void send_message(Uint32 n,const char*label,Uint8 ignlock) {
   }
 }
 
+static void send_message_at(Uint8 lay,Uint32 x,Uint32 y,const char*label,Uint8 ignlock) {
+  StatXY*o;
+  Sint32 f;
+  Tile*t;
+  if(!lay || x>=board_info.width || y>=board_info.height || !label) return;
+  t=(lay==1?b_under:lay==2?b_main:b_over)+y*board_info.width+x;
+  if(!t->stat || t->stat>maxstat || !stats[t->stat].text) return;
+  if(o=find_statxy(t)) {
+    if(ignlock && (o->layer&0x80)) return;
+    f=find_label(stats+t->stat-1,label);
+    if(f!=-1) o->instptr=f;
+  }
+}
+
 static void script_error(Uint16 m,StatXY*xy,const char*text) {
   fprintf(stderr,"Script error in stat %d at offset %d: %s\n",m,xy->instptr,text);
   xy->instptr=65535;
@@ -2159,6 +2173,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               for(i=0;i<maxstat;i++) if(stats[i].length && match_name(stats[i].text,s->text+ip)) {
                 if(xy->x<board_info.width && xy->y<board_info.height && (j=xy->layer&3)) {
                   xy2=add_statxy(i);
+                  xy=s->xy+n;
                   *xy2=*xy;
                   xy2->instptr=0;
                   (j==1?b_under:j==2?b_main:b_over)[xy->y*board_info.width+xy->x].stat=i;
@@ -2176,7 +2191,36 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else if(!strcmp(buf,"CLEARALL")) {
               memset(namedflag,0,sizeof(namedflag));
             } else if(!strcmp(buf,"CLONE")) {
-              
+              Uint32 x,y,z,zz;
+              i=parse_direction(s,xy,&ip);
+              x=xy->x+(i==DIR_E)-(i==DIR_W);
+              y=xy->y+(i==DIR_S)-(i==DIR_N);
+              z=y*board_info.width+x;
+              zz=xy->y*board_info.width+xy->x;
+              if(i!=-1 && condflag && xy->x<board_info.width && xy->y<board_info.height && x<board_info.width && y<board_info.height) {
+                j=elem_def[b_main[z].kind].attrib;
+                if((xy->layer&3)==2 && (j&A_FLOOR) && ((1<<(j&15))&(elem_def[b_main[zz].kind].attrib>>16))) {
+                  if(b_main[z].stat) if(xy2=find_statxy(b_main+z)) xy2->layer--;
+                  b_under[z]=b_main[z];
+                  b_main[z]=b_main[zz];
+                } else if((xy->layer&3)==3 && !b_over[z].stat && !(b_over[z].kind&OVER_SOLID)) {
+                  b_over[z]=b_over[zz];
+                } else if((xy->layer&3)==1 && !b_under[z].stat && !b_under[z].stat) {
+                  b_under[z]=b_under[zz];
+                } else {
+                  goto skip;
+                }
+                xy2=add_statxy(m);
+                xy=s->xy+n;
+                xy2->x=x; xy2->y=y;
+                xy2->instptr=0;
+                xy2->layer=xy->layer&3;
+                xy2->delay=stats[m-1].speed;
+                while(s->text[ip]==' ') ip++;
+                for(v=0;v<126 && ip<s->length && s->text[ip]>0x20;v++) buf[v]=s->text[ip++];
+                buf[v]=0;
+                if(*buf) send_message(m+((stats[m-1].count-1)<<16),buf,1);
+              }
             } else if(!strcmp(buf,"COLOR")) {
               if(xy->x<board_info.width && xy->y<board_info.height && (j=xy->layer&3)) {
                 (j==1?b_under:j==2?b_main:b_over)[xy->y*board_info.width+xy->x].color=parse_number(s,xy,&ip);
@@ -2291,7 +2335,13 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               send_message(0,buf,0);
               ip=xy->instptr;
             } else if(!strcmp(buf,"SENDDIR")) {
-              
+              i=parse_direction(s,xy,&ip);
+              if(condflag) {
+                while(s->text[ip]==' ') ip++;
+                for(v=0;v<126 && ip<s->length && s->text[ip]>0x20;v++) buf[v]=s->text[ip++];
+                buf[v]=0;
+                if(*buf) send_message_at(xy->layer&3,xy->x+(i==DIR_E)-(i==DIR_W),xy->y+(i==DIR_S)-(i==DIR_N),buf,0);
+              }
             } else if(!strcmp(buf,"SET")) {
               script_set_flag(s,xy,&ip,1);
             } else if(!strcmp(buf,"SHOW")) {
