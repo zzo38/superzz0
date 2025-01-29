@@ -317,6 +317,8 @@ static inline Uint8 line_class_of(Sint32 bx,Sint32 by,Uint32 xy) {
 
 static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
   Uint32 xy=by*board_info.width+bx;
+  Sint32 q;
+  Uint16 f;
   Uint8 o=0;
   Uint8 z,m,d;
   ElementDef*e;
@@ -326,9 +328,17 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
     t=b_main+xy;
     e=elem_def+t->kind;
     if(!(h&4) && !(e->attrib&A_LIGHT) && (b_over[xy].kind&OVER_VISIBLE) && (board_info.flag&BF_OVERLAY)) {
-      //TODO: light shape
+      if(memory[MEM_LIGHT]<65486 && maxstat && stats->count) {
+        q=by-stats->xy->y-scroll_y;
+        if(q>-25 && q<25) {
+          f=memory[memory[MEM_LIGHT]+q+24];
+          q=128+bx-stats->xy->x-scroll_x;
+          if(q>=(f>>8) && q<=(f&0xFF)) goto light;
+        }
+      }
       o=b_over[xy].kind;
     }
+    light:
     if(o&OVER_VISIBLE) {
       v_char[at]=b_over[xy].param;
       v_color[at]=b_over[xy].color;
@@ -534,8 +544,8 @@ static void kill_stat(int ns,int nr) {
 static inline void calc_light(Uint8 sh,Sint32 r) {
   Uint16 a=memory[MEM_LIGHT];
   int i,j;
-  if(a>=65488) return;
-  memset(memory+a,0,49);
+  if(a>=65486) return;
+  memset(memory+a,0,49*sizeof(*memory));
   // Data format: [a+24+vertical] ((Left+128)<<8)|(Right+128)
   // where Left/Right is relative to player's X coordinate
   switch(sh) {
@@ -546,7 +556,7 @@ static inline void calc_light(Uint8 sh,Sint32 r) {
     case 2: // circle / Euclid
       if(r>255) r=255;
       r*=r;
-      for(i=0;i<49;i++) if((j=(24-i)*(24-i)-r)>0) {
+      for(i=0;i<49;i++) if((j=r-(24-i)*(24-i))>0) {
         j=sqrt(j)+0.5;
         if(j>127) j=127;
         memory[a+i]=((128-j)<<8)|(128+j);

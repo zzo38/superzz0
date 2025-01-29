@@ -183,7 +183,7 @@ MOVEPL1	XOR A,A
 	JT A,1F
 	MESS E,"You don't have any torches!"
 	LET S,0
-1H	LITE C,5
+1H	LITE C,6
 	GIVE W,200
 	LET S,0
 
@@ -217,6 +217,7 @@ MOVEPL1	XOR A,A
 	ROB W,0
 	JT A,1F
 	LITE A,0
+	SFX A,"@9T<C<C"
 	; Check time limit
 1H	CBT A,$EC
 	JF A,0

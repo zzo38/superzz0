@@ -45,7 +45,7 @@ letters. Immediately following the record is the code to be executed when
 that command is encountered in a script; see "script command events" below.
 
 $E3 = Address of memory for light shape to suppress overlay around the
-player. If this is 65488 or more then the overlay is not suppressed. This
+player. If this is 65486 or more then the overlay is not suppressed. This
 points to a block of forty-nine cells. The first 24 cells are north of the
 player, the next one is for the same row as the player, and the rest are
 then south of the player; they are in order north to south. Each cell has
