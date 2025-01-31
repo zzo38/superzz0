@@ -72,3 +72,29 @@ the world file and side file, but some are only one or the other.
 Object identifiers can be relative or absolute like CATALOG.DER; the
 same rules are followed.
 
+
+=== Service information file ===
+
+The service information file can be used to obtain information about a
+catalog service. The format is a sequence with fields:
+
+* Service identifier (a OID). (This is the same OID that is mentioned
+in the side file.)
+
+* A sequence or set of Visible strings, which are absolute URLs for the
+main URLs of this service (more than one is possible, in case some of
+them are mirrors). If this is a sequence, the first one is preferred.
+
+* A sequence or set of Visible strings, which are absolute URLs for
+read-only access to this service. (If this is empty, then the same URLs
+are used as the main URLs of this service.)
+
+* A bit string to indicate which cases authentication is required. The
+first bit means downloading world files, second means downloading metadata
+files and side files, third means querying, fourth means uploading worlds,
+and fifth means adding comments and other stuff like that.
+
+* A key/value list of extensions.
+
+(This section is incomplete and is likely to be changed in future)
+
