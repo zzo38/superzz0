@@ -9,6 +9,12 @@
 #include <time.h>
 #include <unistd.h>
 
+// === Version ===
+
+extern const Uint8 version_hash[32];
+extern const Uint8 version_rel_oid[];
+extern const Uint8 version_rel_oid_length;
+
 // === Configuration ===
 
 #define B(n,t,d) t n;

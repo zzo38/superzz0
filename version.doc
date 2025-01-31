@@ -1,0 +1,40 @@
+Versions of Super ZZ Zero are using semantic version numbers. If the major
+version number is 0 then that means that version 1 is not finished yet and
+that there is the possibility (although unlikely) that any minor version
+number change can cause incompatibilities. If the major version is nonzero
+then changes that do not affect the major version number should remain
+backward compatible with previous versions of Super ZZ Zero that have the
+same major version number, unless there is a significant bug (but in such
+a case, it will be considered if that would potentially damage existing
+worlds and if so, a check will be made at run time and the compatibility
+will be enabled according to the GENERAL.DER file), or if the world causes
+a deliberate error condition, or if a world uses an undocumented feature
+which is also unintentional. If only the patch number is changed, then it
+should be backward and forward compatible, although bugs which do not
+affect game play might be corrected.
+
+If you are making your own experimental or incompatible versions of Super
+ZZ Zero, then you must change the version.c file to use different OIDs,
+since relative OIDs starting with 0 are reserved for official versions.
+
+The version.status file is used for managing the versions. The first line
+contains the semantic version number. The second line contains a hash
+which is calculated by the use of all of the files listed in all of the
+rest of the lines in this file. If another file is added here, then you
+also must add it into the appropriate line of main.mak so that it will
+know to update version.status and version.inc when it is compiled. Any
+file that affects the operation of the compiled program should be included.
+
+The version.inc file is auto-generated from version.status. You should not
+modify it; you should modify version.c instead, please.
+
+You can run "superzz0 -V" in order to check the current version.
+
+The version hash is not currently used by Super ZZ Zero, but might later
+be used in the HISTORY.DER file (if this feature is enabled in the
+configuration file) for the purpose of keeping track of which version(s)
+of Super ZZ Zero have been used for editing this world file (the OID will
+also be recorded), in case it will somehow help to figure out what went
+wrong if upgrading the version of Super ZZ Zero causes something to not
+work properly.
+

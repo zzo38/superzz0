@@ -5,6 +5,39 @@ exit
 
 #define USING_RW_DATA
 #include "common.h"
+#include "asn1.h"
+
+static int check_feature(const ASN1_Value*v) {
+  // Returns 0 if feature is valid, nonzero if feature is not valid.
+  // Will also enable the feature if necessary (currently this has no effect)
+  // (Note: This is not really tested properly yet)
+  int i,j;
+  if(v->type==ASN1_RELATIVE_OID && v->length<=version_rel_oid_length && !memcmp(v->data,version_rel_oid,v->length)) return 0;
+  if(v->type==ASN1_RELATIVE_OID && v->length>2 && !v->data[0] && !version_rel_oid[0]) {
+    // (This currently assumes that the pieces of the version number cannot exceed 16383, but it is unlikely to exceed 16383 anyways)
+    i=j=(v->data[1]>127?3:2);
+    // Major
+    if(v->data[1]!=version_rel_oid[1]) return 1;
+    if(v->data[1]>127 && v->data[2]!=version_rel_oid[2]) return 1;
+    // Minor
+    if(v->length>i) {
+      if(v->data[i]<version_rel_oid[j]) return 1;
+      if(v->data[i]>127 && v->length>i+1 && v->data[i+1]<version_rel_oid[j+1]) return 1;
+      i+=(v->data[i]>127?2:1);
+      j+=(version_rel_oid[j]>127?2:1);
+    }
+    // Patch (this should be omitted in the mandatory set, but may be included in the optional set)
+    if(v->length>i) {
+      if(j>=version_rel_oid_length) return -1;
+      if(v->data[i]<version_rel_oid[j]) return 1;
+      if(v->data[i]>127 && v->length>i+1 && v->data[i+1]<version_rel_oid[j+1]) return 1;
+      i+=(v->data[i]>127?2:1);
+    }
+    // Excessive data
+    if(v->length>i) return 1;
+  }
+  return -1;
+}
 
 const char*init_world(void) {
   // Returns 0 if OK, error message if error
@@ -60,10 +93,9 @@ const char*init_world(void) {
   for(i=0;i<16;i++) status_vars[i]=(v&(1<<i))?0:read32(fp);
   for(i=0;i<16;i++) namedflag[i].name[0]=0;
   fclose(fp);
-#if 0
-  // (not fully implemented or usable yet; may be completed in future)
   // "GENERAL.DER"
   if(fp=open_lump("GENERAL.DER","r")) {
+    // (Note: This is not really tested properly yet)
     ASN1_Value a1,a2,a3;
     ASN1_Iterator i1,i2;
     if(asn1_read_item(fp,&a1,0)) {
@@ -76,18 +108,30 @@ const char*init_world(void) {
     if(asn1_next(&i1,&a2)) return "ASN.1 error in GENERAL.DER lump";
     if(a2.class || a2.type!=ASN1_SET || !a2.constructed) return "Improper type in GENERAL.DER lump";
     asn1_foreach(j,&i2,&a2,&a3) {
-      
+      if(a3.class || (a3.type!=ASN1_OID && a3.type!=ASN1_RELATIVE_OID)) return "Improper type in GENERAL.DER lump";
+      if(check_feature(&a3) && (config.version_check || config.version_warn || !editor)) {
+        fprintf(stderr,"Unrecognized OID in mandatory set: ");
+        asn1_print_decimal_oid(&a3,ASN1_AUTO,stderr);
+        fputc('\n',stderr);
+        if(config.version_check) return "Unimplemented feature in mandatory set"; else config.version_warn|=4;
+      }
     }
     // Optional features
     if(asn1_next(&i1,&a2)) return "ASN.1 error in GENERAL.DER lump";
     if(a2.class || a2.type!=ASN1_SET || !a2.constructed) return "Improper type in GENERAL.DER lump";
     asn1_foreach(j,&i2,&a2,&a3) {
-      
+      if(a3.class || (a3.type!=ASN1_OID && a3.type!=ASN1_RELATIVE_OID)) return "Improper type in GENERAL.DER lump";
+      if(check_feature(&a3) && config.version_warn) {
+        fprintf(stderr,"Unrecognized OID in optional set: ");
+        asn1_print_decimal_oid(&a3,ASN1_AUTO,stderr);
+        fputc('\n',stderr);
+        config.version_warn|=2;
+      }
     }
+    // (other stuff is currently not defined, and is ignored)
     // Done
     asn1_free(&a1);
   }
-#endif
   // "NUMFORM"
   if(fp=open_lump("NUMFORM","r")) {
     for(i=0;i<16;i++) {

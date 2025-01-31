@@ -190,3 +190,8 @@ version_check
   If set to 1 (which is the default value) then it checks the world
   version and file type by the !SZ0 lump; if 0 then it ignores them.
 
+version_warn
+  If set to 1 (which is the default value) then it will display a
+  warning message if the world file lump specifies optional features
+  or versions that do not match the current implementation.
+

@@ -1,10 +1,11 @@
 #if 0
-gcc -g -O0 -o ~/bin/superzz0 -Wno-unused-result main.c audio.o display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o printer.o savegame.o window.o world.o -lm `sdl-config --cflags --libs`
+gcc -g -O0 -o ~/bin/superzz0 -Wno-unused-result main.c asn1.o audio.o display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o printer.o savegame.o window.o world.o -lm `sdl-config --cflags --libs`
 exit
 #endif
 
 #define USING_RW_DATA
 #include "common.h"
+#include "version.inc"
 
 Config config={
 #define B(n,t,d) d,
@@ -209,14 +210,22 @@ static void create_world(const char*template,const char*name) {
   }
 }
 
+static void show_version(void) {
+  int a;
+  printf("%sHash: ",version_name);
+  for(a=0;a<32;a++) printf("%02X",version_hash[a]);
+  putchar('\n');
+}
+
 int main(int argc,char**argv) {
   Uint8 o=0;
   int b=-1;
   int i;
   char*configname=0;
   const char*s=0;
-  while((i=getopt(argc,argv,"+Tab:c:denq:rt:w\\"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+TVab:c:denq:rt:w\\"))>0) switch(i) {
     case 'T': case 'a': case 'r': o=(o&0x80)|i; break;
+    case 'V': show_version(); return 0;
     case 'b': b=strtol(optarg,0,10); break;
     case 'c': configname=optarg; break;
     case 'd': config.debug=1; break;
@@ -271,6 +280,12 @@ int main(int argc,char**argv) {
     if(!editor && (s=select_board(b))) errx(1,"Cannot load board: %s",s);
   }
   init_display();
+  if(config.version_warn&4) {
+    alert_text("This file requires a newer version of Super ZZ Zero");
+    if(!editor) errx(1,"This file requires a newer version of Super ZZ Zero.");
+  } else if(config.version_warn&2) {
+    alert_text("Warning: This file should use a newer version of Super ZZ Zero");
+  }
   if(config.audio_buffer && !editor) audio_init();
   if(editor) run_editor(); else run_game();
   return 0;
