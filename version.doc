@@ -38,3 +38,12 @@ also be recorded), in case it will somehow help to figure out what went
 wrong if upgrading the version of Super ZZ Zero causes something to not
 work properly.
 
+In the Fossil version control, there will be tags named "major" for all
+new major versions, "minor" for all new major and minor versions, and
+"patch" for all new major and minor and patch versions; each version
+will also have a tag with "v" and the version number. In the Git version
+control, the "major", "minor", and "patch" tags only apply to the latest
+version, and the "v" tags will use underscores instead of dots but will
+be available for all versions. Non-release commits do not use any of
+these tags; only the branch name will be used.
+
