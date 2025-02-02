@@ -3,9 +3,6 @@ gcc -s -O2 -c -std=gnu99 -Wno-unused-result -fwrapv window.c `sdl-config --cflag
 exit
 #endif
 
-// This file is public domain.
-// See bottom for documentation.
-
 #include "common.h"
 
 static win_memo*cwin;
