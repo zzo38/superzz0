@@ -2469,7 +2469,7 @@ Uint16 edit_board(Uint16 id) {
         case '}': switch_to_board(maxboard); numprefix=0; break;
         case ':': ask_colon_command(); break;
         case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd",0); break;
-        case -SDLK_F12 ... -SDLK_F1: f_menu(1-k-SDLK_F1); break;
+        case -SDLK_F12 ... -SDLK_F1: f_menu((event.key.keysym.mod&KMOD_SHIFT?13:1)-k-SDLK_F1); break;
       } break;
       case 'f': case 'F': switch(k) {
         case 'c': flood(xcur,ycur,xcur,ycur,0x0003); break;

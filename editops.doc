@@ -18,7 +18,8 @@ The syntax will be:
 
 === F1-F12 menus ===
 
-Use ED1 and the menu number 1 to 12 at the beginning of this menu.
+Use ED1 and the menu number 1 to 12 at the beginning of this menu. The
+number can be 13 to 24 for shifted functions.
 
 The instructions in this menu are of the formats:
   ED 0,kind,flag            (immediate; no menu)
