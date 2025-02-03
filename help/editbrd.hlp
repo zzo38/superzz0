@@ -31,6 +31,7 @@ ALT+Z      Maximum numeric prefix
 ^V         Toggle view mode
 ^Z         Find player or numbered stat
 SPACE      Toggle mark
+A          Add new board
 c          Select drawing colour
 d          Delete tile at cursor
 e          Edit tile
@@ -123,6 +124,7 @@ north, west, and south directions.
 
 ESC       Cancel boardwalk mode
 ALT+Eø    Unlink east
+A         Add new board
 eø        Go east
 Eø        Link east
 m         Mark current board

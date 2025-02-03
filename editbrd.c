@@ -71,14 +71,21 @@ static void goto_board(Uint16 id) {
   const char*e;
   char b=0;
   int i;
-  if(!fp) b=1,fp=open_lump_by_number(config.template_board,"BRD","r");
+  if(!fp) {
+    if(maxboard<id) {
+      alert_text("Board not found");
+      return;
+    }
+    b=1;
+    fp=open_lump_by_number(config.template_board,"BRD","r");
+  }
   if(fp) {
     if(e=load_board(fp)) alert_text(e);
     fclose(fp);
     if(b) {
-      memset(b_under,0,board_info.width*board_info.height);
-      memset(b_main,0,board_info.width*board_info.height);
-      memset(b_over,0,board_info.width*board_info.height);
+      memset(b_under,0,board_info.width*board_info.height*sizeof(Tile));
+      memset(b_main,0,board_info.width*board_info.height*sizeof(Tile));
+      memset(b_over,0,board_info.width*board_info.height*sizeof(Tile));
       for(i=0;i<maxstat;i++) {
         free(stats[i].text);
         free(stats[i].xy);
@@ -560,6 +567,17 @@ static inline void switch_to_board(Sint32 id) {
   brd_id=id;
 }
 
+static Sint32 add_board(void) {
+  char buf[61]="";
+  ask_text("Add new board:",buf,60);
+  if(*buf) {
+    set_board_name(maxboard+1,buf);
+    return maxboard;
+  } else {
+    return -1;
+  }
+}
+
 static void escroll(void) {
   if(xcur>scroll_x+79) {
     scroll_x+=config.editor_scroll_x;
@@ -1003,7 +1021,7 @@ static int compare_coloncommand(const void*a,const void*b) {
 }
 
 static void cc_board(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
-  if(!ccrestrict) switch_to_board(strtol(arg,0,10));
+  if(!ccrestrict) goto_board(strtol(arg,0,10));
 }
 
 static void cc_color_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
@@ -2437,6 +2455,7 @@ Uint16 edit_board(Uint16 id) {
           break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
+        case 'A': k=add_board(); if(k>0) goto_board(k); break;
         case 'c': case 0x03: clip.color=ask_color_char(0,clip.color); break;
         case 'd': case -SDLK_DELETE: delete_at(xcur,ycur); break;
         case 'e': edit_tile(1); break;
@@ -2528,18 +2547,20 @@ Uint16 edit_board(Uint16 id) {
         case -SDLK_n: board_info.exits[DIR_N]=0; break;
         case -SDLK_s: board_info.exits[DIR_S]=0; break;
         case -SDLK_w: board_info.exits[DIR_W]=0; break;
+        case 'A': k=add_board(); if(k>0) xcur2=k; k=0; break;
         case 'e': if(board_info.exits[DIR_E]) { xcur2=brd_id; goto_board(board_info.exits[DIR_E]); } break;
         case 'E': if(xcur2) board_info.exits[DIR_E]=xcur2; break;
         case 'm': xcur2=brd_id; break;
         case 'M': xcur2=numprefix; numprefix=0; break;
         case 'n': if(board_info.exits[DIR_N]) { xcur2=brd_id; goto_board(board_info.exits[DIR_N]); } break;
         case 'N': if(xcur2) board_info.exits[DIR_N]=xcur2; break;
-        case 'q': ycur2=xcur2; xcur2=brd_id; goto_board(ycur2); break;
+        case 'q': ycur2=xcur2; xcur2=brd_id; switch_to_board(ycur2); break;
         case 's': if(board_info.exits[DIR_S]) { xcur2=brd_id; goto_board(board_info.exits[DIR_S]); } break;
         case 'S': if(xcur2) board_info.exits[DIR_S]=xcur2; break;
         case 'u': xcur2=0; break;
         case 'w': if(board_info.exits[DIR_W]) { xcur2=brd_id; goto_board(board_info.exits[DIR_W]); } break;
         case 'W': if(xcur2) board_info.exits[DIR_W]=xcur2; break;
+        default: goto no_mode;
       } break;
       case 'z': case 'Z': switch(k) {
         case 'h': case -SDLK_LEFT: far_cursor_move(-1,0,emode=='Z',0); break;
@@ -2616,6 +2637,10 @@ Uint16 edit_board(Uint16 id) {
         case ';': overclip.param=ask_color_char(1,overclip.param); break;
         case '<': case -SDLK_HOME: xcur=ycur=0; break;
         case '>': case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
+        case '[': switch_to_board(brd_id-(numprefix?:1)); numprefix=0; break;
+        case ']': switch_to_board(brd_id+(numprefix?:1)); numprefix=0; break;
+        case '{': switch_to_board(numprefix); numprefix=0; break;
+        case '}': switch_to_board(maxboard); numprefix=0; break;
         case ':': ask_colon_command(); break;
         case -SDLK_F1: overclip.kind^=0x01; break;
         case -SDLK_F2: overclip.kind^=0x02; break;
