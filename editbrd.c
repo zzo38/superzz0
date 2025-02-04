@@ -1048,6 +1048,46 @@ static void cc_count_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg)
   alert_text(buf);
 }
 
+static void cc_crop(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  Sint32 x,y;
+  Uint32 a,z;
+  Tile*ku=b_under;
+  Tile*km=b_main;
+  Tile*ko=b_over;
+  Uint16 w=board_info.width;
+  Uint16 h=board_info.height;
+  free(markgrid);
+  markwidth=markheight=markskip=0;
+  markgrid=0;
+  if(x0>x1) a=x0,x0=x1,x1=a;
+  if(y0>y1) a=y0,y0=y1,y1=a;
+  if(x0>=w || y0>=h) return;
+  if(!x0 && !y0 && x1==w-1 && y1==h-1) return;
+  w=x1+1-x0;
+  h=y1+1-y0;
+  b_under=calloc(w*h,3*sizeof(Tile));
+  if(!b_under) err(1,"Allocation failed");
+  b_main=b_under+w*h;
+  b_over=b_main+w*h;
+  a=x1+1-x0;
+  for(x=0;x<w;x++) for(y=0;y<h;y++) {
+    z=x+x0+(y+y0)*board_info.width;
+    b_under[x+y*w]=ku[z];
+    b_main[x+y*w]=km[z];
+    b_over[x+y*w]=ko[z];
+  }
+  free(ku);
+  board_info.width=w;
+  board_info.height=h;
+  xcur-=x0;
+  ycur-=y0;
+  for(x=0;x<maxstat;x++) if(stats[x].count && stats[x].xy) for(y=0;y<stats[x].count;y++) {
+    stats[x].xy[y].x-=x0;
+    stats[x].xy[y].y-=y0;
+  }
+  clear_extra_stats();
+}
+
 static void cc_debug_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   printf("(%d,%d:%d,%d)BEGIN\"%s\"",x0,y0,x1,y1,arg);
   printf("<%02X,%02X,%02X,%02X>#%d\n",cctile.color,cctile.kind,cctile.param,cctile.stat,cctmp);
@@ -1321,6 +1361,7 @@ static const ColonCommand colon_commands[]={
   {"co",'%',0,cc_count_begin,cc_count_step,cc_count_end},
   {"color",'.',0,cc_color_begin,cc_color_step,0},
   {"count",'%',0,cc_count_begin,cc_count_step,cc_count_end},
+  {"crop",'%',cc_crop,0,0,0},
   {"d",'.',0,0,cc_delete_step,0},
   {"debug",'.',0,cc_debug_begin,cc_debug_step,cc_debug_end},
   {"delete",'.',0,0,cc_delete_step,0},

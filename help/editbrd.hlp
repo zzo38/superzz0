@@ -322,6 +322,10 @@ color/c
 count/co
   Tells you how many cells in range match the filter.
 
+crop
+  Resize the board to contain only the contents of the specified
+  rectangular area. Marks and filters cannot be used with this command.
+
 debug
   This command is for debugging Super ZZ Zero and the meaning might be
   changed in future implementations. It is not fully documented here.
