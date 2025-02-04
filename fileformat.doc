@@ -449,6 +449,9 @@ by this lump are used. This contains a ASN.1X sequence with the fields:
 
 * A set of object identifiers specifying features which are mandatory. If
 this set contains an unrecognized object identifier, then it is an error.
+Any item may also be a sequence of object identifiers; in this case, any
+one of them is suitable, where the first one in each sequence is the first
+preference over the other ones in case multiple of them are.
 
 * A set of object identifiers specifying features which are used by this
 world file but are optional. It is not an error if it contains an

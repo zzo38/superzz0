@@ -96,8 +96,8 @@ const char*init_world(void) {
   // "GENERAL.DER"
   if(fp=open_lump("GENERAL.DER","r")) {
     // (Note: This is not really tested properly yet)
-    ASN1_Value a1,a2,a3;
-    ASN1_Iterator i1,i2;
+    ASN1_Value a1,a2,a3,a4;
+    ASN1_Iterator i1,i2,i3;
     if(asn1_read_item(fp,&a1,0)) {
       fclose(fp);
       return "ASN.1 error in GENERAL.DER lump";
@@ -108,10 +108,22 @@ const char*init_world(void) {
     if(asn1_next(&i1,&a2)) return "ASN.1 error in GENERAL.DER lump";
     if(a2.class || a2.type!=ASN1_SET || !a2.constructed) return "Improper type in GENERAL.DER lump";
     asn1_foreach(j,&i2,&a2,&a3) {
-      if(a3.class || (a3.type!=ASN1_OID && a3.type!=ASN1_RELATIVE_OID)) return "Improper type in GENERAL.DER lump";
-      if(check_feature(&a3) && (config.version_check || config.version_warn || !editor)) {
+      if(a3.class || (a3.type!=ASN1_OID && a3.type!=ASN1_RELATIVE_OID && a3.type!=ASN1_SEQUENCE)) return "Improper type in GENERAL.DER lump";
+      if(a3.type==ASN1_SEQUENCE) {
+        i=0;
+        asn1_foreach(j,&i3,&a3,&a4) {
+          if(a4.class || (a4.type!=ASN1_OID && a4.type!=ASN1_RELATIVE_OID)) return "Improper type in GENERAL.DER lump";
+          if(!(i=check_feature(&a4))) break;
+        }
+        if(i && (config.version_check || config.version_warn || !editor)) {
+          fprintf(stderr,"Unrecognized sequence of OIDs in mandatory set: ");
+          asn1_foreach(j,&i3,&a3,&a4) fputc(' ',stderr),asn1_print_decimal_oid(&a4,ASN1_AUTO,stderr);
+          goto gen1;
+        }
+      } else if(check_feature(&a3) && (config.version_check || config.version_warn || !editor)) {
         fprintf(stderr,"Unrecognized OID in mandatory set: ");
         asn1_print_decimal_oid(&a3,ASN1_AUTO,stderr);
+        gen1:
         fputc('\n',stderr);
         if(config.version_check) return "Unimplemented feature in mandatory set"; else config.version_warn|=4;
       }
@@ -120,10 +132,22 @@ const char*init_world(void) {
     if(asn1_next(&i1,&a2)) return "ASN.1 error in GENERAL.DER lump";
     if(a2.class || a2.type!=ASN1_SET || !a2.constructed) return "Improper type in GENERAL.DER lump";
     asn1_foreach(j,&i2,&a2,&a3) {
-      if(a3.class || (a3.type!=ASN1_OID && a3.type!=ASN1_RELATIVE_OID)) return "Improper type in GENERAL.DER lump";
-      if(check_feature(&a3) && config.version_warn) {
+      if(a3.class || (a3.type!=ASN1_OID && a3.type!=ASN1_RELATIVE_OID && a3.type!=ASN1_SEQUENCE)) return "Improper type in GENERAL.DER lump";
+      if(a3.type==ASN1_SEQUENCE) {
+        i=0;
+        asn1_foreach(j,&i3,&a3,&a4) {
+          if(a4.class || (a4.type!=ASN1_OID && a4.type!=ASN1_RELATIVE_OID)) return "Improper type in GENERAL.DER lump";
+          if(!(i=check_feature(&a4))) break;
+        }
+        if(i && config.version_warn) {
+          fprintf(stderr,"Unrecognized sequence of OIDs in optional set:");
+          asn1_foreach(j,&i3,&a3,&a4) fputc(' ',stderr),asn1_print_decimal_oid(&a4,ASN1_AUTO,stderr);
+          goto gen2;
+        }
+      } else if(check_feature(&a3) && config.version_warn) {
         fprintf(stderr,"Unrecognized OID in optional set: ");
         asn1_print_decimal_oid(&a3,ASN1_AUTO,stderr);
+        gen2:
         fputc('\n',stderr);
         config.version_warn|=2;
       }
