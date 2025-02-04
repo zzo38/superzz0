@@ -1742,6 +1742,7 @@ static char parse_kind(Stat*s,StatXY*xy,Uint16*ip,ScriptKind*sk,char cre) {
   Uint16 bip=*ip;
   char buf[16];
   int c,n;
+  while(s->text[*ip]==' ') ++*ip;
   sk->color=sk->kind=sk->param=sk->stat=0;
   sk->cmask=sk->kmask=sk->pmask=sk->smask=255;
   for(c=0;c<256/8;c++) sk->stats[c]=255;
@@ -1801,7 +1802,7 @@ static char parse_kind(Stat*s,StatXY*xy,Uint16*ip,ScriptKind*sk,char cre) {
       ++*ip;
     }
     buf[n]=0;
-    for(n=0;n<256;n++) if(elem_def[n].name[0]) break;
+    for(n=0;n<256;n++) if(elem_def[n].name[0] && !strcmp(buf,elem_def[n].name)) break;
     if(n==256) goto bad;
     sk->kind=n;
     sk->kmask=0;
