@@ -76,8 +76,10 @@ G          Gradient fill area except marked
 H          Flip horizontal and cancel
 i          Toggle marks in block and cancel
 m          Mark block and enter mass mode
+M          Mark border and enter mass mode
 p          Masked paste and cancel
 s          Mark block and cancel
+S          Mark border and cancel
 t          Block tiling (normal)
 T          Block tiling (normal) and unmark
 u          Unmark entire board grid and cancel
@@ -282,6 +284,9 @@ current tile. (This can be used with commands such as "place", together
 with offset filters, to copy colours of nearby tiles.)
 
 * /T is like /C but overrides the entire tile and not only the colour.
+
+* /b selects only the border of the specified rectangular area, rather than
+all cells inside of the area.
 
 * /m will select only some tiles, according to a pattern. The first two
 arguments are the X and Y multiplier, the third argument is the modulus,

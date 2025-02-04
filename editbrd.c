@@ -1569,6 +1569,8 @@ static void do_colon_command(char*text) {
           if(((x+fil[i].arg[0])|(y+fil[i].arg[1]))&~0xFFFF) goto nomatch;
           x+=fil[i].arg[0];
           y+=fil[i].arg[1];
+        } else if(fil[i].kind=='b') {
+          if(fil[i].inv^((x0==x || x1==x || y0==y || y1==y)?0:1)) goto nomatch;
         } else {
           if(!filtcode[fil[i].kind]) { alert_text("Unknown filter type"); return; }
           if((filtcode[fil[i].kind](x,y,fil+i)?0:1)^fil[i].inv) goto nomatch;
@@ -2533,8 +2535,10 @@ Uint16 edit_board(Uint16 id) {
         case 'H': do_colon_command("<:>hflip"); emode=0; break;
         case 'i': case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case 'm': do_colon_command("<:>mark"); emode='m'; break;
+        case 'M': do_colon_command("<:>/b mark"); emode='m'; break;
         case 'p': do_colon_command("<:>~&place"); emode=0; break;
         case 's': case 0x0D: do_colon_command("<:>mark"); emode=0; break;
+        case 'S': do_colon_command("<:>/b mark"); emode=0; break;
         case 't': block_tiling(0); emode=0; cc_unmark(0,0,markwidth,markheight,""); break;
         case 'T': block_tiling(0); emode=0; break;
         case 'V': do_colon_command("<:>vflip"); emode=0; break;
@@ -2689,8 +2693,10 @@ Uint16 edit_board(Uint16 id) {
         case 'H': do_colon_command("<:>ohflip"); emode=0; break;
         case 'i': case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case 'm': do_colon_command("<:>mark"); emode='m'; break;
+        case 'M': do_colon_command("<:>/b mark"); emode='m'; break;
         case 'p': do_colon_command("<:>~&overplace"); emode=0; break;
         case 's': case 0x0D: do_colon_command("<:>mark"); emode=0; break;
+        case 'S': do_colon_command("<:>/b mark"); emode=0; break;
         case 't': block_tiling(2); emode=0; cc_unmark(0,0,markwidth,markheight,""); break;
         case 'T': block_tiling(2); emode=0; break;
         case 'V': do_colon_command("<:>ovflip"); emode=0; break;
