@@ -452,6 +452,18 @@ numbers are treated as unsigned.
   The second operand specifies the stat XY record to use; the first operand
   value is copied into the instruction pointer of that record.
 
+[05C REWD]
+  If W is zero, do nothing; otherwise decrement W and affect another
+  register as specified by the first operand and jump to second operand.
+  A = Decrement J
+  B = Increment J
+  C = Decrement X
+  D = Increment X
+  E = Decrement Y
+  F = Increment Y
+  G = Decrement Z
+  H = Increment Z
+
 [05D COUN]
   Count the number of tiles matching a pattern, and store in the first
   operand. The second operand is the address of a structure which is like

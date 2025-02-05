@@ -2834,6 +2834,20 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_REGL: load_registers(fo,so); break;
       case OP_REGS: save_registers(fo,so); break;
       case OP_REVB: revert_lump_by_number(so,"BRD"); break;
+      case OP_REWD:
+        if(!w) break;
+        --w;
+        switch(fo) {
+          case 0: --memory[MEM_ARG_J]; break;
+          case 1: ++memory[MEM_ARG_J]; break;
+          case 2: --x; break;
+          case 3: ++x; break;
+          case 4: --y; break;
+          case 5: ++y; break;
+          case 6: --z; break;
+          case 7: ++z; break;
+        }
+        goto jump;
       case OP_ROB: if(status_vars[fo]>so) status_vars[fo]-=so,condflag=1; else status_vars[fo]=0,condflag=0; break;
       case OP_RSH: regs[fo]=(so&~31?(regs[fo]<0?-1:0):regs[fo]>>so); break;
       case OP_RSUB: regs[fo]=so-regs[fo]; break;
