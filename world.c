@@ -21,20 +21,30 @@ static int check_feature(const ASN1_Value*v) {
     if(v->data[1]>127 && v->data[2]!=version_rel_oid[2]) return 1;
     // Minor
     if(v->length>i) {
-      if(v->data[i]<version_rel_oid[j]) return 1;
-      if(v->data[i]>127 && v->length>i+1 && v->data[i+1]<version_rel_oid[j+1]) return 1;
+      if(v->data[i]<version_rel_oid[j]) {
+        return 0;
+      } else if(v->data[i]>version_rel_oid[j]) {
+        return 1;
+      } else if(v->data[i]>127 && v->length>i && v->data[i+1]!=version_rel_oid[j+1]) {
+        return (v->data[i+1]<version_rel_oid[j+1]?0:1);
+      }
       i+=(v->data[i]>127?2:1);
       j+=(version_rel_oid[j]>127?2:1);
     }
     // Patch (this should be omitted in the mandatory set, but may be included in the optional set)
     if(v->length>i) {
       if(j>=version_rel_oid_length) return -1;
-      if(v->data[i]<version_rel_oid[j]) return 1;
-      if(v->data[i]>127 && v->length>i+1 && v->data[i+1]<version_rel_oid[j+1]) return 1;
+      if(v->data[i]>version_rel_oid[j]) {
+        return 1;
+      } else if(v->data[i]>127 && v->length>i && v->data[i]==version_rel_oid[j] && v->data[i+1]>version_rel_oid[j+1]) {
+        return 1;
+      }
       i+=(v->data[i]>127?2:1);
     }
     // Excessive data
     if(v->length>i) return 1;
+    // OK
+    return 0;
   }
   return -1;
 }
