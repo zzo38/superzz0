@@ -1078,12 +1078,23 @@ static Sint32 find_label(Stat*s,const char*label) {
   return -1;
 }
 
+static Sint32 find_unzapped_label(Stat*s,const char*label) {
+  const char*v=(char*)s->text;
+  int n;
+  if(*v!=':') v=strstr(v,"\n:"),v+=(v?1:0);
+  while(v) {
+    if(n=match_label(v,label)) return (v-(const char*)s->text);
+    v=strstr(v,"\n:"),v+=(v?1:0);
+  }
+  return -1;
+}
+
 static Sint32 find_zapped_label(Stat*s,const char*label) {
   const char*v=(char*)s->text;
   int n;
   if(*v!='\'') v=strstr(v,"\n'"),v+=(v?1:0);
   while(v) {
-    if(n=match_label(v,label)) return (v-(const char*)s->text)+n;
+    if(n=match_label(v,label)) return (v-(const char*)s->text);
     v=strstr(v,"\n'"),v+=(v?1:0);
   }
   return -1;
@@ -2015,6 +2026,8 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
     }
   } else if(*buf=='@') {
     n=1; goto any;
+  } else if(*buf==':') {
+    v=(find_label(s,buf+1)==-1?0:1);
   } else if(buf[1]=='@') {
     n=3;
     if(*buf=='B') goto beneath;
@@ -2390,7 +2403,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
           case 'Z':
             if(!strcmp(buf,"ZAP")) {
               while(s->text[ip]==' ') ip++;
-              while((u=find_label(s,s->text+ip))!=-1) s->text[u]='\'';
+              if((u=find_unzapped_label(s,s->text+ip))!=-1) s->text[u]='\'';
             } else goto badcommand; break;
           default: badcommand:
             script_error(m,xy,"Bad command");
@@ -3209,9 +3222,13 @@ static void debug_menu(void) {
       int n;
       win_form("Stats") {
         win_list(maxstat+1,0,stat_list_callback,n) {
-          if(n && stats[n-1].count) win_form("Stat XY list") {
-            win_list(stats[n-1].count,stats+n-1,statxy_list_callback,i);
+          if(n) win_form("Stat XY list") {
+            if(stats[n-1].count) win_list(stats[n-1].count,stats+n-1,statxy_list_callback,i);
             win_blank();
+            win_command('E',"Edit text") {
+              stats[n-1].text=text_editor(stats[n-1].text);
+              stats[n-1].length=(stats[n-1].text?strlen(stats[n-1].text):0);
+            }
             win_command_esc(0,"Cancel") break;
           }
         }

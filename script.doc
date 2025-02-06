@@ -284,6 +284,10 @@ number comparison number
   in between; the above is only for explanation. The valid comparisons can
   be one of: = <> < > <= >=
 
+:label
+  True of there is any label with this name in this script, that has not
+  been zapped.
+
 !condition
   Inverts the condition.
 
