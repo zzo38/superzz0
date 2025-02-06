@@ -2838,8 +2838,8 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         if(!w) break;
         --w;
         switch(fo) {
-          case 0: --memory[MEM_ARG_J]; break;
-          case 1: ++memory[MEM_ARG_J]; break;
+          case 0: regs[0]=w; break;
+          case 1: regs[1]=w; break;
           case 2: --x; break;
           case 3: ++x; break;
           case 4: --y; break;

@@ -455,8 +455,8 @@ numbers are treated as unsigned.
 [05C REWD]
   If W is zero, do nothing; otherwise decrement W and affect another
   register as specified by the first operand and jump to second operand.
-  A = Decrement J
-  B = Increment J
+  A = Copy W to A
+  B = Copy W to B
   C = Decrement X
   D = Increment X
   E = Decrement Y
