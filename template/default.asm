@@ -45,6 +45,7 @@
 ;   _1 = Creatures with speed 1 (Runner)
 ;   _2 = Creatures with speed 2 (Lion, Tiger, Bear, Shark)
 ;   _4 = Creatures with speed 4 (Pusher)
+;   _6 = Speed 6 (Bomb)
 ;   _C = Centipedes
 
 ; **** Global variables ****
@@ -225,6 +226,7 @@ MOVEPL1	XOR A,A
 	JZ A,0
 	ROB X,1
 	TLET S,0
+	GIVE X,A
 	GOTO A,OUCH1
 
 ; **** Miscellaneous subroutines ****
@@ -267,9 +269,11 @@ REZAP	BFLG A,0
 	LET X,%I,,INITPX
 	LET Y,%I,,INITPY
 	DROP A,1
-	JT A,0
+	JT A,1F
 	GSXY B,1
 	DROP A,1
+	LET S,0
+1H	SFX A,"@32T<CD#GC'<C"
 	GBU A,0
 	VSET X,A
 	LET S,0
@@ -1085,6 +1089,7 @@ CHEST	FILL $0F,0
 
 	EV S,_DRAGON
 	JF A,0
+	EV X,_DRAGON
 	GIVE S,1
 	GTMP A,0
 	LET B,A
@@ -1389,6 +1394,129 @@ CENMOV	LET D,Z
 1H	SFX A,"@30<<G#F#"
 	LET S,0
 
+; **** Explosives ****
+; Parameter (lit bomb): Remaining time
+
+	EV T,_BOMB
+	SIM A,0
+	XOR B,B
+	PSD B,A
+	LET A,_LITBOMB
+	PTMK A,0
+	SFX A,"@30TCF>CF>C"
+	LET S,0
+
+	EV T,_LITBOMB,1
+
+	EV B,_LITBOMB
+	DEC A,Z
+	JNEG A,1F
+	PTMP A,0
+	JZ A,2F
+	AND A,1
+	PEER A,3F
+	SFX A,A
+	LET S,0
+3H	DATA "@10T!","@10T$"
+	; Clean up explosion
+1H	LET Z,3F
+	DIE A,W
+	GOTO A,5F
+	; Make explosion
+2H	SFX A,"@30O7ZC<.C<C<C<C<C<C<C"
+	LET Z,4F
+	; Find all cells to make/clear explosion
+5H	LET Y,%,Y,-5
+	LET X,%,X,-3
+	LET W,6
+1H	CALL A,Z
+	REWD D,1B
+	INC Y,Y
+	LET W,8
+	INC X,X
+1H	CALL A,Z
+	REWD C,1B
+	INC Y,Y
+	LET W,10
+	DEC X,X
+1H	CALL A,Z
+	REWD D,1B
+	INC Y,Y
+	LET W,12
+	INC X,X
+1H	CALL A,Z
+	REWD C,1B
+	INC Y,Y
+	LET W,12
+1H	CALL A,Z
+	REWD D,1B
+	INC Y,Y
+	LET W,12
+1H	CALL A,Z
+	REWD C,1B
+	INC Y,Y
+	LET W,12
+1H	CALL A,Z
+	REWD D,1B
+	INC Y,Y
+	LET W,12
+1H	CALL A,Z
+	REWD C,1B
+	INC Y,Y
+	LET W,10
+	INC X,X
+1H	CALL A,Z
+	REWD D,1B
+	INC Y,Y
+	LET W,8
+	DEC X,X
+1H	CALL A,Z
+	REWD C,1B
+	INC Y,Y
+	LET W,6
+	INC X,X
+1H	CALL A,Z
+	REWD D,1B
+	LET S,0
+	; Doing explosion per cell
+4H	CALM X,0
+	LET T,W
+	JF A,0
+	KILM A,0
+	SINK A,0
+	LET A,_BREAKABLE
+	PTMK A,0
+	LET A,%R,,7
+	ADD A,9
+	PTMC A,0
+	LET S,0
+	; Cleaning explosion per cell
+3H	GTMK A,0
+	XOR A,_BREAKABLE
+	JNZ A,0
+	PTMK A,0
+	LET S,0
+
+; **** Destroyable objects ****
+	EV X,_EMPTY,1
+	EV X,_BREAKABLE,1
+	EV X,_BULLET,1
+	EV X,_STAR,1
+	EV X,_LANDMINE,1
+	EV X,_ROCK,1
+	EV X,_RUNNER,1
+	EV X,_LION,1
+	EV X,_TIGER,1
+	EV X,_BEAR,1
+	EV X,_SHARK,1
+	EV X,_HEAD,1
+	EV X,_SEGMENT,1
+	EV X,_MOUSE,1
+	EV X,_SNAKE,1
+	EV X,_SPIDER,1
+	EV X,_BIRD,1
+	EV X,_LUMBERJACK,1
+
 ; **** Script commands ****
 
 	; #CHAR <number>
@@ -1467,6 +1595,9 @@ CENMOV	LET D,Z
 	ED 'Q',"Checkpoint",_CHECKPOINT,$0309
 	ED 'C',"Chest",_CHEST,$0106
 	ED 'U',"Pouch",_POUCH,$0000
+	ED 1,"Explosives:"
+	ED 'B',"Bomb",E_BOMB,_BOMB+$8200
+	ED 'L',"Lit Bomb",E_BOMB,_LITBOMB+$8200
 	ED 2
 
 	ED1 2
@@ -1716,6 +1847,17 @@ E_PUSH	ED '=',"K-MP"
 	ED2 'O',"~North",1
 	ED2 'O',"~West",2
 	ED2 'O',"~South",3
+	ED 0
+
+E_BOMB	ED '=',"K9.M"
+	ED '@',"_6",6
+	ED 'P',$FFFF,$4800
+	ED 0
+
+	ED0 _BOMB
+	ED0 _LITBOMB
+	ED 'H',"Bomb"
+	ED2 'N',"~Time: ",$0030,0,9
 	ED 0
 
 ; **** Editor board info ****
