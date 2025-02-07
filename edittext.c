@@ -188,11 +188,11 @@ static Uint8*text_editor_1(Uint8*text) {
     j=i*80;
     if(li->len) {
       draw_text(0,i,p=li->ptr,0x07,li->len>80?80:li->len);
-      if(*p=='@' || *p=='/' || *p=='#' || *p=='?' || *p==':' || *p=='\'' || *p=='$' || *p=='!') {
+      if(*p=='@' || *p=='/' || *p=='#' || *p=='?' || *p==':' || *p=='\'' || *p=='$' || *p=='!' || *p=='&') {
         v_color[j]=0x0A;
         if(*p=='@' && !i && !scrol) {
           for(k=1;k<80 && k<li->len && p[k]!='=';k++) v_color[j+k]=0x06;
-        } else if(*p=='!') {
+        } else if(*p=='!' || *p=='&') {
           for(k=1;k<80 && k<li->len && p[k]!=';';k++);
           if(k<li->len && p[k]==';') v_color[j+k]=0x0D;
         }
@@ -207,11 +207,11 @@ static Uint8*text_editor_1(Uint8*text) {
   memset(v_color+j,0,80);
   if(li->len) {
     draw_text(0,i,p=li->ptr,0x07,li->len>80?80:li->len);
-    if(*p=='@' || *p=='/' || *p=='#' || *p=='?' || *p==':' || *p=='\'' || *p=='$' || *p=='!') {
+    if(*p=='@' || *p=='/' || *p=='#' || *p=='?' || *p==':' || *p=='\'' || *p=='$' || *p=='!' || *p=='&') {
       v_color[j]=0x0A;
       if(*p=='@' && !i && !scrol) {
         for(k=1;k<80 && k<li->len && p[k]!='=';k++) v_color[j+k]=0x06;
-      } else if(*p=='!') {
+      } else if(*p=='!' || *p=='&') {
         for(k=1;k<80 && k<li->len && p[k]!=';';k++);
         if(k<li->len && p[k]==';') v_color[j+k]=0x0D;
       }

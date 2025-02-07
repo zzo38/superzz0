@@ -36,6 +36,9 @@ $text
 !-help;text
   Link to a help file.
 
+&comment
+  Make a zapped link or a comment.
+
 /dir
   Direction must be one letter, and it is possible for further commands on
   the same line (except labels). Otherwise works like the #GO command.
@@ -155,7 +158,10 @@ are not allowed in this case.
   Restart the program from the beginning.
 
 #RESTORE label
-  Changes all lines 'label into :label so that they will work.
+  Changes all lines 'label into :label so that they will work. If the
+  label name after #RESTORE starts with ! then it converts &label to
+  !label instead, allowing those choices to be displayed again when
+  previously they would not be.
 
 #SEND [name:]label
   Go to the specified label, if it exists. If a name is specified, then
@@ -192,7 +198,9 @@ are not allowed in this case.
   Finds the first :label and comments it out by changing it to 'label
   instead, so that it cannot receive messages. If there is more than one,
   then only the first one with a colon is effective, so this command can
-  be used to change which one is effective.
+  be used to change which one is effective. If the label name after #ZAP
+  starts with ! then it converts !label to &label instead, causing those
+  choices to not be displayed next time.
 
 
 === Conditions/flags ===

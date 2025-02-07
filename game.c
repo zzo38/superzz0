@@ -1081,10 +1081,18 @@ static Sint32 find_label(Stat*s,const char*label) {
 static Sint32 find_unzapped_label(Stat*s,const char*label) {
   const char*v=(char*)s->text;
   int n;
-  if(*v!=':') v=strstr(v,"\n:"),v+=(v?1:0);
-  while(v) {
-    if(n=match_label(v,label)) return (v-(const char*)s->text);
-    v=strstr(v,"\n:"),v+=(v?1:0);
+  if(*label=='!') {
+    if(*v!='!') v=strstr(v,"\n!"),v+=(v?1:0);
+    while(v) {
+      if(n=match_label(v,label+1)) return (v-(const char*)s->text);
+      v=strstr(v,"\n!"),v+=(v?1:0);
+    }
+  } else {
+    if(*v!=':') v=strstr(v,"\n:"),v+=(v?1:0);
+    while(v) {
+      if(n=match_label(v,label)) return (v-(const char*)s->text);
+      v=strstr(v,"\n:"),v+=(v?1:0);
+    }
   }
   return -1;
 }
@@ -1092,10 +1100,18 @@ static Sint32 find_unzapped_label(Stat*s,const char*label) {
 static Sint32 find_zapped_label(Stat*s,const char*label) {
   const char*v=(char*)s->text;
   int n;
-  if(*v!='\'') v=strstr(v,"\n'"),v+=(v?1:0);
-  while(v) {
-    if(n=match_label(v,label)) return (v-(const char*)s->text);
-    v=strstr(v,"\n'"),v+=(v?1:0);
+  if(*label=='!') {
+    if(*v!='&') v=strstr(v,"\n&"),v+=(v?1:0);
+    while(v) {
+      if(n=match_label(v,label+1)) return (v-(const char*)s->text);
+      v=strstr(v,"\n&"),v+=(v?1:0);
+    }
+  } else {
+    if(*v!='\'') v=strstr(v,"\n'"),v+=(v?1:0);
+    while(v) {
+      if(n=match_label(v,label)) return (v-(const char*)s->text);
+      v=strstr(v,"\n'"),v+=(v?1:0);
+    }
   }
   return -1;
 }
@@ -2345,7 +2361,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               ip=0; u=0; goto begin;
             } else if(!strcmp(buf,"RESTORE")) {
               while(s->text[ip]==' ') ip++;
-              while((u=find_zapped_label(s,s->text+ip))!=-1) s->text[u]=':';
+              while((u=find_zapped_label(s,s->text+ip))!=-1) s->text[u]=(s->text[ip]=='!'?'!':':');
             } else goto badcommand; break;
           case 'S':
             if(!strcmp(buf,"SEND")) {
@@ -2403,7 +2419,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
           case 'Z':
             if(!strcmp(buf,"ZAP")) {
               while(s->text[ip]==' ') ip++;
-              if((u=find_unzapped_label(s,s->text+ip))!=-1) s->text[u]='\'';
+              if((u=find_unzapped_label(s,s->text+ip))!=-1) s->text[u]=(s->text[ip]=='!'?'&':'\'');
             } else goto badcommand; break;
           default: badcommand:
             script_error(m,xy,"Bad command");
@@ -2421,7 +2437,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
       if((v=script_go(m,n,s,xy,s->text[ip+1])) || c=='?') ip+=2;
       if(v==2) ip=65535;
       goto stop;
-    case '\'': case ':': case '@':
+    case '\'': case ':': case '@': case '&':
       while(s->text[ip] && s->text[ip]!='\n') ip++;
       if(s->text[ip]) ip++;
       break;
