@@ -1501,29 +1501,34 @@ CENMOV	LET D,Z
 ; **** Lasers ****
 	EV B,_LASERGUN
 	LET H,Z
-	URSH H,1
-	LSH H,9
+	LSH H,8
 	GTMC A,0
 	ADD H,A
 	LSH H,8
 	ADD H,_BEAM
-	; Go ahead
-1H	FORW A,Z
-	JF A,0
-	; Check if the tile is a matching beam
+	; Check current beam state
+	FORW A,Z
 	MTIL A,0
-	AND A,$0002FFFF
 	XOR A,H
-	JNZ A,2F
-	; It is a laser beam; get rid of it
-	FLOA A,0
-	GOTO A,1B
-	; It is not a laser beam
-2H	GTMK B,0
+	AND A,$0002FFFF
+	JNZ A,1F
+	; Beam is active; destroy beam
+2H	FLOA A,0
+	FORW A,Z
+	JF A,0
+	MTIL A,0
+	XOR A,H
+	AND A,$0002FFFF
+	JZ A,2B
+	LET S,0
+	; Beam is not active
+1H	GTMK B,0
 	JNZ B,2F
 	; Empty; add a laser beam
-3H	PTM H,0
-	GOTO A,1B
+	PTM H,0
+	FORW A,Z
+	JT A,1B
+	LET S,0
 	; Not empty
 2H	EQ B,_PLAYER
 	JT B,2F
@@ -1534,7 +1539,7 @@ CENMOV	LET D,Z
 	; Destroy it
 	KILM A,0
 	SFX A,"@24O4DO1DO5DO3D"
-	GOTO A,3B
+	GOTO A,1B
 	; Move and damage player (unless player has energy)
 2H	ROB E,0
 	JT E,0
@@ -1542,10 +1547,10 @@ CENMOV	LET D,Z
 	INC G,0
 	INC D,Z
 	SMOV G,$0083
-	JT G,3B
+	JT G,1B
 	DEC D,Z
 	SMOV G,$0083
-	JT G,3B
+	JT G,1B
 	VSET H,0
 	LET S,0
 
