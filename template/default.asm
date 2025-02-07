@@ -257,6 +257,7 @@ ENTER	MESS E,0
 	LET S,0
 
 	; Damage player
+	; (clobbers: A, B)
 OUCH	ROB E,0
 	JT E,0
 OUCH1	ROB H,10
@@ -1497,6 +1498,57 @@ CENMOV	LET D,Z
 	PTMK A,0
 	LET S,0
 
+; **** Lasers ****
+	EV B,_LASERGUN
+	LET H,Z
+	URSH H,1
+	LSH H,9
+	GTMC A,0
+	ADD H,A
+	LSH H,8
+	ADD H,_BEAM
+	; Go ahead
+1H	FORW A,Z
+	JF A,0
+	; Check if the tile is a matching beam
+	MTIL A,0
+	AND A,$0002FFFF
+	XOR A,H
+	JNZ A,2F
+	; It is a laser beam; get rid of it
+	FLOA A,0
+	GOTO A,1B
+	; It is not a laser beam
+2H	GTMK B,0
+	JNZ B,2F
+	; Empty; add a laser beam
+3H	PTM H,0
+	GOTO A,1B
+	; Not empty
+2H	EQ B,_PLAYER
+	JT B,2F
+	; Check if breakable
+	EATT C,B
+	BTST C,8
+	JF C,0
+	; Destroy it
+	KILM A,0
+	SFX A,"@24O4DO1DO5DO3D"
+	GOTO A,3B
+	; Move and damage player (unless player has energy)
+2H	ROB E,0
+	JT E,0
+	CALL D,OUCH1
+	INC G,0
+	INC D,Z
+	SMOV G,$0083
+	JT G,3B
+	DEC D,Z
+	SMOV G,$0083
+	JT G,3B
+	VSET H,0
+	LET S,0
+
 ; **** Destroyable objects ****
 	EV X,_EMPTY,1
 	EV X,_BREAKABLE,1
@@ -1591,7 +1643,7 @@ CENMOV	LET D,Z
 	ED 'Z',"Stone",_STONE,$0000
 	ED 'E',"Energizer",_ENERGIZER,$0305
 	ED 'P',"Potion",_POTION,$0200
-	ED 'S',"Scroll",_SCROLL,$0800
+	ED 'S',"Scroll",_SCROLL,$0B0F
 	ED 'Q',"Checkpoint",_CHECKPOINT,$0309
 	ED 'C',"Chest",_CHEST,$0106
 	ED 'U',"Pouch",_POUCH,$0000
@@ -1660,10 +1712,13 @@ CENMOV	LET D,Z
 	ED 2
 
 	ED1 5
-	ED 1,"Projectiles:"
+	ED 1,"Guns:"
+	ED 'L',"Laser Gun",_LASERGUN,$0800
+	ED 1,"Projectiles/Beams:"
 	ED 'B',"Bullet",_BULLET+$0200,$010F
 	ED 'S',"Star",_STAR+$0200,$010F
 	ED 'F',"Fire",_SPITFIRE+$0200,$010C
+	ED 'M',"Beam",_BEAM,$0000
 	ED 1,"Special:"
 	ED 'E',"Empty",_EMPTY,$0300
 	ED 'Z',"Player",_PLAYER+$0100,$031F
@@ -1763,6 +1818,7 @@ E_RUNN	ED '=',"-MP"
 	ED0 _PUSHER
 	ED0 _RUNNER
 	ED0 _SPITFIRE
+	ED0 _BEAM
 	ED 'H',"Direction:"
 	ED 'O',$0010
 	ED2 'O',"~East",0
@@ -1858,6 +1914,18 @@ E_BOMB	ED '=',"K9.M"
 	ED0 _LITBOMB
 	ED 'H',"Bomb"
 	ED2 'N',"~Time: ",$0030,0,9
+	ED 0
+
+	ED0 _LASERGUN
+	ED 'H',"Direction:"
+	ED 'O',$0010
+	ED2 'O',"~East",0
+	ED2 'O',"~North",1
+	ED2 'O',"~West",2
+	ED2 'O',"~South",3
+	ED 'H',0
+	ED2 'N',"Spee~d: ",$1070,0,255
+	ED2 'N',"~Phase: ",$2070,0,255
 	ED 0
 
 ; **** Editor board info ****
