@@ -2132,6 +2132,12 @@ static void script_do_change(const ScriptKind*sk,const ScriptKind*sk1) {
   }
 }
 
+static inline void dieitem(Uint16 m,Uint16 n) {
+  StatXY xy=stats[m-1].xy[n];
+  break_tile(0,0,m,n,0);
+  if((xy.layer&3)==2 && stats->count) general_move(0,1,0,0,5,-1,xy.x,xy.y);
+}
+
 static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   // m=stat number, n=XY index, u=(<0 if imply #, =0 if restart, >0 if normal)
   char buf[128];
@@ -2271,6 +2277,9 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
           case 'D':
             if(!strcmp(buf,"DIE")) {
               break_tile(0,0,m,n,0);
+              ip=65535; goto stop;
+            } else if(!strcmp(buf,"DIEITEM")) {
+              dieitem(m,n);
               ip=65535; goto stop;
             } else goto badcommand; break;
           case 'E':

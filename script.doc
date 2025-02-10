@@ -92,6 +92,10 @@ are not allowed in this case.
 #DIE
   Delete this object and stop executing.
 
+#DIEITEM
+  Delete this object and stop executing, and move the player (the first
+  instance of stat 1) to the location where this object was.
+
 #END
   Stop executing this object.
 
