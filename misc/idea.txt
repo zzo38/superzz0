@@ -413,3 +413,14 @@ EXT0, EXT1, etc can be used if too many opcodes are defined, that these can
 then be used for further extended opcodes. (Perhaps, those that are going
 to be less common, or need an additional operand, might use these.)
 
+
+=== Sensors ===
+
+Some way to implement sensors like in MegaZeux. I am not sure if this might
+require additional memory cells, element attributes, and/or events.
+
+In MegaZeux, sensors are movable and pushable by most stuff, but the player
+can stand on top of it, and while doing so, whatever is beneath the sensor
+will be saved, so that when the player moves away, the sensor and whatever
+is underneath it will be restored.
+
