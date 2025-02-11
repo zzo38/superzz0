@@ -1,0 +1,415 @@
+These are ideas about stuff that might or might not be implemented in
+future; when they are implemented they might not be done exactly as
+specified here, since the plans may change in future. (Some might be
+decided against adding in future, or in a more limited way than is
+described here; other changes may also be made.)
+
+
+=== Custom fonts ===
+
+Each custom font will have a .CHR lump and a optional .CCM (character
+code mapping) lump.
+
+If the length of the .CHR lump is a multiple of 256 then it is stored in
+uncompressed format, which is like the format of MegaZeux but the height
+is not necessarily fourteen.
+
+The format of the .CCM lump is as follows:
+
+* First byte has the high bit set if the identifier represents a subset of
+the characters in this font, and the next 3-bits specify the type of the
+identifier. The low nybble is the length of the identifier, or if it is
+fifteen then the next byte specifies the length of the identifier.
+
+* The identifier then follows (up to 255 bytes).
+
+* After this is optionally the TRON code mapping. There is an implicit 0xFE
+at the beginning which is not actually included in this file, since the
+first command must be a plane shift command.
+
+The TRON code mapping consists of the commands:
+
+* Plane shift: One or more 0xFE bytes, followed by one byte in the range
+0x21 to 0x7E or 0x80 to 0xFD.
+
+* Character code: Two bytes, both in the range 0x21 to 0xFD except 0x7F.
+This number is big-endian.
+
+* No character: 0x7F.
+
+* No mapping: 0xFF.
+
+* Run: One byte 0x00 to 0x20, representing a run of 1 to 33 character
+codes. If the previous character code is 0x7F or 0xFF then it repeats
+that code, but otherwise each one is the previous character code advanced
+by one; if this would advance the second byte of 0x7F then it advances the
+first byte (skipping 0x7F) and the second byte is set to 0x21, and if it
+would advance the second byte to 0xFE then it advances the first byte
+(skipping 0x7F) and the second byte is set to 0x80. If the first byte
+would be advanced to 0xFE then it becomes 0x21 and the second byte will
+then be 0x80.
+
+The total number of represented character codes is 256.
+
+Types of identifiers:
+
+* 0 = None.
+
+* 1 = Code page number (IBM or extended; small-endian).
+
+* 2 = Object identifier, in the binary format.
+
+* 3 = Character set name (MIME).
+
+* 4 = ISO 2022 (the ESC characters are omitted since they are implied).
+
+* 5 = (reserved)
+
+* 6 = (reserved)
+
+* 7 = (reserved)
+
+(The .CCM lump probably will not be used by Super ZZ Zero at all, and it
+might not even include an editor for this lump, but it would be defined
+in case someone finds it useful, e.g. in case someone later adds the
+ability for the user to override the fonts, or for text to be copied
+between programs that use different character encodings.)
+
+
+=== Custom palettes ===
+
+This could be done like MegaZeux, by .PAL lumps.
+
+
+=== Large character sets ===
+
+This is for large character sets with wide characters (e.g. JIS). A world
+file will be limited to not more than one large character set; this can be
+used together with the multiple small character sets. Wide characters are
+always 16-bits long.
+
+Probably, this will have two lumps, one for the wide font and one for the
+wide character mapping, which maps the 16-bit character codes specific to
+the world file to TRON characters (although, like with small character
+sets, some characters might not be mapped to TRON characters). (These lumps
+may be named WIDEFONT and WIDECMAP)
+
+For text windows and for single-line messages, some way will be needed to
+specify if they use wide characters; this could perhaps be a global flag,
+which can be either fixed or able to be changed at run time.
+
+Screens will also need some way to specify which tiles use wide characters;
+this is only applicable for SC_BACKGROUND. (Since this command has some
+unused bits, they could be used for this purpose.)
+
+For overlays, the OVER_RESERVED bit could be used for this purpose (in
+which case it will be renamed).
+
+And then, there is also text within the main layer of the board. This could
+be a new major code for element appearances which can be called AP_WIDE.
+
+The other consideration is knowing if a tile is the left or right half of
+a wide character. I think it is not relevant for screens and for text
+windows and single-line messages, but it may be relevant for boards and
+for overlays. This could possibly be ignored and handled by the rendering
+instead, although that will fail to work properly if the board has a
+scrolling viewport or if an overlay partially covers a wide character.
+
+There is also then the consideration to improve the rendering in order to
+allow wide characters mixed with narrow characters. (If enhanced graphics
+is implemented, then wide characters could be limited to only some of the
+video layers, rather than all of them, if that helps.)
+
+
+=== Joypad input ===
+
+The configuration file can specify which joypad to use, as well as a
+mapping from the buttons, hats, and axes to key codes, command codes,
+and virtual buttons.
+
+There can also be a field in GENERAL.DER for then mapping the virtual
+buttons. The mappings might have multiple levels, and that each screen
+might specify the mapping level. Each one can then be mapped to a key
+code, level shift (while it is held), or other command.
+
+
+=== Music ===
+
+For music lumps, there are some features I dislike of MOD/S3M/XM/IT even
+though it is good idea to have instruments and notes. Specifically:
+
+* Such formats assume 12-TET; they are not very good for just intonation
+and stuff like that.
+
+* They must be arranged in patterns and orders; this is not always the
+best way for MML conversion.
+
+* There are some features that should not be necessary for play back;
+some of these (e.g. song title and some comments) may still be useful
+to keep, but such things as note ranges per instrument are probably
+not needed since the MML compiler can handle these.
+
+However, it would be good for possibility to convert MOD, S3M, XM, IT
+(and possibly others, e.g. Reality Adlib Tracker) into the format which
+can be used for this, in case you want to use existing editors, and that
+many of the existing effects can be available. However, a MML compiler
+specifically for this format can also be made up.
+
+
+=== Wave sounds ===
+
+Wave sounds can be in .WAV lumps (which are in the ordinary Microsoft wave
+sound format), and may be able to be disabled by the user configuration
+file (volume might also be independently adjustable for PC sound effects,
+wave sound effects, and music, by the user configuration file).
+
+Inside of a SFX or #PLAY command you can put the name of a .WAV lump in
+parentheses (without the .WAV suffix) to be treated as a note with the
+duration of the wave sound (ignoring the specified note duration and
+octave). There should be a limited number of wave sounds that can be
+queued at once.
+
+
+=== User preferences ===
+
+These user preferences are those which do not directly affect the game
+engine (although the default values may sometimes be based on them), but
+can be used in game worlds to control various features, such as:
+
+* Want reduced animation
+
+* Auto/ask to skip cutscenes
+
+* Puzzle difficulty
+
+* Language
+
+* Using keyboard or joypad
+
+* Want to censor certain things (e.g. swearing)
+
+* Visual indication of sound
+
+There can be a field in GENERAL.DER to specify which such preferences are
+used by this world, what values they can have, and their defaults (which
+may be fixed and/or automatic). There can then be a opcode which can be
+used to access this information.
+
+The field in GENERAL.DER could contain a sequence for each user preference;
+these are numbered starting from zero. You can put null in place of one of
+these sequences if that number is not used (e.g. if it was used in the past
+but now has been removed). Each of these sequences contains:
+
+* The OID of the preference.
+
+* An optional PC string which labels the preference.
+
+* The default value, which is a integer.
+
+* Further data are for the possible values that it can have.
+
+For each possible value that it can have (where the values are numbered
+starting from zero), it has (these are not inside of their own sequence,
+but are inline in the "preference item" structure):
+
+* The OID of the value. If it is relative, it is relative to the OID of
+the preference. Alternatively this can be a set of OIDs; all of these OIDs
+are interpreted in the same way for this specific world (even if their
+meanings are otherwise distinct).
+
+* An optional PC string which describes this possible value.
+
+Nulls may intervene to mean that a number is not used.
+
+A new opcode could be INFO which takes the number from the second operand
+and the value (according to the above) is written to the first operand.
+If the second operand is negative then it could correspond to various
+kinds of built-in information which does not use this.
+
+
+=== Item window ===
+
+The item window is meant for a kind of inventory menu. There is also the
+item memory, which is a part of the program memory, which can be used to
+store this inventory list.
+
+Opcodes related to item memory and item windows:
+
+* IMNU = Display the item window, and request selection of an item. Flags
+can be used to allow/disallow/force sorting and to allow/disallow items
+to be discarded. You can also restrict display by classes of items.
+
+* IGIV = Give a specified quantity of a specified item.
+
+* ITAK = Take a specified quantity of a specified item.
+
+* ICNT = Count how many of a specific item you have (or of all items that
+have a specific quality or are in a specific class). Can also be used to
+total the value of a specific field (e.g. mass) of items.
+
+* IFND = Find the address of a specific item or quality.
+
+The address of the item memory may be one of the special memory cells in
+the $00C0 to $00FF range. Each entry may then consist of two cells:
+
+* Address of item definition.
+
+* Quantity and flags.
+
+The item definition consists of the first cell specifying attributes and
+the rest being packed text specifying the name of the item; there may then
+be other fields, but these are not used by Super ZZ Zero itself (the code
+in the world might use them, though). The attributes are as follows:
+
+* bit7-bit0 = Maximum heap size. Zero means it is a "key item" which does
+not display the quantity, but is limited to one.
+
+* bit10-bit8 = Item class.
+
+* bit13-bit11 = User-defined flags.
+
+* bit14 = Disallow discarding.
+
+* bit15 = Disallow reordering.
+
+
+=== High scores ===
+
+There can be an optional high score file; the user configuration file could
+be used to enable or disable this feature.
+
+The format of the high scores could be specified in GENERAL.DER, which can
+specify things to be included in high score entries and how they will be
+sorted and classified; they are not necessarily limited to only the score,
+but also such things as difficulty level, achievements, etc.
+
+There can be a opcode called HISC to write new entries into the high score
+file (reading from the high scores is deliberately not possible).
+
+
+=== Editing history ===
+
+This means optionally storing the editor version history (the user
+configuration file can control what is stored) in the world file. I am
+not really sure if this is useful, although OHRRPGCE does something
+similar (but unlike OHRRPGCE, a separate lump (e.g. HISTORY.DER) should
+be used which is not used for other purposes).
+
+
+=== Screen transition animations ===
+
+For defining screen transition animations when going between boards, or
+when open or closing a text window or item window (or other screens, if
+custom screen displays are possible).
+
+This should be possible for the user to override by the configuration file.
+This would be done by options named "board_anim" and "window_anim", whose
+values can be zero to use the time specified in the world file, positive
+for the specified number of milliseconds per frame, or negative to limit
+the total duration of the animation to not greater than the specified
+number of deciseconds. The default values will be zero, allowing the values
+specified in the world file to work.
+
+Each screen can have an associated transition animation, perhaps numbered
+from 0 (meaning no animation) to some number (one less than a power of
+two), such as 15.
+
+The transition animations themself can be defined in a lump called
+TRANSIT.DER, containing a sequence of the definitions, with 1-based
+indexing. Each definition can have the fields:
+
+* Total number of animation frames, which is an integer.
+
+* Optionally, another integer for the number of milliseconds per frame.
+If this is omitted, the current game speed is used. (Either way, it can be
+overridden by the user configuration file.)
+
+* A octet string defining the reveal time grid. This might be optional (if
+reveal time is not needed and other options are used). It would probably
+have predictions like some picture formats (e.g. JPEG-LS) use, in order to
+store the data in a compact format.
+
+* Others depending on the animation method.
+
+The possible animation methods might be:
+
+* Only reveal time; some screen cells are updated during each frame, until
+all of the cells have been updated. (It might also be possible to combine
+reveal time with other methods.)
+
+* Screen scrolling. A rectangular area might be possible to be specified
+(usually matching the viewport defined in the screen layout). This way,
+if you walk out of a board edge to another one, the next board would be
+scrolled into view.
+
+* Motion of parts of the screen layout. For example, this would be used to
+emulate the scroll opening/closing animation in ZZT.
+
+* Changing screen cells to fixed values before changing them again to the
+new screen values. This is like the board transition animation in ZZT.
+
+(These are probably sufficient.)
+
+For some of these methods, it would be more useful for programs to specify
+some details (or possibly even entirely overriding it) at run time, perhaps
+specified as warp registers. (For example, in the case of screen scrolling,
+this would include the direction of movement. When using passages instead
+of edges, it would need to switch to a different animation instead.)
+
+
+=== Enhanced graphics ===
+
+Super ZZ Zero is and will continue to be primarily emulating PC text mode
+instead of having enhanced graphics, although it might be possible in
+future (but unsure) to add enhanced graphics modes, possibly with the
+ability to run simultaneously with the emulated text mode graphics.
+
+One possible idea is to make a slice tree like OHRRPGCE has, although we
+probably should not need all of the features that OHRRPGCE has.
+
+Other possibility is SMZX mode like MegaZeux does.
+
+Another way would be that bobs can be defined and drawn over anything else
+on the screen; the bobs can be defined from pictures stored in other lumps
+and then at run time it can be programmed to draw the bobs.
+
+It could also combine the multiple ways and have layers:
+* Video playfield layer
+* Video mobs layer
+* Video text layer
+* Video slice layer
+* Video bobs layer
+* Video window layer
+
+(The video window layer allows text and/or slices to be displayed in
+a fixed area in a way that overlays anything else on the screen and
+is not affected by screen scrolling.)
+
+Some worlds might support enhanced graphics as an optional feature.
+
+
+=== Memory overlays ===
+
+This means that in addition to the MEMORY lump you can also have other
+lumps that contain parts of program memory, and have an instruction to
+load them at a specified address.
+
+
+=== Custom windows ===
+
+In addition to text windows and item windows, it might be possible to use
+screens as custom windows.
+
+My idea is to add a opcode for displaying a custom window, which can be any
+defined screen, and to specify the subroutine to execute while the custom
+window is active.
+
+
+=== Other instructions ===
+
+SQRT can be used for calculating square roots.
+
+EXT0, EXT1, etc can be used if too many opcodes are defined, that these can
+then be used for further extended opcodes. (Perhaps, those that are going
+to be less common, or need an additional operand, might use these.)
+
