@@ -2134,8 +2134,43 @@ static void script_do_change(const ScriptKind*sk,const ScriptKind*sk1) {
 
 static inline void dieitem(Uint16 m,Uint16 n) {
   StatXY xy=stats[m-1].xy[n];
-  break_tile(0,0,m,n,0);
-  if((xy.layer&3)==2 && stats->count) general_move(0,1,0,0,5,-1,xy.x,xy.y);
+  StatXY yx;
+  StatXY*r=stats[m-1].xy+n;
+  Uint32 a,b;
+  if(xy.x>=board_info.width || xy.y>=board_info.height || !(xy.layer&3)) {
+    r->x=r->y=r->instptr=65535; r->layer=128; r->delay=255;
+    return;
+  }
+  a=xy.y*board_info.width+xy.x;
+  if(stats->count && (stats->xy->layer&3)) {
+    yx=stats->xy[0];
+    b=yx.y*board_info.width+yx.x;
+    if(yx.x>=board_info.width || yx.y>=board_info.height) {
+      break_tile(0,0,m,n,0);
+    } else if((xy.layer&3)==3 && (yx.layer&3)==3) {
+      stats->xy->x=xy.x; stats->xy->y=xy.y;
+      r->x=r->y=r->instptr=65535; r->layer=128; r->delay=255;
+      b_over[a]=b_over[b];
+      b_over[b].kind&=OVER_BG_THRU;
+      if(memory[MEM_DEFAULT_OVERLAY]) b_over[b].kind|=OVER_VISIBLE;
+      b_over[b].color=memory[MEM_DEFAULT_OVERLAY]>>8;
+      b_over[b].param=memory[MEM_DEFAULT_OVERLAY];
+    } else if((xy.layer&3)!=3 && (yx.layer&3)!=3) {
+      stats->xy->x=xy.x; stats->xy->y=xy.y;
+      stats->xy->layer=(yx.layer&~3)|(xy.layer&3);
+      r->x=r->y=r->instptr=65535; r->layer=128; r->delay=255;
+      (xy.layer&2?b_main:b_under)[a]=(yx.layer&2?b_main:b_under)[b];
+      if(yx.layer&2) {
+        if(b_under[b].stat) if(r=find_statxy(b_under+b)) r->layer++;
+        b_main[b]=b_under[b];
+      }
+      b_under[b]=(Tile){0,0,0,0};
+    } else {
+      break_tile(0,0,m,n,0);
+    }
+  } else {
+    break_tile(0,0,m,n,0);
+  }
 }
 
 static void run_script(Uint16 m,Uint16 n,Sint32 u) {
