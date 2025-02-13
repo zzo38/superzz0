@@ -365,7 +365,9 @@ future (but unsure) to add enhanced graphics modes, possibly with the
 ability to run simultaneously with the emulated text mode graphics.
 
 One possible idea is to make a slice tree like OHRRPGCE has, although we
-probably should not need all of the features that OHRRPGCE has.
+probably should not need all of the features that OHRRPGCE has. (Slice
+trees could be DER-encoded lumps whose names have a .EGS suffix (which
+stands for "Enhanced Graphics Screen").)
 
 Other possibility is SMZX mode like MegaZeux does.
 
@@ -404,6 +406,9 @@ My idea is to add a opcode for displaying a custom window, which can be any
 defined screen, and to specify the subroutine to execute while the custom
 window is active.
 
+Maybe it should also be possible to have custom printing for custom
+windows, that if you push F11 then it can customize the text to print.
+
 
 === Other instructions ===
 
@@ -423,4 +428,67 @@ In MegaZeux, sensors are movable and pushable by most stuff, but the player
 can stand on top of it, and while doing so, whatever is beneath the sensor
 will be saved, so that when the player moves away, the sensor and whatever
 is underneath it will be restored.
+
+
+=== Zones ===
+
+These zones are meant to be like a combination of the rotation zones in
+ZZ Zero and the zones in OHRRPGCE. The number of zones per board probably
+does not have to be very large; eight might be sufficient (allowing one
+byte to specify a set of zones to select).
+
+
+=== Dynamic strings ===
+
+Dynamic strings means strings that can change during the run time. A new
+opcode might be added to deal with them.
+
+These dynamic strings can then be used for TEXT and MESS, as well as for
+text within text boxes when #ESCAPE ON is used. It might also be made
+possible to add them into screen layouts.
+
+
+=== Undesirable features ===
+
+There are some features which will probably be permanently out of scope,
+and that I do not want to add (even if someone provides a patch). Some of
+these features include:
+
+* Password protection. (MegaZeux used to have this feature, and OHRRPGCE
+still does (although I think some maintainers want to remove it).)
+
+* RTC (date/time) access.
+
+* File I/O. (It may be possible to support lump I/O, but the codes in the
+world file would never be able to access external files. External file
+access is always under the control of the user.)
+
+* In app purchases.
+
+* Unicode support.
+
+* Network support. (Communication with catalog services, version control
+services, etc, would use separate programs, and are not a part of the
+game engine itself.)
+
+* Full keyboard access. (Many keys will be reserved by the game engine
+and/or operating system and/or window manager. The keys that can be used
+can use an abstract handling.)
+
+* Automatic updates. (I dislike automatic updates, and if someone wants to
+use them it would be done by a separate package manager instead, which
+should allow the user to disable automatic updates, anyways.)
+
+* Operating system detection.
+
+* Ability for game world code to adjust game speed at run time. (I may add
+a setting within the world file to specify the default game speed, though.)
+
+* Saving/restoring games by scripts/programs defined in the world file.
+(Restrictions for saving games may be added, but not restrictions for
+restoring saved games.)
+
+* Persisting data across different instances of a game. (Data will always
+persist across save/restore games, but if you restart the game and create
+a new save file, it does not interact with the old save file at all.)
 
