@@ -204,7 +204,10 @@ but now has been removed). Each of these sequences contains:
 
 * An optional PC string which labels the preference.
 
-* The default value, which is a integer.
+* The default value, which is a integer. (It might also be possible to have
+a default value that depends on settings in the user configuration file
+(e.g. whether or not audio is enabled), or on external things such as the
+current locale.)
 
 * Further data are for the possible values that it can have.
 
@@ -444,8 +447,24 @@ Dynamic strings means strings that can change during the run time. A new
 opcode might be added to deal with them.
 
 These dynamic strings can then be used for TEXT and MESS, as well as for
-text within text boxes when #ESCAPE ON is used. It might also be made
-possible to add them into screen layouts.
+text within scripts when #ESCAPE ON is used. It might also be made possible
+to add them into screen layouts.
+
+
+=== Escaped text ===
+
+For use in scripts with the #ESCAPE ON command. The things that {} might be
+used to enter into the text might include:
+
+* Numbers
+
+* Alignment
+
+* Single characters
+
+* Dynamic strings
+
+* Conditional text
 
 
 === Board editor features ===
