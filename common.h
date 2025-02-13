@@ -429,6 +429,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define XOP_S_IF_TRUE 0x0DC0 // (source) if true, (value) if false (-3 to +4, A to H)
 #define XOP_S_IF_FALSE 0x0DD0 // (source) if false, (value) if true (-3 to +4, A to H)
 
+#define MEM_OVERLAY_STAT_EVENT 0xC7
 #define MEM_TRANSPORT_EVENT 0xC8
 #define MEM_DEFAULT_OVERLAY 0xC9
 #define MEM_GLOBAL_INSTPTR 0xCA

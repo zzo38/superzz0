@@ -6,6 +6,9 @@ addresses with a currently defined meaning are listed here. The initial
 values can be set using the assembler, and they can also be changed at
 run time.
 
+$C7 = Overlay stat event. This is like EV_STAT but is used for stats in
+the overlay.
+
 $C8 = Transport event (see below).
 
 $C9 = The default overlay, which is used when objects within the overlay
@@ -164,7 +167,7 @@ EV_FRAME (0)
   Return = Unused.
 
 EV_STAT (1)
-  Called whenever a stat's turn to be executed, before scripts.
+  Called whenever a stat's turn to be executed.
 
   W = Stat number and stat XY index
   Z = Parameter

@@ -3500,7 +3500,7 @@ int run_game(void) {
         if(stats[a].speed && !stats[a].xy[b].delay--) {
           t=(d==1?b_under:d==2?b_main:b_over)+stats[a].xy[b].y*board_info.width+stats[a].xy[b].x;
           stats[a].xy[b].delay=0;
-          if(d==3 || !run_program(elem_def[t->kind].event[EV_STAT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) stats[a].xy[b].delay=stats[a].speed-1;
+          if(!run_program(d!=3?elem_def[t->kind].event[EV_STAT]:memory[MEM_OVERLAY_STAT_EVENT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) stats[a].xy[b].delay=stats[a].speed-1;
         }
       } else {
         // Delete this stat
