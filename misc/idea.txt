@@ -448,6 +448,43 @@ text within text boxes when #ESCAPE ON is used. It might also be made
 possible to add them into screen layouts.
 
 
+=== Board editor features ===
+
+Some ideas about board editor features. (Some of these may also be suitable
+for the screen editor.)
+
+* Tile queue buffer: Like the backbuffer in KevEdit. The gradient menu can
+have an option to use the tile queue buffer for making gradients.
+
+* Area buffer: Stores an area of any shape (not necessarily rectangular),
+which can later be pasted in the same or other boards, any number of times.
+It can have an origin when saved, so that pasting it will treat the cursor
+position as the origin for the paste position.
+
+* Import/export MZM: Only layer mode MZM is relevant for Super ZZ Zero.
+
+* Import/export other formats: ANSI, XBIN, etc. This may also include user
+configuration options for whether or not to import/export SAUCE. It might
+also be possible to specify external programs for converting other formats.
+
+* Undo/redo
+
+
+=== Text editor features ===
+
+Ideas about text editor features.
+
+* Block selection: Commands to set a beginning and ending of a block; you
+can then use other block commands to make copies of it, to delete it, or
+to move it.
+
+* Using external programs to process text: Text can be filtered through
+an external command for processing; it will be sent to that program's
+stdin and then the text is replaced by the stdout from that program.
+
+* Undo/redo
+
+
 === Undesirable features ===
 
 There are some features which will probably be permanently out of scope,
@@ -491,4 +528,8 @@ restoring saved games.)
 * Persisting data across different instances of a game. (Data will always
 persist across save/restore games, but if you restart the game and create
 a new save file, it does not interact with the old save file at all.)
+
+* 3D graphics.
+
+* True colour graphics.
 
