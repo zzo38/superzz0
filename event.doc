@@ -178,7 +178,7 @@ EV_PUSH (2)
   Called when this object would be pushed.
 
   W = Direction
-  Z = Parameter
+  Z = Parameter (+256 if pushing while transporting)
   Condition flag = Suppression flag
 
   Return = Nonzero to prevent pushing.
