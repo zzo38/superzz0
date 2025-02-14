@@ -801,6 +801,7 @@ CHEST	FILL $0F,0
 
 ; **** Object ****
 	EV B,_OBJECT
+	TA $C7
 	LET A,W
 	RUN A,1
 	DEC A,%I,,NWAITS

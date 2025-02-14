@@ -1126,6 +1126,7 @@ static void send_message(Uint32 n,const char*label,Uint8 ignlock) {
   if(q || !n) {
     if(q) p=label,label=q+1; else p=0;
     for(n=0;n<maxstat;n++) if(stats[n].length) {
+      s=stats+n;
       if(p && !match_name(s->text,p)) continue;
       f=find_label(s=stats+n,label);
       if(f!=-1) {
@@ -1534,7 +1535,7 @@ static char script_go(Uint16 m,Uint16 n,Stat*s,StatXY*xy,Uint8 dir) {
     case 's': case 'S': dir=DIR_S; break;
     default: script_error(m,xy,"Improper direction"); return 2;
   }
-  general_move(0,(n<<16)+m,xy->x,xy->y,0x0814,0,dir,dir);
+  general_move(0,(n<<16)+m,xy->x,xy->y,0x0814,1,dir,dir);
   return condflag;
 }
 
@@ -2345,7 +2346,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else if(!strcmp(buf,"GO")) {
               i=parse_direction(s,xy,&ip);
               if(i!=-1 && condflag) {
-                general_move(0,(n<<16)+m,xy->x,xy->y,0x0814,0,i,i);
+                general_move(0,(n<<16)+m,xy->x,xy->y,0x0814,1,i,i);
                 if(!condflag) {
                   ip=bip;
                   goto stop;
@@ -2449,7 +2450,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else if(!strcmp(buf,"TRY")) {
               i=parse_direction(s,xy,&ip);
               if(i!=-1 && condflag) {
-                general_move(0,(n<<16)+m,xy->x,xy->y,0x0814,0,i,i);
+                general_move(0,(n<<16)+m,xy->x,xy->y,0x0814,1,i,i);
                 if(!condflag) {
                   u=-1; goto begin;
                 }
