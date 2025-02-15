@@ -204,10 +204,14 @@ but now has been removed). Each of these sequences contains:
 
 * An optional PC string which labels the preference.
 
-* The default value, which is a integer. (It might also be possible to have
-a default value that depends on settings in the user configuration file
-(e.g. whether or not audio is enabled), or on external things such as the
-current locale.)
+* The default value, which is a integer. (The OID of the preference might
+also allow the game engine to provide its own default value, e.g. for
+whether or not sound is enabled.)
+
+* A boolean to indicate whether or not it is allowed to be changed after
+the game has started. Even if this is false, it can still be changed before
+the first time it is read by the INFO opcode; it will record in the save
+game file whether or not this occurs, and what the saved values are.
 
 * Further data are for the possible values that it can have.
 
