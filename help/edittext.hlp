@@ -12,7 +12,9 @@
  ^KP  send to printer
  ^L   repeat find
  ^M   line break
+ @M   insert line below
  ^N   split line
+ @N   insert line
  ^P   add character code
  ^QC  end of document
  ^QD  end of line

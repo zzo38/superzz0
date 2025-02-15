@@ -257,7 +257,9 @@ static Uint8*text_editor_1(Uint8*text) {
     case_CTRL('K'): prefix=2; break;
     case_CTRL('L'): goto find;
     case_CTRL('M'): line_break(xc,yc); xc=0; ++yc; goto display;
+    case -SDLK_m: line_break(lines[yc].len,yc); xc=0; ++yc; goto display;
     case_CTRL('N'): line_break(xc,yc); goto display;
+    case -SDLK_n: line_break(0,yc); xc=0; goto display;
     case_CTRL('P'): xc+=ins_char(yc,xc,ask_color_char(1,askch)); goto display;
     case_CTRLK('P'): case -SDLK_F11: print_document(); goto display;
     case_CTRL('Q'): prefix=1; break;
