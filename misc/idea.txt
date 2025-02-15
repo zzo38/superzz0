@@ -75,10 +75,26 @@ in case someone finds it useful, e.g. in case someone later adds the
 ability for the user to override the fonts, or for text to be copied
 between programs that use different character encodings.)
 
+I also don't know if case folding would ever be necessary, but if it is
+wanted in future, I do have idea how to make compact case folding tables,
+which is as follows:
+
+* 0x00 to 0x7F means a identity run with length 1 to 127.
+
+* 0x80 to 0xBF followed by one more byte means a difference run with
+length 1 to 64.
+
+* 0xC0 to 0xFF means a manual run with length 1 to 64; the following
+bytes are the values within the manual run.
+
 
 === Custom palettes ===
 
 This could be done like MegaZeux, by .PAL lumps.
+
+The ability to enable/disable flashy text should also be added (this might
+be one of the text mode options in addition to SMZX mode; see the below
+section about enhanced graphics).
 
 
 === Large character sets ===
@@ -167,7 +183,8 @@ Inside of a SFX or #PLAY command you can put the name of a .WAV lump in
 parentheses (without the .WAV suffix) to be treated as a note with the
 duration of the wave sound (ignoring the specified note duration and
 octave). There should be a limited number of wave sounds that can be
-queued at once.
+queued at once. There should also be a way to optionally skip the PC
+notes if the wave notes are played (like in MegaZeux).
 
 
 === User preferences ===
@@ -395,6 +412,7 @@ a fixed area in a way that overlays anything else on the screen and
 is not affected by screen scrolling.)
 
 Some worlds might support enhanced graphics as an optional feature.
+(It can be specified as mandatory or optional in GENERAL.DER.)
 
 
 === Memory overlays ===
@@ -420,6 +438,8 @@ windows, that if you push F11 then it can customize the text to print.
 === Other instructions ===
 
 SQRT can be used for calculating square roots.
+
+DICE might be added for more sophisticated random numbers.
 
 EXT0, EXT1, etc can be used if too many opcodes are defined, that these can
 then be used for further extended opcodes. (Perhaps, those that are going
@@ -471,6 +491,21 @@ used to enter into the text might include:
 * Conditional text
 
 
+=== Regression testing ===
+
+Some way to do regression testing, sort of like Free Hero Mesh. Note that
+Free Hero Mesh is meant to be fully deterministic, while Super ZZ Zero
+isn't (and isn't meant to be). It might be necessary to include testing
+of features other than the game engine too.
+
+Demo recording might also be suitable; the same functions can be used for
+regression testing than demo recording and playback. A demo recording can
+store the random numbers and other details needed to repeat (since future
+versions might change the working of the random number generator, and the
+existing random numbers should be saved for use with demo recording and
+for testing). If demo recordings can include assertions, that will help.
+
+
 === Board editor features ===
 
 Some ideas about board editor features. (Some of these may also be suitable
@@ -492,6 +527,8 @@ also be possible to specify external programs for converting other formats.
 
 * Undo/redo
 
+* Secondary mark grid
+
 
 === Text editor features ===
 
@@ -506,6 +543,8 @@ an external command for processing; it will be sent to that program's
 stdin and then the text is replaced by the stdout from that program.
 
 * Undo/redo
+
+* Find and replace
 
 
 === Undesirable features ===
@@ -527,7 +566,7 @@ access is always under the control of the user.)
 
 * Unicode support.
 
-* Network support. (Communication with catalog services, version control
+* Network access. (Communication with catalog services, version control
 services, etc, would use separate programs, and are not a part of the
 game engine itself.)
 
