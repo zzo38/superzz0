@@ -755,6 +755,18 @@ numbers are treated as unsigned.
   Like PEEK but saves the old value of the register; once this subroutine
   returns then the old value is restored.
 
+[0A4 EXT4]
+  (Reserved)
+
+[0A5 EXT5]
+  (Reserved)
+
+[0A6 EXT6]
+  (Reserved)
+
+[0A7 EXT7]
+  (Reserved)
+
 [100 LET]
   Copy second operand to first.
 
@@ -822,6 +834,18 @@ numbers are treated as unsigned.
   the first operand is A to H or T, then it will act like LET but also
   return from the subroutine, with the return value being the address of
   the next instruction.
+
+[113 INFO]
+  Request information. The second operand is the type of information, which
+  is one of the numbers below. The result is written to the first operand.
+  -1 = Current screen number
+  -2 = Distance between soft edges (east/west)
+  -3 = Distance between hard edges (east/west)
+  -4 = Distance between soft edges (north/south)
+  -5 = Distance between hard edges (north/south)
+  -6 = Maximum board number
+  -7 = Maximum stat number for this board
+  -8 = Length of text buffer
 
 [120 GIVE]
   The first operand tells which status variable to access, where A-H are

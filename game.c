@@ -2527,6 +2527,21 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   }
 }
 
+static Sint32 request_info(Sint32 m) {
+  if(m>=0) return 0; // not implemented
+  switch(-m) {
+    case 1: return cur_screen_id;
+    case 2: return cur_screen.soft_edge[DIR_E]+1-cur_screen.soft_edge[DIR_W];
+    case 3: return cur_screen.hard_edge[DIR_E]+1-cur_screen.hard_edge[DIR_W];
+    case 4: return cur_screen.soft_edge[DIR_N]+1-cur_screen.soft_edge[DIR_S];
+    case 5: return cur_screen.hard_edge[DIR_N]+1-cur_screen.hard_edge[DIR_S];
+    case 6: return maxboard;
+    case 7: return maxstat;
+    case 8: return ntextbuf;
+    default: return 0;
+  }
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   StatXY*rs;
   Uint16 op;
@@ -2740,6 +2755,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_ICG: condflag=(++regs[fo]>so?1:0); break;
       case OP_INC: ++so; goto store;
       case OP_INCL: ++so; goto lstore;
+      case OP_INFO: so=request_info(so); goto store;
       case OP_JEV: if(!(regs[fo]&1)) goto jump; break;
       case OP_JF: if(!condflag) goto jump; break;
       case OP_JNEG: if(regs[fo]<0) goto jump; break;
