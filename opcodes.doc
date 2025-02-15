@@ -273,8 +273,8 @@ numbers are treated as unsigned.
   Similar to MOVE, but applies to the overlay. It can move to any cell
   if the SOLID bit is clear in the over kind field of that cell, which
   overwrites the previous data and sets all fields in the over layer at
-  the place it came from to zero. The second operand is the direction
-  code (only the low 2-bits are used).
+  the place it came from to zero. The second operand works like that of
+  MOVE, but only the low five bits are meaningful.
 
 [03C PUSH]
   Similar to MOVE, but the first operand is not written to, and it can

@@ -2794,7 +2794,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_MUL: regs[fo]*=so; break;
       case OP_NEG: so=-so; goto store;
       case OP_NOT: so=~so; goto store;
-      case OP_OMOV: so=general_move(0,regs[fo],x,y,0x8802+(so&7)*0x1100,0xFFFF,0,0); goto setxy;
+      case OP_OMOV: so=general_move(0,regs[fo],x,y,(so&0xF8)+0x8800+(so&7)*0x1100,0xFFFF,0,0); goto setxy;
       case OP_ONEW:
         so=convxy(so,x,y);
         if(so==-1 || !b_over[so].stat || b_over[so].stat>maxstat) break;
