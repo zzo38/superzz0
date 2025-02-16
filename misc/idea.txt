@@ -456,6 +456,16 @@ can stand on top of it, and while doing so, whatever is beneath the sensor
 will be saved, so that when the player moves away, the sensor and whatever
 is underneath it will be restored.
 
+If only stats can move onto sensors (which themself are not required to be
+stats), and the StatXY structure is made longer (as described below in the
+section about script subroutines), four bytes of this structure may be used
+to remember whether or not it is standing on a sensor.
+
+I think that the general_move function could handle keeping the sensor with
+whatever is standing on it if it is pushing it (the first argument of that
+function; not the same as the "allow pushing" flag), or to move it off of
+the sensor if it is not being pushed.
+
 
 === Zones ===
 
@@ -480,9 +490,9 @@ to add them into screen layouts.
 For use in scripts with the #ESCAPE ON command. The things that {} might be
 used to enter into the text might include:
 
-* Numbers
+* Numbers (plain and formatted)
 
-* Alignment
+* Alignment (with optional leaders)
 
 * Single characters
 
@@ -490,8 +500,66 @@ used to enter into the text might include:
 
 * Conditional text
 
+* Board names
 
-=== Regression testing ===
+
+=== Script libraries ===
+
+It might be useful to have script libraries, although I am not quite sure
+of this. A #BIND command can be added to bind a script library. (Such a
+command might have a different name; it is different from ZZT's #BIND.)
+
+The script library lumps might be .LIB and #BIND will replace the current
+script with the contents of that lump (although it might retain the name
+if it has one, and/or other parts). The lump might also contain commands
+with \ at first for preprocessing, in order that parameters can be passed.
+
+However, such a specification would mean that the bound script cannot
+receive any messages until it starts to execute, since it will not be
+bound until it is executed.
+
+
+=== Script subroutines ===
+
+Allowing scripts to have subroutine calls may require making the StatXY
+structure longer (and I did not want to make it too long), although making
+the StatXY structure longer may also be helpful with other stuff, such as
+for handling sensors. (It could be extended from 8 to 16 bytes.)
+
+If a label definition ends with an asterisk then receiving that message
+(including internally) will cause a subroutine call, and then #RETURN can
+be used to return from the subroutine. (It can otherwise be treated like
+an ordinary label, so #ZAP and #RESTORE will work.)
+
+Another possible enhancement for subroutines is that after the asterisk
+can have other flags such as remembering the interrupt to be called later
+if the script is locked; this might also have the flag to specify whether
+or not multiple instances of an interrupt can be remembered at once.
+
+The Stat structure can store the offset of the call stack in the script,
+and the first time it does so (or if the call stack is full) it can
+automatically add space at the end of the script to store it. It might
+start with '' (treated as a comment) and then the encoded call stack
+entries. Note that different instances of a stat can have their own
+call stack, so they might be interleaved; if each frame references the
+previous frame, and it knows which spaces are free, then it can decide
+where to allocate new frames. (It might be worth for #DIE to clean up
+the stack frames in order to avoid memory leaks.)
+
+(If it does resize the script text, then it will be necessary to add
+handling for global scripts to avoid use-after-free.)
+
+
+=== Script states movable between boards ===
+
+Currently, there is only one global script whose states can be movable
+between boards, and only stat 1, and only if stat 1 does not already
+have a script in that board.
+
+However, maybe it might sometimes be wanted to do more than that.
+
+
+=== Regression testing and demo recording ===
 
 Some way to do regression testing, sort of like Free Hero Mesh. Note that
 Free Hero Mesh is meant to be fully deterministic, while Super ZZ Zero
@@ -504,6 +572,12 @@ store the random numbers and other details needed to repeat (since future
 versions might change the working of the random number generator, and the
 existing random numbers should be saved for use with demo recording and
 for testing). If demo recordings can include assertions, that will help.
+
+
+=== RPG battle mode ===
+
+This feature has been mentioned in the document of ideas of features to
+implement in future for ZZ Zero. (This is probably not a high priority.)
 
 
 === Board editor features ===
@@ -549,9 +623,9 @@ stdin and then the text is replaced by the stdout from that program.
 
 === Undesirable features ===
 
-There are some features which will probably be permanently out of scope,
-and that I do not want to add (even if someone provides a patch). Some of
-these features include:
+There are some features which will probably be permanently out of scope
+(or that are bad in general), and that I am unlikely to want to add (even
+if someone provides a patch). Some of these features include:
 
 * Password protection. (MegaZeux used to have this feature, and OHRRPGCE
 still does (although I think some maintainers want to remove it).)
@@ -564,7 +638,7 @@ access is always under the control of the user.)
 
 * In app purchases.
 
-* Unicode support.
+* Unicode.
 
 * Network access. (Communication with catalog services, version control
 services, etc, would use separate programs, and are not a part of the
@@ -594,4 +668,6 @@ a new save file, it does not interact with the old save file at all.)
 * 3D graphics.
 
 * True colour graphics.
+
+* Multiplayer mode.
 
