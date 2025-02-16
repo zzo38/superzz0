@@ -847,6 +847,12 @@ numbers are treated as unsigned.
   -7 = Maximum stat number for this board
   -8 = Length of text buffer
 
+[114 LAST]
+  Sets the first operand to the last stat XY record (in the format of SIXY)
+  with the stat number given by the second operand, and set the condition
+  flag to true. If there isn't any, then the first operand is unchanged and
+  the condition flag is false.
+
 [120 GIVE]
   The first operand tells which status variable to access, where A-H are
   the first eight and S-Z are the last eight. Adds the second operand to
@@ -1052,6 +1058,11 @@ numbers are treated as unsigned.
 
 [15B SIO]
   Same as SIU but the over layer instead of the under layer.
+
+[15C SIP]
+  If the second operand is $10000 or more, then subtracts $10000 and writes
+  the result to the first operand, and the condition flag is true.
+  Otherwise the condition flag will be false.
 
 [15D UNEW]
   Create a new XY record for the stat at the coordinates specified by the

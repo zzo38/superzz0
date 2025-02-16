@@ -2767,6 +2767,15 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_KILM: if((t=convxy(so,x,y))!=-1) break_tile(t,2,0,0,fo&4); goto died;
       case OP_KILO: if((t=convxy(so,x,y))!=-1) break_tile(t,3,0,0,fo&4); goto died;
       case OP_KILU: if((t=convxy(so,x,y))!=-1) break_tile(t,1,0,0,fo&4); goto died;
+      case OP_LAST:
+        so&=0xFFFF;
+        if(!so || so>maxstat || !stats[so-1].count) {
+          condflag=0;
+        } else {
+          so+=(stats[so-1].count-1)<<16;
+          condflag=1;
+        }
+        goto store;
       case OP_LAY: if(rs=get_statxy(so)) { condflag=1; so=rs->layer; goto store; } else condflag=0; break;
       case OP_LESS: condflag=(regs[fo]<so?1:0); break;
       case OP_LET: goto store;
@@ -2985,6 +2994,14 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         }
         break;
       case OP_SIO: so=statxy_index_at(convxy(so,x,y),3,b_over); condflag=(so?1:0); goto store;
+      case OP_SIP:
+        if(so>=0x10000) {
+          condflag=1;
+          so-=0x10000;
+        } else {
+          condflag=0;
+        }
+        goto store;
       case OP_SIU: so=statxy_index_at(convxy(so,x,y),1,b_under); condflag=(so?1:0); goto store;
       case OP_SIXY: if((rs=get_statxy(so)) && (so=convxy(0,rs->x,rs->y)+1)) condflag=1; else condflag=so=0; goto store;
       case OP_SMOV: general_move(0,regs[fo],x,y,(so&0xF8)+0x8804+(so&7)*0x1100,(so&0xFF00)+1,0,0); break;
