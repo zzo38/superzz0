@@ -570,7 +570,7 @@ static inline void calc_light(Uint8 sh,Sint32 r) {
 }
 
 static void do_text_op(Uint8 op,Sint32 n) {
-  int i;
+  int i,j,k;
   char buf[81];
   const char*s=buf;
   if(op==4) ntextbuf=0,op=6;
@@ -593,6 +593,26 @@ static void do_text_op(Uint8 op,Sint32 n) {
     case 3: // Decimal
       snprintf(buf,80,"%ld",(long)n);
       break;
+    case 5: // Formatted
+      for(i=0,j=memory[MEM_ARG_J];j<0x10000;j++) {
+        for(k=(memory[j]>>4)&15;i<80;) {
+          if(op=digit_of(n,((memory[j]>>4)&0xF0)+k)) {
+            buf[i++]=op;
+          } else {
+            op=(memory[j]>>12)&7;
+            if(op==1) buf[i++]=0x20;
+            if(op==2) break;
+            if(op==3) goto stop;
+            if(op==4) buf[i++]=memory[MEM_ARG_K]?:0x20;
+            if(op==5) memory[MEM_ARG_K]++;
+            if(op>5) condflag=op&1;
+          }
+          if(k==(memory[j]&15)) break;
+          if(((memory[j]>>4)&15)<(memory[j]&15)) k++; else k--;
+        }
+        if(memory[j]&0x8000) break;
+      }
+      break;
     case 6: // Global
       if(n>0 && n<ngtext) s=(char*)gtext[n];
       break;
@@ -600,6 +620,7 @@ static void do_text_op(Uint8 op,Sint32 n) {
       snprintf(buf,80,"%08lX",(unsigned long)n);
       break;
   }
+  stop:
   n=snprintf(textbuf+ntextbuf,81-ntextbuf,"%s",s);
   if(n+ntextbuf<80) ntextbuf+=n; else ntextbuf=80;
 }

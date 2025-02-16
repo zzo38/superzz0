@@ -297,13 +297,31 @@ numbers are treated as unsigned.
 
 [040 TEXT]
   Affects the text buffer, depending on the first operand:
-  A = Append a packed string from the specified address.
-  B = Append the board title of the board with the specified number.
-  C = Append a single character (if zero, then no effect).
-  D = Appends a number in decimal notation.
-  E = Replace the text buffer with a global text string (0=empty).
-  G = Append a global text string.
-  H = Appends a number in eight character uppercase hex.
+   A = Append a packed string from the specified address.
+   B = Append the board title of the board with the specified number.
+   C = Append a single character (if zero, then no effect).
+   D = Appends a number in decimal notation.
+   E = Replace the text buffer with a global text string (0=empty).
+   F = Append a formatted number (see below for details).
+   G = Append a global text string.
+   H = Appends a number in eight character uppercase hex.
+  For a formatted number, the second operand is the number to be formatted
+  and the J argument contains the address of the sequence of the following
+  formatting commands:
+   bit3-bit0 = Last digit position
+   bit7-bit4 = First digit position
+   bit11-bit8 = Select numeric format
+   bit14-bit12 = How to deal with null characters
+   bit15 = Set if this is the last one
+  How to deal with null characters:
+   0 = Ignored
+   1 = Treated as spaces
+   2 = Stop this formatting command
+   3 = Stop this and all further formatting commands
+   4 = Use character in K argument
+   5 = Increment K argument
+   6 = Clear condition flag
+   7 = Set condition flag
 
 [041 MESS]
   Has the same effect as the TEXT instruction, and then replaces the
