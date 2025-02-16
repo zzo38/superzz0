@@ -17,28 +17,24 @@
 	SMOV A,1
 	JT A,1F
 	; Game over
-	POKE F,$E0
-	POKE F,$E1
+	WOKE F,$E0
 	SFX A,"@8Z.<EC#C<EC#C"
 	LET S,0
 	; Movement OK; check if standing on food
-1H	LET X,%XP,,0
-	LET Y,%YP,,0
-	GTUK C,0
+1H	SIXY H,1
+	GTUK C,H
 	JZ C,1F
 	; Found food
 	SFX A,"@8Z.K4K5K6K8K10"
 	GIVE S,1
-	PTUK F,0
+	PTUK F,H
 	; Add tail segment
-	MTIL D,0
-	BACK B,B
+	MTIL D,H
 	ADD D,$01000001
-	PTM D,0
+	PTM D,G
 	; Modify head colour
-	FORW B,B
-	GTUC D,0
-	PTMC D,0
+	GTUC D,H
+	PTMC D,H
 	; Place another food
 2H	LET X,%R,,78
 	LET Y,%R,,23
