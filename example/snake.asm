@@ -17,9 +17,8 @@
 	SMOV A,1
 	JT A,1F
 	; Game over
-	LET A,0
-	POKE A,$E0
-	POKE A,$E1
+	POKE F,$E0
+	POKE F,$E1
 	SFX A,"@8Z.<EC#C<EC#C"
 	LET S,0
 	; Movement OK; check if standing on food
@@ -45,8 +44,7 @@
 	LET Y,%R,,23
 	GTMK D,0
 	JNZ D,2B
-	LET D,_FOOD
-	PTMK D,0
+	PTMK C,0
 	INC D,%R,,15
 	PTMC D,0
 	LET S,0
