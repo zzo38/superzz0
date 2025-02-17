@@ -498,7 +498,7 @@ static void do_pass(void) {
         v=parse_numeric(0);
         if(v&~255) errx(1,"Operand out of range on line %d",linenum);
         put_data(op|(3<<12)|(i<<9));
-        put_data(v);
+        put_data(v+0x0200);
       } else {
         v=parse_numeric(0);
         if(has_unknown || (v&~1)) {
