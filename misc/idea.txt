@@ -63,11 +63,14 @@ Types of identifiers:
 
 * 4 = ISO 2022 (the ESC characters are omitted since they are implied).
 
-* 5 = (reserved)
+* 5 = Relative object identifier.
 
-* 6 = (reserved)
+* 6 = XLFD (this is the full font name, including character set).
 
 * 7 = (reserved)
+
+("None" might be unnecessary, since the length can be zero if there is no
+character set identifier, instead of needing its own type of identifiers.)
 
 (The .CCM lump probably will not be used by Super ZZ Zero at all, and it
 might not even include an editor for this lump, but it would be defined
@@ -90,7 +93,13 @@ bytes are the values within the manual run.
 
 === Custom palettes ===
 
-This could be done like MegaZeux, by .PAL lumps.
+This could be done like MegaZeux, by .PAL lumps. (With enhanced graphics,
+this could also be used with more than sixteen colours; there could be
+sizes of 16, 32, 64, or 128 colours.) (It might also be suitable to have
+VGA palettes (three bytes per entry, like MegaZeux) and EGA palettes (one
+byte per entry), so that EGA can be used for smaller files when you do not
+want the VGA. It is not necessary to mark this (or the number of colours)
+somewhere explicitly; it can be determined from the lump size.)
 
 The ability to enable/disable flashy text should also be added (this might
 be one of the text mode options in addition to SMZX mode; see the below
@@ -283,7 +292,8 @@ the $00C0 to $00FF range. Each entry may then consist of two cells:
 The item definition consists of the first cell specifying attributes and
 the rest being packed text specifying the name of the item; there may then
 be other fields, but these are not used by Super ZZ Zero itself (the code
-in the world might use them, though). The attributes are as follows:
+in the world might use them, though; ICNT can also read these fields). The
+attributes are as follows:
 
 * bit7-bit0 = Maximum heap size. Zero means it is a "key item" which does
 not display the quantity, but is limited to one.
@@ -547,7 +557,33 @@ where to allocate new frames. (It might be worth for #DIE to clean up
 the stack frames in order to avoid memory leaks.)
 
 (If it does resize the script text, then it will be necessary to add
-handling for global scripts to avoid use-after-free.)
+handling for global scripts to avoid use-after-free. Other thing to be
+considered would be that when reading back the frame offset for a stat
+from a board lump, it would have to check that it is not out of range.)
+
+Script commands for dealing with it might be:
+  #RETURN (return from a subroutine)
+  #RETURN label (return from a subroutine to a label)
+  #SWITCH (switch with a coroutine)
+
+
+=== Extended StatXY ===
+
+This is relevant for script subroutines and for sensors. My idea is to
+have it as follows (numbers in parentheses are lengths in bytes):
+  X (2)
+  Y (2)
+  Instruction pointer (2)
+  Delay (1)
+  Layer/lock (1)
+  [New fields below]
+  Sensor (4)
+  Frame pointer (2)
+  Extra value (2)
+
+The layer/lock field currently only uses four bits (bit0, bit1, bit6,
+and bit7). Three of the unused bits can be used for FLOW direction (one
+bit is clear if idle or set if walking, other two for the direction).
 
 
 === Script states movable between boards ===
@@ -619,6 +655,9 @@ stdin and then the text is replaced by the stdout from that program.
 * Undo/redo
 
 * Find and replace
+
+* Auto-complete: If it is implemented, then it should also be possible to
+disable this feature, and might be disabled by default.
 
 
 === Undesirable features ===
