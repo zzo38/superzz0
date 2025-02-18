@@ -1,0 +1,47 @@
+# Release files for Super ZZ Zero
+# (Change the lines with "C" to the correct paths on your computer)
+
+# Binaries
+C /home/user/bin
+P superzz0-release/bin/
+./superzz0 superzz0
+./sz0asm sz0asm
+./har har
+C /home/user/superzz0
+# Documentations
+P superzz0-release/doc/
+./asm.doc asm.doc
+./config.doc config.doc
+./editops.doc editops.doc
+./event.doc event.doc
+./opcodes.doc opcodes.doc
+./printer.doc printer.doc
+./script.doc script.doc
+# Help files
+C /home/user/superzz0/help
+P superzz0-release/help/
+./anima.hlp anima.hlp
+./appmap.hlp appmap.hlp
+./blist.hlp blist.hlp
+./edit.hlp edit.hlp
+./editbrd.hlp editbrd.hlp
+./edithelp.hlp edithelp.hlp
+./editscr.hlp editscr.hlp
+./edittext.hlp edittext.hlp
+./editwin.hlp editwin.hlp
+./element.hlp element.hlp
+./gradient.hlp gradient.hlp
+./index.hlp index.hlp
+./numform.hlp numform.hlp
+./screen.hlp screen.hlp
+./slist.hlp slist.hlp
+./stvar.hlp stvar.hlp
+C /home/user/superzz0
+# Man pages
+P superzz0-release/man6/
+./man6/superzz0.6 superzz0.6
+# Templates
+P superzz0-release/template/
+./template/default.sz0 default.sz0
+./template/default.asm default.asm
+
