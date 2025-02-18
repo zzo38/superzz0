@@ -297,6 +297,14 @@ int ask_save_file(char issave) {
   return 1;
 }
 
+static void discard_unused_lumps(void) {
+  // Some lumps are only used in save games, so discard them from memory after saving/restoring.
+  revert_lump("SAVE");
+  revert_lump("CURRENT.BRD");
+  revert_lump("MEMORY");
+  revert_lump("GLOBAL");
+}
+
 void save_state(void) {
   FILE*fp;
   Uint32 u,v;
@@ -345,8 +353,10 @@ void save_state(void) {
   if(!fp) goto error;
   save_game(fp);
   fclose(fp);
+  discard_unused_lumps();
   return;
   error: v_status[1]='!'; if(errno) alert_text(strerror(errno)); else alert_text("Error saving game");
+  discard_unused_lumps();
 }
 
 void load_state(void) {
@@ -385,6 +395,7 @@ void load_state(void) {
       return;
     }
   }
+  rewind(fp); // ensure that the !SZ0 lump is not discarded
   restore_game(fp);
   //  SAVE
   if(!(fp=open_lump("SAVE","r"))) errx(1,"Invalid save game file (missing SAVE lump)");
@@ -434,4 +445,6 @@ void load_state(void) {
     }
     fclose(fp);
   }
+  // Finished
+  discard_unused_lumps();
 }
