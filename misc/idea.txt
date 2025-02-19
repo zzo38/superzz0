@@ -660,6 +660,29 @@ stdin and then the text is replaced by the stdout from that program.
 disable this feature, and might be disabled by default.
 
 
+=== Versions ===
+
+Currently, it does not write the version number of Super ZZ Zero into the
+world file (in the GENERAL.DER lump) but will read it if it is there. The
+intention is for the mandatory set to include the major.minor version and
+the optional set to include the major.minor.patch version.
+
+The error message should probably be improved. Currently it only says "This
+file {requires|should use} a newer version of Super ZZ Zero", although the
+mandatory and optional sets can be potentially used for features other than
+versions of Super ZZ Zero. A more elaborate error/warning screen which will
+explain what is happening, may be helpful.
+
+There is also the consideration of working with non-released versions. One
+idea is that non-released versions would add something into the optional
+set in GENERAL.DER to mention this, and then a warning message will be
+displayed when running with a released version (non-released versions will
+not display the warning message for this case).
+
+Additionally, a proper change log file should be made for each released
+version, to indicate what new features, bug fixes, etc are done.
+
+
 === Undesirable features ===
 
 There are some features which will probably be permanently out of scope
