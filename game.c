@@ -1982,7 +1982,7 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
   bip=*ip;
   for(n=0;n<127;n++) {
     c=s->text[*ip];
-    if(c<=32) break;
+    if(c<=32 || c==0x7D) break;
     if(c>='a' && c<='z') c+='A'-'a';
     buf[n]=c;
     ++*ip;
@@ -2192,6 +2192,41 @@ static inline void dieitem(Uint16 m,Uint16 n) {
     }
   } else {
     break_tile(0,0,m,n,0);
+  }
+}
+
+static int append_escaped(char*buf,int len,Stat*s,StatXY*xy,Uint16 ip) {
+  Sint32 u,v;
+  switch(s->text[ip++]) {
+    case 'B': case 'b': // board name
+      if(s->text[ip]==0x7D) {
+        v=cur_board_id;
+      } else if(s->text[ip]=='N' || s->text[ip]=='n') {
+        v=board_info.exits[DIR_N];
+      } else if(s->text[ip]=='S' || s->text[ip]=='s') {
+        v=board_info.exits[DIR_S];
+      } else if(s->text[ip]=='E' || s->text[ip]=='e') {
+        v=board_info.exits[DIR_E];
+      } else if(s->text[ip]=='W' || s->text[ip]=='w') {
+        v=board_info.exits[DIR_W];
+      } else {
+        v=parse_number(s,xy,&ip);
+      }
+      return (boardnames && v>0 && v<=maxboard && boardnames[v])?snprintf(buf,len+1,"%s",(char*)boardnames[v]):0;
+    case 'C': case 'c': // character
+      v=parse_number(s,xy,&ip);
+      return (*buf=v&0xFF)?1:0;
+    case 'N': case 'n': // number
+      v=parse_number(s,xy,&ip);
+      if(s->text[ip]!=',') return snprintf(buf,len+1,"%lld",(long long)v);
+      ip++;
+      u=parse_number(s,xy,&ip);
+      return snprintf(buf,len+1,"%*lld",(int)u,(long long)v);
+    case 0x7D: // end of condition
+      return 0;
+    default: bad:
+      script_error(s+1-stats,xy,"Improper {} in text");
+      return 0;
   }
 }
 
@@ -2526,7 +2561,30 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
           if(c=='\n' || !c) break;
           ip++;
           if(c==0x7B) {
-            //TODO
+            if(s->text[ip]=='T' || s->text[ip]=='t') {
+              ip++;
+              w=parse_number(s,xy,&ip);
+              if(s->text[ip]==',') {
+                ip++;
+                c=parse_number(s,xy,&ip)?:32;
+              } else {
+                c=' ';
+              }
+              while(v<w && v<80) buf[v++]=c;
+            } else if(s->text[ip]=='?') {
+              ip++;
+              if(!parse_condition(s,xy,&ip)) {
+                while(s->text[ip] && s->text[ip]!='\n') {
+                  if(s->text[ip]==0x7B && (s->text[ip+1]==0x7D || s->text[ip+1]=='?')) break;
+                  ip++;
+                }
+                continue;
+              }
+            } else {
+              v+=append_escaped(buf+v,80-v,s,xy,ip);
+            }
+            while(s->text[ip] && s->text[ip]!=0x7D && s->text[ip]!='\n') ip++;
+            if(s->text[ip]==0x7D) ip++;
           } else {
             v++;
           }

@@ -380,6 +380,47 @@ SEEKNS (toward the player; north or south if not aligned)
 SEEKEW (toward the player; east or west if not aligned)
 
 
+=== Escaped text ===
+
+If #ESCAPE ON is used, then you can use {} within the text to use the
+following special codes below. In the below, lowercase letters mean
+that they must be replaced by a parameter.
+
+{}
+  End of condition.
+
+{?c}
+  If condition c is false then it skips to the next {?} or {} or to
+  the end of the line; if true then it continues.
+
+{B}
+  Show the name of the current board. Does not work on board zero.
+
+{Bn}
+  Show the name of a numbered board (other than board zero). You may
+  also replace n with one of the letters N,S,E,W to display the name
+  of the board in that direction.
+
+{Cn}
+  Make a single character with code number n.
+
+{Nn}
+  Show the number n (this is usually an expression, rather than a
+  plain number, since a plain number is not very useful here).
+
+{Nn,m}
+  Like {Nn} but there is the minimum with is another number m; it
+  will be right aligned and padded with spaces.
+
+{Tn}
+  Given a number n being the zero-based column to advance to; it is
+  filled by spaces.
+
+{Tn,m}
+  Like {Tn} but m is another number of the character code to use for
+  filling, instead of being filled by spaces.
+
+
 === Sound effects ===
 
 A B C D E F G
