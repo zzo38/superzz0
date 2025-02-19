@@ -206,6 +206,9 @@ are not allowed in this case.
   starts with ! then it converts !label to &label instead, causing those
   choices to not be displayed next time.
 
+#ZAPALL label
+  Like #ZAP but zaps all matching labels instead of only one.
+
 
 === Conditions/flags ===
 

@@ -2486,6 +2486,9 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             if(!strcmp(buf,"ZAP")) {
               while(s->text[ip]==' ') ip++;
               if((u=find_unzapped_label(s,s->text+ip))!=-1) s->text[u]=(s->text[ip]=='!'?'&':'\'');
+            } else if(!strcmp(buf,"ZAPALL")) {
+              while(s->text[ip]==' ') ip++;
+              while((u=find_unzapped_label(s,s->text+ip))!=-1) s->text[u]=(s->text[ip]=='!'?'&':'\'');
             } else goto badcommand; break;
           default: badcommand:
             script_error(m,xy,"Bad command");
