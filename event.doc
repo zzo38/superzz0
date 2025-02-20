@@ -1,7 +1,7 @@
 
 === Zero page ===
 
-Memory addresses $00C0 to $00FF are the system area. The meaning of the
+Memory addresses $0080 to $00FF are the system area. The meaning of the
 addresses with a currently defined meaning are listed here. The initial
 values can be set using the assembler, and they can also be changed at
 run time.
@@ -77,7 +77,7 @@ limit the amount of scrolling per frame.
 
 $EF = Y scroll rate.
 
-Anything in the range $00C0 to $00FF which is not listed here should be
+Anything in the range $0080 to $00FF which is not listed here should be
 left at zero for compatibility with future versions of Super ZZ Zero.
 
 
