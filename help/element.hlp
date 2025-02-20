@@ -39,10 +39,8 @@ it if it cannot be pushed out of the way.
 Floor: Allows other objects to be moved onto this one. Normally, a blank
 space should have this attribute set, although it is not actually required.
 
-Transporter: This element can act as a transporter, for other elements that
-have the Transportable attribute to be moved through. The event code for
-finding the destination must be defined in the assembly code; if it is not,
-then it will not be able to transport anything.
+Sensor: Means that this element is a sensor. (This currently has no effect,
+but later versions of Super ZZ Zero may implement it.)
 
 Transportable: Allows this element to be transported through a transporter.
 

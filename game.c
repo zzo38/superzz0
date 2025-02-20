@@ -889,7 +889,7 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   // Find stat record if necessary
   if(b[at].stat && !sn && (qq=find_statxy(b+at))) sr=qq-stats[(sn=b[at].stat)-1].xy;
   // Transporting
-  if((flag&0x40) && (e0&A_TRANSPORTABLE) && (e1&A_TRANSPORTER)) {
+  if((flag&0x40) && (e0&A_TRANSPORTABLE) && (elem_def[b[to].kind].event[EV_TRANSPORT])) {
     transport:
     condflag=(flag>>3)&1;
     if(tto=run_program(elem_def[b[to].kind].event[EV_TRANSPORT],(rx>0?DIR_E:rx<0?DIR_W:ry>0?DIR_S:DIR_N),tx,ty,tto+1)) {

@@ -174,7 +174,7 @@ text_editor_command
   If defined, an external command to execute for the text editor; the
   environment variable named "textfile" will contain the name of the
   temporary file. If this is not defined, then the internal text editor
-  willl be used instead.
+  will be used instead.
 
 text_editor_insert
   Controls the initial insert/overwrite mode in the text editor (not

@@ -195,8 +195,8 @@ static void element_list_callback(Uint16 n,int y,void*uz) {
   v_char[80*y+30]=(e->attrib&A_UNDER_BGCOLOR?0x81:0xFA);
   v_color[80*y+31]=(e->attrib&A_LIGHT?0x0E:0x08);
   v_char[80*y+31]=(e->attrib&A_LIGHT?0x9D:0xFA);
-  v_color[80*y+32]=(e->attrib&A_TRANSPORTER?0x0F:0x08);
-  v_char[80*y+32]=(e->attrib&A_TRANSPORTER?'T':0xFA);
+  v_color[80*y+32]=(e->attrib&A_SENSOR?0x0F:0x08);
+  v_char[80*y+32]=(e->attrib&A_SENSOR?'S':0xFA);
   v_color[80*y+33]=(e->attrib&A_TRANSPORTABLE?0x0F:0x08);
   v_char[80*y+33]=(e->attrib&A_TRANSPORTABLE?'t':0xFA);
   for(x=0;x<8;x++) {
@@ -225,7 +225,7 @@ static void edit_element(Uint8 en) {
     win_boolean('u',"Pushable \x1D",e->attrib,A_PUSH_EW);
     win_boolean('r',"Crushable",e->attrib,A_CRUSH);
     win_boolean('o',"Floor",e->attrib,A_FLOOR);
-    win_boolean('T',"Transporter",e->attrib,A_TRANSPORTER);
+    win_boolean('S',"Sensor",e->attrib,A_SENSOR);
     win_boolean('n',"Transportable",e->attrib,A_TRANSPORTABLE);
     win_heading("Movement classes:");
     win_boolean('0',"Class 0",e->attrib,A_MOVE_C0);

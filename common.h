@@ -116,7 +116,7 @@ typedef struct {
 #define A_UNKNOWN 0x00000800 // (reserved)
 #define A_LIGHT 0x00001000 // suppress overlay
 #define A_SPECIAL 0x00002000 // (reserved)
-#define A_TRANSPORTER 0x00004000
+#define A_SENSOR 0x00004000
 #define A_TRANSPORTABLE 0x00008000
 #define A_MOVE_C0 0x00010000 // allow movement on class 0
 #define A_MOVE_C1 0x00020000
