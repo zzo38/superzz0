@@ -516,10 +516,9 @@ used to enter into the text might include:
 === Script libraries ===
 
 It might be useful to have script libraries, although I am not quite sure
-of this. A #BIND command can be added to bind a script library. (Such a
-command might have a different name; it is different from ZZT's #BIND.)
+of this. A #CHAIN command can be added to bind a script library.
 
-The script library lumps might be .LIB and #BIND will replace the current
+The script library lumps might be .LIB and #CHAIN will replace the current
 script with the contents of that lump (although it might retain the name
 if it has one, and/or other parts). The lump might also contain commands
 with \ at first for preprocessing, in order that parameters can be passed.
@@ -595,6 +594,35 @@ have a script in that board.
 However, maybe it might sometimes be wanted to do more than that.
 
 
+=== Visibility ===
+
+An idea is to implement blocking visibility. (However, this might also be
+done by use of program codes within the world file, so it is not really
+necessary to implement within the game engine directly, although doing so
+may be helpful anyways for some reasons.) Tiles might then be set as
+blocking visibility or as not blocking visibility, so that you cannot see
+past a opaque wall, and you can see past windows even if you cannot walk
+past windows.
+
+
+=== Wrap around ===
+
+Allowing boards to wrap around, by the use of a new board flag (or possibly
+two flags, one for north/south and one for east/west).
+
+The game engine does not currently expect this and will need modifications
+to support this properly, although the file format probably doesn't need to
+be changed. Some of the things that must be changed include:
+
+* Anything involving directions
+
+* The general_move function
+
+* Scrolling and display
+
+* Line joining
+
+
 === Regression testing and demo recording ===
 
 Some way to do regression testing, sort of like Free Hero Mesh. Note that
@@ -638,6 +666,8 @@ also be possible to specify external programs for converting other formats.
 * Undo/redo
 
 * Secondary mark grid
+
+* World map
 
 
 === Text editor features ===
