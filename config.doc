@@ -5,7 +5,9 @@ made in the configuration file by # at the beginning of a line.
 
 Configuration format is the key and = and the value (if any one is omitted,
 then the default value will be used instead). The possible keys are
-explained below.
+explained below. (Default values may change in future; if you want to avoid
+this, then you should explicitly set the value. Values that have been set
+explicitly will not be overridden by future versions of Super ZZ Zero.)
 
 audio_buffer
   Audio buffer size; zero to disable audio.
