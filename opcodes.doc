@@ -442,7 +442,14 @@ numbers are treated as unsigned.
 [056 LOCK]
   The low 16-bits of the second operand are the stat number, and the high
   16-bits are the index into the XY list of that stat. Sets the layer/lock
-  flag to the first operand; however, the low 2-bits are not used.
+  flag to the first operand; however, the low 2-bits are not used. The bits
+  of the layer/lock flag are as follows:
+   bit1-bit0 = Layer
+   bit3-bit2 = Face direction
+   bit4 = Walk flag
+   bit5 = (Reserved; you should always clear this bit)
+   bit6 = User flag
+   bit7 = Lock flag (cannot receive messages)
 
 [057 PSD]
   The low 16-bits of the second operand are the stat number, and the high

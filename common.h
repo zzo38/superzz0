@@ -187,7 +187,7 @@ typedef struct {
   Uint16 x,y;
   Uint16 instptr; // if 65535 then stop
   Uint8 layer,delay;
-  // Layer: low 2-bits (1=under, 2=main, 3=overlay), bit6=user, bit7=lock
+  // Layer: low 2-bits (1=under, 2=main, 3=overlay), bit3-bit2=face, bit4=walk, bit5=(reserved), bit6=user, bit7=lock
   Tile sensor;
   Uint16 frame,extra;
 } StatXY;

@@ -112,6 +112,10 @@ are not allowed in this case.
   Allows further lines of this text message to contain {} which can be
   used to include variable data in the text.
 
+#FACE dir
+  Set the facing direction. If it is idle, then it is not changed. If the
+  object is currently walking, then the walking direction is also changed.
+
 #GIVE status_var number
   Increase the specified status variable (a letter A to H or S to Z) by the
   specified number.
@@ -198,6 +202,12 @@ are not allowed in this case.
 #UNLOCK
   Unlock the program to allow it to receive messages.
 
+#WALK dir
+  Set the walking direction. If the walking direction is not idle, then it
+  also sets the facing direction as well. (This does not necessarily allow
+  the object to move by itself like ZZT, although the EV_STAT event may be
+  used to allow it to do so.)
+
 #ZAP label
   Finds the first :label and comments it out by changing it to 'label
   instead, so that it cannot receive messages. If there is more than one,
@@ -246,6 +256,9 @@ name
   same cell (but different layer) of the player. (For this purpose, the
   "player" means any tile belonging to stat 1.)
 
+#FACING:dir
+  True if the current facing direction matches the specified direction.
+
 #FULL
   True if no more named flags can be set.
 
@@ -276,6 +289,12 @@ name
 #VISIBLE
   True if this tile is visible, due to being in range of the viewport and
   not obscured by overlays.
+
+#WALK
+  The walk bit of this stat XY record.
+
+#WALKING:dir
+  True if the current walking direction matches the specified direction.
 
 @kind
   True if anything of the specified kind in the main or under layer.
@@ -378,6 +397,8 @@ RNDNE (random north or east)
 SEEK (toward the player; random of two ways if not aligned)
 SEEKNS (toward the player; north or south if not aligned)
 SEEKEW (toward the player; east or west if not aligned)
+FACE (facing direction)
+FLOW (facing direction if walk flag is set, or idle otherwise)
 
 
 === Escaped text ===

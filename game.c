@@ -725,10 +725,12 @@ static void do_change_stat(Uint16 f,Uint8 os,Uint8 lay,Uint32 x,Uint32 y) {
       }
     }
   }
-  if(os=(lay==1?b_under:lay==2?b_main:b_over)[y*board_info.width+x].stat) {
+  if(i=(lay==1?b_under:lay==2?b_main:b_over)[y*board_info.width+x].stat) {
+    if(i!=os) r.instptr=r.frame=0;
+    os=i;
     if(os>maxstat) return;
     if(f&0x8000) r.delay=(f>>8)&0x7F;
-    r.layer=lay|(r.layer&0xC0&~f);
+    if(f&0xC0) r.layer=lay|(r.layer&0xC0&~f); else r.layer=lay|(r.layer&0xFC);
     *add_statxy(os)=r;
   }
 }
@@ -1593,6 +1595,10 @@ static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
     case 'E':
       if(n==1 || (n==4 && !memcmp(buf+1,"AST",3))) return (condflag=1),((adj+0)&3);
       goto bad;
+    case 'F':
+      if(n==4 && !memcmp(buf+1,"ACE",3)) return (condflag=1),((adj+xy->layer/4)&3);
+      if(n==4 && !memcmp(buf+1,"LOW",3)) return (condflag=1),(xy->layer&0x10?((adj+xy->layer/4)&3):-1);
+      goto bad;
     case 'I':
       if(n==1 || (n==4 && !memcmp(buf+1,"DLE",3))) return (condflag=1),-1;
       goto bad;
@@ -1637,7 +1643,7 @@ static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
       }
       goto bad;
     case 'W':
-      if(n==1 || (n==4 && !memcmp(buf+1,"AST",3))) return (condflag=1),((adj+2)&3);
+      if(n==1 || (n==4 && !memcmp(buf+1,"EST",3))) return (condflag=1),((adj+2)&3);
       goto bad;
     default: bad: script_error(s+1-stats,xy,"Invalid direction"); return -1;
   }
@@ -2061,6 +2067,18 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
       if(count_script_kind(1,&sk)) v=1;
     } else if(!strcmp(buf+1,"USER")) {
       if(xy->layer&0x40) v=1;
+    } else if(!strcmp(buf+1,"WALK")) {
+      if(xy->layer&0x10) v=1;
+    } else if(!strncmp(buf+1,"FACING:",7)) {
+      *ip=bip+8;
+      c=parse_direction(s,xy,ip);
+      if(!condflag) goto bad;
+      v=(c==((xy->layer>>2)&3)?1:0);
+    } else if(!strncmp(buf+1,"WALKING:",8)) {
+      *ip=bip+9;
+      c=parse_direction(s,xy,ip);
+      if(!condflag) goto bad;
+      if(xy->layer&0x10) v=(c==((xy->layer>>2)&3)?1:0); else v=(c==-1?1:0);
     } else {
       bad: script_error(s+1-stats,xy,"Improper condition");
     }
@@ -2120,6 +2138,8 @@ static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
       if(v) board_info.flag|=BF_PERSIST; else board_info.flag&=~BF_PERSIST;
     } else if(!strcmp(buf+1,"USER")) {
       if(v) xy->layer|=0x40; else xy->layer&=0xBF;
+    } else if(!strcmp(buf+1,"WALK")) {
+      if(v) xy->layer|=0x10; else xy->layer&=0xEF;
     } else {
       bad: script_error(s+1-stats,xy,"Improper #SET or #CLEAR");
     }
@@ -2315,7 +2335,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
                   xy2=add_statxy(i);
                   xy=s->xy+n;
                   *xy2=*xy;
-                  xy2->instptr=0;
+                  xy2->instptr=xy2->frame=xy2->extra=0;
                   (j==1?b_under:j==2?b_main:b_over)[xy->y*board_info.width+xy->x].stat=i;
                   kill_stat(m,n);
                 }
@@ -2393,6 +2413,14 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               if(c!='o' && c!='O') {script_error(m,xy,"Improper #ESCAPE"); return;}
               c=s->text[ip++];
               if(c=='n' || c=='N') esc=1; else if(c=='f' || c=='F') esc=0; else {script_error(m,xy,"Improper #ESCAPE"); return;}
+            } else goto badcommand; break;
+          case 'F':
+            if(!strcmp(buf,"FACE")) {
+              i=parse_direction(s,xy,&ip);
+              if(i!=-1 && condflag) {
+                xy->layer&=0xF3;
+                xy->layer|=i<<2;
+              }
             } else goto badcommand; break;
           case 'G':
             if(!strcmp(buf,"GIVE")) {
@@ -2518,6 +2546,18 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
           case 'U':
             if(!strcmp(buf,"UNLOCK")) {
               xy->layer&=0x7F;
+            } else goto badcommand; break;
+          case 'W':
+            if(!strcmp(buf,"WALK")) {
+              i=parse_direction(s,xy,&ip);
+              if(condflag) {
+                if(i==-1) {
+                  xy->layer&=0xEF;
+                } else {
+                  xy->layer&=0xF3;
+                  xy->layer|=(i<<2)|0x10;
+                }
+              }
             } else goto badcommand; break;
           case 'Z':
             if(!strcmp(buf,"ZAP")) {
@@ -2865,7 +2905,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_LET: goto store;
       case OP_LETL: goto lstore;
       case OP_LITE: calc_light(fo,so); break;
-      case OP_LOCK: if(rs=get_statxy(so)) rs->layer=(rs->layer&0x3F)|(regs[fo]&0xC0); break;
+      case OP_LOCK: if(rs=get_statxy(so)) rs->layer=(rs->layer&0x03)|(regs[fo]&0xFC); break;
       case OP_LOG: if(config.debug) debug_log(fo,so,w,x,y,z,pc); break;
       case OP_LOOP: if(!regs[fo]) break; --regs[fo]; goto jump;
       case OP_LSH: regs[fo]=(so&~31?0:regs[fo]<<so); break;
