@@ -393,14 +393,14 @@ static Uint32 save_board_run(FILE*fp,const Tile*pt,const Tile*end,Uint8 v,Uint8*
 
 const char*load_board(FILE*fp) {
   Uint8 guess[256];
-  Uint8 c;
+  Uint8 c,sf;
   Uint16 ef=read16(fp);
   Uint32 at,tc,n;
   Tile*pt;
   Tile*end;
   StatXY*r;
   int i,j;
-  if(ef&0x7AC0) return "Unrecognized file format";
+  if(ef&0x78C0) return "Unrecognized file format";
   free(b_under);
   b_under=b_main=b_over=0;
   for(i=0;i<maxstat;i++) {
@@ -435,10 +435,11 @@ const char*load_board(FILE*fp) {
   stats=calloc(maxstat,sizeof(Stat));
   if(!stats) err(1,"Allocation failed");
   for(i=0;i<maxstat;i++) {
-    stats[i].misc1=read16(fp);
-    stats[i].misc2=read16(fp);
-    stats[i].misc3=read16(fp);
-    if(stats[i].length=read16(fp)) {
+    sf=(ef&0x0200?read8(fp):0x0F);
+    stats[i].misc1=(sf&0x02)?read16(fp):0;
+    stats[i].misc2=(sf&0x04)?read16(fp):0;
+    stats[i].misc3=(sf&0x08)?read16(fp):0;
+    if(stats[i].length=(sf&0x01?read16(fp):0)) {
       stats[i].text=malloc(stats[i].length+1);
       if(!stats[i].text) err(1,"Allocation failed");
       fread(stats[i].text,1,stats[i].length,fp);
@@ -447,6 +448,8 @@ const char*load_board(FILE*fp) {
       stats[i].text=0;
     }
     stats[i].speed=read8(fp);
+    stats[i].frame=(sf&0x10)?read16(fp):0;
+    if(stats[i].frame && stats[i].frame>stats[i].length-4) return "Incorrect frame offset";
     if(stats[i].count=read16(fp)) {
       r=stats[i].xy=calloc(stats[i].count,sizeof(StatXY));
       if(!r) err(1,"Allocation failed");
@@ -458,8 +461,21 @@ const char*load_board(FILE*fp) {
         r[j].instptr=(((c>>4)&3)==0?0:((c>>4)&3)==1?65535:((c>>4)&3)==2?r[j?j-1:0].instptr:read16(fp));
         r[j].layer=(c&0x40?read8(fp):j?r[j-1].layer:2);
         r[j].delay=(c&0x80?read8(fp):j?r[j-1].delay:0);
+        r[j].sensor=(Tile){};
+        r[j].frame=r[j].extra=0;
         c=r[j].layer&3;
         if(c && r[j].x<board_info.width && r[j].y<board_info.height) (c==1?b_under:c==2?b_main:b_over)[r[j].y*board_info.width+r[j].x].stat=i+1;
+        if(sf&0x20) {
+          c=read8(fp);
+          if(c&0x01) r[j].sensor.kind=read8(fp);
+          if(c&0x02) r[j].sensor.color=read8(fp);
+          if(c&0x04) r[j].sensor.param=read8(fp);
+          if(c&0x08) r[j].sensor.stat=read8(fp);
+          if(c&0x10) {
+            r[j].frame=read16(fp);
+            if(r[j].frame>stats[i].length-6 || !stats[i].frame) return "Improper frame pointer";
+          }
+        }
       }
     } else {
       stats[i].xy=0;
@@ -489,14 +505,14 @@ const char*load_board(FILE*fp) {
 
 const char*save_board(FILE*fp,int m) {
   Uint8 guess[256];
-  Uint16 ef=(m?0x8400:0x0400);
+  Uint16 ef=(m?0x8600:0x0600);
   Uint16 w=board_info.width;
   Uint32 at;
   Uint32 tc=board_info.width*board_info.height;
   Tile*pt=b_under;
   Tile*end=pt+tc*3;
   int i,j;
-  Uint8 c;
+  Uint8 c,sf;
   StatXY*r;
   // Header
   if(board_info.flag&~255) ef|=0x100;
@@ -529,11 +545,28 @@ const char*save_board(FILE*fp,int m) {
     stats->length=0;
   }
   for(i=0;i<maxstat;i++) {
-    write16(fp,stats[i].misc1);
-    write16(fp,stats[i].misc2);
-    write16(fp,stats[i].misc3);
-    write16(fp,stats[i].length);
-    if(stats[i].length) fwrite(stats[i].text,1,stats[i].length,fp);
+    if(ef&0x200) {
+      sf=0;
+      if(stats[i].length) sf|=0x01;
+      if(stats[i].misc1) sf|=0x02;
+      if(stats[i].misc2) sf|=0x04;
+      if(stats[i].misc3) sf|=0x08;
+      if(stats[i].frame) sf|=0x10;
+      for(j=0;j<stats[i].count;j++) if(stats[i].xy[j].sensor.kind || stats[i].xy[j].sensor.color || stats[i].xy[j].sensor.param || stats[i].xy[j].sensor.stat || stats[i].xy[j].frame) {
+        sf|=0x20;
+        break;
+      }
+      write8(fp,sf);
+    } else {
+      sf=0x0F;
+    }
+    if(sf&0x02) write16(fp,stats[i].misc1);
+    if(sf&0x04) write16(fp,stats[i].misc2);
+    if(sf&0x08) write16(fp,stats[i].misc3);
+    if(sf&0x01) {
+      write16(fp,stats[i].length);
+      if(stats[i].length) fwrite(stats[i].text,1,stats[i].length,fp);
+    }
     write8(fp,stats[i].speed);
     write16(fp,stats[i].count);
     r=stats[i].xy;
@@ -555,6 +588,20 @@ const char*save_board(FILE*fp,int m) {
       if((c&0x30)==0x30) write16(fp,r[j].instptr);
       if(c&0x40) write8(fp,r[j].layer);
       if(c&0x80) write8(fp,r[j].delay);
+      if(sf&0x20) {
+        c=0;
+        if(r[j].sensor.kind) c|=0x01;
+        if(r[j].sensor.color) c|=0x02;
+        if(r[j].sensor.param) c|=0x04;
+        if(r[j].sensor.stat) c|=0x08;
+        if(r[j].frame) c|=0x10;
+        write8(fp,c);
+        if(c&0x01) write8(fp,r[j].sensor.kind);
+        if(c&0x02) write8(fp,r[j].sensor.color);
+        if(c&0x04) write8(fp,r[j].sensor.param);
+        if(c&0x08) write8(fp,r[j].sensor.stat);
+        if(c&0x10) write16(fp,r[j].frame);
+      }
     }
   }
   // Stat grid

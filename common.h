@@ -188,14 +188,15 @@ typedef struct {
   Uint16 instptr; // if 65535 then stop
   Uint8 layer,delay;
   // Layer: low 2-bits (1=under, 2=main, 3=overlay), bit6=user, bit7=lock
+  Tile sensor;
+  Uint16 frame,extra;
 } StatXY;
 
 typedef struct {
-  Uint16 misc1,misc2,misc3;
-  Uint8*text;
-  Uint16 length;
-  Uint16 count;
   StatXY*xy;
+  Uint8*text;
+  Uint16 length,frame,count;
+  Uint16 misc1,misc2,misc3;
   Uint8 speed;
 } Stat;
 

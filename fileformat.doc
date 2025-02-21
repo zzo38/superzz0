@@ -64,7 +64,7 @@ Summary of encoding flags:
   0040 = (reserved)
   0080 = (reserved)
   0100 = Long flag
-  0200 = (reserved)
+  0200 = New stat format
   0400 = Layer inversion
   0800 = (reserved)
   1000 = (reserved)
@@ -74,6 +74,8 @@ Summary of encoding flags:
 
 Each stat (the first stat number is stat 1) is as follows:
 
+* Flag (8-bits; only present if bit9 of encoding flags is set)
+
 * Misc1, Misc2, Misc3 (16-bits each)
 
 * Length of text (16-bits) (zero if no text is present)
@@ -82,9 +84,21 @@ Each stat (the first stat number is stat 1) is as follows:
 
 * Speed (8-bits)
 
+* Frame offset (16-bits)
+
 * Number of XY records for this stat (16-bits)
 
 * The data of the XY records
+
+The stat flag specifies which other fields are present, as follows:
+  bit0 = Text
+  bit1 = Misc1
+  bit2 = Misc2
+  bit3 = Misc3
+  bit4 = Frame offset
+  bit5 = Additional XY data
+  bit6 = (reserved)
+  bit7 = (reserved)
 
 For each XY record, the first byte is the encoding flag, and then the rest
 of the data is according to the encoding flag:
@@ -105,6 +119,18 @@ same as previous, and 3 means a specified 16-bit number.
 * Layer: Set means read a 8-bit number, clear means same as previous.
 
 * Delay: Set means read a 8-bit number, clear means same as previous.
+
+If the "additional XY data" is present, then another encoding flag follows:
+  bit0 = Sensor kind
+  bit1 = Sensor color
+  bit2 = Sensor parameter
+  bit3 = Sensor stat
+  bit4 = Frame pointer
+  bit7-bit5 = (reserved)
+
+The sensor data is 8-bits each, and the frame pointer is 16-bits. The frame
+pointer cannot be nonzero if the frame offset for the stat is zero, and it
+also cannot exceed the length of the stat's text minus six.
 
 The board grid is encoded in the order:
   Under/kind

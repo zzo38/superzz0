@@ -505,6 +505,8 @@ StatXY*add_statxy(int n) {
   r=s->xy+s->count-1;
   r->x=r->y=r->instptr=0;
   r->layer=r->delay=0;
+  r->sensor=(Tile){};
+  r->frame=r->extra=0;
   return r;
 }
 

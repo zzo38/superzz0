@@ -187,6 +187,7 @@ static Uint8 new_stat(void) {
   stats[maxstat].count=0;
   stats[maxstat].text=0;
   stats[maxstat].xy=0;
+  stats[maxstat].frame=0;
   return ++maxstat;
 }
 
