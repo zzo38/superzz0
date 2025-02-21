@@ -287,6 +287,7 @@ static Uint16 exchange_statxy(Stat*s,Uint16 m,Uint16 n) {
 static void stat_xy_edit(Stat*s,Uint16 n) {
   char r;
   StatXY*o=s->xy+n;
+  char f=(o->layer>>2)&3;
   char buf[81];
   static const char*const lay[4]={"N/A","Under","Main","Over"};
   win_form("Stat XY Edit") {
@@ -298,16 +299,23 @@ static void stat_xy_edit(Stat*s,Uint16 n) {
     }
     win_boolean('U',"User",o->layer,0x40);
     win_boolean('L',"Lock",o->layer,0x80);
-    win_numeric('D',"Delay: ",o->delay,0,255);
+    win_numeric('y',"Delay: ",o->delay,0,255);
     win_numeric('I',"Instruction: ",o->instptr,0,65535);
     win_blank();
     win_command('R',"Restart script") o->instptr=0,r=1;
     win_command('o',"Stop script") o->instptr=0xFFFF,r=1;
     win_blank();
-    win_command('s',"Move to start") o=s->xy+(n=exchange_statxy(s,0,n)),r=1;
+    win_heading("Facing:");
+    win_option('E',"East",f,0);
+    win_option('N',"North",f,1);
+    win_option('W',"West",f,2);
+    win_option('S',"South",f,3);
+    win_boolean('k',"Walking",o->layer,0x10);
+    win_blank();
+    win_command('t',"Move to start") o=s->xy+(n=exchange_statxy(s,0,n)),r=1;
     if(n) win_command('p',"Move to previous") o=s->xy+(n=exchange_statxy(s,n-1,n)),r=1;
-    if(n<s->count-1) win_command('n',"Move to next") o=s->xy+(n=exchange_statxy(s,n+1,n)),r=1;
-    win_command('e',"Move to end") o=s->xy+(n=exchange_statxy(s,s->count-1,n)),r=1;
+    if(n<s->count-1) win_command('x',"Move to next") o=s->xy+(n=exchange_statxy(s,n+1,n)),r=1;
+    win_command('d',"Move to end") o=s->xy+(n=exchange_statxy(s,s->count-1,n)),r=1;
     if(r) {
       r=0;
       win_refresh();
@@ -315,6 +323,7 @@ static void stat_xy_edit(Stat*s,Uint16 n) {
     win_blank();
     win_command_esc(0,"Done") break;
   }
+  o->layer=(o->layer&0xF3)|(f<<2);
 }
 
 static int statxy_sorter_callback(const void*aa,const void*bb) {
