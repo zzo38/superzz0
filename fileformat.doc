@@ -457,6 +457,14 @@ preference over the other ones in case multiple of them are.
 world file but are optional. It is not an error if it contains an
 unrecognized object identifier, but it may warn the user about it.
 
+OIDs which are expected in the mandatory and optional sets are:
+
+* ...0.(major).(minor).(patch) for a version number; the (patch) is
+optional and should normally only be used in the optional set. The
+version number without the (patch) should be used in the mandatory set.
+If in future it becomes necessary to emulate bugs of older versions of
+Super ZZ Zero, it will use this version number to enable such emulation.
+
 All of the further fields are optional, but none are currently defined.
 
 (This lump is not currently implemented. When it is, the optional fields
