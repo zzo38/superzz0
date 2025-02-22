@@ -6,6 +6,8 @@ addresses with a currently defined meaning are listed here. The initial
 values can be set using the assembler, and they can also be changed at
 run time.
 
+$C6 = Sensor event (see below).
+
 $C7 = Overlay stat event. This is like EV_STAT but is used for stats in
 the overlay.
 
@@ -82,6 +84,19 @@ left at zero for compatibility with future versions of Super ZZ Zero.
 
 
 === Global events ===
+
+$00C6
+  This event occurs when a stat tries to move onto a sensor (which does not
+  necessarily have the A_FLOOR attribute). Only stats can try to move onto
+  sensors, and only in the main layer, although the sensor doesn't have to
+  be a stat (but it is OK if it is). Sensors cannot move onto sensors.
+
+  W = Stat number and stat XY index trying to move onto the sensor
+  X = X coordinate of sensor
+  Y = Y coordinate of sensor
+  Z = Movement flags
+
+  Return = Nonzero to allow movement onto the sensor; zero for normal move.
 
 $00C8
   This event occurs whenever something tries to move through a transporter,

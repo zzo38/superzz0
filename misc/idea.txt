@@ -146,6 +146,13 @@ is implemented, then wide characters could be limited to only some of the
 video layers, rather than all of them, if that helps.)
 
 
+=== Animated fonts ===
+
+It may be meaningful to allow custom fonts (and possibly palettes, but not
+wide fonts) to be animated, so that characters can automatically change
+over time to make animations.
+
+
 === Joypad input ===
 
 The configuration file can specify which joypad to use, as well as a
@@ -456,27 +463,6 @@ then be used for further extended opcodes. (Perhaps, those that are going
 to be less common, or need an additional operand, might use these.)
 
 
-=== Sensors ===
-
-Some way to implement sensors like in MegaZeux. I am not sure if this might
-require additional memory cells, element attributes, and/or events.
-
-In MegaZeux, sensors are movable and pushable by most stuff, but the player
-can stand on top of it, and while doing so, whatever is beneath the sensor
-will be saved, so that when the player moves away, the sensor and whatever
-is underneath it will be restored.
-
-If only stats can move onto sensors (which themself are not required to be
-stats), and the StatXY structure is made longer (as described below in the
-section about script subroutines), four bytes of this structure may be used
-to remember whether or not it is standing on a sensor.
-
-I think that the general_move function could handle keeping the sensor with
-whatever is standing on it if it is pushing it (the first argument of that
-function; not the same as the "allow pushing" flag), or to move it off of
-the sensor if it is not being pushed.
-
-
 === Zones ===
 
 These zones are meant to be like a combination of the rotation zones in
@@ -561,8 +547,10 @@ considered would be that when reading back the frame offset for a stat
 from a board lump, it would have to check that it is not out of range.)
 
 Script commands for dealing with it might be:
+  #CALL name:label (blocking call)
   #RETURN (return from a subroutine)
   #RETURN label (return from a subroutine to a label)
+  #SPAWN name:label (non-blocking spawn)
   #SWITCH (switch with a coroutine)
 
 

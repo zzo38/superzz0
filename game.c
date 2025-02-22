@@ -529,9 +529,66 @@ static StatXY*find_statxy(const Tile*at) {
   s=stats+at->stat-1;
   for(n=0;n<s->count;n++) {
     r=s->xy+n;
-    if(r->x==x && r->y==y && (r->layer&3)==z) return r;
+    if(r->x==x && r->y==y && (r->layer&0x23)==z) return r;
   }
   return 0;
+}
+
+static void step_on_sensor_stat(Uint32 at) {
+  StatXY*q=find_statxy(b_main+at);
+  if(q) {
+    q->layer|=0x20;
+    q->sensor.kind=255;
+  }
+}
+
+static void restore_sensor_stat(Uint32 at) {
+  Stat*s;
+  StatXY*r;
+  Sint32 x=at%board_info.width;
+  Sint32 y=at/board_info.width;
+  Uint32 n=b_main[at].stat;
+  if(!n || n>maxstat) return;
+  s=stats+n-1;
+  for(n=0;n<s->count;n++) {
+    r=s->xy+n;
+    if(r->x==x && r->y==y && (r->layer&0x23)==0x22) {
+      r->layer&=0xDF;
+      return;
+    }
+  }
+}
+
+static void move_sensor_stat(Uint8 nn,Sint32 x0,Sint32 y0,Sint32 x1,Sint32 y1) {
+  Stat*s;
+  StatXY*r;
+  Uint32 n;
+  if(!nn || nn>maxstat) return;
+  s=stats+nn-1;
+  for(n=0;n<s->count;n++) {
+    r=s->xy+n;
+    if(r->x==x0 && r->y==y0 && (r->layer&0x23)==0x22) {
+      r->x=x1; r->y=y1;
+      return;
+    }
+  }
+}
+
+static void destroy_sensor_stat(Uint8 nn,Uint16 x,Uint16 y) {
+  Stat*s;
+  StatXY*r;
+  Uint32 n;
+  if(!nn || nn>maxstat) return;
+  s=stats+nn-1;
+  for(n=0;n<s->count;n++) {
+    r=s->xy+n;
+    if(r->x==x && r->y==y && (r->layer&0x23)==0x22) {
+      r->x=r->y=r->instptr=65535;
+      r->layer=128; r->delay=255;
+      r->sensor=(Tile){};
+      return;
+    }
+  }
 }
 
 static void kill_stat(int ns,int nr) {
@@ -684,7 +741,7 @@ static Uint32 statxy_index_at(Sint32 xy,Uint8 lay,const Tile*ti) {
   x=xy%board_info.width;
   y=xy/board_info.width;
   s=stats+ti->stat-1;
-  for(n=0;n<s->count;n++) if(s->xy[n].x==x && s->xy[n].y==y && (s->xy[n].layer&3)==lay) return ti->stat+(n<<16);
+  for(n=0;n<s->count;n++) if(s->xy[n].x==x && s->xy[n].y==y && (s->xy[n].layer&0x23)==lay) return ti->stat+(n<<16);
   return 0;
 }
 
@@ -718,7 +775,7 @@ static void do_change_stat(Uint16 f,Uint8 os,Uint8 lay,Uint32 x,Uint32 y) {
     s=stats+os-1;
     for(i=0;i<s->count;i++) {
       u=s->xy+i;
-      if((u->layer&3)==lay && u->x==x && u->y==y) {
+      if((u->layer&0x23)==lay && u->x==x && u->y==y) {
         r=*u;
         kill_stat(os,i);
         break;
@@ -892,6 +949,24 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   }
   // Find stat record if necessary
   if(b[at].stat && !sn && (qq=find_statxy(b+at))) sr=qq-stats[(sn=b[at].stat)-1].xy;
+  // Sensors
+  if(qq && (e1&A_SENSOR&~e0) && !qq->sensor.kind) {
+    if(run_program(memory[MEM_SENSOR_EVENT],sn|(sr<<16),tx,ty,flag)) {
+      if(!(flag&8)) {
+        qq->sensor=b[to];
+        if(qq->sensor.stat) step_on_sensor_stat(to);
+        b[to]=b[at];
+        if(b_under[at].stat && (q=find_statxy(b_under+at))) q->layer++;
+        b[at]=b_under[at];
+        b_under[at]=(Tile){};
+        qq->x=tx;
+        qq->y=ty;
+      }
+      condflag=1;
+      return (flag&4)?(sn|(sr<<16)):(to+1);
+    }
+    condflag=0;
+  }
   // Transporting
   if((flag&0x40) && (e0&A_TRANSPORTABLE) && (elem_def[b[to].kind].event[EV_TRANSPORT])) {
     transport:
@@ -997,12 +1072,17 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
       b[at].color=memory[MEM_DEFAULT_OVERLAY]>>8;
       b[at].param=memory[MEM_DEFAULT_OVERLAY];
       b[at].stat=0;
+    } else if(qq && qq->sensor.kind && !pushing) {
+      b_main[at]=qq->sensor;
+      if(qq->sensor.stat) restore_sensor_stat(at);
+      qq->sensor=(Tile){};
     } else {
       if(b_under[at].stat && (q=find_statxy(b_under+at))) q->layer++;
       b_main[at]=b_under[at];
       b_under[at]=(Tile){};
     }
     if(qq) {
+      if(qq->sensor.stat && qq->sensor.kind) move_sensor_stat(qq->sensor.stat,qq->x,qq->y,tx,ty);
       qq->x=tx; qq->y=ty;
     }
     at=to;
@@ -1030,7 +1110,14 @@ static void break_tile(Sint32 at,Uint8 lay,Uint16 sn,Uint16 sr,Uint8 f) {
   } else if(lay==2) {
     t=b_main+at;
     if(!sn && (sn=t->stat)) q=find_statxy(t);
-    if(!f) {
+    if(q->sensor.kind) {
+      if(!f) {
+        b_main[at]=q->sensor;
+        if(b_main[at].stat) restore_sensor_stat(at);
+      } else if(q->sensor.stat) {
+        destroy_sensor_stat(q->sensor.stat,q->x,q->y);
+      }
+    } else if(!f) {
       if(b_under[at].stat && (z=find_statxy(b_under+at))) z->layer++;
       *t=b_under[at];
       b_under[at]=(Tile){};
@@ -1050,6 +1137,7 @@ static void break_tile(Sint32 at,Uint8 lay,Uint16 sn,Uint16 sr,Uint8 f) {
     q->x=q->y=q->instptr=65535;
     q->layer=128;
     q->delay=255;
+    q->sensor=(Tile){};
   }
 }
 
@@ -1155,10 +1243,11 @@ static void send_message(Uint32 n,const char*label,Uint8 ignlock) {
       if(p && !match_name(s->text,p)) continue;
       f=find_label(s=stats+n,label);
       if(f!=-1) {
-        for(m=0;m<s->count;m++) if(!(s->xy[m].layer&0x80)) s->xy[m].instptr=f;
+        for(m=0;m<s->count;m++) if(!(s->xy[m].layer&0xA0)) s->xy[m].instptr=f;
       }
     }
   } else if(r=get_statxy(n)) {
+    if(r->layer&0x20) return;
     if(*label=='*') ++label; else if((r->layer&0x80) && !ignlock) return;
     f=find_label(stats+(n&0xFF)-1,label);
     if(f!=-1) r->instptr=f;
@@ -2994,9 +3083,15 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           if(x<0 || x>board_info.width || y<0 || y>board_info.height || (rs->layer&3)!=2) break;
           u=x+y*board_info.width;
           regs[fo]=pack_tile(b_main+u);
-          b_main[u]=b_under[u];
-          if(b_main[u].stat) if(rs=find_statxy(b_under+u)) rs->layer++;
-          b_under[u]=(Tile){};
+          if(!rs->sensor.kind) {
+            b_main[u]=b_under[u];
+            if(b_main[u].stat) if(rs=find_statxy(b_under+u)) rs->layer++;
+            b_under[u]=(Tile){};
+          } else {
+            b_main[u]=rs->sensor;
+            if(rs->sensor.stat) restore_sensor_stat(u);
+            rs->sensor=(Tile){};
+          }
           condflag=1;
         }
         break;
@@ -3654,6 +3749,7 @@ int run_game(void) {
   }
   for(a=0;a<maxstat;a++) {
     if(stats[a].xy) for(b=0;b<stats[a].count;b++) {
+      if(stats[a].xy[b].layer&0x20) continue;
       if((d=stats[a].xy[b].layer&3) && stats[a].xy[b].x<board_info.width && stats[a].xy[b].y<board_info.height) {
         if(stats[a].speed && !stats[a].xy[b].delay--) {
           t=(d==1?b_under:d==2?b_main:b_over)+stats[a].xy[b].y*board_info.width+stats[a].xy[b].x;

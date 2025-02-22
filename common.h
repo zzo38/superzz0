@@ -187,7 +187,7 @@ typedef struct {
   Uint16 x,y;
   Uint16 instptr; // if 65535 then stop
   Uint8 layer,delay;
-  // Layer: low 2-bits (1=under, 2=main, 3=overlay), bit3-bit2=face, bit4=walk, bit5=(reserved), bit6=user, bit7=lock
+  // Layer: bit1-bit0=layer (1=under, 2=main, 3=overlay), bit3-bit2=face, bit4=walk, bit5=disable, bit6=user, bit7=lock
   Tile sensor;
   Uint16 frame,extra;
 } StatXY;
@@ -430,6 +430,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define XOP_S_IF_TRUE 0x0DC0 // (source) if true, (value) if false (-3 to +4, A to H)
 #define XOP_S_IF_FALSE 0x0DD0 // (source) if false, (value) if true (-3 to +4, A to H)
 
+#define MEM_SENSOR_EVENT 0xC6
 #define MEM_OVERLAY_STAT_EVENT 0xC7
 #define MEM_TRANSPORT_EVENT 0xC8
 #define MEM_DEFAULT_OVERLAY 0xC9

@@ -463,8 +463,8 @@ const char*load_board(FILE*fp) {
         r[j].delay=(c&0x80?read8(fp):j?r[j-1].delay:0);
         r[j].sensor=(Tile){};
         r[j].frame=r[j].extra=0;
-        c=r[j].layer&3;
-        if(c && r[j].x<board_info.width && r[j].y<board_info.height) (c==1?b_under:c==2?b_main:b_over)[r[j].y*board_info.width+r[j].x].stat=i+1;
+        c=r[j].layer&0x23;
+        if(c && c<4 && r[j].x<board_info.width && r[j].y<board_info.height) (c==1?b_under:c==2?b_main:b_over)[r[j].y*board_info.width+r[j].x].stat=i+1;
         if(sf&0x20) {
           c=read8(fp);
           if(c&0x01) r[j].sensor.kind=read8(fp);

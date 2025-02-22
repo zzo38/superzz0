@@ -447,7 +447,7 @@ numbers are treated as unsigned.
    bit1-bit0 = Layer
    bit3-bit2 = Face direction
    bit4 = Walk flag
-   bit5 = (Reserved; you should always clear this bit)
+   bit5 = Disable flag (usually means this is a sensor someone stepped on)
    bit6 = User flag
    bit7 = Lock flag (cannot receive messages)
 

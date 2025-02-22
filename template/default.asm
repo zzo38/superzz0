@@ -843,6 +843,19 @@ CHEST	FILL $0F,0
 	RUN A,0
 	KILM C,0
 
+; **** Sensor ****
+	EV T,_SENSOR,1
+	TA $C6
+	DEC T,W
+	TLET S,0
+	LETL A,W
+	BTST A,3
+	TLET S,1
+	SIM A,0
+	FLET S,1
+	RUN A,0
+	LET S,1
+
 ; **** Checkpoint ****
 	EV T,_CHECKPOINT
 	LET A,X
@@ -1737,6 +1750,7 @@ CENMOV	LET D,Z
 	ED 'E',"Empty",_EMPTY,$0300
 	ED 'Z',"Player",_PLAYER+$0100,$031F
 	ED 'O',"Object",_OBJECT,$0800
+	ED 'X',"Sensor",_SENSOR,$0800
 	ED 2
 
 	ED1 6
@@ -1748,6 +1762,7 @@ CENMOV	LET D,Z
 	ED0 _SPIKE,$0100
 
 	ED0 _OBJECT
+	ED0 _SENSOR
 	ED 'C'
 	ED0 _SCROLL
 	ED 1,$0200
