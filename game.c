@@ -950,8 +950,19 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   // Find stat record if necessary
   if(b[at].stat && !sn && (qq=find_statxy(b+at))) sr=qq-stats[(sn=b[at].stat)-1].xy;
   // Sensors
-  if(qq && (e1&A_SENSOR&~e0) && !qq->sensor.kind) {
-    if(run_program(memory[MEM_SENSOR_EVENT],sn|(sr<<16),tx,ty,flag)) {
+  if(qq && (e1&A_SENSOR&~e0)) {
+    if(qq->sensor.kind) {
+      // Trying to move from one sensor to another sensor
+      if(!pushing && run_program(memory[MEM_SENSOR_EVENT],sn|(sr<<16),tx,ty,(flag&0xFC)|(cla&0xFF00)|0x01)) {
+        Tile tt=b[at];
+        b[at]=qq->sensor;
+        if(qq->sensor.stat) restore_sensor_stat(at);
+        qq->sensor=b[to];
+        if(qq->sensor.stat) step_on_sensor_stat(to);
+        b[to]=tt;
+        goto sensorok;
+      }
+    } else if(run_program(memory[MEM_SENSOR_EVENT],sn|(sr<<16),tx,ty,(flag&0xFC)|(cla&0xFF00))) {
       if(!(flag&8)) {
         qq->sensor=b[to];
         if(qq->sensor.stat) step_on_sensor_stat(to);
@@ -959,6 +970,7 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
         if(b_under[at].stat && (q=find_statxy(b_under+at))) q->layer++;
         b[at]=b_under[at];
         b_under[at]=(Tile){};
+        sensorok:
         qq->x=tx;
         qq->y=ty;
       }

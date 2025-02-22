@@ -94,9 +94,14 @@ $00C6
   W = Stat number and stat XY index trying to move onto the sensor
   X = X coordinate of sensor
   Y = Y coordinate of sensor
-  Z = Movement flags
+  Z = Movement flags (see below)
 
   Return = Nonzero to allow movement onto the sensor; zero for normal move.
+
+  For the movement flags, bit7-bit2 are the same as for GMOV, but the other
+  bits have other meanings. The bit15-bit8 are the movement classes, while
+  bit0 is set if it is moving from one sensor to another sensor, and bit1
+  is not currently meaningful (but may be meaningful in future).
 
 $00C8
   This event occurs whenever something tries to move through a transporter,
