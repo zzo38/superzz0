@@ -642,7 +642,7 @@ SPFIRE	FORW H,Z
 	CASE A,POTION
 1H	DATA "Dud","Healing","Poison","Energy"
 	DATA "Reveal Walls","Extra Healing","Time","Avalanche"
-	DATA "Destroy Creatures"
+	DATA "Destroy Creatures","Explode Bombs"
 POTION	FILL $10,1
 
 	TA POTION+1 ; Healing
@@ -688,6 +688,13 @@ POTION	FILL $10,1
 	CHA A,1F
 	LET S,1
 1H	DATA $0023,$FB04,$FFFF,$FFFF,$FFFF,_DESTROYED,0,0,0,0
+
+	TA POTION+9 ; Explode Bombs
+	CHA A,2F
+	CHA A,1F
+	LET S,1
+1H	DATA $8003,_BOMB,$FFFF,$FFFF,$FFFF,_LITBOMB,$FF00,$0001,$FF00
+2H	DATA $8003,_LITBOMB,$FFFF,$FFFF,$FFFF,_LITBOMB,$FF00,$0001,$FF00
 
 ; **** Destroyed tiles ****
 ; This is used when other objects are changed to this in order to destroy them.
@@ -1798,6 +1805,7 @@ CENMOV	LET D,Z
 	ED2 'O',"~Time",6
 	ED2 'O',"~Avalanche",7
 	ED2 'O',"~Destroy Creatures",8
+	ED2 'O',"Expl~ode Bombs",9
 	ED 0
 
 E_LION	ED3 _LION,$0C,_TIGER,$0B,_BEAR,$06,_SHARK,$07,_MOUSE,$0F,_LUMBERJACK,$0A,_SPIDER,$07,_BIRD,$0E,_DRAGON,$0C
