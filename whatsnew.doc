@@ -28,7 +28,10 @@ SCRIPTS
      or choice item.
   +  #FACE and #WALK can be used to set the facing and walking directions.
      There are also FACE and FLOW directions, and new conditions #FACING:
-     and #WALKING: and #WALK to test the facing/walking state.
+     and #WALKING: and #WALK to test the facing/walking state. There is
+     also F, B, L, R directions which are abbreviations of FACE, OPP FACE,
+     etc, and can be used with / and ? commands.
+  +  Directions with parameters can be delimited by spaces or underscores.
   =  Corrected spelling of "WEST".
 
 ASSEMBLY

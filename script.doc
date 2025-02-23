@@ -387,6 +387,10 @@ E or EAST
 N or NORTH
 W or WEST
 S or SOUTH
+F or FORWARD (same as FACE)
+B or BACKWARD (same as OPP FACE)
+R or RIGHT (same as CW FACE)
+L or LEFT (same as CCW FACE)
 CW dir
 CCW dir
 OPP dir

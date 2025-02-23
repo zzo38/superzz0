@@ -1661,6 +1661,10 @@ static char script_go(Uint16 m,Uint16 n,Stat*s,StatXY*xy,Uint8 dir) {
     case 'w': case 'W': dir=DIR_W; break;
     case 'n': case 'N': dir=DIR_N; break;
     case 's': case 'S': dir=DIR_S; break;
+    case 'f': case 'F': dir=(xy->layer/4+0)&3; break;
+    case 'b': case 'B': dir=(xy->layer/4+2)&3; break;
+    case 'l': case 'L': dir=(xy->layer/4+1)&3; break;
+    case 'r': case 'R': dir=(xy->layer/4+3)&3; break;
     default: script_error(m,xy,"Improper direction"); return 2;
   }
   general_move(0,(n<<16)+m,xy->x,xy->y,0x0814,1,dir,dir);
@@ -1687,6 +1691,9 @@ static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
   if(c=='_') ++*ip;
   *ip+=n;
   switch(*buf) {
+    case 'B':
+      if(n==1 || (n==8 && !memcmp(buf+1,"ACKWARD",7))) return (condflag=1),((adj+xy->layer/4+2)&3);
+      goto bad;
     case 'C':
       if(n==2 && buf[1]=='W') {
         adj+=3;
@@ -1702,9 +1709,13 @@ static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
     case 'F':
       if(n==4 && !memcmp(buf+1,"ACE",3)) return (condflag=1),((adj+xy->layer/4)&3);
       if(n==4 && !memcmp(buf+1,"LOW",3)) return (condflag=1),(xy->layer&0x10?((adj+xy->layer/4)&3):-1);
+      if(n==1 || (n==7 && !memcmp(buf+1,"ORWARD",6))) return (condflag=1),((adj+xy->layer/4)&3);
       goto bad;
     case 'I':
       if(n==1 || (n==4 && !memcmp(buf+1,"DLE",3))) return (condflag=1),-1;
+      goto bad;
+    case 'L':
+      if(n==1 || (n==4 && !memcmp(buf+1,"EFT",3))) return (condflag=1),((adj+xy->layer/4+1)&3);
       goto bad;
     case 'N':
       if(n==1 || (n==5 && !memcmp(buf+1,"ORTH",4))) return (condflag=1),((adj+1)&3);
@@ -1725,6 +1736,8 @@ static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
         return (condflag=1),((adj+2*dice(2)+1)&3);
       } else if(n==5 && !memcmp(buf+1,"NDNE",4)) {
         return (condflag=1),((adj+dice(2))&3);
+      } else if(n==1 || (n==5 && !memcmp(buf+4,"IGHT",4))) {
+        return (condflag=1),((adj+xy->layer/4+3)&3);
       }
       goto bad;
     case 'S':
