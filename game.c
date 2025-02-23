@@ -1110,10 +1110,11 @@ static void break_tile(Sint32 at,Uint8 lay,Uint16 sn,Uint16 sr,Uint8 f) {
   if(sn) {
     if(sn>maxstat || sr>=stats[sn-1].count) return;
     q=stats[sn-1].xy+sr;
+    if(q->layer&0x20) goto die;
     lay=q->layer&3;
-    if(!lay) return;
+    if(!lay) goto die;
     at=convxy(0,q->x,q->y);
-    if(at==-1) return;
+    if(at==-1) goto die;
   }
   if(lay==1) {
     t=b_under+at;
@@ -1146,6 +1147,7 @@ static void break_tile(Sint32 at,Uint8 lay,Uint16 sn,Uint16 sr,Uint8 f) {
   }
   if(q) {
     if(f && sn==t->stat) t->stat=0;
+    die:
     q->x=q->y=q->instptr=65535;
     q->layer=128;
     q->delay=255;
