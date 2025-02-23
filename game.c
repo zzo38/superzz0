@@ -2965,6 +2965,12 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_GPUS: if(so>0xFFFC) break; general_move(1,regs[fo],x,y,memory[so],memory[so+1],memory[so+2],memory[so+3]); break;
       case OP_GRTR: condflag=(regs[fo]>so?1:0); break;
       case OP_GSD: if(rs=get_statxy(so)) regs[fo]=rs->delay; break;
+      case OP_GSEN:
+        if(rs=get_statxy(so)) {
+          condflag=rs->sensor.kind?1:0;
+          regs[fo]=pack_tile(&rs->sensor);
+        }
+        break;
       case OP_GSPD: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].speed); goto store;
       case OP_GSXY: if(rs=get_statxy(so)) x=rs->x,y=rs->y,so=rs->delay|(rs->layer<<8),condflag=1; else condflag=so=0; goto store;
       case OP_GTMC: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=b_main[t].color; else condflag=0; break;
@@ -3123,6 +3129,14 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PM3: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc3=regs[fo];
       case OP_POKE: memory[so&0xFFFF]=regs[fo]; break;
       case OP_PSD: if(rs=get_statxy(so)) rs->delay=regs[fo]; break;
+      case OP_PSEN:
+        if(rs=get_statxy(so)) {
+          rs->sensor.kind=regs[fo]&0xFF;
+          rs->sensor.color=(regs[fo]>>8)&0xFF;
+          rs->sensor.param=(regs[fo]>>16)&0xFF;
+          rs->sensor.stat=(regs[fo]>>24)&0xFF;
+        }
+        break;
       case OP_PSPD: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].speed=regs[fo]; break;
       case OP_PSXY: if(rs=get_statxy(so)) rs->x=x,rs->y=y,rs->delay=so,rs->layer=so>>8,condflag=1; else condflag=0; break;
       case OP_PTM:
@@ -3325,6 +3339,13 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_XOR: regs[fo]^=so; break;
       case OP_XORN: regs[fo]^=~so; break;
       case OP_ZEX: so=(Uint16)so; goto store;
+      case OP_ZSEN:
+        if(rs=get_statxy(so)) {
+          condflag=rs->sensor.kind?1:0;
+          regs[fo]=pack_tile(&rs->sensor);
+          rs->sensor=(Tile){};
+        }
+        break;
       default: errx(1,"Unimplemented opcode $%X at $%X",op&0x1FF,pc-1);
     }
     continue;

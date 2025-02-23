@@ -766,6 +766,19 @@ numbers are treated as unsigned.
 [097 KILO]
   Like KILU but over layer instead of under layer.
 
+[098 GSEN]
+  Retrieve the sensor that the specified stat XY (by the second operand) is
+  standing on, and store it in the first operand in the format of MTIL. The
+  condition flag is true if the kind is nonzero or false if zero. If the
+  second operand is not valid then nothing happens.
+
+[099 PSEN]
+  Set the sensor of a stat XY by the second operand, to the first operand
+  (which will be in the format from MTIL or GSEN).
+
+[09A ZSEN]
+  Like GSEN but also sets the sensor to zero.
+
 [0A0 LETL]
   Like LET but saves the old value of the register; once this subroutine
   returns then the old value is restored. (Note that each use of LETL,
