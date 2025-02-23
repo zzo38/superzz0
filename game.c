@@ -1123,7 +1123,7 @@ static void break_tile(Sint32 at,Uint8 lay,Uint16 sn,Uint16 sr,Uint8 f) {
   } else if(lay==2) {
     t=b_main+at;
     if(!sn && (sn=t->stat)) q=find_statxy(t);
-    if(q->sensor.kind) {
+    if(q && q->sensor.kind) {
       if(!f) {
         b_main[at]=q->sensor;
         if(b_main[at].stat) restore_sensor_stat(at);
@@ -3509,7 +3509,7 @@ static void stat_list_callback(Uint16 n,int y,void*uz) {
 static void statxy_list_callback(Uint16 n,int y,void*uz) {
   StatXY*o=((Stat*)uz)->xy+n;
   char buf[81];
-  draw_text(1,y,buf,7,snprintf(buf,80,"%5u: X=%05d Y=%05d Layer=$%02X Inst=%05d Delay=%03d",n,o->x,o->y,o->layer,o->instptr,o->delay));
+  draw_text(1,y,buf,7,snprintf(buf,80,"%5u: X=%05d Y=%05d Layer=$%02X Inst=%05d Delay=%03d %c",n,o->x,o->y,o->layer,o->instptr,o->delay,o->sensor.kind?'S':'.'));
 }
 
 static void debug_menu(void) {

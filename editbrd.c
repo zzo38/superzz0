@@ -722,6 +722,9 @@ static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay) {
     s->xy[i].instptr=0;
     s->xy[i].layer=nlay;
     s->xy[i].delay=0;
+    s->xy[i].frame=0;
+    s->xy[i].extra=0;
+    s->xy[i].sensor=(Tile){};
     return s->xy+i;
   }
   for(i=0;i<s->count;i++) {
