@@ -953,7 +953,7 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   if(qq && (e1&A_SENSOR&~e0)) {
     if(qq->sensor.kind) {
       // Trying to move from one sensor to another sensor
-      if(!pushing && run_program(memory[MEM_SENSOR_EVENT],sn|(sr<<16),tx,ty,(flag&0xFC)|(cla&0xFF00)|0x01)) {
+      if(!pushing && run_program(memory[MEM_SENSOR_EVENT],sn|(sr<<16),tx,ty,(flag&0xF8)|(((Uint32)cla)<<16)|(b[at].kind<<8)|0x01)) {
         Tile tt=b[at];
         b[at]=qq->sensor;
         if(qq->sensor.stat) restore_sensor_stat(at);
@@ -962,7 +962,7 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
         b[to]=tt;
         goto sensorok;
       }
-    } else if(run_program(memory[MEM_SENSOR_EVENT],sn|(sr<<16),tx,ty,(flag&0xFC)|(cla&0xFF00))) {
+    } else if(run_program(memory[MEM_SENSOR_EVENT],sn|(sr<<16),tx,ty,(flag&0xF8)|(((Uint32)cla)<<16)|(b[at].kind<<8))) {
       if(!(flag&8)) {
         qq->sensor=b[to];
         if(qq->sensor.stat) step_on_sensor_stat(to);
@@ -2904,8 +2904,16 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           rs->x=x; rs->y=y; rs->layer=(rs->layer&~3)+2;
           u=x+y*board_info.width;
           if(b_under[u].stat) break;
+          if(elem_def[b_main[u].kind].attrib&A_SENSOR&~elem_def[regs[fo]&0xFF].attrib) {
+            if(run_program(memory[MEM_SENSOR_EVENT],so,rs->x,rs->y,(b_main[u].kind<<8)|0xFFFF0082)) {
+              rs->sensor=b_main[u];
+              if(rs->sensor.stat) step_on_sensor_stat(u);
+              goto skipdrop;
+            }
+          }
           b_under[u]=b_main[u];
           if(b_main[u].stat) if(rs=find_statxy(b_main+u)) rs->layer--;
+          skipdrop:
           b_main[u].stat=so;
           b_main[u].kind=regs[fo];
           b_main[u].color=regs[fo]>>8;
@@ -3269,6 +3277,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
             condflag=1;
             break;
           }
+          if(rs->sensor.stat) move_sensor_stat(rs->sensor.stat,rs->x,rs->y,t&board_info.width,t/board_info.width);
           rs->x=t%board_info.width; rs->y=t/board_info.width;
           b_under[t]=b_main[t];
           if(rs=find_statxy(b_main+t)) rs->layer--;

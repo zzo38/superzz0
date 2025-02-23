@@ -98,10 +98,11 @@ $00C6
 
   Return = Nonzero to allow movement onto the sensor; zero for normal move.
 
-  For the movement flags, bit7-bit2 are the same as for GMOV, but the other
-  bits have other meanings. The bit15-bit8 are the movement classes, while
+  For the movement flags, bit7-bit3 are the same as for GMOV, but the other
+  bits have other meanings. The bit31-bit16 are the movement classes, and
+  the bit15-bit8 are the element number of the object being moved, and the
   bit0 is set if it is moving from one sensor to another sensor, and bit1
-  is not currently meaningful (but may be meaningful in future).
+  is set if DROP is used, and bit2 is not currently meaningful.
 
 $00C8
   This event occurs whenever something tries to move through a transporter,

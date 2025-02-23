@@ -434,7 +434,8 @@ numbers are treated as unsigned.
   coordinates specified by the second operand; the condition flag is true
   if successful, or false if it cannot (coordinates are out of range, or
   there is no such stat). (The class of the target tile is ignored; the
-  FLOOR attribute is also ignored in most circumstances.)
+  FLOOR attribute is also ignored in most circumstances.) If it is standing
+  on a sensor, the sensor will be moved with it.
 
 [055 PSPD]
   Set speed of stat specified by second operand to the first operand.
@@ -716,7 +717,8 @@ numbers are treated as unsigned.
   X and Y registers are updated with the coordinates of the stat. The
   condition flag will be true if it was successful, or false if anything
   is wrong (e.g. coordinates out of range, index out of range, the tile
-  at those coordinates is not that stat, etc).
+  at those coordinates is not that stat, etc). If it is standing on a
+  sensor, the sensor will be left behind.
 
 [091 DROP]
   The operands are as in PICK. It will place the tile from the first
@@ -726,7 +728,9 @@ numbers are treated as unsigned.
   for the tile that was placed, to the coordinates it was placed at. The
   condition flag will be true if successful, or false if there is any
   reason it doesn't work (coordinates out of range, index out of range,
-  there is already another stat in the under layer, etc).
+  there is already another stat in the under layer, etc). If it lands on
+  a sensor, it will call the sensor event to determine if it should set
+  it as the sensor it is standing on.
 
 [092 GSXY]
   The second operand is the stat number and stat XY index. If it is valid,
