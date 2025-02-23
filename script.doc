@@ -400,6 +400,9 @@ SEEKEW (toward the player; east or west if not aligned)
 FACE (facing direction)
 FLOW (facing direction if walk flag is set, or idle otherwise)
 
+Any of the directions above that requires a parameter can use either
+a space or a underscore to delimit the parameter.
+
 
 === Escaped text ===
 

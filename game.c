@@ -1684,6 +1684,7 @@ static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
     else if(c>='a' && c<='z') buf[n++]=c+'A'-'a';
     else break;
   }
+  if(c=='_') ++*ip;
   *ip+=n;
   switch(*buf) {
     case 'C':
