@@ -55,6 +55,7 @@ TEMPLATE
   +  Add a "Explode Bombs" potion effect.
 
 OTHERS
+  +  The "video_gamma" setting can be used to modify the colours.
   *  The handling of version numbers in GENERAL.DER has been changed.
   *  The -T switch is now mentioned in the man page. (This was already
      implemented but was not documented before.)

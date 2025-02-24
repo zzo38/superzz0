@@ -4,6 +4,7 @@ exit
 #endif
 
 #include "common.h"
+#include <math.h>
 
 static const Uint8 font[3584]={
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -391,6 +392,19 @@ void init_display(void) {
   atexit(SDL_Quit);
   scrn=SDL_SetVideoMode(81*8,(config.show_status?26:25)*14+8,8,SDL_SWSURFACE|(config.full_screen?SDL_FULLSCREEN:0));
   if(!scrn) errx(1,"SDL error: %s",SDL_GetError());
+  if(config.video_gamma) {
+    const char*s=config.video_gamma;
+    float r,g,b;
+    int i,j;
+    r=strtod(s,(char**)&s);
+    if(*s==';') ++s,g=strtod(s,(char**)&s);
+    if(*s==';') ++s,b=strtod(s,(char**)&s);
+    for(i=0;i<16;i++) {
+      j=255.0*pow(palet[i].r/255.0,r); palet[i].r=j>255?255:j;
+      j=255.0*pow(palet[i].g/255.0,g); palet[i].g=j>255?255:j;
+      j=255.0*pow(palet[i].b/255.0,b); palet[i].b=j>255?255:j;
+    }
+  }
   SDL_SetColors(scrn,palet,0,34);
   SDL_EnableUNICODE(1);
   SDL_EnableKeyRepeat(config.key_repeat_delay,config.key_repeat_interval);

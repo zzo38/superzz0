@@ -197,3 +197,7 @@ version_warn
   warning message if the world file lump specifies optional features
   or versions that do not match the current implementation.
 
+video_gamma
+  Can be three numbers with semicolons in between; affects the gamma
+  setting of red, green, blue.
+
