@@ -816,6 +816,14 @@ numbers are treated as unsigned.
 [0A7 EXT7]
   (Reserved)
 
+[0A8 M1L]
+  Like PEEL but writes the final value of the register to the specified
+  memory address after the subroutine returns, before the old value of
+  the register is restored.
+
+[0A9 M2L]
+  Like M1L but uses 32-bit values instead of 16-bit values.
+
 [100 LET]
   Copy second operand to first.
 

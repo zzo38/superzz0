@@ -3047,6 +3047,23 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_LOG: if(config.debug) debug_log(fo,so,w,x,y,z,pc); break;
       case OP_LOOP: if(!regs[fo]) break; --regs[fo]; goto jump;
       case OP_LSH: regs[fo]=(so&~31?0:regs[fo]<<so); break;
+      case OP_M1L:
+        op=so&0xFFFF;
+        t=regs[fo];
+        regs[fo]=memory[op];
+        u=run_program(pc,w,x,y,z);
+        memory[op]=regs[fo];
+        regs[fo]=t;
+        return u;
+      case OP_M2L:
+        op=so&0xFFFF;
+        t=regs[fo];
+        regs[fo]=(memory[op]<<16)|memory[(op+1)&0xFFFF];
+        u=run_program(pc,w,x,y,z);
+        memory[op]=regs[fo]>>16;
+        memory[(op+1)&0xFFFF]=regs[fo];
+        regs[fo]=t;
+        return u;
       case OP_MAX: if(so>regs[fo]) regs[fo]=so; break;
       case OP_MESS: do_text_op(fo,so); memcpy(vtextbuf,textbuf,nvtextbuf=ntextbuf); vtextbuf[nvtextbuf]=0; if(vtexttime=(nvtextbuf?config.message_timer:0)) add_message_text(); break;
       case OP_MIN: if(so<regs[fo]) regs[fo]=so; break;

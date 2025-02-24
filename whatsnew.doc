@@ -37,6 +37,8 @@ SCRIPTS
 ASSEMBLY
   +  LOCK can now set the six high bits instead of only two high bits.
   +  New and changed instructions for dealing with sensors.
+  +  M1L and M2L, like PEEL but also saves the final value of the register
+     into memory after it is finished with it.
   =  Changing stats with CHA and CHAX now resets the instruction pointer
      if the stat number changed.
   =  DIE can now destroy stats that have invalid parameters.
