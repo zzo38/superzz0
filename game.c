@@ -536,10 +536,7 @@ static StatXY*find_statxy(const Tile*at) {
 
 static void step_on_sensor_stat(Uint32 at) {
   StatXY*q=find_statxy(b_main+at);
-  if(q) {
-    q->layer|=0x20;
-    q->sensor.kind=255;
-  }
+  if(q) q->layer|=0x20;
 }
 
 static void restore_sensor_stat(Uint32 at) {
@@ -2964,6 +2961,16 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         if(so==DIR_N) u--; else if(so==DIR_S) u++;
         if(so==DIR_W) t--; else if(so==DIR_E) t++;
         if(t>=0 && u>=0 && t<board_info.width && u<board_info.height) condflag=1,x=t,y=u; else condflag=0;
+        break;
+      case OP_FSEN:
+        regs[fo]=condflag=0;
+        if((rs=get_statxy(so)) && (rs->layer&0x23)==0x02 && (u=rs->sensor.stat) && u<=maxstat) {
+          for(t=0;t<stats[u-1].count;t++) if(stats[u-1].xy[t].x==rs->x && stats[u-1].xy[t].y==rs->y && (stats[u-1].xy[t].layer&0x23)==0x22) {
+            regs[fo]=rs->sensor.stat|(t<<16);
+            condflag=1;
+            break;
+          }
+        }
         break;
       case OP_GBF: regs[fo]=board_info.flag&~so; break;
       case OP_GBU: regs[fo]=board_info.userdata&~so; break;

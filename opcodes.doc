@@ -779,6 +779,13 @@ numbers are treated as unsigned.
 [09A ZSEN]
   Like GSEN but also sets the sensor to zero.
 
+[09B FSEN]
+  The second operand specifies a stat XY, and the first will then be set
+  to the stat XY of the sensor that it is standing on, if any; if there
+  isn't any, or if the second operand is zero or not valid, then the first
+  operand will be zero. The condition flag is true if it is found or is
+  false if it is not found.
+
 [0A0 LETL]
   Like LET but saves the old value of the register; once this subroutine
   returns then the old value is restored. (Note that each use of LETL,
