@@ -16,7 +16,10 @@ Most commands, arguments, etc are case-insensitive.
   see the below section about subroutines.
 
 'comment
-  Make a zapped label or a comment.
+  Make a zapped label or a comment. (Note that when finding a label, some
+  characters will terminate the label name, so if you want to avoid a
+  potential problem of matching when it shouldn't, you can double the
+  apostrophe when you want to write a comment.)
 
 #command
   A standard command, or a user-defined command.
@@ -64,7 +67,9 @@ unlocked by the script normally, in which case it remains unlocked).
 * Z = Zaps the label when the message is received, and restores it when
 returning from the subroutine. Only that specific instance of that label
 is restored, unlike the #RESTORE command. (It is possible to restore that
-label before returning; if so, it is unaffected.)
+label before returning; if so, it is unaffected.) If the message is sent
+to multiple instances of the same stat at once, the a label is zapped for
+each one; if there is not enough then the rest ignore the message.
 
 Subroutines do not work in all circumstances; specifically, a subroutine
 cannot be called by a ! command.

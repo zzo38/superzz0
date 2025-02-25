@@ -1266,7 +1266,7 @@ static void frame_push(Stat*s,StatXY*r,Uint8 c,Uint16 p) {
     if(!t) err(1,"Allocation failed");
     if(global_text==s->text) global_text=t,global_length=s->length+16;
     s->text=t;
-    memcpy(t+s->length,s->frame?"\n''.............":"................",17);
+    memcpy(t+s->length,s->frame?"................":"\n''.............",17);
     if(!s->frame) s->frame=s->length+3;
     s->length+=16;
   }
@@ -1335,7 +1335,7 @@ static int frame_return(Stat*s,StatXY*r,int d) {
   goto again;
 }
 
-static void send_message_to(Stat*s,StatXY*r,Sint32 f,const char*e) {
+static Uint8 send_message_to(Stat*s,StatXY*r,Sint32 f,const char*e) {
   Uint8 h=0;
   Sint32 k;
   if(e && *e++=='*') {
@@ -1363,8 +1363,10 @@ static void send_message_to(Stat*s,StatXY*r,Sint32 f,const char*e) {
         frame_push(s,r,1,k);
       }
     }
+    r->delay=0;
   }
   r->instptr=f;
+  return h&4;
 }
 
 static void send_message(Uint32 n,const char*label,Uint8 ignlock) {
@@ -1381,7 +1383,7 @@ static void send_message(Uint32 n,const char*label,Uint8 ignlock) {
       if(p && !match_name(s->text,p)) continue;
       f=find_label(s=stats+n,label);
       if(f!=-1) {
-        for(m=0;m<s->count;m++) if(!(s->xy[m].layer&0xA0)) s->xy[m].instptr=f;
+        for(m=0;m<s->count;m++) if(!(s->xy[m].layer&0xA0) && send_message_to(s,s->xy+m,f,end_of_label) && (f=find_label(s,label))==-1) break;
       }
     }
   } else if(r=get_statxy(n)) {
