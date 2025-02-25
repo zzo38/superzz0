@@ -473,7 +473,7 @@ const char*load_board(FILE*fp) {
           if(c&0x08) r[j].sensor.stat=read8(fp);
           if(c&0x10) {
             r[j].frame=read16(fp);
-            if(r[j].frame>stats[i].length-6 || !stats[i].frame) return "Improper frame pointer";
+            if(r[j].frame>stats[i].length || !stats[i].frame) return "Improper frame pointer";
           }
         }
       }

@@ -12,7 +12,8 @@ Most commands, arguments, etc are case-insensitive.
   default kind cannot start with a at sign.
 
 :label
-  Make a label.
+  Make a label. If it is followed by an asterisk, then it is a subroutine;
+  see the below section about subroutines.
 
 'comment
   Make a zapped label or a comment.
@@ -47,6 +48,28 @@ $text
   Direction must be one letter, and it is possible for further commands on
   the same line. Otherwise works like the #TRY command, but you cannot
   specify a command to do if it fails to move.
+
+
+=== Subroutines ===
+
+A label acts as a subroutine if the label name where it is defined is
+followed by an asterisk, and then optionally any combination of:
+
+* L = Locks the object when the message is received, and unlocks it when
+returning from the subroutine. If it was already locked when the message
+is received (which is normally only possible if it is sent by the same
+object), then it will remain locked after it returns (although it can be
+unlocked by the script normally, in which case it remains unlocked).
+
+* Z = Zaps the label when the message is received, and restores it when
+returning from the subroutine. Only that specific instance of that label
+is restored, unlike the #RESTORE command. (It is possible to restore that
+label before returning; if so, it is unaffected.)
+
+Subroutines do not work in all circumstances; specifically, a subroutine
+cannot be called by a ! command.
+
+Use the #RETURN command to return from a subroutine call.
 
 
 === Standard commands ===
@@ -170,6 +193,10 @@ are not allowed in this case.
   label name after #RESTORE starts with ! then it converts &label to
   !label instead, allowing those choices to be displayed again when
   previously they would not be.
+
+#RETURN [label]
+  Return from a subroutine call; if a label name is specified then it will
+  return to the specified label instead of where it was called from.
 
 #SEND [name:]label
   Go to the specified label, if it exists. If a name is specified, then

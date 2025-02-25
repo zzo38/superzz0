@@ -6,6 +6,8 @@ addresses with a currently defined meaning are listed here. The initial
 values can be set using the assembler, and they can also be changed at
 run time.
 
+$C5 = Script return event (see below).
+
 $C6 = Sensor event (see below).
 
 $C7 = Overlay stat event. This is like EV_STAT but is used for stats in
@@ -84,6 +86,16 @@ left at zero for compatibility with future versions of Super ZZ Zero.
 
 
 === Global events ===
+
+$00C5
+  This event occurs when a #RETURN command in a script returns to a stack
+  frame that was pushed when the stat had a non-zero delay.
+
+  W = Stat number and stat XY index
+  X,Y = Currently not meaningful
+  Z = Saved delay number
+
+  Return = New delay value. A negative number means to continue execution.
 
 $00C6
   This event occurs when a stat tries to move onto a sensor (which does not

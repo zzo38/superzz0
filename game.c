@@ -61,6 +61,8 @@ static size_t textfile_size;
 // Text window
 static Uint16 tnlines,tcursor,tscroll;
 
+static const char*end_of_label;
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z);
 
 static void debug_log(Uint8 fo,Sint32 so,Sint32 w,Sint32 x,Sint32 y,Sint32 z,Uint16 pc) {
@@ -1159,8 +1161,8 @@ static int match_label(const char*v,const char*label) {
     a=v[n+1];
     b=label[n];
     if(!b || b=='\n' || b==' ' || b=='\r' || b==';' || b=='(' || b==')') {
-      if(!a || a=='\n' || a==' ' || a=='\r' || a==';' || a=='(' || a==')') {
-        n++;
+      if(!a || a=='\n' || a==' ' || a=='\r' || a==';' || a=='(' || a==')' || a=='*' || a=='=') {
+        end_of_label=v+(++n);
         while(v[n] && v[n]!='\n') n++;
         if(v[n]=='\n') n++;
         return n;
@@ -1240,6 +1242,131 @@ static Sint32 find_zapped_label(Stat*s,const char*label) {
   return -1;
 }
 
+static void frame_push(Stat*s,StatXY*r,Uint8 c,Uint16 p) {
+  /*
+    Frame format:
+    - '.' means free space.
+    - 'C' means continue execution.
+    - 'E' means end execution.
+    - 'U' means unlock.
+    - 'X' means stop (this is the end of this object's stack).
+    - Small-endian 21-bit number, high bit set of each byte. High 5-bits=command, low 16-bits=parameter.
+    0 = Return to address
+    1 = Restore label
+    2 = Go to frame
+    3 = Set delay
+  */
+  Uint8*t=s->text;
+  Sint32 k;
+  if(!s->frame) {
+    allocate:
+    end_of_label=0; // because this points into the script text, it is not used.
+    if(s->length+16>=0xFFFD) errx(1,"Out of memory for script frames");
+    t=realloc(t,s->length+17);
+    if(!t) err(1,"Allocation failed");
+    if(global_text==s->text) global_text=t,global_length=s->length+16;
+    s->text=t;
+    memcpy(t+s->length,s->frame?"\n''.............":"................",17);
+    if(!s->frame) s->frame=s->length+3;
+    s->length+=16;
+  }
+  if(!r->frame) r->frame=s->frame;
+  if(!t[r->frame] || memcmp(t+r->frame,"......",c>31?3:1)) {
+    // Find a free space
+    for(k=s->frame;k<s->length;k++) if(memcmp(t+k,"......",c>31?6:4)) goto found;
+    r->frame=s->length;
+    goto allocate;
+    found:
+    if(c!='X') {
+      if(r->frame==s->frame) {
+        t[k++]='X';
+      } else {
+        t[k++]=r->frame|0x80;
+        t[k++]=(r->frame>>7)|0x80;
+        t[k++]=((r->frame+0x20000)>>14)|0x80;
+      }
+    }
+    r->frame=k;
+  }
+  if(c>31) {
+    t[r->frame++]=c;
+  } else {
+    k=p+(c<<16);
+    t[r->frame++]=k|0x80;
+    t[r->frame++]=(k>>7)|0x80;
+    t[r->frame++]=(k>>14)|0x80;
+  }
+}
+
+static int frame_return(Stat*s,StatXY*r,int d) {
+  // Return: 1=continue, 0=delay
+  Uint8*t=s->text;
+  Sint32 k;
+  again:
+  if(!r->frame || r->frame==s->frame) return d;
+  if(r->frame>s->length || r->frame<s->frame || !s->frame) errx(1,"Improper script frame");
+  if(t[r->frame-1]&0x80) {
+    if(r->frame<s->frame+3 || !(t[r->frame-2]&t[r->frame-3]&0x80)) errx(1,"Improper script frame");
+    k=(t[r->frame-1]<<14)+(t[r->frame-2]<<7)+t[r->frame-3]-0x204080;
+    t[r->frame-1]=t[r->frame-2]=t[r->frame-3]='.';
+    r->frame-=3;
+    switch(k>>16) {
+      case 0: r->instptr=k; break;
+      case 1: k&=0xFFFF; if(k<s->length) t[k]=':'; break;
+      case 2: r->frame=k&0xFFFF; break;
+      case 3:
+        if(d) return d;
+        if(memory[MEM_RETURN_EVENT]) {
+          k=run_program(memory[MEM_RETURN_EVENT],(s+1-stats)+(r-s->xy),0,0,k&0xFFFF);
+          if(k<0) return 1;
+        }
+        r->delay=k&0xFFFF;
+        return 0;
+      default: errx(1,"Improper script frame");
+    }
+  } else {
+    switch(t[r->frame-1]) {
+      case 'C': t[--r->frame]='.'; return 1;
+      case 'U': t[--r->frame]='.'; r->layer&=0x7F; break;
+      case 'X': t[r->frame-1]='.'; r->frame=0; return d;
+      default: errx(1,"Improper script frame");
+    }
+  }
+  goto again;
+}
+
+static void send_message_to(Stat*s,StatXY*r,Sint32 f,const char*e) {
+  Uint8 h=0;
+  Sint32 k;
+  if(e && *e++=='*') {
+    h=0x01;
+    while(*e && *e!='\n' && *e!='=') switch(*e++) {
+      case 'l': case 'L': h|=0x02; break;
+      case 'z': case 'Z': h|=0x04; break;
+    }
+  }
+  if(h) {
+    if(r->instptr==65535) {
+      if(r->frame && r->frame!=s->frame) frame_push(s,r,'E',0);
+    } else {
+      if(r->delay) frame_push(s,r,3,r->delay); else frame_push(s,r,'C',0);
+      frame_push(s,r,0,r->instptr);
+    }
+    if(h&0x02) {
+      if(!(r->layer&0x80)) frame_push(s,r,'U',0);
+      r->layer|=0x80;
+    }
+    if(h&0x04) {
+      for(k=f-1;k>=0 && s->text[k]!=':';k--);
+      if(k>=0) {
+        s->text[k]='\'';
+        frame_push(s,r,1,k);
+      }
+    }
+  }
+  r->instptr=f;
+}
+
 static void send_message(Uint32 n,const char*label,Uint8 ignlock) {
   const char*p;
   const char*q=strchr(label,':');
@@ -1259,9 +1386,9 @@ static void send_message(Uint32 n,const char*label,Uint8 ignlock) {
     }
   } else if(r=get_statxy(n)) {
     if(r->layer&0x20) return;
-    if(*label=='*') ++label; else if((r->layer&0x80) && !ignlock) return;
-    f=find_label(stats+(n&0xFF)-1,label);
-    if(f!=-1) r->instptr=f;
+    if(*label=='*') ignlock=0,++label; else if((r->layer&0x80) && !ignlock) return;
+    f=find_label(s=stats+(n&0xFF)-1,label);
+    if(f!=-1) send_message_to(s,r,f,end_of_label);
   }
 }
 
@@ -1275,7 +1402,7 @@ static void send_message_at(Uint8 lay,Uint32 x,Uint32 y,const char*label,Uint8 i
   if(o=find_statxy(t)) {
     if(ignlock && (o->layer&0x80)) return;
     f=find_label(stats+t->stat-1,label);
-    if(f!=-1) o->instptr=f;
+    if(f!=-1) send_message_to(stats+t->stat-1,o,f,end_of_label);
   }
 }
 
@@ -2607,6 +2734,16 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else if(!strcmp(buf,"RESTORE")) {
               while(s->text[ip]==' ') ip++;
               while((u=find_zapped_label(s,s->text+ip))!=-1) s->text[u]=(s->text[ip]=='!'?'!':':');
+            } else if(!strcmp(buf,"RETURN")) {
+              for(v=0;v<126 && ip<s->length && s->text[ip]>=0x20;v++) buf[v]=s->text[ip++];
+              buf[v]=0;
+              xy->instptr=65535;
+              if(frame_return(s,xy,v)) {
+                if(v) send_message((n<<16)+m,buf,1);
+                ip=xy->instptr;
+                if(ip!=65535) goto begin;
+              }
+              goto stop1;
             } else goto badcommand; break;
           case 'S':
             if(!strcmp(buf,"SEND")) {
@@ -2760,6 +2897,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   goto begin;
   stop:
   xy->instptr=ip;
+  stop1:
   if(textfile && show_text_window((n<<16)+m,0) && (u=find_label(s,textbuf))>=0) {
     selection: ip=u; u=0; goto begin;
   }

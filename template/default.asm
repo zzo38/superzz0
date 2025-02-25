@@ -1657,6 +1657,12 @@ CENMOV	LET D,Z
 1H	CALM S,0
 	LET S,1
 
+	; #RETURN
+	TA $C5
+	LET A,Z
+	POKE A,NWAITS
+	LET S,Z
+
 ; **** Light shape ****
 	TA $E3
 	ASS @,65487

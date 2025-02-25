@@ -32,6 +32,9 @@ SCRIPTS
      also F, B, L, R directions which are abbreviations of FACE, OPP FACE,
      etc, and can be used with / and ? commands.
   +  Directions with parameters can be delimited by spaces or underscores.
+  +  Script subroutines. Any label can optionally be a subroutine call, so
+     that when it receives the message it can remember what part was being
+     executed and can return to it later.
   =  Corrected spelling of "WEST".
 
 ASSEMBLY
