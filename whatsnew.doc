@@ -12,7 +12,7 @@ The notation is:
 The time zone for the dates in this file is Pacific (British Columbia).
 
 
-=== Version ??? ===
+=== Version 0.4.0 (2025-02-25) ===
 
 GAME
   +  The four previously unused layer/lock bits are now meaningful (and
