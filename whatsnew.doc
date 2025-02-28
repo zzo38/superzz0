@@ -12,6 +12,12 @@ The notation is:
 The time zone for the dates in this file is Pacific (British Columbia).
 
 
+=== Version ??? ===
+
+ASSEMBLY
+  +  SCFR is a new instruction to affect script frames.
+
+
 === Version 0.4.0 (2025-02-25) ===
 
 GAME

@@ -89,7 +89,10 @@ left at zero for compatibility with future versions of Super ZZ Zero.
 
 $00C5
   This event occurs when a #RETURN command in a script returns to a stack
-  frame that was pushed when the stat had a non-zero delay.
+  frame that was pushed when the stat had a non-zero delay. (The delay is
+  normally in range 1 to 255, but by the use of SCFR instruction you can
+  save delay numbers outside of that range; that can be used to pass extra
+  information to this event.)
 
   W = Stat number and stat XY index
   X,Y = Currently not meaningful

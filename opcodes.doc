@@ -786,6 +786,18 @@ numbers are treated as unsigned.
   operand will be zero. The condition flag is true if it is found or is
   false if it is not found.
 
+[09C SCFR]
+  Work with script frames. The second operand tells which stat XY to use.
+  The first operand is one of:
+   A = Push a return address from the J argument.
+   B = Push a unlock indicator.
+   C = Push a continue execution indicator.
+   D = Push a delay amount from the J argument.
+   E = Push a end execution indicator.
+   F = Free all stack frames for all instances of this stat.
+   G = Do return (set condition flag: true=continue, false=end).
+   H = Test presence of script frames.
+
 [0A0 LETL]
   Like LET but saves the old value of the register; once this subroutine
   returns then the old value is restored. (Note that each use of LETL,

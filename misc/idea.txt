@@ -506,8 +506,6 @@ called once the subroutine stack is empty.
 *S would cause a received message to be received by the first unlocked
 instance rather than all of them.
 
-A new opcode called SCFR can be used to affect script frames.
-
 
 === Script states movable between boards ===
 
@@ -667,10 +665,6 @@ should allow the user to disable automatic updates, anyways.)
 
 * Operating system detection.
 
-* Ability for game world code to adjust game speed at run time. (I am less
-sure about this than other stuff I listed here, actually. But, I may add a
-setting within the world file to specify the default game speed, though.)
-
 * Saving/restoring games by scripts/programs defined in the world file.
 (Restrictions for saving games may be added, but not restrictions for
 restoring saved games.)
@@ -681,7 +675,11 @@ a new save file, it does not interact with the old save file at all.)
 
 * 3D graphics.
 
+* Ability for game world code to adjust game speed at run time. (I may add
+a setting within the world file to specify the default game speed, though.)
+
 * True colour graphics.
 
 * Multiplayer mode.
 
+(Some of these are not entirely certain, though.)

@@ -3385,6 +3385,23 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_RSUB: regs[fo]=so-regs[fo]; break;
       case OP_RUN: run_script(regs[fo]&0xFFFF,(regs[fo]>>16)&0xFFFF,so); break;
       case OP_SCAN: so=scan_board(regs[fo],so&0xFF,x,y); if(!so) break; if(regs[fo]) regs[fo]=so; else goto unpack0; break;
+      case OP_SCFR:
+        if(rs=get_statxy(so)) switch(fo) {
+          case 0: frame_push(stats+(so&0xFF)-1,rs,0,memory[MEM_ARG_J]); break;
+          case 1: frame_push(stats+(so&0xFF)-1,rs,'U',0); break;
+          case 2: frame_push(stats+(so&0xFF)-1,rs,'C',0); break;
+          case 3: frame_push(stats+(so&0xFF)-1,rs,3,memory[MEM_ARG_J]); break;
+          case 4: frame_push(stats+(so&0xFF)-1,rs,'E',0); break;
+          case 5:
+            so&=0xFF;
+            if(!stats[so-1].frame) break;
+            for(t=stats[so-1].frame;t<stats[so-1].length;t++) stats[so-1].text[t]='.';
+            for(t=0;t<stats[so-1].count;t++) stats[so-1].xy[t].frame=0;
+            break;
+          case 6: condflag=(frame_return(stats+(so&0xFF)-1,rs,0)?1:0); break;
+          case 7: so&=0xFF; condflag=(rs->frame && stats[so-1].frame && (t=stats[so-1].text[rs->frame-1]) && t!='X' && t!='.' && t!='\'')?1:0; break;
+        }
+        break;
       case OP_SEEK:
         if(rs=get_statxy(so)) {
           t=rs->x-x; u=rs->y-y;
