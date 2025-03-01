@@ -1999,6 +1999,7 @@ static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
       case '<': if(w<32) v<<=w; else v=0; break;
       case '>': if(w<32) v>>=w; else v=(v<0?-1:0); break;
       case '?': if(v!=w) v+=dice(w+1-v); break;
+      case 'd': case 'D': c=v; v=0; while(c-->0) v+=dice(w)+1; break;
       default: goto badexp;
     }
     op=s->text[*ip];

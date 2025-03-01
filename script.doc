@@ -377,6 +377,7 @@ The valid operators are:
 < left shift
 > right shift
 ? random number in range
+D dice
 
 Operands can be a number, or it can be one of the following:
 

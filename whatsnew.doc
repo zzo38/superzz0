@@ -19,6 +19,7 @@ GAME
 
 SCRIPTS
   +  Use the {D} code to display dynamic strings in text.
+  +  Use "d" operator in numeric expressions for dice.
 
 ASSEMBLY
   +  DYN opcode for dealing with dynamic strings.
