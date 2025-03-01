@@ -14,6 +14,15 @@ The time zone for the dates in this file is Pacific (British Columbia).
 
 === Version ??? ===
 
+GAME
+  +  Dynamic strings are implemented.
+
+SCRIPTS
+  +  Use the {D} code to display dynamic strings in text.
+
+ASSEMBLY
+  +  DYN opcode for dealing with dynamic strings.
+
 ASSEMBLY
   +  SCFR is a new instruction to affect script frames.
 

@@ -275,6 +275,16 @@ const char*init_world(void) {
     global_text[lump_size]=0;
     fclose(fp);
   }
+  // "DYNASTR"
+  free(dynastr);
+  dynastr=0;
+  ndynastr=0;
+  if(fp=open_lump("DYNASTR","r")) {
+    warnx("This world file contains a DYNASTR lump but it is not supposed to");
+    config.version_warn|=4;
+    fclose(fp);
+    if(fp=open_lump("DYNASTR","w")) fclose(fp);
+  }
   // done
   return 0;
 }

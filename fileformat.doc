@@ -433,6 +433,16 @@ under layer, main layer, over layer. There is one byte per tile, but if it
 is zero then a 16-bit number of how many more zeros follow.
 
 
+=== DYNASTR ===
+
+This lump is only allowed in a save game file (but it is not mandatory); it
+is an error if it is present in a world file.
+
+This lump contains dynamic strings. The first byte is the number of dynamic
+strings, and then each dynamic string (1-based numbering) consists of one
+byte specifying the length of the text, and then the text.
+
+
 === ELEMENT ===
 
 This starts with the 128 bytes for the appearance mapping.

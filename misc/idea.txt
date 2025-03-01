@@ -471,16 +471,6 @@ does not have to be very large; eight might be sufficient (allowing one
 byte to specify a set of zones to select).
 
 
-=== Dynamic strings ===
-
-Dynamic strings means strings that can change during the run time. A new
-opcode might be added to deal with them.
-
-These dynamic strings can then be used for TEXT and MESS, as well as for
-text within scripts when #ESCAPE ON is used. It might also be made possible
-to add them into screen layouts.
-
-
 === Script libraries ===
 
 It might be useful to have script libraries, although I am not quite sure

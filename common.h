@@ -498,6 +498,15 @@ typedef struct {
 
 extern NamedFlag namedflag[16];
 
+#define DYNASTRLEN 70
+typedef struct {
+  Uint8 text[DYNASTRLEN];
+  Uint8 len,unused;
+} DynaString;
+
+extern DynaString*dynastr;
+extern Uint8 ndynastr;
+
 // === File access (Hamster archives) ===
 
 extern char*world_name;

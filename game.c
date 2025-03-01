@@ -39,6 +39,8 @@ Uint16 vtexttime;
 NamedFlag namedflag[16];
 Uint8*global_text;
 Uint16 global_length;
+DynaString*dynastr;
+Uint8 ndynastr;
 
 static uint64_t rseed;
 static char soundon;
@@ -673,6 +675,8 @@ static void do_text_op(Uint8 op,Sint32 n) {
       break;
     case 6: // Global
       if(n>0 && n<ngtext) s=(char*)gtext[n];
+      if(n<0 && n>=-ndynastr) s=(char*)dynastr[~n].text;
+      if(n<-255 && n>=-271) s=(char*)namedflag[-255-n].name;
       break;
     case 7: // Hexadecimal
       snprintf(buf,80,"%08lX",(unsigned long)n);
@@ -2481,6 +2485,12 @@ static int append_escaped(char*buf,int len,Stat*s,StatXY*xy,Uint16 ip) {
     case 'C': case 'c': // character
       v=parse_number(s,xy,&ip);
       return (*buf=v&0xFF)?1:0;
+    case 'D': case 'd': // dynamic string
+      v=parse_number(s,xy,&ip)&255;
+      if(!v || v>ndynastr || !dynastr[v-1].len) return 0;
+      if(len>dynastr[v-1].len) len=dynastr[v-1].len;
+      memcpy(buf,dynastr[v-1].text,len);
+      return len;
     case 'N': case 'n': // number
       v=parse_number(s,xy,&ip);
       if(s->text[ip]!=',') return snprintf(buf,len+1,"%lld",(long long)v);
@@ -2920,6 +2930,55 @@ static Sint32 request_info(Sint32 m) {
   }
 }
 
+static void do_dynamic_strings(Uint8 f,Sint32 s) {
+  int n;
+  if(s<0) s=~s; else if(s>0) s--; else if(f!=5) goto non;
+  if(s>=ndynastr) {
+    if(0x0D&(1<<f)) {
+      dynastr=realloc(dynastr,(s+1)*sizeof(DynaString));
+      if(!dynastr) err(1,"Allocation failed");
+      while(ndynastr<s+1) {
+        n=ndynastr++;
+        dynastr[n].len=dynastr[n].text[0]=0;
+      }
+    } else {
+      goto non;
+    }
+  }
+  n=dynastr[s].len;
+  switch(f) {
+    case 0:
+      if(n>=DYNASTRLEN-1 || !ntextbuf) return;
+      if(ntextbuf>=DYNASTRLEN-1-dynastr[s].len) ntextbuf=DYNASTRLEN-2-dynastr[s].len;
+      memcpy(dynastr[s].text+n,textbuf,ntextbuf);
+      ntextbuf=*textbuf=0;
+      break;
+    case 1: condflag=(memory[MEM_ARG_J]=n)?1:0; break;
+    case 2:
+      if(n<DYNASTRLEN-1 && (n=memory[MEM_ARG_K]&0xFF)) dynastr[s].text[dynastr[s].len++]=n;
+      memory[MEM_ARG_J]=dynastr[s].len;
+      break;
+    case 3:
+      n=memory[MEM_ARG_J];
+      if(memory[MEM_ARG_K]&255) while(dynastr[s].len<n && dynastr[s].len<DYNASTRLEN-1) dynastr[s].text[dynastr[s].len++]=memory[MEM_ARG_K];
+      break;
+    case 4: dynastr[s].len=dynastr[s].text[0]=0; break;
+    case 5:
+      if(s<ndynastr) return;
+      dynastr=realloc(dynastr,s)?:dynastr;
+      if(!s) dynastr=0;
+      ndynastr=s;
+      return;
+    case 6: n=memory[MEM_ARG_J]; memory[MEM_ARG_K]=(n<dynastr[s].len?dynastr[s].text[n]:0); break;
+    case 7: if(memory[MEM_ARG_J]<n) if(!(dynastr[s].text[memory[MEM_ARG_J]]=memory[MEM_ARG_K]&255)) dynastr[s].len=memory[MEM_ARG_J]; break;
+  }
+  if(s<ndynastr) dynastr[s].text[dynastr[s].len]=0;
+  return;
+  non:
+  if(f==1) condflag=memory[MEM_ARG_J]=0;
+  if(f==6) memory[MEM_ARG_K]=0;
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   StatXY*rs;
   Uint16 op;
@@ -3072,6 +3131,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           condflag=1;
         }
         break;
+      case OP_DYN: do_dynamic_strings(fo,so); break;
       case OP_EAP0: so=elem_def[so&255].app[0]; goto store;
       case OP_EAP1: so=elem_def[so&255].app[1]; goto store;
       case OP_EATT: so=elem_def[so&255].attrib; goto store;

@@ -322,6 +322,8 @@ numbers are treated as unsigned.
    5 = Increment K argument
    6 = Clear condition flag
    7 = Set condition flag
+  For E and G, negative numbers -1 to -255 can be used to use the dynamic
+  strings, and -256 to -271 can be used for named flags.
 
 [041 MESS]
   Has the same effect as the TEXT instruction, and then replaces the
@@ -797,6 +799,19 @@ numbers are treated as unsigned.
    F = Free all stack frames for all instances of this stat.
    G = Do return (set condition flag: true=continue, false=end).
    H = Test presence of script frames.
+
+[09D DYN]
+  Work with dynamic strings. The second operand is the dynamic string
+  number from 1 to 255 (or -1 to -255, which refers to the same strings),
+  and the first operand selects the operation which can be one of:
+   A = Append the string made by TEXT and then clear the TEXT string.
+   B = Set J to the length of the string; condition flag true if nonzero.
+   C = Append a single character with code K; set J to the new length.
+   D = Fill up to position J (zero-based) with character K.
+   E = Make the dynamic string empty.
+   F = Free memory of the specified dynamic string and all higher numbered.
+   G = Read byte K from position J.
+   H = Write byte K to position J (the length must already be enough).
 
 [0A0 LETL]
   Like LET but saves the old value of the register; once this subroutine

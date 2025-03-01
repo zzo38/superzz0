@@ -303,6 +303,7 @@ static void discard_unused_lumps(void) {
   revert_lump("CURRENT.BRD");
   revert_lump("MEMORY");
   revert_lump("GLOBAL");
+  revert_lump("DYNASTR");
 }
 
 void save_state(void) {
@@ -346,6 +347,15 @@ void save_state(void) {
   if(global_text) {
     if(!(fp=open_lump("GLOBAL","w"))) goto error;
     fwrite(global_text,1,global_length,fp);
+    fclose(fp);
+  }
+  //  DYNASTR
+  if(ndynastr && (fp=open_lump("DYNASTR","w"))) {
+    fputc(ndynastr,fp);
+    for(i=0;i<ndynastr;i++) {
+      fputc(dynastr[i].len,fp);
+      fwrite(dynastr[i].text,1,dynastr[i].len,fp);
+    }
     fclose(fp);
   }
   //
@@ -444,6 +454,23 @@ void load_state(void) {
       stats->length=global_length;
     }
     fclose(fp);
+  }
+  //  DYNASTR
+  if(fp=open_lump("DYNASTR","r")) {
+    ndynastr=read8(fp);
+    dynastr=realloc(dynastr,ndynastr*sizeof(DynaString));
+    if(ndynastr && !dynastr) err(1,"Allocation failed");
+    for(i=0;i<ndynastr;i++) {
+      dynastr[i].len=read8(fp);
+      if(dynastr[i].len>=DYNASTRLEN) errx(1,"Invalid data in save game file");
+      fread(dynastr[i].text,1,dynastr[i].len,fp);
+      dynastr[i].text[dynastr[i].len]=0;
+    }
+    fclose(fp);
+  } else {
+    free(dynastr);
+    dynastr=0;
+    ndynastr=0;
   }
   // Finished
   discard_unused_lumps();
