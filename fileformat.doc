@@ -691,6 +691,17 @@ The flags are:
 * bit0 = Clear to automatically pause the game when it starts.
 
 
+=== TEMPLATE.DER ===
+
+This is only used in templates. It contains a sequence of operations to be
+applied to the world file when being created from a template (and then this
+lump is deleted from the newly created world file). Each operation is a
+implicit typed sequence.
+
+* 0 = Contains Visible strings, each of which is the name of a lump to be
+deleted from the new world file.
+
+
 === TEXT ===
 
 Contains null-terminated global text strings, starting with string 1 (with

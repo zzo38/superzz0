@@ -6,6 +6,7 @@ exit
 #define USING_RW_DATA
 #include "common.h"
 #include "version.inc"
+#include "asn1.h"
 
 Config config={
 #define B(n,t,d) d,
@@ -182,6 +183,7 @@ static void create_world(const char*template,const char*name) {
   Uint8 buf[256];
   FILE*f;
   FILE*ft=0;
+  int i;
   if(template) {
     ft=fopen(template,"r");
     if(!ft) err(1,"Cannot open template file");
@@ -201,10 +203,37 @@ static void create_world(const char*template,const char*name) {
     if(open_world(name)) err(1,"Cannot open world");
     if(f=open_lump("CATALOG.DER","w")) fclose(f);
     if(f=open_lump("HISTORY.DER","w")) fclose(f);
-    if(f=open_lump("TEMPLATE","r")) {
-      warnx("TEMPLATE lump is not currently implemented, and will be ignored.");
+    if(f=open_lump("TEMPLATE.DER","r")) {
+      ASN1_Value a,b,c;
+      ASN1_Iterator t,tt;
+      FILE*g;
+      if(asn1_read_item(f,&a,0) || a.class || a.type!=ASN1_SEQUENCE || !a.constructed) {
+        warnx("ASN.1 error with TEMPLATE.DER");
+      } else {
+        asn1_foreach(i,&t,&a,&b) {
+          if(b.class==ASN1_CONTEXT_SPECIFIC && b.constructed) {
+            switch(b.type) {
+              case 0: // delete lumps from world file
+                asn1_foreach(i,&tt,&b,&c) {
+                  if(c.type==ASN1_VISIBLE_STRING && !c.constructed && c.length>0 && c.length<256) {
+                    memcpy(buf,c.data,c.length);
+                    buf[c.length]=0;
+                    if(g=open_lump(buf,"w")) fclose(g);
+                  }
+                }
+                break;
+              default: warnx("Unrecognized command [%lu] in TEMPLATE.DER",(unsigned long)b.type);
+            }
+          } else {
+            warnx("ASN.1 error with TEMPLATE.DER");
+            break;
+          }
+        }
+        if(i!=ASN1_DONE) asn1error: warnx("ASN.1 error with TEMPLATE.DER");
+      }
+      asn1_free(&a);
       fclose(f);
-      if(f=open_lump("TEMPLATE","w")) fclose(f);
+      if(f=open_lump("TEMPLATE.DER","w")) fclose(f);
     }
     save_world(0);
   }
