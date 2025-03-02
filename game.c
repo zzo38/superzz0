@@ -165,7 +165,7 @@ static void warp_to_board(Uint16 b,char m) {
     if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
     fclose(fp);
   }
-  // Handle scrolling
+  // Initial scrolling
   if((cur_screen.flag&SF_NO_SCROLL) || !maxstat || !stats->count) {
     scroll_x=-cur_screen.hard_edge[DIR_W];
     scroll_y=-cur_screen.hard_edge[DIR_N];
@@ -173,8 +173,10 @@ static void warp_to_board(Uint16 b,char m) {
     x=stats->xy->x; y=stats->xy->y;
     scroll_x=x-cur_screen.view_x;
     scroll_y=y-cur_screen.view_y;
-    if(scroll_x<-cur_screen.hard_edge[DIR_W]) scroll_x=cur_screen.hard_edge[DIR_W]; else if(scroll_x>board_info.width-cur_screen.hard_edge[DIR_E]) scroll_x=cur_screen.hard_edge[DIR_E];
-    if(scroll_y<-cur_screen.hard_edge[DIR_N]) scroll_y=cur_screen.hard_edge[DIR_N]; else if(scroll_y>board_info.height-cur_screen.hard_edge[DIR_S]) scroll_y=cur_screen.hard_edge[DIR_S];
+    if(scroll_x<-(Sint32)cur_screen.hard_edge[DIR_W]) scroll_x=cur_screen.hard_edge[DIR_W];
+     else if(scroll_x>=board_info.width-(Sint32)cur_screen.hard_edge[DIR_E]) scroll_x=board_info.width-cur_screen.hard_edge[DIR_E]-1;
+    if(scroll_y<-(Sint32)cur_screen.hard_edge[DIR_N]) scroll_y=cur_screen.hard_edge[DIR_N];
+     else if(scroll_y>=board_info.height-(Sint32)cur_screen.hard_edge[DIR_S]) scroll_y=board_info.height-cur_screen.hard_edge[DIR_S]-1;
   }
 }
 
@@ -3933,7 +3935,8 @@ static void debug_menu(void) {
 int run_game(void) {
   Uint8 ka=0;
   Sint8 kd=-1;
-  Uint32 a,b,c,d,x,y;
+  Uint32 b,c,d,x,y;
+  Sint32 a,z;
   Tile*t;
   reseed(0);
   soundon=(audio_get_volume()<0x10000?1:0);
@@ -3949,25 +3952,19 @@ int run_game(void) {
   }
   *v_status=playstate;
   if(!(cur_screen.flag&SF_NO_SCROLL) && maxstat && stats->count) {
-    if(memory[MEM_SCROLL_X_RATE]) {
-      a=stats->xy->x; b=scroll_x;
-      if(b<a-cur_screen.soft_edge[DIR_W]) b=a-cur_screen.soft_edge[DIR_W];
-      if(b>a-cur_screen.soft_edge[DIR_E]) b=a-cur_screen.soft_edge[DIR_E];
-      if(b<scroll_x-memory[MEM_SCROLL_X_RATE]) b=scroll_x-memory[MEM_SCROLL_X_RATE];
-      if(b>scroll_x+memory[MEM_SCROLL_X_RATE]) b=scroll_x+memory[MEM_SCROLL_X_RATE];
-      if(b<-cur_screen.hard_edge[DIR_W]) b=-cur_screen.hard_edge[DIR_W];
-      if(b>board_info.width-1-cur_screen.hard_edge[DIR_E]) b=board_info.width-1-cur_screen.hard_edge[DIR_E];
-      scroll_x=b;
+    if(b=memory[MEM_SCROLL_X_RATE]) {
+      a=stats->xy->x; z=scroll_x;
+      if(z<a-(Sint32)cur_screen.soft_edge[DIR_E]) z=a-cur_screen.soft_edge[DIR_E]; else if(z>a-(Sint32)cur_screen.soft_edge[DIR_W]) z=a-cur_screen.soft_edge[DIR_W];
+      if(z<scroll_x-(Sint32)b) z=scroll_x-b; else if(z>scroll_x+(Sint32)b) z=scroll_x+b;
+      if(z<-(Sint32)cur_screen.hard_edge[DIR_W]) z=-cur_screen.hard_edge[DIR_W]; else if(z>board_info.width-((Sint32)cur_screen.hard_edge[DIR_E])-1) z=board_info.width-cur_screen.hard_edge[DIR_E]-1;
+      scroll_x=z;
     }
-    if(memory[MEM_SCROLL_Y_RATE]) {
-      a=stats->xy->y; b=scroll_y;
-      if(b<a-cur_screen.soft_edge[DIR_N]) b=a-cur_screen.soft_edge[DIR_N];
-      if(b>a-cur_screen.soft_edge[DIR_S]) b=a-cur_screen.soft_edge[DIR_S];
-      if(b<scroll_y-memory[MEM_SCROLL_Y_RATE]) b=scroll_y-memory[MEM_SCROLL_Y_RATE];
-      if(b>scroll_y+memory[MEM_SCROLL_Y_RATE]) b=scroll_y+memory[MEM_SCROLL_Y_RATE];
-      if(b<-cur_screen.hard_edge[DIR_N]) b=-cur_screen.hard_edge[DIR_N];
-      if(b>board_info.height-1-cur_screen.hard_edge[DIR_S]) b=board_info.height-1-cur_screen.hard_edge[DIR_S];
-      scroll_y=b;
+    if(b=memory[MEM_SCROLL_Y_RATE]) {
+      a=stats->xy->y; z=scroll_y;
+      if(z<a-(Sint32)cur_screen.soft_edge[DIR_S]) z=a-cur_screen.soft_edge[DIR_S]; else if(z>a-(Sint32)cur_screen.soft_edge[DIR_N]) z=a-cur_screen.soft_edge[DIR_N];
+      if(z<scroll_y-(Sint32)b) z=scroll_y-b; else if(z>scroll_y+(Sint32)b) z=scroll_y+b;
+      if(z<-(Sint32)cur_screen.hard_edge[DIR_N]) z=-cur_screen.hard_edge[DIR_N]; else if(z>board_info.height-((Sint32)cur_screen.hard_edge[DIR_S])-1) z=board_info.height-cur_screen.hard_edge[DIR_S]-1;
+      scroll_y=z;
     }
   }
   display:
