@@ -2566,6 +2566,12 @@ Uint16 edit_board(Uint16 id) {
           }
           break;
         case 0x0F: stat_list(numprefix); numprefix=0; break;
+        case 0x10:
+          if((i=b_main[xcur+ycur*board_info.width].stat) && i<=maxstat) {
+            stats[i-1].text=text_editor(stats[i-1].text);
+            stats[i-1].length=(stats[i-1].text?strlen(stats[i-1].text):0);
+          }
+          break;
         case 0x16: vmode^=1; break;
         case 0x1A:
           if(!numprefix) numprefix=1;
@@ -2734,6 +2740,12 @@ Uint16 edit_board(Uint16 id) {
           }
           break;
         case 0x0F: stat_list(numprefix); numprefix=0; break;
+        case 0x10:
+          if((i=b_over[xcur+ycur*board_info.width].stat) && i<=maxstat) {
+            stats[i-1].text=text_editor(stats[i-1].text);
+            stats[i-1].length=(stats[i-1].text?strlen(stats[i-1].text):0);
+          }
+          break;
         case 0x16: vmode^=1; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;

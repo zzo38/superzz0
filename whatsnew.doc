@@ -26,6 +26,9 @@ ASSEMBLY
   +  DYN opcode for dealing with dynamic strings.
   +  SCFR is a new instruction to affect script frames.
 
+EDITOR
+  +  You can use ^P in the board editor to edit the text of a stat.
+
 OTHERS
   +  The TEMPLATE.DER lump is usable for affecting the creation of new
      world files from a template.

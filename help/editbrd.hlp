@@ -28,6 +28,7 @@ ALT+R      Resize board
 ALT+T      Test game
 ALT+Z      Maximum numeric prefix
 ^O         Stat list
+^P         Edit text of stat
 ^V         Toggle view mode
 ^Z         Find player or numbered stat
 SPACE      Toggle mark
