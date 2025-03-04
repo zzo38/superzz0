@@ -25,6 +25,7 @@ SCRIPTS
 ASSEMBLY
   +  DYN opcode for dealing with dynamic strings.
   +  SCFR is a new instruction to affect script frames.
+  +  Implemented the CAM instruction.
 
 EDITOR
   +  You can use ^P in the board editor to edit the text of a stat.

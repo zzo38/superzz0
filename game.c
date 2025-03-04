@@ -2982,6 +2982,45 @@ static void do_dynamic_strings(Uint8 f,Sint32 s) {
   if(f==6) memory[MEM_ARG_K]=0;
 }
 
+static void do_camera(Uint8 f,Sint32 s,Sint32 x,Sint32 y) {
+  switch(f) {
+    case 0: // if coordinates are visible
+      condflag=0;
+      s=convxy(s,x,y);
+      if(s==-1) break;
+      
+      break;
+    case 1: // if coordinates are within bounding box
+      condflag=0;
+      s=convxy(s,x,y);
+      if(s==-1) break;
+      
+      break;
+    case 2: // center on stat XY
+      if((s&0xFF) && (s&0xFF)<=maxstat && ((s>>16)&0xFFFF)<=stats[(s&0xFF)-1].count) {
+        scroll_x=stats[(s&0xFF)-1].xy[(s>>16)&0xFFFF].x-cur_screen.view_x;
+        scroll_y=stats[(s&0xFF)-1].xy[(s>>16)&0xFFFF].y-cur_screen.view_y;
+      }
+      break;
+    case 3: // move camera one step in direction
+      s&=3;
+      if(s==DIR_E) ++scroll_x;
+      if(s==DIR_W) --scroll_x;
+      if(s==DIR_S) ++scroll_y;
+      if(s==DIR_N) --scroll_y;
+      break;
+    case 4: // enable scrolling
+      if(s) memory[MEM_CONTROL]&=~CONTROL_NOSCROLL; else memory[MEM_CONTROL]|=CONTROL_NOSCROLL;
+      break;
+    case 6: // go to coordinates immediately
+      s=convxy(s,x,y);
+      if(s==-1) break;
+      scroll_x=(s%board_info.width)-cur_screen.view_x;
+      scroll_y=(s/board_info.width)-cur_screen.view_y;
+      break;
+  }
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   StatXY*rs;
   Uint16 op;
@@ -3066,6 +3105,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_CALL: so=run_program(so,w,x,y,z); goto store;
       case OP_CALM: if((t=convxy(so,x,y))!=-1) w=run_program(elem_def[b_main[t].kind].event[fo],w,t%board_info.width,t/board_info.width,z); break;
       case OP_CALU: if((t=convxy(so,x,y))!=-1) w=run_program(elem_def[b_under[t].kind].event[fo],w,t%board_info.width,t/board_info.width,z); break;
+      case OP_CAM: do_camera(fo,so,x,y); break;
       case OP_CASE: so=memory[(so+regs[fo])&0xFFFF]; goto jump;
       case OP_CBC: memory[so&0xFFFF]&=~(1<<fo); break;
       case OP_CBS: memory[so&0xFFFF]|=(1<<fo); break;
@@ -3951,7 +3991,7 @@ int run_game(void) {
     run_program(a,b,(memory[MEM_WARP_X_HI]<<16)|memory[MEM_WARP_X_LO],(memory[MEM_WARP_Y_HI]<<16)|memory[MEM_WARP_Y_LO],(memory[MEM_WARP_Z_HI]<<16)|memory[MEM_WARP_Z_LO]);
   }
   *v_status=playstate;
-  if(!(cur_screen.flag&SF_NO_SCROLL) && maxstat && stats->count) {
+  if(!(cur_screen.flag&SF_NO_SCROLL) && !(memory[MEM_CONTROL]&CONTROL_NOSCROLL) && maxstat && stats->count) {
     if(b=memory[MEM_SCROLL_X_RATE]) {
       a=stats->xy->x; z=scroll_x;
       if(z<a-(Sint32)cur_screen.soft_edge[DIR_E]) z=a-cur_screen.soft_edge[DIR_E]; else if(z>a-(Sint32)cur_screen.soft_edge[DIR_W]) z=a-cur_screen.soft_edge[DIR_W];

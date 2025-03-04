@@ -24,7 +24,7 @@ a board, if on the board that was previously active, global scripts are
 allowed to execute and stat 1 has at least one instance and stat 1 does
 not have any text.
 
-$CB = Global control flags. (None are currently meaningful)
+$CB = Global control flags (see below).
 
 $CC = J register. This is mostly like a general-purpose register (except
 that it is only 16-bits long), although some instructions may use it for
@@ -83,6 +83,14 @@ $EF = Y scroll rate.
 
 Anything in the range $0080 to $00FF which is not listed here should be
 left at zero for compatibility with future versions of Super ZZ Zero.
+
+
+=== Global control flags ===
+
+$0001 = Disable scrolling. (The CAM E instruction can be used to set or
+clear this flag. Also note that this is independent from the "no scroll"
+flag in the screen definition; if that no scroll flag is set, then this
+one is ignored and it never scrolls that screen automatically.)
 
 
 === Global events ===

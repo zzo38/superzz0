@@ -345,9 +345,7 @@ numbers are treated as unsigned.
   C = Center on stat XY index specified by second operand
   D = Move camera one step in direction by low 2-bits of second operand
   E = Enable scrolling if second operand is nonzero, disable if zero
-  F = 
   G = Go to (X,Y) immediately
-  H = 
 
 [044 WARP]
   Set the warp. The first operand is the target board number, and the
