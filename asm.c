@@ -377,7 +377,7 @@ static void do_pass(void) {
           u=0;
         } else {
           u=parse_numeric(0);
-          if(has_unknown || (u&~1)) i|=0x2000;
+          if(has_unknown || (u&~1)) i|=0x2000; else i|=u<<12;
         }
         parse_comma();
         if(j=='X--' || j=='Y--') {

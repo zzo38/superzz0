@@ -25,14 +25,18 @@ SCRIPTS
 ASSEMBLY
   +  DYN opcode for dealing with dynamic strings.
   +  SCFR is a new instruction to affect script frames.
-  +  Implemented the CAM instruction.
+  +  Implemented the CAM instruction (affects camera position).
+  =  Correction in assembler of parsing the source part of a extension
+     operand if its value is 1.
 
 EDITOR
   +  You can use ^P in the board editor to edit the text of a stat.
 
 OTHERS
   +  The TEMPLATE.DER lump is usable for affecting the creation of new
-     world files from a template.
+     world files from a template. (There is currently no way to create
+     this lump within Super ZZ Zero itself; an external program must be
+     used instead.)
 
 
 === Version 0.4.0 (2025-02-25) ===

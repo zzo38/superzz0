@@ -2983,18 +2983,21 @@ static void do_dynamic_strings(Uint8 f,Sint32 s) {
 }
 
 static void do_camera(Uint8 f,Sint32 s,Sint32 x,Sint32 y) {
+  Sint32 b,z;
+  if(s && (f==0 || f==1 || f==5 || f==6)) {
+    s=convxy(s,x,y);
+    if(s==-1) return;
+    x=s%board_info.width;
+    y=s/board_info.height;
+  }
   switch(f) {
     case 0: // if coordinates are visible
-      condflag=0;
-      s=convxy(s,x,y);
-      if(s==-1) break;
-      
+      condflag=0; x-=scroll_x; y-=scroll_y;
+      if(x>=0 && x<80 && y>=0 && y<25 && (cur_screen.command[y*80+x]&0xF0)==SC_BOARD) condflag=1;
       break;
     case 1: // if coordinates are within bounding box
-      condflag=0;
-      s=convxy(s,x,y);
-      if(s==-1) break;
-      
+      condflag=0; x-=scroll_x; y-=scroll_y;
+      if(x>=cur_screen.hard_edge[DIR_W] && x<=cur_screen.hard_edge[DIR_E] && y>=cur_screen.hard_edge[DIR_N] && y<=cur_screen.hard_edge[DIR_S]) condflag=1;
       break;
     case 2: // center on stat XY
       if((s&0xFF) && (s&0xFF)<=maxstat && ((s>>16)&0xFFFF)<=stats[(s&0xFF)-1].count) {
@@ -3012,11 +3015,28 @@ static void do_camera(Uint8 f,Sint32 s,Sint32 x,Sint32 y) {
     case 4: // enable scrolling
       if(s) memory[MEM_CONTROL]&=~CONTROL_NOSCROLL; else memory[MEM_CONTROL]|=CONTROL_NOSCROLL;
       break;
+    case 5: // scroll toward coordinates
+      condflag=0;
+      if(b=memory[MEM_SCROLL_X_RATE]) {
+        z=scroll_x;
+        if(z<x-(Sint32)cur_screen.soft_edge[DIR_E]) z=x-cur_screen.soft_edge[DIR_E]; else if(z>x-(Sint32)cur_screen.soft_edge[DIR_W]) z=x-cur_screen.soft_edge[DIR_W];
+        if(z<scroll_x-(Sint32)b) z=scroll_x-b; else if(z>scroll_x+(Sint32)b) z=scroll_x+b;
+        if(z<-(Sint32)cur_screen.hard_edge[DIR_W]) z=-cur_screen.hard_edge[DIR_W]; else if(z>board_info.width-((Sint32)cur_screen.hard_edge[DIR_E])-1) z=board_info.width-cur_screen.hard_edge[DIR_E]-1;
+        if(z!=scroll_x) condflag=1;
+        scroll_x=z;
+      }
+      if(b=memory[MEM_SCROLL_Y_RATE]) {
+        z=scroll_y;
+        if(z<y-(Sint32)cur_screen.soft_edge[DIR_S]) z=y-cur_screen.soft_edge[DIR_S]; else if(z>y-(Sint32)cur_screen.soft_edge[DIR_N]) z=y-cur_screen.soft_edge[DIR_N];
+        if(z<scroll_y-(Sint32)b) z=scroll_y-b; else if(z>scroll_y+(Sint32)b) z=scroll_y+b;
+        if(z<-(Sint32)cur_screen.hard_edge[DIR_N]) z=-cur_screen.hard_edge[DIR_N]; else if(z>board_info.height-((Sint32)cur_screen.hard_edge[DIR_S])-1) z=board_info.height-cur_screen.hard_edge[DIR_S]-1;
+        if(z!=scroll_y) condflag=1;
+        scroll_y=z;
+      }
+      break;
     case 6: // go to coordinates immediately
-      s=convxy(s,x,y);
-      if(s==-1) break;
-      scroll_x=(s%board_info.width)-cur_screen.view_x;
-      scroll_y=(s/board_info.width)-cur_screen.view_y;
+      scroll_x=x-cur_screen.view_x;
+      scroll_y=y-cur_screen.view_y;
       break;
   }
 }

@@ -340,12 +340,15 @@ numbers are treated as unsigned.
 
 [043 CAM]
   Operations with camera, according to first operand:
-  A = Condition flag if coordinates are visible
-  B = Condition flag if coordinates are within bounding box
-  C = Center on stat XY index specified by second operand
-  D = Move camera one step in direction by low 2-bits of second operand
-  E = Enable scrolling if second operand is nonzero, disable if zero
-  G = Go to (X,Y) immediately
+   A = Condition flag if coordinates are visible
+   B = Condition flag if coordinates are within bounding box
+   C = Center on stat XY index specified by second operand
+   D = Move camera one step in direction by low 2-bits of second operand
+   E = Enable scrolling if second operand is nonzero, disable if zero
+   F = Scroll toward coordinates, condition flag if moved
+   G = Go to coordinates immediately
+  The ones that expect coordinates will use the second operand, but if it
+  is zero then X and Y registers are used even if they are out of range.
 
 [044 WARP]
   Set the warp. The first operand is the target board number, and the

@@ -320,7 +320,7 @@ name
 
 #VISIBLE
   True if this tile is visible, due to being in range of the viewport and
-  not obscured by overlays.
+  not obscured by overlays. (This is not implemented yet)
 
 #WALK
   The walk bit of this stat XY record.
