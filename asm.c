@@ -207,7 +207,7 @@ static inline void parse_comma(void) {
 static int parse_reg16(void) {
   if(*linept>='A' && *linept<='H') return *linept++-'A';
   if(*linept>='S' && *linept<='Z') return *linept++-'S'+8;
-  errx(1,"Improper register code on line %d",linenum);
+  errx(1,"Improper register code (%c) on line %d",*linept,linenum);
 }
 
 static Sint32 parse_numeric(char e) {
@@ -664,6 +664,7 @@ static void do_pass(void) {
           parse_comma();
           ed_put_data((i<<8)+4);
           ed_put_data(parse_numeric(0));
+          break;
         case 0x35: // ED5
           i=parse_reg16();
           if(i>=8) errx(1,"Invalid register on line %d",linenum);
@@ -672,6 +673,7 @@ static void do_pass(void) {
           parse_comma();
           ed_put_data((i<<8)+(v<<12)+5);
           ed_put_data(parse_numeric(0));
+          break;
       }
       if(op&0x20) exchange_strings();
     }

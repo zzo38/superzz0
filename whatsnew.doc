@@ -28,6 +28,7 @@ ASSEMBLY
   +  Implemented the CAM instruction (affects camera position).
   =  Correction in assembler of parsing the source part of a extension
      operand if its value is 1.
+  =  Missing "break" in ED4 and ED5 cases in assembler.
 
 EDITOR
   +  You can use ^P in the board editor to edit the text of a stat.
