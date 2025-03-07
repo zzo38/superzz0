@@ -316,6 +316,15 @@ the below listings of the commands.
 board/b
   Switch to a board number specified as the argument (in decimal).
 
+boardinfo/bi
+  Modify the board info. You can have multiple arguments with spaces in
+  between, and the argument can be one of the following:
+    s followed by the screen number.
+    u followed by the user data number.
+    + followed by flags to set (0,1,2,3,P,N,O).
+    - followed by flags to clear.
+    = followed by flags to set, clearing all others.
+
 color/c
   Changes the colour of main layer cells. The argument can be a hexadecimal
   colour code; if not specified then the current colour is used.

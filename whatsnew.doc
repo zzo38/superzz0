@@ -26,12 +26,19 @@ ASSEMBLY
   +  DYN opcode for dealing with dynamic strings.
   +  SCFR is a new instruction to affect script frames.
   +  Implemented the CAM instruction (affects camera position).
+  +  ED ';' and ED 'V' and ED4 65 are added.
   =  Correction in assembler of parsing the source part of a extension
      operand if its value is 1.
   =  Missing "break" in ED4 and ED5 cases in assembler.
 
 EDITOR
   +  You can use ^P in the board editor to edit the text of a stat.
+  +  The :boardinfo command to alter board info.
+  +  Default settings for new boards can now be made by the asm file. (This
+     function can be disabled by the user configuration file.)
+
+TEMPLATE
+  +  Default settings for new boards are now specified.
 
 OTHERS
   +  The TEMPLATE.DER lump is usable for affecting the creation of new

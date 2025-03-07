@@ -45,6 +45,12 @@ default_colors
   to F12 menus in the board editor will be used, but if 0 then the colour
   specified by the user is used instead.
 
+editor_auto
+  Set to 1 (default) to enable some editor functions being automatic
+  according to to the specifications in the assembly file (see the
+  editops.doc for details). Set to 0 to disable some of these functions
+  (others still work, or can be disabled in other ways).
+
 editor_custom_labels
   Set to 1 (default) to enable custom labels in the editor. (These custom
   labels can be defined by the asm file; see editops.doc for details.)
@@ -164,7 +170,7 @@ speed_fast
 
 template_board
   The board number to use as the template for new boards; the default value
-  is zero.
+  is zero. (See also: editor_auto)
 
 test_mode
   Used for internal testing. The meaning of the value is undocumented (and

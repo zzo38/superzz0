@@ -1979,3 +1979,24 @@ E_BOMB	ED '=',"K9.M"
 	; Text editor
 	ED1 64,60
 
+	; New board
+	ED1 65
+	ED 2,60,25,2,0
+	ED ':',"bi s0 u0 ="
+	ED 'S',1
+	ED4 A,$FFFF
+	ED5 A,1,$1170
+	ED4 A,0
+	ED5 A,1,$1070
+	ED5 A,1,$1270
+	ED5 A,1,$1370
+	ED 'S',2
+	ED5 A,1,$1170
+	ED5 A,1,$1270
+	ED5 A,1,$1370
+	ED4 A,1
+	ED5 A,1,$1070
+	ED ':',"%/b p <0E>Normal<00>"
+	ED 'V',$80,$08,$B1
+	ED 0
+

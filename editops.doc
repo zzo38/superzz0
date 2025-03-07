@@ -108,6 +108,14 @@ ED 1,parameter
   menus, then the high 8-bits of the parameter will be used as the speed
   value of the new stat.
 
+ED 2,width,height,stats,option
+  This is only allowed as the first instruction of a parameter editor for
+  creating a new board, and is mandatory in that case. The width and
+  height of the board, and the number of stats, can be specified; none
+  of these are allowed to be zero. The option is a bit field; currently
+  only bit0 is used, which means that the size of the previously selected
+  board should be used if there is one.
+
 ED '/',which,bits  !
   Set a condition for further form items to be displayed or suppressed
   (up to the next ED '/' instruction). The bits are, if any bit is set
@@ -117,6 +125,14 @@ ED '/',which,bits  !
 
 ED ':',string
   Execute a colon command. Some colon commands are restricted.
+
+ED ';',string
+  Execute a colon command, but allow the use of escapes in the string,
+  which start with ` and then another character. Doubling the ` will
+  represent a literal ` character. A uppercase letter A to H means use
+  the value of that register, or don't execute if negative. A lowercase
+  letter a to h means use the value of the register with a plus or minus
+  sign in front (which is always valid; plus is used if it is zero).
 
 ED '=',string
   Make a calculation.
@@ -175,6 +191,9 @@ ED 'S',stat
   in the parameter editor, such as the ED 'E' command. If the stat number
   is specified as $FFFF then the stat of the saved tile is used instead.
 
+ED 'V',kind,color,character
+  Fill the overlay with the specified tile.
+
 ED3 key,value[,key,value,...]
   If the parameter any of the keys then the A register is changed to the
   specified value. All of the keys and values must be 8-bit numbers.
@@ -219,6 +238,9 @@ minor 2 for user/lock flags.
 
 * 3 = Board info; minor 0 for flags, 1 for user data, 2 for screen, and 8
 to 11 for exits.
+
+* 4 = Overlay values; minor 0 for kind, 1 for color, 2 for parameter, and
+3 for stat number.
 
 * 7 = One of the 32-bit registers A to H (minor codes 0 to 7) (although
 only the low 16-bits are valid).
@@ -268,4 +290,7 @@ value is nonzero or zero.
 
 ED1 64,margin
   Set the right margin position in the text editor, from 1 to 79.
+
+ED1 65
+  Followed by parameter editor code for setting values of a new board.
 

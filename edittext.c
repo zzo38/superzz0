@@ -179,7 +179,7 @@ static Uint8*text_editor_1(Uint8*text) {
   if(yc<scrol) scrol=yc;
   if(yc>scrol+23) scrol=yc-23;
   if(xc>lines[yc].len) xc=lines[yc].len;
-  if(memory[0x240] && memory[0x240]<80) for(i=0;i<24;i++) {
+  if(editor && memory[0x240] && memory[0x240]<80) for(i=0;i<24;i++) {
     v_color[i*80+memory[0x240]]=0x02;
     v_char[i*80+memory[0x240]]=0xB3;
   }

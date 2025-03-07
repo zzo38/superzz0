@@ -20,6 +20,7 @@ static Uint16 markwidth,markheight,markskip;
 static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay);
 static void stat_list_callback(Uint16 n,int y,void*uz);
 static void stat_xy_edit(Stat*s,Uint16 n);
+static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy);
 
 void set_board_name(Uint16 id,const char*name) {
   if(maxboard<id) {
@@ -71,13 +72,14 @@ static void goto_board(Uint16 id) {
   const char*e;
   char b=0;
   int i;
+  Uint16 m;
   if(!fp) {
     if(maxboard<id) {
       alert_text("Board not found");
       return;
     }
     b=1;
-    fp=open_lump_by_number(config.template_board,"BRD","r");
+    if(!config.editor_auto || !memory[0x241]) fp=open_lump_by_number(config.template_board,"BRD","r");
   }
   if(fp) {
     if(e=load_board(fp)) alert_text(e);
@@ -96,14 +98,45 @@ static void goto_board(Uint16 id) {
       }
       maxstat=1;
     }
-  } else {
+  } else if(b && config.editor_auto && (m=memory[0x241])) {
+    if(m>0xFFF0 || memory[m]!=2 || (memory[m+3]&~127)) {
+      alert_text("The ED1 65 command is used improperly");
+      goto blank;
+    }
     free(b_under);
-    b_under=calloc(25*60,3*sizeof(Tile));
+    if(!board_info.width || !(memory[m+4]&1)) board_info.width=memory[m+1]?:80;
+    if(!board_info.height || !(memory[m+4]&1)) board_info.height=memory[m+2]?:25;
+    b_under=calloc(board_info.height*board_info.width,3*sizeof(Tile));
     if(!b_under) err(1,"Allocation failed");
-    b_main=b_under+25*60;
-    b_over=b_main+25*60;
-    board_info.width=60;
-    board_info.height=25;
+    b_main=b_under+board_info.height*board_info.width;
+    b_over=b_main+board_info.height*board_info.width;
+    board_info.exits[0]=board_info.exits[1]=0;
+    board_info.exits[2]=board_info.exits[3]=0;
+    if(!stats || maxstat!=memory[m+3]) {
+      for(i=0;i<maxstat;i++) {
+        free(stats[i].text);
+        free(stats[i].xy);
+        stats[i].text=0;
+        stats[i].length=0;
+        stats[i].xy=0;
+        stats[i].frame=0;
+        stats[i].count=0;
+      }
+      stats=realloc(stats,(memory[m+3]?:1)*sizeof(Stat));
+      if(!stats) err(1,"Allocation failed");
+      while(maxstat<memory[m+3]) memset(stats+maxstat++,0,sizeof(Stat));
+      maxstat=memory[m+3]?:1;
+    }
+    parameter_edit(m+5,0,0,0);
+  } else {
+    blank:
+    free(b_under);
+    if(!board_info.width) board_info.width=60;
+    if(!board_info.height) board_info.height=25;
+    b_under=calloc(board_info.height*board_info.width,3*sizeof(Tile));
+    if(!b_under) err(1,"Allocation failed");
+    b_main=b_under+board_info.height*board_info.width;
+    b_over=b_main+board_info.height*board_info.width;
     board_info.screen=0;
     board_info.exits[0]=board_info.exits[1]=0;
     board_info.exits[2]=board_info.exits[3]=0;
@@ -1037,6 +1070,34 @@ static void cc_board(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   if(!ccrestrict) goto_board(strtol(arg,0,10));
 }
 
+static void cc_boardinfo(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  Uint16 c,f;
+  while(*arg) {
+    while(*arg==' ') ++arg;
+    if(!*arg) break;
+    switch(c=*arg++) {
+      case '=': case '+': case '-':
+        f=0;
+        while(*arg && *arg!=' ') switch(*arg++) {
+          case '0': f|=BF_USER0; break;
+          case '1': f|=BF_USER1; break;
+          case '2': f|=BF_USER2; break;
+          case '3': f|=BF_USER3; break;
+          case 'P': f|=BF_PERSIST; break;
+          case 'N': f|=BF_NO_GLOBAL; break;
+          case 'O': f|=BF_OVERLAY; break;
+        }
+        if(c=='=') board_info.flag=f;
+        if(c=='-') board_info.flag&=~f;
+        if(c=='+') board_info.flag|=f;
+        break;
+      case 's': board_info.screen=strtol(arg,(char**)&arg,10); break;
+      case 'u': board_info.userdata=strtol(arg,(char**)&arg,10); break;
+      default: alert_text("Improper :boardinfo"); return;
+    }
+  }
+}
+
 static void cc_color_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   if(*arg) cctmp=strtol(arg,0,16); else cctmp=clip.color;
 }
@@ -1369,7 +1430,9 @@ static void cc_writeunder_step(Uint16 x,Uint16 y,const char*arg) {
 
 static const ColonCommand colon_commands[]={
   {"b",0,cc_board,0,0,0},
+  {"bi",0,cc_boardinfo,0,0,0},
   {"board",0,cc_board,0,0,0},
+  {"boardinfo",0,cc_boardinfo,0,0,0},
   {"c",'.',0,cc_color_begin,cc_color_step,0},
   {"co",'%',0,cc_count_begin,cc_count_step,cc_count_end},
   {"color",'.',0,cc_color_begin,cc_color_step,0},
@@ -1666,6 +1729,40 @@ static void do_colon_command(char*text) {
   syntax: alert_text("Syntax error"); return;
 }
 
+static void do_escaped_colon_command(char*t) {
+  char*p;
+  char b[128];
+  int n=0;
+  int c;
+  while(*t && n<127) {
+    p=strchrnul(t,'`');
+    if(n+(p-t)>127) goto big;
+    if(t!=p) memcpy(b+n,t,p-t);
+    n+=p-t;
+    t=p;
+    if(*t=='`') {
+      if(n>99) goto big;
+      switch(c=*++t) {
+        case '`': b[n++]='`'; break;
+        case 'A' ... 'H':
+          if(regs[c-'A']<0) return;
+          n+=snprintf(b+n,128-n,"%ld",(long)(regs[c-'A']));
+          break;
+        case 'a' ... 'h':
+          n+=snprintf(b+n,128-n,"%+ld",(long)(regs[c-'a']));
+          break;
+      }
+      if(*t) t++;
+    }
+  }
+  if(*t || n>127) {
+    big: alert_text("Too long escaped colon command");
+    return;
+  }
+  b[n]=0;
+  if(n) do_colon_command(b);
+}
+
 static void ask_colon_command(void) {
   char text[75]="";
   if(emode=='v') strcpy(text,"<:>");
@@ -1830,6 +1927,7 @@ static Sint32 parameter_which_get(Uint16 which,Uint8 par,Uint8 sta,StatXY*sxy) {
     case 0x30: v=board_info.flag; break;
     case 0x31: v=board_info.userdata; break;
     case 0x32: v=board_info.screen; break;
+    case 0x40 ... 0x43: v=overclip.values[(which>>8)&3]; break;
     case 0x38 ... 0x3B: v=board_info.exits[(which>>8)&3]; break;
     case 0x70 ... 0x77: v=regs[(which>>8)&7]; break;
     default: return -1;
@@ -1874,21 +1972,22 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
               case 0x13: stats[sta-1].misc3=v; break;
               case 0x20: rxy.delay=sxy->delay=v; break;
               case 0x21: rxy.instptr=sxy->instptr=v; break;
-              case 0x22: rxy.layer=sxy->layer=(sxy->layer&0x3F)+(v&0xC0); break;
+              case 0x22: rxy.layer=sxy->layer=(sxy->layer&0x03)+(v&0xFC); break;
               case 0x30: board_info.flag=v; break;
               case 0x31: board_info.userdata=v; break;
               case 0x32: board_info.screen=v; break;
+              case 0x40 ... 0x43: overclip.values[(memory[addr+1]>>8)&3]=v; break;
               case 0x38 ... 0x3B: board_info.exits[(memory[addr+1]>>8)&3]=v; break;
             }
           }
         }
         addr+=2;
         break;
-      case ':':
+      case ':': case ';':
         if(ccrestrict) errx(1,"Recursive colon commands");
         if(memory[addr+1]<ngtext && memory[addr+1]>0) {
           ccrestrict=1;
-          do_colon_command(gtext[memory[addr+1]]);
+          if((memory[addr]&0xFF)==';') do_escaped_colon_command(gtext[memory[addr+1]]); else do_colon_command(gtext[memory[addr+1]]);
           ccrestrict=0;
         }
         sxy=0;
@@ -1957,6 +2056,11 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
         addr+=3;
         break;
       case 'S': if(memory[addr+1]==0xFFFF) sta=clip.stat; else sta=memory[addr+1]; addr+=2; break;
+      case 'V':
+        cctile.kind=memory[addr+1]; cctile.color=memory[addr+2]; cctile.param=memory[addr+3]; cctile.stat=0;
+        for(i=0;i<board_info.width;i++) for(j=0;j<board_info.height;j++) over_place_at(i,j,cctile);
+        addr+=4;
+        break;
       default: errx(1,"Improper instruction: $%04X at $%04X",memory[addr],addr);
     }
   }
