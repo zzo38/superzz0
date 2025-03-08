@@ -852,6 +852,15 @@ numbers are treated as unsigned.
 [0A9 M2L]
   Like M1L but uses 32-bit values instead of 16-bit values.
 
+[0AA MEM]
+  Memory block operation. In most cases, the J is the source address, the
+  K is the destination address, and the second operand is the length. The
+  first operand selects the operation as follows:
+   C = Copy
+   D = Display (J is colour mask: low=XOR, high=AND)
+   E = Exchange
+   F = Fill (J is the value to be filled with)
+
 [100 LET]
   Copy second operand to first.
 

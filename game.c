@@ -3328,6 +3328,15 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         regs[fo]=t;
         return u;
       case OP_MAX: if(so>regs[fo]) regs[fo]=so; break;
+      case OP_MEM:
+        t=memory[MEM_ARG_J]; u=memory[MEM_ARG_K];
+        switch(fo) {
+          case 2: while(so-- && !((t|u)&~0xFFFF)) memory[u++]=memory[t++]; break;
+          case 3: fo=0; while(fo<ntextbuf && so-- && !(u&~0xFFFF)) memory[u]=(memory[u]&t&0xFF00)^(t<<8)^textbuf[fo],u++,fo++; break;
+          case 4: while(so-- && !((t|u)&~0xFFFF)) ex=memory[u],memory[u++]=memory[t],memory[t++]=ex; break;
+          case 5: while(so-- && !(u&~0xFFFF)) memory[u++]=t; break;
+        }
+        break;
       case OP_MESS: do_text_op(fo,so); memcpy(vtextbuf,textbuf,nvtextbuf=ntextbuf); vtextbuf[nvtextbuf]=0; if(vtexttime=(nvtextbuf?config.message_timer:0)) add_message_text(); break;
       case OP_MIN: if(so<regs[fo]) regs[fo]=so; break;
       case OP_MNEW:
