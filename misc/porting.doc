@@ -1,0 +1,239 @@
+This has ideas about porting Super ZZ Zero to other systems. It also
+includes notes about possible new or changed user configuration options.
+
+
+=== GNU/Linux ===
+
+Super ZZ Zero is already designed for GNU/Linux systems, although it might
+be helpful to be included in package managers of some distributions.
+
+Some systems may use SDL2 or SDL3 instead of SDL1, especially if the system
+is using Wayland. Compatibility layers exist, but its use may need testing.
+
+
+=== DOS ===
+
+DOS has 8.3 case-insensitive file names. This should not be a problem with
+most of the working of Super ZZ Zero.
+
+The save/restore game menu might have to be changed somewhat, but still
+mostly retaining the existing UI, to work with DOS file names properly.
+
+The user configuration file will need to have a different name, and will
+probably be stored in the same directory as the executable file.
+
+audio_music_driver
+  Specify the sound driver for music lumps (not currently implemented).
+  (It can also read settings from the BLASTER environment variable.)
+
+audio_pc_driver
+  Specify the sound driver for PC sound effects (#PLAY and SFX), such as
+  using the PC speaker directly (which will disable the volume controls),
+  or emulated using some sound card.
+
+audio_wave_driver
+  Specify the sound driver for wave sounds (not currently implemented).
+
+help
+  In DOS, if this option is not specified, it will look in the subdirectory
+  of the directory with the executable file. (You can still override it
+  with your own specification if you want to do.)
+
+joy_calibration
+  Sets the calibration setting for joysticks.
+
+joy_type
+  Specifies the joystick type, which can be "PC" (only two buttons and two
+  axes), "GRAVIS" (has four buttons), or "GRAVIS_PRO" (which has many more
+  buttons as well, and up to four controllers).
+
+printer_port
+  Specify the port that the printer is connected to, such as "LPT1". (If
+  it is connected to a PostScript printer, you must use the printer_begin
+  option to specify the name of a file containing a ESC/P emulator written
+  in PostScript, and printer_end with whatever is used to terminate it.)
+  Specify "FILE:" and a file name if you want to print to file.
+
+show_status
+  This setting is only meaningful with some video modes; it is not
+  meaningful in text mode.
+
+video_mode
+  Specifies preferred and acceptable video modes.
+
+The following configuration settings are not meaningful on DOS:
+  full_screen
+  joy_name
+  time_utc
+
+
+=== Windows ===
+
+Windows also has case-insensitive file names like DOS has; this probably
+does not require any changes to Super ZZ Zero. However, another feature
+of file names in Windows is that they will normally use Unicode; this
+will not work with Super ZZ Zero unless native_file_picker is used (see
+the below description), but file names with only ASCII characters can
+still be displayed and used. If the PC character set is in use though,
+then it can be used directly.
+
+It will probably also be appropriate on Windows to allow user settings to
+be stored in the registry. Windows registry has several data types. For
+Super ZZ Zero, different options have different types (although the text
+configuration file always stores them as text). REG_SZ and REG_EXPAND_SZ
+would be suitable for file names and for other text that is used with
+Windows API functions. REG_DWORD (and sometimes REG_QWORD) would be used
+for integer values and for boolean values. Other settings would probably
+use REG_BINARY, but would also allow REG_SZ and REG_EXPAND_SZ if the string
+is limited to only ASCII characters.
+
+Windows also has file associations in the Explorer and File Manager, and
+allows multiple menu options, so it can include menus for "play" and for
+"edit", so that if a file is right-clicked you can select the function.
+
+There is also COM automation, which also might have some use.
+
+A built-in option menu for configuration by GUI might also be suitable.
+
+joy_guid
+  Specifies the DirectX instance GUID for the joystick.
+
+menu_bar
+  Enables or disables the menu bar. You cannot push F10 to select the menu
+  bar, but you can push ALT by itself to select the menu bar, if the menu
+  bar is enabled.
+
+native_file_picker
+  If set to 1 then the save/restore game menu will use the Windows file
+  dialog boxes instead of the built-in UI of Super ZZ Zero.
+
+native_text_edit
+  If set to 1 then the text editing widget of Windows is used instead of
+  the built-in UI of Super ZZ Zero.
+
+printer_type
+  Specify W to display the Windows printing dialog box when F11 is pushed.
+  This will then be used to print using the functions of Windows.
+
+renderer
+  Specifies the type of renderer to use.
+
+time_format
+  If not specified, it uses the date/time format setting in Windows.
+
+time_format_mode
+  Selects to use short or long date/time formats.
+
+
+=== Mac OS X ===
+
+I do not know much about it. However, there are a few things. The command
+key is not used in Super ZZ Zero, but an implementation on Mac OS X can
+use it for the common functions that it is used for with its combinations,
+such as Command+Q to quit, Command+P to print, etc.
+
+Mac OS X also uses UTI. The UTI for a Super ZZ Zero world file should be
+"org.zzo38computer.superzz0.world", and this conforms to the UTI for the
+Hamster archive format, which is "com.hamsterrepublic.lumped".
+
+Some functions of Windows such as a configuration menu would also be
+possible on Mac OS X, too.
+
+AppleScript is another thing; it might be possible to make it possible
+to work some functions (e.g. board editor automation) with AppleScript,
+but because it uses Unicode, it will not be possible to work properly
+with non-Unicode text.
+
+native_file_picker
+  Like on Windows.
+
+native_text_edit
+  Like on Windows.
+
+time_format_mode
+  Selects to use short or long date/time formats.
+
+
+=== A currently unnamed operating system design ===
+
+Command, Automation, and Query Language may be usable to command, automate,
+and query the Super ZZ Zero.
+
+The .CCM lumps would probably be used with this system, since they can be
+used to interoperate text with other programs; it would also be usable to
+allow the application to tell the keyboard manager which input character
+set it wants, to automatically set the IME by the context. (This is not
+possible in most other systems since they use Unicode, but this one uses
+TRON code, which is better.)
+
+In this system, many settings that refer to files and directories will
+not work as is; the values will be links to the files instead. Settings
+that refer to external programs will need to refer to capabilities. For
+directories (only "help" so far), the link would usually be to a file with
+a key/value list, which associates the names (in ASCII) to the files.
+
+full_screen
+  This is not available. If you want to use full screen, you must use the
+  facilities of the operating system to display it as full screen, which
+  is a separate setting from the application-specific configuration.
+
+native_text_edit
+  Like on Windows.
+
+printer_type
+  This can be set to W to use the operating system's printing functions.
+
+time_format
+  If not specified, the locale setting will be used (which also makes it
+  possible to use non-Gregorian calendars), if it can be used with the
+  current character set.
+
+time_format_mode
+  Selects to use short or long date/time formats.
+
+The following configuration settings are not meaningful:
+  auto_suffix
+  file_list
+  full_screen
+  joy_index
+  joy_name
+  save_dir
+
+(Such things as joypad selections and full screen are handled by other
+software on the system and does not need to be configured by the
+application programs, so such settings are not used by Super ZZ Zero.
+The button/axis mapping still needs to be configured in Super ZZ Zero.)
+
+
+=== HTML ===
+
+One possible feature is to allow automation of some editor functions using
+JavaScripts (like it would be possible using AppleScript on Mac OS X).
+
+joy_name
+  When using HTML, the joy_name is the "id" property of the Gamepad object.
+  If it does not match any of them exactly, it is a prefix.
+
+js_time_format
+  Specifies the JSON data which will be decoded and used as the options for
+  the Intl.DateTimeFormat. (This will not work within the user interface of
+  Super ZZ Zero itself unless the resulting format uses only ASCII
+  characters, but can still be used in other interfaces.)
+
+native_text_edit
+  Like on Windows.
+
+The following configuration settings are not meaningful on HTML:
+  auto_suffix
+  extra_lump_file
+  extra_lump_name
+  file_list
+  help
+  printer_begin
+  printer_command
+  printer_end
+  printer_type
+  save_dir
+  test_mode
+  text_editor_command
+
