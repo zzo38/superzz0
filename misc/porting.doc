@@ -34,6 +34,11 @@ audio_pc_driver
 audio_wave_driver
   Specify the sound driver for wave sounds (not currently implemented).
 
+copy_current_font
+  If set to 1 then it enables the function to allow copying the current
+  text mode font into the world file. This only works if the video mode
+  is set to a suitable text mode.
+
 help
   In DOS, if this option is not specified, it will look in the subdirectory
   of the directory with the executable file. (You can still override it
@@ -186,7 +191,8 @@ printer_type
 time_format
   If not specified, the locale setting will be used (which also makes it
   possible to use non-Gregorian calendars), if it can be used with the
-  current character set.
+  current character set. This setting is ignored if Super ZZ Zero does
+  not have permission to determine the current date and time.
 
 time_format_mode
   Selects to use short or long date/time formats.
