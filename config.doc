@@ -63,6 +63,11 @@ editor_scroll_y
   Amount by which to scroll the board editor window if the cursor is moved
   out of the range of the screen.
 
+event_input
+  If set to 1, then it allows events to be read from stdin, in addition to
+  occurring normally. Setting it to 0 disables this feature. Other numbers
+  are not currently meaningful.
+
 extra_lump_file
   See extra_lump_name.
 
@@ -89,6 +94,14 @@ help
   Name of a directory (including the trailing slash) of the online help
   files for the editor. This is not the same as the help lumps within a
   world file, although the file format is similar (but not the same).
+
+joy_index
+  The SDL joystick index number to use. To use joysticks, either joy_name
+  or joy_index must be defined (but not both).
+
+joy_name
+  The SDL joystick name to match. To use joysticks, either joy_name or
+  joy_index must be defined (but not both).
 
 key_repeat_delay
   Keyboad repeat delay.

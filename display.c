@@ -345,6 +345,7 @@ Uint8 v_ycur=128;
 SDL_Event event;
 
 static SDL_Surface*scrn;
+static SDL_Joystick*joy;
 
 static SDL_Color palet[34]={
   // PC
@@ -386,12 +387,80 @@ static SDL_Color palet[34]={
   {0xA4,0xBD,0xBB},
 };
 
+static int custom_event_thread(void*unuse) {
+  SDL_Event e={};
+  Uint8 d[256];
+  int i,n;
+  for(;;) {
+    n=getchar();
+    if(n==EOF || !n) break;
+    fread(d,1,n&255,stdin);
+    switch(*d) {
+      case 0: e.type=SDL_QUIT; SDL_PushEvent(&e); return 0;
+      case 1:
+        e.type=SDL_KEYDOWN; e.key.keysym.mod=0;
+        for(i=1;i<n;i++) {
+          e.key.keysym.sym=e.key.keysym.unicode=d[i];
+          SDL_PushEvent(&e);
+        }
+        break;
+      case 2: case 3:
+        if(n!=6) break;
+        e.type=(*d==2?SDL_KEYDOWN:SDL_KEYUP);
+        e.key.state=(*d==2?SDL_PRESSED:SDL_RELEASED);
+        e.key.keysym.sym=d[1]|(d[2]<<8);
+        e.key.keysym.mod=d[3]|(d[4]<<8);
+        e.key.keysym.unicode=d[5];
+        SDL_PushEvent(&e);
+        break;
+      case 4: case 5:
+        if(n!=2) break;
+        e.type=(*d==4?SDL_JOYBUTTONDOWN:SDL_JOYBUTTONUP);
+        e.jbutton.state=(*d==4?SDL_PRESSED:SDL_RELEASED);
+        e.jbutton.button=d[1];
+        SDL_PushEvent(&e);
+        break;
+      case 6:
+        if(n!=4) break;
+        e.type=SDL_JOYAXISMOTION;
+        e.jaxis.axis=d[1];
+        e.jaxis.value=d[2]|(d[3]<<8);
+        SDL_PushEvent(&e);
+        break;
+      case 7:
+        if(n!=3) break;
+        e.type=SDL_JOYHATMOTION;
+        e.jhat.hat=d[1];
+        e.jhat.value=d[2];
+        SDL_PushEvent(&e);
+        break;
+    }
+  }
+  warnx("Error reading events from stdin; now stopped reading events from stdin.");
+  return 1;
+}
+
 void init_display(void) {
   if(scrn) goto clear;
   if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO)) errx(1,"SDL error: %s",SDL_GetError());
   atexit(SDL_Quit);
   scrn=SDL_SetVideoMode(81*8,(config.show_status?26:25)*14+8,8,SDL_SWSURFACE|(config.full_screen?SDL_FULLSCREEN:0));
   if(!scrn) errx(1,"SDL error: %s",SDL_GetError());
+  if(config.joy_name || config.joy_index>=0) {
+    if(SDL_InitSubSystem(SDL_INIT_JOYSTICK)) errx(1,"SDL error: %s",SDL_GetError());
+    if(config.joy_name && config.joy_index<0) {
+      int n=SDL_NumJoysticks();
+      int i;
+      for(i=0;i<n;i++) if(!strcmp(SDL_JoystickName(i),config.joy_name)) {
+        config.joy_index=i;
+        break;
+      }
+      if(config.joy_index<0) errx(1,"Cannot find joystick named \"%s\"",config.joy_name);
+    }
+    joy=SDL_JoystickOpen(config.joy_index);
+    if(!joy) errx(1,"SDL error: %s",SDL_GetError());
+    SDL_JoystickEventState(SDL_ENABLE);
+  }
   if(config.video_gamma) {
     const char*s=config.video_gamma;
     float r,g,b;
@@ -408,6 +477,7 @@ void init_display(void) {
   SDL_SetColors(scrn,palet,0,34);
   SDL_EnableUNICODE(1);
   SDL_EnableKeyRepeat(config.key_repeat_delay,config.key_repeat_interval);
+  if(config.event_input==1) SDL_CreateThread(custom_event_thread,0);
   clear:
   memset(v_color,7,80*25);
   memset(v_char,32,80*25);
