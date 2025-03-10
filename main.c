@@ -80,6 +80,7 @@ static void set_config(const char*s) {
 }
 
 static void load_config(char*nam) {
+  char*x;
   FILE*f;
   int n;
   char*line=0;
@@ -99,7 +100,8 @@ static void load_config(char*nam) {
     if(!f) return;
   }
   while(getline(&line,&linesize,f)>0) {
-    *strchrnul(line,'\n')=0;
+    *(x=strchrnul(line,'\n'))=0;
+    if(x>line && x[-1]=='\r') x[-1]=0;
     if(*line=='#' || !*line) continue;
     set_config(line);
   }

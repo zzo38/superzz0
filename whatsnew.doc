@@ -46,6 +46,8 @@ OTHERS
      world files from a template. (There is currently no way to create
      this lump within Super ZZ Zero itself; an external program must be
      used instead.)
+  *  Carriage returns at the end of lines in the user configuration file
+     are now ignored.
 
 
 === Version 0.4.0 (2025-02-25) ===
