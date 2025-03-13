@@ -80,6 +80,7 @@ static void set_config(const char*s) {
 }
 
 static void load_config(char*nam) {
+  char div=1;
   char*x;
   FILE*f;
   int n;
@@ -101,9 +102,17 @@ static void load_config(char*nam) {
   }
   while(getline(&line,&linesize,f)>0) {
     *(x=strchrnul(line,'\n'))=0;
-    if(x>line && x[-1]=='\r') x[-1]=0;
+    if(x>line && x[-1]=='\r') *--x=0;
     if(*line=='#' || !*line) continue;
-    set_config(line);
+    if(*line=='[' && x>line && x[-1]==']') {
+      div=0;
+      if(!strcmp(line,"[Options]")) div=1;
+      if(!strcmp(line,"[Joystick]")) div=2;
+      continue;
+    }
+    switch(div) {
+      case 1: set_config(line); break;
+    }
   }
   fclose(f);
   free(line);

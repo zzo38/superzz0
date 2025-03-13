@@ -1,7 +1,14 @@
 Configurations can be specified by command-line arguments and by the
 configuration file (it looks for ~/.superzz0rc by default). Command-line
-arguments override whatever is in the configuration file. Comments can be
+arguments override whatever is in the [Options] division. Comments can be
 made in the configuration file by # at the beginning of a line.
+
+Each division of the configuration file starts with a line with [] around
+the name of the division (mentioned below). If no division is specified
+then the [Options] division will be used by default.
+
+
+=== [Options] ===
 
 Configuration format is the key and = and the value (if any one is omitted,
 then the default value will be used instead). The possible keys are
@@ -102,6 +109,14 @@ joy_index
 joy_name
   The SDL joystick name to match. To use joysticks, either joy_name or
   joy_index must be defined (but not both).
+
+joy_sensitivity
+  A number from 1 to 32767 indicating how far the joystick must be pushed
+  in order to be recognized for translation to digital inputs. Higher
+  numbers means that the joystick must be pushed more far from the centre
+  in order to have any effect. (This only affects translation from analog
+  to digital inputs within Super ZZ Zero itself. It is independent of any
+  settings in Xorg, evdev, etc.)
 
 key_repeat_delay
   Keyboad repeat delay.
@@ -219,4 +234,9 @@ version_warn
 video_gamma
   Can be three numbers with semicolons in between; affects the gamma
   setting of red, green, blue.
+
+
+=== [Joystick] ===
+
+(TODO)
 

@@ -31,6 +31,9 @@ claims that these classifications do not apply to this world.)
 * A OID to identify the hash algorithm. This may be relative to
 2.16.840.1.101.3.4.2 (not to the Super ZZ Zero base OID).
 
+* The hash of the previous version of the world file, stored as a octet
+string. This may be null if this is the first version.
+
 * A set of Visible strings, which are URLs for downloading current or new
 versions of the world file. This set may be empty, but if it is not empty
 then all URLs must be direct download links. Any scheme may be used.
@@ -97,4 +100,42 @@ and fifth means adding comments and other stuff like that.
 * A key/value list of extensions.
 
 (This section is incomplete and is likely to be changed in future)
+
+
+=== Protocol ===
+
+The URL for the service may start with "scorpion:" or "scorpions:". It
+should end with a slash, and should not include a query string or a
+fragment name. A user name and password is allowed but it is not
+mandatory and is not recommended for announcing services, although the
+user may add it manually if necessary.
+
+User authentication types:
+
+* Username/password (included in the URL)
+
+* HMAC (only for write access; cannot be used to restrict read access)
+
+* X.509 (only for secure connections)
+
+Two request types are used, R for receiving data and S for sending data.
+Range requests are allowed for some operations; some implementations may
+also allow range requests for some other operations as well.
+
+All requests will use the URL with something added on the end, which is
+the specific operation.
+
+The operations for receiving are:
+
+* _info = Download the service information file. (You might already have
+it, which will be used to connect to this service. However, this can be
+used if you want to download a new version of the file.)
+
+* _side/ = Followed by some kind of identifier to download the side file.
+This identifier is specific to the service being used.
+
+* _world/ = Followed by the hash of the world file in lowercase hexadecimal
+format, to download the world file.
+
+(This section is incomplete)
 
