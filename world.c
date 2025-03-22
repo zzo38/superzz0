@@ -31,6 +31,47 @@ static int check_feature(const ASN1_Value*v) {
   return -1;
 }
 
+static int do_joystick_config(const ASN1_Value*v) {
+  char buf[256];
+  ASN1_Value a,b;
+  ASN1_Iterator it;
+  int c,d,i,q;
+  Sint32 z;
+  asn1_foreach(q,&it,v,&a) {
+    if(!a.class && a.type==ASN1_SEQUENCE && a.constructed) {
+      if(asn1_first_of(&b,&a) || b.class || b.type!=ASN1_PC_STRING || b.length>255) return 1;
+      memcpy(buf,b.data,b.length);
+      buf[b.length]=0;
+      if(asn1_next_of(&b,&a) || b.class || b.type!=ASN1_OCTET_STRING) return 1;
+      z=configure_joystick(1,buf);
+      if(z<0) continue;
+      for(d=i=q=0;i<b.length && q<32;) {
+        switch(c=b.data[i++]) {
+          case 3: joystat->map[z].a[q++]=0; if(q<32)
+          case 2: joystat->map[z].a[q++]=0; if(q<32)
+          case 1: joystat->map[z].a[q++]=0; if(q<32)
+          case 0: joystat->map[z].a[q++]=0; break;
+          case 7: joystat->map[z].a[q++]=d; if(q<32)
+          case 6: joystat->map[z].a[q++]=d; if(q<32)
+          case 5: joystat->map[z].a[q++]=d; if(q<32)
+          case 4: joystat->map[z].a[q++]=d; if(q<32)
+          /*   */ joystat->map[z].a[q++]=d; break;
+          case 8 ... 9: case 13: case 16 ... 17: case 24 ... 27: case 30 ... 126:
+          case 8+128 ... 9+128: case 13+128: case 16+128 ... 17+128: case 24+128 ... 27+128: case 30+128 ... 126+128:
+            joystat->map[z].a[q++]=d=c; break;
+          case 12: if(i<b.length && q<32) joystat->map[z].a[q++]=d=b.data[i++]+0x100; //
+          case 11: if(i<b.length && q<32) joystat->map[z].a[q++]=d=b.data[i++]+0x100; //
+          case 10: if(i<b.length && q<32) joystat->map[z].a[q++]=d=b.data[i++]+0x100; break;
+          case 128 ... 135: joystat->map[z].a[q++]=d=b.data[i++]+0x180; break;
+          default: fprintf(stderr,"Incorrect byte (%02X) in joystick configuration in GENERAL.DER",c); return 1;
+        }
+      }
+      for(i=16;i<24;i++) if(joystat->map[z].a[i]&0x8000) joystat->map[z].a[i]=0x300;
+    }
+  }
+  return q!=ASN1_DONE;
+}
+
 const char*init_world(void) {
   // Returns 0 if OK, error message if error
   int i,j;
@@ -144,7 +185,12 @@ const char*init_world(void) {
         config.version_warn|=2;
       }
     }
-    // (other stuff is currently not defined, and is ignored)
+    // Others
+    while(!asn1_next(&i1,&a2)) if(a2.class==ASN1_CONTEXT_SPECIFIC && a2.constructed) switch(a2.type) {
+      case 0: // Joystick configuration
+        if(joystat && do_joystick_config(&a2)) return "Error in joystick configuration in world file";
+        break;
+    }
     // Done
     asn1_free(&a1);
   }

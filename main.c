@@ -107,11 +107,12 @@ static void load_config(char*nam) {
     if(*line=='[' && x>line && x[-1]==']') {
       div=0;
       if(!strcmp(line,"[Options]")) div=1;
-      if(!strcmp(line,"[Joystick]")) div=2;
+      if(!editor && !strcmp(line,"[Joystick]")) div=2;
       continue;
     }
     switch(div) {
       case 1: set_config(line); break;
+      case 2: configure_joystick(0,line); break;
     }
   }
   fclose(f);
@@ -320,6 +321,7 @@ int main(int argc,char**argv) {
     if(!editor && (s=select_board(b))) errx(1,"Cannot load board: %s",s);
   }
   init_display();
+  if(joystat) configure_joystick(2,0);
   if(config.version_warn&4) {
     alert_text("This file requires a newer version of Super ZZ Zero");
     if(!editor) errx(1,"This file requires a newer version of Super ZZ Zero.");

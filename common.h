@@ -47,6 +47,33 @@ void set_timer(Uint32);
 Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n);
 int next_event(void);
 
+// === Joystick ===
+
+#define JL_NORMAL 16
+#define JL_TEXT_WINDOW 17
+#define JL_LEVEL0 16
+#define JL_LEVEL1 20
+#define JL_LEVEL2 21
+#define JL_LEVEL3 22
+#define JL_LEVEL4 23
+
+typedef struct {
+  Uint16 a[24];
+} JoyMapping;
+
+typedef struct {
+  Uint8*hat; // e,n,w,s
+  Uint8*axis; // -,+
+  Uint8*button; // *
+  JoyMapping map[32];
+  Uint32 state;
+  Uint8 nhat,nbutton,naxis,nmap;
+} JoyStatus;
+
+extern JoyStatus*joystat;
+
+Sint32 configure_joystick(char mode,const char*text);
+
 // === Sounds ===
 
 void audio_init(void);
@@ -430,6 +457,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define XOP_S_IF_TRUE 0x0DC0 // (source) if true, (value) if false (-3 to +4, A to H)
 #define XOP_S_IF_FALSE 0x0DD0 // (source) if false, (value) if true (-3 to +4, A to H)
 
+#define MEM_JOY_LEVEL 0xC4
 #define MEM_RETURN_EVENT 0xC5
 #define MEM_SENSOR_EVENT 0xC6
 #define MEM_OVERLAY_STAT_EVENT 0xC7

@@ -501,10 +501,31 @@ version number without the (patch) should be used in the mandatory set.
 If in future it becomes necessary to emulate bugs of older versions of
 Super ZZ Zero, it will use this version number to enable such emulation.
 
-All of the further fields are optional, but none are currently defined.
+All of the further fields are optional. Each one is a implicit typed
+sequence with context-specific class; the type number indicates the
+meaning of the sequence, and they are:
 
-(This lump is not currently implemented. When it is, the optional fields
-might include: high score format, joypad mapping, etc.)
+* 0 = Joystick mapping. There can be up to 32 mappings defined; each is
+a sequence, where the first item in the sequence is a PC string with the
+button names with semicolons in between, and the second item is a octet
+string, with a format described below.
+
+The octet strings in the joystick mappings are made as a sequence of the
+mappings for levels 0 to 15; there can be less than sixteen mappings in
+which case the rest are null. Each byte will be one of:
+
+* 0 to 3 means 1 to 4 null entries.
+
+* 4 to 7 means 2 to 5 copies of the previous entry.
+
+* 8, 9, 13, 16, 17, 24 to 27, and 30 to 126 means a ASCII key code.
+
+* 10 to 12 means the next 1 to 3 bytes are command codes. (See config.doc
+for a list of the possible command codes.)
+
+* 128 to 135 means shift while held, to level 1 to 8.
+
+* Adding 128 to a ASCII key code will mean auto fire.
 
 
 === GLOBAL ===

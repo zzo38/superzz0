@@ -238,5 +238,96 @@ video_gamma
 
 === [Joystick] ===
 
-(TODO)
+Each line in this section has three parts, with colons in between:
+
+* The buttons/axes/hats to be mapped.
+
+* The levels. This can be an asterisk for all levels, or any combination
+of the following: 0 for normal mode, 1 to 4 for a user-defined level, or
+T for text windows.
+
+* The command codes for this mapping.
+
+The second and third parts can be repeated multiple times (after a command
+code, another level and then another command, etc), as long as the levels
+do not overlap, unless the first level is * in which case the rest of the
+pairs will override the first one.
+
+The first part of each line in this section consists of one or more the
+following things, with commas in between:
+
+* Button numbers preceded by an asterisk.
+
+* Axis numbers preceded by - or + sign.
+
+* Hat numbers preceded by a direction: n s e w
+
+Any things listed together on the same line are considered to be
+equivalent for the purpose of mapping. Up to 32 mappings can be defined.
+
+The command codes are as follows:
+
+* A normal key code; this can be a ASCII character with ' on both sides,
+or one of the control keys: n s e w for unshifted arrows, N S E W for
+shifted directions, b for backspace, t for tab, r for return. You may
+prefix any of them by an exclamation mark for auto fire.
+
+* One of the special command codes listed below.
+
+* It can be a modifier button; use # and then a number 1 to 4 for the
+modifier level.
+
+* A string in quotation marks, representing the label to be mapped to; if
+the world file contains a mapping for that label, it will use it. You may
+optionally add a comma after the final quotation mark and then one of the
+above possible command codes as well. See below for the possible escapes.
+
+The following escapes are possible in label strings:
+
+* \\ represents a backslash.
+
+* \" represents a quotation mark.
+
+* \x and two hex digits represents a PC character. (Null characters are not
+allowed, and are meaningless, anyways.)
+
+* \n \s \e \w represents primary arrows.
+
+* \N \S \E \W represents secondary arrows.
+
+Semicolons in label strings have a special meaning; you can have multiple
+labels with semicolons in between and then whichever one is present in the
+world file will be used, where the first one has priority over the others.
+
+The possible special command codes are:
+
+* ^0 = Toggle pause (same as the PAUSE key).
+
+* ^1 = Display the F1 menu.
+
+* ^2 = Toggle sound.
+
+* ^5 = Quick save game (same as F5).
+
+* ^7 = Quick restore game (same as F7).
+
+* ^9 = Display the message scrollback.
+
+* ^< = Display the previous page in a text window.
+
+* ^> = Display the next page in a text window.
+
+* ^A = Advance to next frame.
+
+* ^F = Fast speed while button is held.
+
+* ^T = Toggle speed (same as F12).
+
+* ^X = Clear message.
+
+* ^Z = Cancel a text window or other window.
+
+* ^[ = Go to the top of a text window.
+
+* ^] = Go to the bottom of a text window.
 

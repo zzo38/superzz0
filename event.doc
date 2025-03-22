@@ -6,6 +6,10 @@ addresses with a currently defined meaning are listed here. The initial
 values can be set using the assembler, and they can also be changed at
 run time.
 
+$C4 = Joystick input levels. The low nybble is for normal game mode, the
+next nybble is for text windows, and the higher two nybbles are not
+meaningful in the current version of Super ZZ Zero.
+
 $C5 = Script return event (see below).
 
 $C6 = Sensor event (see below).

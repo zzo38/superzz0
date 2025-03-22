@@ -343,6 +343,7 @@ Uint8 v_status[82];
 Uint8 v_xcur=128;
 Uint8 v_ycur=128;
 SDL_Event event;
+JoyStatus*joystat;
 
 static SDL_Surface*scrn;
 static SDL_Joystick*joy;
@@ -572,3 +573,197 @@ int next_event(void) {
   return 0;
 }
 
+static int j_find_map(Uint8**ar,Uint8*nu,Uint16 si,Uint16 of,Uint8 ix,Sint16 ma) {
+  int i;
+  if(ix>=*nu) {
+    *ar=realloc(*ar,(ix+1)*si);
+    if(!*ar) err(1,"Allocation failed");
+    for(i=*nu*si;i<(ix+1)*si;i++) (*ar)[i]=255;
+    *nu=ix+1;
+  }
+  if((*ar)[ix*si+of]==255) {
+    if(ma<0) {
+      if(joystat->nmap==32) errx(1,"Too many joystick mappings");
+      ma=joystat->nmap++;
+    }
+    return (*ar)[ix*si+of]=ma;
+  } else {
+    if(ma>=0 && (*ar)[ix*si+of]!=ma) errx(1,"Joystick mapping mismatch");
+    return ma=(*ar)[ix*si+of];
+  }
+}
+
+typedef struct {
+  Uint8*text;
+  Uint32 offset[32];
+  Uint32 size;
+} JoyNames;
+
+static int j_match_name(Uint8*s0,const Uint8*s1,int y) {
+  Uint8*e0;
+  const Uint8*e1=strchrnul(s1,';');
+  size_t n;
+  repeat:
+  if(*s0==';' || !*s0 || !*s1) return 0;
+  n=(e0=strchrnul(s0,';'))-s0;
+  if(e1-s1==n && !memcmp(s0,s1,n)) {
+    *s0=0xFF;
+    return 1;
+  }
+  if(!y) return 0;
+  if(y==2 && *e1 && j_match_name(s0,e1+1,2)) return 1;
+  if(!*e0) return 0;
+  s0=e0+1;
+  goto repeat;
+}
+
+Sint32 configure_joystick(char mode,const char*text) {
+  Uint8 b[64];
+  static JoyNames*names=0;
+  const char*t=text;
+  int c,i,n;
+  int m=-1;
+  Uint32 lv;
+  Uint16 v;
+  if(!joystat) {
+    joystat=calloc(1,sizeof(JoyStatus));
+    if(!joystat) err(1,"Allocation failed");
+  }
+  switch(mode) {
+    case 0: // user configuration
+      while(*t && *t!=':') {
+        if(*t==',') ++text;
+        if(c=*t++) {
+          if(*t<'0' || *t>'9') goto err1;
+          n=strtol(t,(char**)&t,10);
+          if(n<0 || n>253) goto err1;
+        } else {
+          err1: errx(1,"Error in joystick configuration: %s",text);
+        }
+        switch(c) {
+          case '*': m=j_find_map(&joystat->button,&joystat->nbutton,1,0,n,m); break;
+          case '-': case '+': m=j_find_map(&joystat->axis,&joystat->naxis,2,(c=='+'?1:0),n,m); break;
+          case 'n': case 's': case 'e': case 'w': m=j_find_map(&joystat->hat,&joystat->nhat,4,(c=='e'?0:c=='n'?1:c=='w'?2:3),n,m); break;
+          default: goto err1;
+        }
+      }
+      if(m<0 || *t++!=':') goto err1;
+      lv=0;
+      while(*t!=':') switch(c=*t++) {
+        case '*': lv=0xFF; break;
+        case '0': lv|=1<<JL_NORMAL; break;
+        case '1': lv|=1<<JL_LEVEL1; break;
+        case '2': lv|=1<<JL_LEVEL2; break;
+        case '3': lv|=1<<JL_LEVEL3; break;
+        case '4': lv|=1<<JL_LEVEL4; break;
+        case 'T': lv|=1<<JL_TEXT_WINDOW; break;
+        default: goto err1;
+      }
+      t++;
+      if(*t=='"') {
+        if(!names) {
+          names=calloc(1,sizeof(JoyNames));
+          if(!names) err(1,"Allocation failed");
+          names->text=strdup(";");
+          if(!names->text) err(1,"Allocation failed");
+          names->size=2;
+        }
+        v=0x8000;
+        i=0;
+        while((c=*++t)!='"') {
+          if(!c) goto err1;
+          if(i==63) errx(1,"Joystick label string is too long: %s",text);
+          if(c=='\\') {
+            switch(c=*++t) {
+              case '\\': case '"': b[i++]=c; break;
+              case 'E': b[i++]=16; break;
+              case 'W': b[i++]=17; break;
+              case 'n': b[i++]=24; break;
+              case 's': b[i++]=25; break;
+              case 'e': b[i++]=26; break;
+              case 'w': b[i++]=27; break;
+              case 'N': b[i++]=30; break;
+              case 'S': b[i++]=31; break;
+              case 'x':
+                c=*++t;
+                if(c>='0' && c<='9') n=c-'0'; else if(c>='A' && c<='F') n=c+10-'A'; else if(c>='a' && c<='f') n=c+10-'a'; else goto err1;
+                n<<=4;
+                c=*++t;
+                if(c>='0' && c<='9') n+=c-'0'; else if(c>='A' && c<='F') n+=c+10-'A'; else if(c>='a' && c<='f') n+=c+10-'a'; else goto err1;
+                b[i++]=n;
+                break;
+              default: goto err1;
+            }
+          } else {
+            b[i++]=c;
+          }
+        }
+        b[i++]=0;
+        if(names->offset[m]) {
+          if(strcmp(names->text+names->offset[m],b)) errx(1,"Joystick mapping mismatch");
+        } else {
+          names->text=realloc(names->text,names->size+i);
+          if(!names->text) err(1,"Allocation failed");
+          memcpy(names->text+names->size,b,i);
+          names->offset[m]=names->size;
+          names->size+=i;
+        }
+        if(*t=='"') t++;
+        if(*t==',') t++;
+      } else {
+        v=0;
+      }
+      if(*t=='#') {
+        switch(c=*++t) {
+          case '0': v|=JL_NORMAL+0x200; break;
+          case '1': v|=JL_LEVEL1+0x200; break;
+          case '2': v|=JL_LEVEL2+0x200; break;
+          case '3': v|=JL_LEVEL3+0x200; break;
+          case '4': v|=JL_LEVEL4+0x200; break;
+          default: goto err1;
+        }
+      } else if(*t=='!') {
+        v|=0x80;
+        c=*++t;
+        if(c=='\'') goto apos; else goto others;
+      } else if(*t=='\'') {
+        apos:
+        v|=c=*++t;
+        if(c<0x20 || c>0x7E || *++t!='\'') goto err1;
+      } else if(*t=='^') {
+        v|=(c=*++t)+0x100;
+        if(c<0x21 || c>0x7E) goto err1;
+      } else {
+        others:
+        switch(c=*++t) {
+          case 'b': v|=8; break;
+          case 't': v|=9; break;
+          case 'r': v|=13; break;
+          case 'E': v|=16; break;
+          case 'W': v|=17; break;
+          case 'n': v|=24; break;
+          case 's': v|=25; break;
+          case 'e': v|=26; break;
+          case 'w': v|=27; break;
+          case 'N': v|=30; break;
+          case 'S': v|=31; break;
+          default: goto err1;
+        }
+      }
+      if(*t && t[1]) goto err1;
+      for(i=16;i<24;i++) if(lv&(1<<i)) {
+        if(joystat->map[m].a[i]&0x7FFF) errx(1,"Duplicate configuration in joystick mapping: %s",text);
+        joystat->map[m].a[i]=v;
+      }
+      break;
+    case 1: // configuration in world file
+      if(!names) break;
+      for(i=0;i<3;i++) for(m=0;m<32;m++) if(names->offset[m] && j_match_name(names->text+names->offset[m],text,i)) return m;
+      break;
+    case 2: // free name data
+      if(names) free(names->text);
+      free(names);
+      break;
+  }
+  return -1;
+}

@@ -5,9 +5,73 @@ exit
 
 #define USING_RW_DATA
 #include "common.h"
+#include "asn1.h"
 
 Uint8**screennames;
 Uint16 maxscreen;
+
+#define N_GENERAL_PARTS 1
+static ASN1_Value general_der;
+static ASN1_Value*general_parts;
+
+static void unload_general_der(void) {
+  Uint32 n;
+  asn1_free(&general_der);
+  if(general_parts) for(n=0;n<N_GENERAL_PARTS;n++) if(general_parts[n].own) asn1_free(general_parts+n);
+  free(general_parts);
+  general_parts=0;
+}
+
+static void load_general_der(void) {
+  ASN1_Value v;
+  FILE*f=open_lump("GENERAL.DER","r");
+  unload_general_der();
+  general_parts=calloc(N_GENERAL_PARTS,sizeof(ASN1_Value));
+  if(!general_parts) err(1,"Allocation failed");
+  if(!f) return;
+  if(asn1_read_item(f,&general_der,0)) {
+    alert_text("Error loading GENERAL.DER");
+    general_der.data=0;
+    general_der.length=0;
+  } else if(!asn1_first_of(&v,&general_der) && !asn1_next_of(&v,&general_der)) {
+    while(!asn1_next_of(&v,&general_der)) if(v.class==ASN1_CONTEXT_SPECIFIC && v.type<N_GENERAL_PARTS && !general_parts[v.type].data) general_parts[v.type]=v;
+  }
+  fclose(f);
+}
+
+static void save_general_der(void) {
+  Uint32 n=0;
+  ASN1_Value v;
+  ASN1_Encoder*e;
+  FILE*f=open_lump("GENERAL.DER","w");
+  if(!f) errx(1,"Cannot open GENERAL.DER lump for writing");
+  e=asn1_create_encoder(f);
+  if(!e) errx(1,"Unexpected error");
+  asn1_construct(e,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+  if(general_der.data) {
+    //TODO: Update version numbers
+    if(!asn1_first_of(&v,&general_der)) do {
+      if(v.class==ASN1_CONTEXT_SPECIFIC) {
+        while(n<v.type && n<N_GENERAL_PARTS) {
+          if(general_parts[n].class) asn1_encode(e,general_parts+n);
+          n++;
+        }
+        asn1_encode(e,general_parts[n].class?general_parts+n:&v);
+      } else {
+        asn1_encode(e,&v);
+      }
+    } while(!asn1_next_of(&v,&general_der));
+  } else {
+    //TODO: This should set the version numbers
+    asn1_construct(e,ASN1_UNIVERSAL,ASN1_SET,0);
+    asn1_end(e);
+    asn1_construct(e,ASN1_UNIVERSAL,ASN1_SET,0);
+    asn1_end(e);
+  }
+  asn1_end(e);
+  asn1_finish_encoder(e);
+  fclose(f);
+}
 
 static void write_start_lump(void) {
   int i;
@@ -471,6 +535,16 @@ static void edit_help_lumps(void) {
   }
 }
 
+static void edit_joystick(void) {
+  
+  win_form("Joystick config edit") {
+    
+    win_blank();
+    win_command_esc(0,"Done") break;
+  }
+  
+}
+
 static int copy_board(Uint16 inb,Uint16 outb) {
   FILE*in=open_lump_by_number(inb,"BRD","r");
   Uint32 s=lump_size;
@@ -700,12 +774,16 @@ int run_editor(void) {
       win_refresh();
     }
     win_command('.',"More...") {
+      load_general_der();
       win_form("Editor") {
         win_help("edit","more");
         win_boolean('p',"Auto pause",config.pause,128);
+        win_command('J',"Joystick configuration...") edit_joystick();
         win_blank();
         win_command_esc(0,"Go back") break;
       }
+      save_general_der();
+      unload_general_der();
     }
     win_blank();
     win_command('R',"Run") {
