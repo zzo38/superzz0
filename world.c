@@ -45,24 +45,24 @@ static int do_joystick_config(const ASN1_Value*v) {
       if(asn1_next_of(&b,&a) || b.class || b.type!=ASN1_OCTET_STRING) return 1;
       z=configure_joystick(1,buf);
       if(z<0) continue;
-      for(d=i=q=0;i<b.length && q<32;) {
+      for(d=i=q=0;i<b.length && q<16;) {
         switch(c=b.data[i++]) {
-          case 3: joystat->map[z].a[q++]=0; if(q<32)
-          case 2: joystat->map[z].a[q++]=0; if(q<32)
-          case 1: joystat->map[z].a[q++]=0; if(q<32)
+          case 3: joystat->map[z].a[q++]=0; if(q<16)
+          case 2: joystat->map[z].a[q++]=0; if(q<16)
+          case 1: joystat->map[z].a[q++]=0; if(q<16)
           case 0: joystat->map[z].a[q++]=0; break;
-          case 7: joystat->map[z].a[q++]=d; if(q<32)
-          case 6: joystat->map[z].a[q++]=d; if(q<32)
-          case 5: joystat->map[z].a[q++]=d; if(q<32)
-          case 4: joystat->map[z].a[q++]=d; if(q<32)
+          case 7: joystat->map[z].a[q++]=d; if(q<16)
+          case 6: joystat->map[z].a[q++]=d; if(q<16)
+          case 5: joystat->map[z].a[q++]=d; if(q<16)
+          case 4: joystat->map[z].a[q++]=d; if(q<16)
           /*   */ joystat->map[z].a[q++]=d; break;
           case 8 ... 9: case 13: case 16 ... 17: case 24 ... 27: case 30 ... 126:
           case 8+128 ... 9+128: case 13+128: case 16+128 ... 17+128: case 24+128 ... 27+128: case 30+128 ... 126+128:
             joystat->map[z].a[q++]=d=c; break;
-          case 12: if(i<b.length && q<32) joystat->map[z].a[q++]=d=b.data[i++]+0x100; //
-          case 11: if(i<b.length && q<32) joystat->map[z].a[q++]=d=b.data[i++]+0x100; //
-          case 10: if(i<b.length && q<32) joystat->map[z].a[q++]=d=b.data[i++]+0x100; break;
-          case 128 ... 135: joystat->map[z].a[q++]=d=b.data[i++]+0x180; break;
+          case 12: if(i<b.length && q<16) joystat->map[z].a[q++]=d=b.data[i++]+0x100; //
+          case 11: if(i<b.length && q<16) joystat->map[z].a[q++]=d=b.data[i++]+0x100; //
+          case 10: if(i<b.length && q<16) joystat->map[z].a[q++]=d=b.data[i++]+0x100; break;
+          case 128 ... 135: joystat->map[z].a[q++]=d=b.data[i++]+0x181; break;
           default: fprintf(stderr,"Incorrect byte (%02X) in joystick configuration in GENERAL.DER",c); return 1;
         }
       }

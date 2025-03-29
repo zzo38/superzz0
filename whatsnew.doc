@@ -40,6 +40,7 @@ EDITOR
 
 TEMPLATE
   +  Default settings for new boards are now specified.
+  +  Added joystick configuration into template.
 
 OTHERS
   +  The TEMPLATE.DER lump is usable for affecting the creation of new

@@ -516,7 +516,7 @@ which case the rest are null. Each byte will be one of:
 
 * 0 to 3 means 1 to 4 null entries.
 
-* 4 to 7 means 2 to 5 copies of the previous entry.
+* 4 to 7 means 2 to 5 copies of the previous non-null entry.
 
 * 8, 9, 13, 16, 17, 24 to 27, and 30 to 126 means a ASCII key code.
 

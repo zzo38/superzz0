@@ -57,6 +57,7 @@ static void save_general_der(void) {
           n++;
         }
         asn1_encode(e,general_parts[n].class?general_parts+n:&v);
+        n=v.type+1;
       } else {
         asn1_encode(e,&v);
       }
@@ -68,6 +69,7 @@ static void save_general_der(void) {
     asn1_construct(e,ASN1_UNIVERSAL,ASN1_SET,0);
     asn1_end(e);
   }
+  for(;n<N_GENERAL_PARTS;n++) if(general_parts[n].class) asn1_encode(e,general_parts+n);
   asn1_end(e);
   asn1_finish_encoder(e);
   fclose(f);
@@ -535,14 +537,223 @@ static void edit_help_lumps(void) {
   }
 }
 
+typedef struct {
+  Uint8 text[24];
+  Uint16 data[16];
+} JoystickConfig;
+
 static void edit_joystick(void) {
-  
-  win_form("Joystick config edit") {
-    
-    win_blank();
-    win_command_esc(0,"Done") break;
+  static const char*const js[]={
+    "0Toggle pause",
+    "1Display F1 menu",
+    "2Toggle sound",
+    "5Quick save",
+    "7Quick restore",
+    "9Message scrollback",
+    "<Previous page",
+    ">Next page",
+    "AAdvance frame",
+    "FFast speed while held",
+    "TToggle speed",
+    "XClear message",
+    "ZCancel window",
+    "[Top of window",
+    "]Bottom of window",
+  };
+  JoystickConfig jc[32]={};
+  JoystickConfig jc0;
+  Uint8 q[64];
+  ASN1_Encoder*enc;
+  ASN1_Value u,v;
+  int i,j,k,x,y,z;
+  Uint8 xc=0;
+  Uint8 yc=0;
+  if(!general_parts) errx(1,"Internal confusion in edit_joystick function");
+  if(general_parts[0].class && !asn1_first_of(&v,general_parts+0)) for(i=0;i<32;i++) {
+    if(asn1_first_of(&u,&v) || u.class || u.type!=ASN1_PC_STRING || u.length>23) goto error;
+    memcpy(jc[i].text,u.data,u.length);
+    if(asn1_next_of(&u,&v) || u.class || u.type!=ASN1_OCTET_STRING) goto error;
+    for(j=x=y=0;j<u.length && x<16;j++) switch(u.data[j]) {
+      case 0 ... 3: x+=u.data[j]+1; break;
+      case 7: jc[i].data[x++]=y; if(x<16)
+      case 6: jc[i].data[x++]=y; if(x<16)
+      case 5: jc[i].data[x++]=y; if(x<16)
+      case 4: jc[i].data[x++]=y; if(x<16)
+      /*   */ jc[i].data[x++]=y; break;
+      case 8 ... 9: case 13: case 16 ... 17: case 24 ... 27: case 30 ... 126:
+      case 8+128 ... 9+128: case 13+128: case 16+128 ... 17+128: case 24+128 ... 27+128: case 30+128 ... 126+128:
+        jc[i].data[x++]=y=u.data[j]; break;
+      case 12: if(j+1<u.length && x<16) jc[i].data[x++]=y=u.data[++j]+0x100; //
+      case 11: if(j+1<u.length && x<16) jc[i].data[x++]=y=u.data[++j]+0x100; //
+      case 10: if(j+1<u.length && x<16) jc[i].data[x++]=y=u.data[++j]+0x100; break;
+      case 128 ... 135: jc[i].data[x++]=u.data[j]+0x181; break;
+      default: alert_text("The joystick configuration contains unusable data; it will be discarded."); x=16;
+    }
+    if(asn1_next_of(&u,&v)!=ASN1_DONE) alert_text("The joystick configuration contains unusable data; it will be discarded.");
+    j=asn1_next_of(&v,general_parts+0);
+    if(j) {
+      if(j!=ASN1_DONE) error: alert_text("Error reading joystick configuration from GENERAL.DER");
+      break;
+    }
   }
-  
+  redraw0:
+  memset(v_color,0,80*25);
+  memset(v_char,0,80*25);
+  draw_text(0,0,"Joystick Edit",0x30,-1);
+  memset(v_color,0x30,80);
+  draw_text(16,2,"[00][01][02][03][04][05][06][07][08][09][10][11][12][13][14][15]",0x07,-1);
+  redraw1:
+  draw_text(0,1,"Page 1/2",0x0F,-1);
+  if(yc&16) v_char[85]++;
+  memset(v_char+3*80,0,16*80);
+  memset(v_color+3*80,0,16*80);
+  for(y=0;y<16;y++) {
+    draw_text(0,y+3,jc[y+(yc&16)].text,0,16);
+    memset(v_color+(y+3)*80,(y==(yc&15)&&!xc?0x2B:0x0B),16);
+    for(x=0;x<16;x++) {
+      z=(y+3)*80+x*4+16;
+      i=jc[y+(yc&16)].data[x];
+      if(!i) {
+        v_color[z+1]=0x04; v_char[z+1]=0xFA;
+      } else if(i<0x100) {
+        switch(i&0x7F) {
+          case 8: draw_text(x*4+16,y+3,"BS",0x0A,2); break;
+          case 9: draw_text(x*4+16,y+3,"TAB",0x0A,3); break;
+          case 13: draw_text(x*4+16,y+3,"RET",0x0A,3); break;
+          case 32: draw_text(x*4+16,y+3,"SP",0x0A,2); break;
+          default: v_color[z+1]=0x0A; v_char[z+1]=i&0x7F;
+        }
+        if(i&0x80) v_color[z+3]=0x0C,v_char[z+3]='!';
+      } else if(i<0x200) {
+        v_color[z+1]=v_color[z+2]=0x0E;
+        v_char[z+1]='^'; v_char[z+2]=i&0x7F;
+      } else if(i<0x300) {
+        v_color[z+1]=v_color[z+2]=0x0D;
+        v_char[z+1]='#'; v_char[z+2]=i+'0';
+      }
+      if(xc==x+1 && (yc&15)==y) {
+        v_color[z]|=0x20; v_color[z+1]|=0x20; v_color[z+2]|=0x20; v_color[z+3]|=0x20;
+      }
+    }
+  }
+  draw_text(0,20,"<ESC> Done  <TAB> Page  <\x18\x19\x1A\x1B> Move Cursor  <SHIFT+\x1A\x1B> Copy",0x07,-1);
+  draw_text(0,21,xc?"<N> Normal  <C> Command  <1-8> Shift  <X> Nothing  <A> Auto-fire":"<SPACE> Edit  <DEL> Erase Line  <SHIFT+\x18\x19> Exchange             ",0x07,-1);
+  redisplay();
+  input:
+  if(!next_event()) return;
+  if(event.type!=SDL_KEYDOWN) goto input;
+  switch(event.key.keysym.sym) {
+    case SDLK_ESCAPE: goto stop;
+    case SDLK_TAB: yc^=16; goto redraw1;
+    case SDLK_UP:
+      if(!xc && (event.key.keysym.mod&KMOD_SHIFT)) jc0=jc[(yc-1)&31],jc[(yc-1)&31]=jc[yc],jc[yc]=jc0;
+      yc=(yc-1)&31; goto redraw1;
+    case SDLK_DOWN:
+      if(!xc && (event.key.keysym.mod&KMOD_SHIFT)) jc0=jc[(yc+1)&31],jc[(yc+1)&31]=jc[yc],jc[yc]=jc0;
+      yc=(yc+1)&31; goto redraw1;
+    case SDLK_LEFT:
+      if(xc) {
+        if(xc>1 && (event.key.keysym.mod&KMOD_SHIFT)) jc[yc].data[xc-2]=jc[yc].data[xc-1];
+        --xc;
+      } goto redraw1;
+    case SDLK_RIGHT:
+      if(xc<16) {
+        if(xc && (event.key.keysym.mod&KMOD_SHIFT)) jc[yc].data[xc]=jc[yc].data[xc-1];
+        ++xc;
+      } goto redraw1;
+    case SDLK_SPACE:
+      if(!xc) ask_text("Button names:",jc[yc].text,23);
+      goto redraw0;
+    case SDLK_a:
+      if(xc && jc[yc].data[xc-1]<0x100 && jc[yc].data[xc-1]>0) jc[yc].data[xc-1]^=0x80;
+      goto redraw1;
+    case SDLK_c:
+      if(!xc) break;
+      draw_border(0x1F,20,4,61,21);
+      draw_text(22,5,"Select command to assign:",0x1F,-1);
+      for(i=0;i<sizeof(js)/sizeof(*js);i++) {
+        memset(v_color+(i+6)*80+22,i&1?0x70:0x30,3);
+        v_char[(i+6)*80+23]=js[i][0];
+        draw_text(26,i+6,js[i]+1,0x1E,-1);
+      }
+      redisplay();
+      while(next_event() && event.type!=SDL_KEYDOWN);
+      i=event.key.keysym.unicode;
+      if(i>='a' && i<='z') i+='A'-'a';
+      if(i>32 && i<127) jc[yc].data[xc-1]=i+0x100;
+      goto redraw0;
+    case SDLK_n:
+      if(!xc) break;
+      draw_border(0x1F,30,11,51,13);
+      draw_text(32,12,"Push key to assign",0x1F,-1);
+      redisplay();
+      while(next_event() && event.type!=SDL_KEYDOWN);
+      i=event.key.keysym.unicode;
+      if((i>=32 && i<127) || i==8 || i==9 || i==13) {
+        jc[yc].data[xc-1]=i;
+      } else if(event.key.keysym.sym==SDLK_UP) {
+        jc[yc].data[xc-1]=(event.key.keysym.mod&KMOD_SHIFT)?30:24;
+      } else if(event.key.keysym.sym==SDLK_DOWN) {
+        jc[yc].data[xc-1]=(event.key.keysym.mod&KMOD_SHIFT)?31:25;
+      } else if(event.key.keysym.sym==SDLK_LEFT) {
+        jc[yc].data[xc-1]=(event.key.keysym.mod&KMOD_SHIFT)?17:27;
+      } else if(event.key.keysym.sym==SDLK_RIGHT) {
+        jc[yc].data[xc-1]=(event.key.keysym.mod&KMOD_SHIFT)?16:26;
+      }
+      goto redraw0;
+    case SDLK_x:
+      if(xc) jc[yc].data[xc-1]=0;
+      goto redraw1;
+    case SDLK_1 ... SDLK_8:
+      if(xc) jc[yc].data[xc-1]=event.key.keysym.sym+0x200-SDLK_0;
+      goto redraw1;
+    case SDLK_DELETE:
+      if(xc) break;
+      jc[yc].text[0]=0;
+      for(i=0;i<16;i++) jc[yc].data[i]=0;
+      goto redraw1;
+  }
+  goto input;
+  stop:
+  win_refresh();
+  // Encode the configuration as DER format
+  asn1_free(general_parts+0);
+  enc=asn1_start_encoding_constructed_value(general_parts+0,ASN1_CONTEXT_SPECIFIC,0,0);
+  if(!enc) err(1,"Allocation failed");
+  for(y=0;y<32;y++) if(jc[y].text[0]) {
+    asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+    asn1_encode_c_string(enc,ASN1_PC_STRING,jc[y].text);
+    for(x=z=j=0;x<16;) {
+      if(z && jc[y].data[x]==z && x!=15 && jc[y].data[x+1]==z) {
+        for(k=2;k<6 && x+k<16 && !jc[y].data[x+k];k++);
+        if(k==6) q[j++]=5,q[j++]=5; else q[j++]=k+2;
+        x+=k;
+      } else if(jc[y].data[x]) {
+        z=jc[y].data[x++];
+        if(z<0x100) {
+          q[j++]=z;
+        } else if(z<0x200) {
+          if(x<14 && (jc[y].data[x]&jc[y].data[x+1]&0x100)) {
+            q[j++]=12; q[j++]=z; q[j++]=z=jc[y].data[++x]; q[j++]=z=jc[y].data[++x];
+          } else if(x<15 && (jc[y].data[x]&0x100)) {
+            q[j++]=11; q[j++]=z; q[j++]=z=jc[y].data[++x];
+          } else {
+            q[j++]=10; q[j++]=z;
+          }
+        } else {
+          q[j++]=z-0x181;
+        }
+      } else {
+        for(k=x;k<16 && !jc[y].data[k];k++);
+        if(k==16) break;
+        for(k=1;k<4 && x+k<16 && !jc[y].data[x+k];k++);
+        q[j++]=k-1; x+=k;
+      }
+    }
+    asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,q,j);
+    asn1_end(enc);
+  }
+  asn1_finish_encoder(enc);
 }
 
 static int copy_board(Uint16 inb,Uint16 outb) {
