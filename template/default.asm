@@ -57,6 +57,7 @@ NWAITS	IS $04
 REGSAV	IS $10 ;x16
 
 ; **** Global parameters ****
+	TA $C4,$0010
 	TA $ED,1
 
 ; **** Keyboard handler ****
