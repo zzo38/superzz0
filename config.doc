@@ -200,6 +200,16 @@ template_board
   The board number to use as the template for new boards; the default value
   is zero. (See also: editor_auto)
 
+temporary_file_1
+  Name of temporary file for saving world files in the editor. The default
+  value is ".superzz0_save". This must be in the same file system than the
+  world file is stored in.
+
+temporary_file_2
+  Name of temporary file for saving test world files, when using the test
+  function of the editor. The default value is ".superzz0_testgame". Note
+  that this file will be deleted if it already exists.
+
 test_mode
   Used for internal testing. The meaning of the value is undocumented (and
   may change in future), except that zero is used for normal operation.

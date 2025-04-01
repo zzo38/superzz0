@@ -48,6 +48,7 @@ OTHERS
      this lump within Super ZZ Zero itself; an external program must be
      used instead.)
   +  Joystick configuration is implemented (but not fully tested).
+  +  Added options to set the name of temporary files.
   *  Carriage returns at the end of lines in the user configuration file
      are now ignored.
   *  The configuration file is now split into divisions. For backward

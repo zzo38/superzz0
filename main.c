@@ -146,8 +146,8 @@ void run_test_game(int b) {
   memset(v_color,0,80*25);
   *v_status='$';
   redisplay();
-  unlink(".superzz0_testgame");
-  if(save_world(".superzz0_testgame")) {
+  unlink(config.temporary_file_2);
+  if(save_world(config.temporary_file_2)) {
     alert_text("Unable to save temporary world file");
     *v_status=r;
     return;
@@ -172,7 +172,7 @@ void run_test_game(int b) {
 #undef I
 #undef S
   pclose(fp);
-  unlink(".superzz0_testgame");
+  unlink(config.temporary_file_2);
   *v_status=r;
 }
 
@@ -302,8 +302,10 @@ int main(int argc,char**argv) {
 #undef F
 #undef I
 #undef S
+    if(open_world(config.temporary_file_2)) err(1,"Error opening world");
+  } else {
+    if(open_world(argv[optind])) err(1,"Error opening world");
   }
-  if(open_world(argv[optind])) err(1,"Error opening world");
   if(editor && o) switch(o&0x7F) {
     case 'a':
       if(s=init_world()) errx(1,"Cannot initialize world settings: %s",s);

@@ -273,6 +273,8 @@ The following configuration settings are not meaningful:
   full_screen
   joy_name
   save_dir
+  temporary_file_1
+  temporary_file_2
 
 (Such things as joypad selections and full screen are handled by other
 software on the system and does not need to be configured by the
@@ -317,6 +319,8 @@ The following configuration settings are not meaningful on HTML:
   printer_end
   printer_type
   save_dir
+  temporary_file_1
+  temporary_file_2
   test_mode
   text_editor_command
 

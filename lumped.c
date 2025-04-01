@@ -279,7 +279,7 @@ void close_world(void) {
 
 int save_world(const char*name) {
   Uint8 buf[1024];
-  FILE*fp=name?fopen(name,"wx"):fopen(".superzz0_save","w");
+  FILE*fp=name?fopen(name,"wx"):fopen(config.temporary_file_1,"w");
   Uint32 n,o;
   if(!name && !worldfile) {
     if(!world_name) errx(1,"Internal confusion in save_world");
@@ -333,7 +333,7 @@ int save_world(const char*name) {
     return -1;
   }
   if(!name) {
-    if(rename(".superzz0_save",world_name)) err(1,"Cannot replace world file (the new file is now called .superzz0_save)");
+    if(rename(config.temporary_file_1,world_name)) err(1,"Cannot replace world file (the new file is now called %s)",config.temporary_file_1);
     flock(fileno(worldfile),LOCK_UN);
     fclose(worldfile);
     worldfile=fopen(world_name,"r");
