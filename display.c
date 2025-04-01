@@ -632,13 +632,13 @@ Sint32 configure_joystick(char mode,const char*text) {
   switch(mode) {
     case 0: // user configuration
       while(*t && *t!=':') {
-        if(*t==',') ++text;
+        if(*t==',') ++t;
         if(c=*t++) {
           if(*t<'0' || *t>'9') goto err1;
           n=strtol(t,(char**)&t,10);
           if(n<0 || n>253) goto err1;
         } else {
-          err1: errx(1,"Error in joystick configuration: %s",text);
+          err1: errx(1,"Error in joystick configuration {%s} near position %ld/%ld",text,(long)(t-text),(long)strlen(text));
         }
         switch(c) {
           case '*': m=j_find_map(&joystat->button,&joystat->nbutton,1,0,n,m); break;
@@ -724,8 +724,7 @@ Sint32 configure_joystick(char mode,const char*text) {
         }
       } else if(*t=='!') {
         v|=0x80;
-        c=*++t;
-        if(c=='\'') goto apos; else goto others;
+        if(*++t=='\'') goto apos; else goto others;
       } else if(*t=='\'') {
         apos:
         v|=c=*++t;
@@ -733,9 +732,9 @@ Sint32 configure_joystick(char mode,const char*text) {
       } else if(*t=='^') {
         v|=(c=*++t)+0x100;
         if(c<0x21 || c>0x7E) goto err1;
-      } else {
+      } else if(*t) {
         others:
-        switch(c=*++t) {
+        switch(*t) {
           case 'b': v|=8; break;
           case 't': v|=9; break;
           case 'r': v|=13; break;
@@ -751,7 +750,7 @@ Sint32 configure_joystick(char mode,const char*text) {
         }
       }
       if(*t && t[1]) goto err1;
-      for(i=16;i<24;i++) if(lv&(1<<i)) {
+      for(i=16;i<24;i++) if(lv&(1<<(i-16))) {
         if(joystat->map[m].a[i]&0x7FFF) errx(1,"Duplicate configuration in joystick mapping: %s",text);
         joystat->map[m].a[i]=v;
       }
@@ -763,6 +762,7 @@ Sint32 configure_joystick(char mode,const char*text) {
     case 2: // free name data
       if(names) free(names->text);
       free(names);
+      for(m=0;m<joystat->nmap;m++) for(i=16;i<24;i++) joystat->map[m].a[i]&=0x7FFF;
       break;
   }
   return -1;
