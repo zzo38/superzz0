@@ -62,7 +62,7 @@ static int do_joystick_config(const ASN1_Value*v) {
           case 12: if(i<b.length && q<16) joystat->map[z].a[q++]=d=b.data[i++]+0x100; //
           case 11: if(i<b.length && q<16) joystat->map[z].a[q++]=d=b.data[i++]+0x100; //
           case 10: if(i<b.length && q<16) joystat->map[z].a[q++]=d=b.data[i++]+0x100; break;
-          case 128 ... 135: joystat->map[z].a[q++]=d=b.data[i++]+0x181; break;
+          case 128 ... 135: joystat->map[z].a[q++]=d=c+0x181; break;
           default: fprintf(stderr,"Incorrect byte (%02X) in joystick configuration in GENERAL.DER",c); return 1;
         }
       }

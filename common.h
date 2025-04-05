@@ -66,7 +66,8 @@ typedef struct {
   Uint8*axis; // -,+
   Uint8*button; // *
   JoyMapping map[32];
-  Uint32 state;
+  // Shift bits "0b1XXXXYYYYY" (X=shift state, Y=which button shifted it)
+  Uint32 state,user_shift,world_shift;
   Uint8 nhat,nbutton,naxis,nmap;
 } JoyStatus;
 

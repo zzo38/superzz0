@@ -44,11 +44,14 @@ Uint8 ndynastr;
 
 static uint64_t rseed;
 static char soundon;
+static Uint8 autofire=0;
+static Sint8 autofire_dir=-1;
 
 #define PLAYSTATE_NORMAL 16
 #define PLAYSTATE_FAST 175
 #define PLAYSTATE_PAUSED 186
 static Uint8 playstate=PLAYSTATE_NORMAL;
+static Uint8 saved_playstate=PLAYSTATE_NORMAL;
 
 typedef struct {
   Uint8 text[81];
@@ -66,6 +69,40 @@ static Uint16 tnlines,tcursor,tscroll;
 static const char*end_of_label;
 
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z);
+
+static Uint32 do_joystick(Uint8 mode) {
+  Uint8 b=event.jbutton.button;
+  Uint16 v;
+  if((joystat->user_shift&0x200) && (v=(joystat->user_shift>>5)&7)) v+=16; else v=mode;
+  v=joystat->map[b].a[v];
+  if(v==0x300) {
+    if(joystat->world_shift&0x200) v=(joystat->world_shift>>5)&15; else v=(memory[MEM_JOY_LEVEL]>>(4*(mode&3)))&15;
+    v=joystat->map[b].a[v];
+  }
+  //if(config.test_mode) printf("(mode=%X v=%X b=%X state=%lX w=%lX u=%lX)\n",mode,v,b,(long)joystat->state,(long)joystat->world_shift,(long)joystat->user_shift);
+  if(event.type==SDL_JOYBUTTONDOWN) {
+    switch(v) {
+      case 0x000 ... 0x07F: return v;
+      case 0x080 ... 0x0FF: autofire=v&=0x7F; autofire_dir=-1; return v;
+      case 0x100 ... 0x17F: return v;
+      case 0x200 ... 0x20F: joystat->world_shift=(joystat->world_shift<<10)+0x200+((v&0x0F)<<5)+b; v_status[79]='w'; return 0;
+      case 0x210 ... 0x217: joystat->user_shift=(joystat->user_shift<<10)+0x200+((v&0x0F)<<5)+b; v_status[79]='u'; return 0;
+      default: return 0;
+    }
+  } else {
+    if(joystat->state) {
+      while((joystat->user_shift&0x200) && !((1ULL<<(joystat->user_shift&0x1F))&joystat->state)) joystat->user_shift>>=10;
+      while((joystat->world_shift&0x200) && !((1ULL<<(joystat->world_shift&0x1F))&joystat->state)) joystat->world_shift>>=10;
+    } else {
+      joystat->world_shift=joystat->user_shift=autofire=v_status[79]=0;
+    }
+    switch(v) {
+      case 0x080 ... 0x0FF: if(autofire==(v&0x7F)) autofire=0; return 0;
+      case 0x100 ... 0x17F: return v+0x80;
+      default: return 0;
+    }
+  }
+}
 
 static void debug_log(Uint8 fo,Sint32 so,Sint32 w,Sint32 x,Sint32 y,Sint32 z,Uint16 pc) {
   FILE*f=stdout; // should it be configurable?
@@ -3725,6 +3762,7 @@ static int system_menu(void) {
   Uint8 z;
   char buf[16];
   set_timer(0);
+  autofire=0;
   v_status[1]='F';
   redraw0:
   config.menu_x=x; config.menu_y=y;
@@ -4063,7 +4101,7 @@ int run_game(void) {
           case SDLK_DOWN: ka=(event.key.keysym.mod&KMOD_SHIFT)?31:25; kd=DIR_S; break;
           case SDLK_LEFT: ka=(event.key.keysym.mod&KMOD_SHIFT)?17:27; kd=DIR_W; break;
           case SDLK_RIGHT: ka=(event.key.keysym.mod&KMOD_SHIFT)?16:26; kd=DIR_E; break;
-          case SDLK_F1:
+          case SDLK_F1: k_f1:
             a=system_menu();
             resume:
             *v_status=playstate;
@@ -4072,7 +4110,7 @@ int run_game(void) {
             update_screen();
             if(a) goto repeat_event;
             goto display;
-          case SDLK_F2:
+          case SDLK_F2: k_f2:
             a=audio_get_volume();
             audio_set_volume(a&0xFFFF,(a>>16)^1);
             soundon=(audio_get_volume()<0x10000?1:0);
@@ -4080,19 +4118,19 @@ int run_game(void) {
             break;
           case SDLK_F3: if(ask_save_file(1)) save_state(); goto resume;
           case SDLK_F4: if(ask_save_file(0)) load_state(); goto resume;
-          case SDLK_F5: save_state(); goto resume;
+          case SDLK_F5: k_f5: save_state(); goto resume;
           case SDLK_F6: if(config.debug) debug_menu(); a=0; goto resume;
-          case SDLK_F7: load_state(); goto resume;
-          case SDLK_F9: set_timer(0); v_status[1]=24; message_scrollback(); a=0; goto resume;
+          case SDLK_F7: k_f7: load_state(); goto resume;
+          case SDLK_F9: k_f9: set_timer(0); v_status[1]=24; message_scrollback(); a=0; goto resume;
           case SDLK_F10: return 0;
-          case SDLK_F12:
+          case SDLK_F12: k_f12:
             if(playstate==PLAYSTATE_NORMAL) playstate=PLAYSTATE_FAST; else playstate=PLAYSTATE_NORMAL;
             *v_status=playstate;
             set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:config.speed);
             break;
-          case SDLK_DELETE: vtexttime=nvtextbuf=*vtextbuf=0; update_screen(); break;
+          case SDLK_DELETE: k_del: vtexttime=nvtextbuf=*vtextbuf=0; update_screen(); break;
           case SDLK_INSERT: goto nextturn;
-          case SDLK_PAUSE:
+          case SDLK_PAUSE: k_pause:
             if(playstate==PLAYSTATE_PAUSED) playstate=PLAYSTATE_NORMAL; else playstate=PLAYSTATE_PAUSED;
             *v_status=playstate;
             set_timer(playstate==PLAYSTATE_PAUSED?0:config.speed);
@@ -4103,10 +4141,36 @@ int run_game(void) {
       if(ka && playstate==PLAYSTATE_PAUSED) goto nextturn;
     } else if(event.type==SDL_USEREVENT) {
       goto nextturn;
+    } else if(event.type==SDL_JOYBUTTONDOWN || event.type==SDL_JOYBUTTONUP) {
+      switch(b=do_joystick(JL_NORMAL)) {
+        case 0x01 ... 0x7E:
+          ka=b;
+          if(b==16 || b==26) kd=DIR_E;
+          if(b==30 || b==24) kd=DIR_N;
+          if(b==17 || b==27) kd=DIR_W;
+          if(b==31 || b==25) kd=DIR_S;
+          if(autofire==ka) autofire_dir=kd;
+          break;
+        case '0'+0x100: goto k_pause;
+        case '1'+0x100: goto k_f1;
+        case '2'+0x100: goto k_f2;
+        case '5'+0x100: goto k_f5;
+        case '7'+0x100: goto k_f7;
+        case '9'+0x100: goto k_f9;
+        case 'A'+0x100: goto nextturn;
+        case 'F'+0x100: saved_playstate=playstate; playstate=PLAYSTATE_NORMAL; goto k_f12;
+        case 'F'+0x180: *v_status=playstate=saved_playstate; set_timer(playstate==PLAYSTATE_PAUSED?0:playstate==PLAYSTATE_FAST?config.speed_fast:config.speed); break;
+        case 'T'+0x100: goto k_f12;
+        case 'X'+0x100: goto k_del;
+      }
     }
   }
   nextturn:
-  if(ka) run_program(memory[MEM_KEY_EVENT],ka,kd==DIR_E?1:kd==DIR_W?-1:0,kd==DIR_S?1:kd==DIR_N?-1:0,kd);
+  if(ka) {
+    sendkey: run_program(memory[MEM_KEY_EVENT],ka,kd==DIR_E?1:kd==DIR_W?-1:0,kd==DIR_S?1:kd==DIR_N?-1:0,kd);
+  } else if(autofire) {
+    ka=autofire; kd=autofire_dir; goto sendkey;
+  }
   ++memory[MEM_FRAME_COUNTER];
   if(run_program(memory[MEM_FRAME_EVENT],0,0,0,0)) goto gameloop;
   for(a=y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++,a++) {

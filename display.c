@@ -549,6 +549,7 @@ Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
 }
 
 int next_event(void) {
+  int i,j;
   static const SDLKey numpad[11]={
     SDLK_INSERT,
     SDLK_END, SDLK_DOWN, SDLK_PAGEDOWN,
@@ -564,10 +565,78 @@ int next_event(void) {
         event.key.keysym.unicode=0;
         event.key.keysym.sym=numpad[event.key.keysym.sym-256];
       }
+      // Non-Unicode text is not currently handled; due to this, only ASCII is currently supported.
+      // Implementing this will likely require going beyond the functions provided by SDL.
       return 1;
     case SDL_USEREVENT: return 1;
     case SDL_QUIT: return 0;
     case SDL_VIDEOEXPOSE: redisplay(); break;
+    // All joystick events will be translated to SDL_JOYBUTTONDOWN and SDL_JOYBUTTONUP.
+    // The only meaningful parameter is event.jbutton.button which will be the translated button number.
+    case SDL_JOYBUTTONDOWN:
+      if(joystat && (i=event.jbutton.button)<joystat->nbutton) {
+        i=joystat->button[i];
+        if(i<32 && !(joystat->state&(1ULL<<i))) goto push;
+      }
+      break;
+    case SDL_JOYBUTTONUP:
+      if(joystat && (i=event.jbutton.button)<joystat->nbutton) {
+        i=joystat->button[i];
+        if(i<32 && (joystat->state&(1ULL<<i))) goto unpush;
+      }
+      break;
+    case SDL_JOYAXISMOTION:
+      if(joystat && (i=event.jaxis.axis)<joystat->naxis) {
+        if(event.jaxis.value<-config.joy_sensitivity) {
+          j=joystat->axis[i+i+1]; i=joystat->axis[i+i];
+          goto axispush;
+        } else if(event.jaxis.value>config.joy_sensitivity) {
+          j=joystat->axis[i+i]; i=joystat->axis[i+i+1];
+          axispush:
+          if(j<32) joystat->state&=~(1ULL<<j);
+          if(i<32 && (joystat->state&(1ULL<<i))) goto push;
+        } else {
+          j=joystat->axis[i+i+1]; i=joystat->axis[i+i];
+          if(joystat->state&(i<32?1ULL<<i:0)) {
+            joystat->state&=~(j<32?1ULL<<j:0);
+            goto unpush;
+          } else if(joystat->state&(j<32?1ULL<<j:0)) {
+            i=j;
+            goto unpush;
+          }
+        }
+      }
+      break;
+    case SDL_JOYHATMOTION:
+      if(joystat && (j=event.jhat.hat)<joystat->nhat) {
+        i=event.jhat.value;
+        if(i==SDL_HAT_CENTERED) {
+          i=joystat->hat[4*j+0]; if(i<32 && joystat->state&(1ULL<<i)) event.type=SDL_JOYBUTTONUP,event.jbutton.button=i,joystat->state&=~(1ULL<<i);
+          i=joystat->hat[4*j+1]; if(i<32 && joystat->state&(1ULL<<i)) event.type=SDL_JOYBUTTONUP,event.jbutton.button=i,joystat->state&=~(1ULL<<i);
+          i=joystat->hat[4*j+2]; if(i<32 && joystat->state&(1ULL<<i)) event.type=SDL_JOYBUTTONUP,event.jbutton.button=i,joystat->state&=~(1ULL<<i);
+          i=joystat->hat[4*j+3]; if(i<32 && joystat->state&(1ULL<<i)) event.type=SDL_JOYBUTTONUP,event.jbutton.button=i,joystat->state&=~(1ULL<<i);
+          if(event.type==SDL_JOYBUTTONUP) return 1; else break;
+        } else if(i==SDL_HAT_UP) {
+          i=DIR_N;
+        } else if(i==SDL_HAT_RIGHT) {
+          i=DIR_E;
+        } else if(i==SDL_HAT_DOWN) {
+          i=DIR_S;
+        } else if(i==SDL_HAT_LEFT) {
+          i=DIR_W;
+        } else {
+          break;
+        }
+        if(joystat->hat[4*j+0]<32) joystat->state&=~(1ULL<<(joystat->hat[4*j+0]));
+        if(joystat->hat[4*j+1]<32) joystat->state&=~(1ULL<<(joystat->hat[4*j+0]));
+        if(joystat->hat[4*j+2]<32) joystat->state&=~(1ULL<<(joystat->hat[4*j+0]));
+        if(joystat->hat[4*j+3]<32) joystat->state&=~(1ULL<<(joystat->hat[4*j+0]));
+        i=joystat->hat[4*j+i];
+        if(i<32) goto push;
+      }
+      break;
+    push: event.type=SDL_JOYBUTTONDOWN; event.jbutton.button=i; joystat->state|=1ULL<<i; return 1;
+    unpush: event.type=SDL_JOYBUTTONUP; event.jbutton.button=i; joystat->state&=~(1ULL<<i); return 1;
   }
   event.type=SDL_QUIT;
   return 0;
