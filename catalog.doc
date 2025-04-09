@@ -112,11 +112,16 @@ user may add it manually if necessary.
 
 User authentication types:
 
-* Username/password (included in the URL)
+* Username/password (included in the URL, before the domain name)
 
 * HMAC (only for write access; cannot be used to restrict read access)
 
 * X.509 (only for secure connections)
+
+What authentication types are acceptable, how to register new accounts,
+what hash algorithm to use for HMAC, and what criteria are used to decide
+which X.509 certificates are acceptable, depends on the server. This
+document does not impose any requirements about such things.
 
 Two request types are used, R for receiving data and S for sending data.
 Range requests are allowed for some operations; some implementations may

@@ -1,0 +1,231 @@
+
+=== Comparison with ZZT and Super ZZT ===
+
+Super ZZ Zero is a ZZT-like, but with many differences. (There are actually
+a lot more enhancements than described here.)
+
+In ZZT, a board is limited to 150 stats, one of which is the player. Each
+stat can have its own text, and some other parameters, and only stats can
+have other stuff underneath since they are stored with stat data. But, in
+Super ZZ Zero, each stat has zero or more instances; you can create and
+destroy instances at run time (even if there are initially no instances)
+but not create and destroy stats. Each instance of a stat has its own
+instruction pointer, lock flag, and facing direction.
+
+Super ZZ Zero has a separate under layer and main layer, so the stuff
+underneath other tiles can be remembered even if they aren't stats. In
+addition, each tile on a layer has kind/colour/parameter, unlike only
+kind/colour of ZZT. This means that you do not need many different text
+elements, since the parameter can be used for specifying the character
+of the text, rather than using the colour for this purpose. Parameters
+can also be used for many things that would require stats in ZZT.
+
+Probably the most significant feature of Super ZZ Zero is that you can
+define your own elements (actually, you must define your own elements,
+although a template can be used if you do not want to define your own;
+the default template has many elements like ZZT has, and some others).
+You can also define many global behaviours in a similar way.
+
+Boards can be of different sizes, and can also be scrollable.
+
+Dark rooms are possible like in ZZT, and you can customize the shape of
+the torch light (and this can change during the game). Boards also have
+an overlay (like MegaZeux; see the below section), and it can be disabled
+or enabled at run time, so that the darkness of rooms can also be changed
+at run time.
+
+The screen layout can be customized; this includes the viewport (and how
+the scrolling works), the message line, and the display of counters such
+as health, money, etc. You can also define separate screen layouts for
+text windows, and different boards may have different screen layouts if
+wanted (although usually the share the same screen layouts).
+
+Scripts are like ZZT-OOP, but have many new features, e.g. #DIEITEM (moves
+the player where the object is when it dies), #ZAP can zap choices as well
+as labels, #ZAPALL, #ESCAPE (allows variable data in text to be displayed),
+subroutines, numeric expressions, and more.
+
+However, there is also separate synchronous program code which applies to
+the entire world and does not use scripts; this is a different programming
+language, which is compiled into P-codes, and can be used for many other
+things, including defining new script commands.
+
+The #PLAY command (and SFX, in synchronous codes) has a different syntax
+than ZZT, but has additional features such as overtone and undertone
+scales, sixty-fourth notes, priority numbers, and some additional
+percussions than ZZT has.
+
+In ZZT, sometimes external .HLP files can be displayed, and some worlds use
+this feature. In Super ZZ Zero, these .HLP files are included inside of the
+world file, so you do not need additional files than the world file.
+
+Whether or not boards persist when you leave and re-enter can be set per
+board individually, instead of automatically persisting all boards.
+
+
+=== Comparison with MegaZeux ===
+
+There are many features like MegaZeux has, and some that MegaZeux does not
+have, but also some Super ZZ Zero does not have but might or might not be
+added in future.
+
+Super ZZ Zero does not currently have customizable fonts and palettes,
+although this feature is planned and may be added in future.
+
+Everything needed for a world to work is stored in the world file in Super
+ZZ Zero, unlike in MegaZeux where separate files are used. Some of these
+features (e.g. music files) are not implemented yet, but when (if) they are
+implemented (some of these are planned), then they will store the data in
+the world file instead of in separate files.
+
+In Super ZZ Zero, you can define your own kind of elements (and must do so
+if you do not use the template), unlike MegaZeux where the set of possible
+kind of pieces is fixed and you cannot change them (you must use Robotic
+instead). Super ZZ Zero has scriptable objects too like MegaZeux has, but
+this is separate from defining new kind of pieces.
+
+One feature of Super ZZ Zero is screen definitions. A board can be
+associated with a screen definition, and screens are usually shared between
+multiple boards but you can also make different boards use different screen
+definitions. Text windows can also use screen definitions.
+
+In MegaZeux, you cannot customize much about the viewport other than its
+size and colour. In Super ZZ Zero, the viewport can be defined as a part
+of the screen definition.
+
+MegaZeux has board overlays, which can be made static or not static, but
+not both at the same time. Super ZZ Zero does not have static overlays but
+you can define screen layouts as well as overlays, and these can be used at
+the same time; screen layouts can be used for many of the things that
+static overlays were previously used for (such as HUD).
+
+In MegaZeux, there is a menu opened by pushing enter, which displays
+health and other stuff, and some other options. In Super ZZ Zero, F1 is
+used for options, but stuff like health and counters are defined by the
+specific game world instead, and can be displayed during the game instead
+of needing a separate menu. The screen layout can include components such
+as the values of numeric counters (there are several ways these can be
+displayed, including as decimal numbers, meters, Lsd money, and more),
+which makes it easy to make screen layouts.
+
+Super ZZ Zero does have stats, but they do not work like in ZZT. Each
+stat can have a script (like a Robotic program, but the syntax is more
+like ZZT), but also has zero or more instances, which can be added and
+removed at run time (even if there are initially no instances). Anything
+that needs to store more data than the kind/colour/parameter, or that
+needs to be updated in stat order instead of board scanning, will use
+stats; many other things will not need stats.
+
+MegaZeux Robotic code has some klugy stuff due to how it changed over time
+and kept the compatible format, but Super ZZ Zero uses syntax for numeric
+expressions, subroutines, etc which are better than MegaZeux in my opinion.
+
+Super ZZ Zero does have a mechanism for sensors like MegaZeux has, but it
+is a bit different (and there is a bit more customizability). You can have
+multiple element definitions which work like sensors, and they can be
+programmed to allow any stats to move on them and not necessarily only the
+player (this is fully customizable). Different kind of sensors can also be
+made pushable or not pushable, and other properties.
+
+The overlay in Super ZZ Zero does not have the feature of MegaZeux that
+character code 32 is transparent; instead, being transparent is a separate
+bit. There are other additional bits stored in overlay cells as well,
+including translucent backgrounds, user-defined bits, and solid. Stuff in
+the overlay can be moved around (if the specific game is programmed to do
+this), which means solid is meaningful; stats can also be in the overlay.
+
+In MegaZeux, the label name must specify whether or not it is a subroutine
+and anything that calls it must know if it is a subroutine or not. Super
+ZZ Zero uses a separate specification of if a label is a subroutine, and
+callers that send a message to it do not need to be aware of that. This
+means that messages do not need to have a separate subroutine message.
+
+Super ZZ Zero does not have (nearly) unlimited named counters like MegaZeux
+has. There is up to sixteen named flags (like ZZT), and you can store more
+stuff in program memory and in global status variables (of which you can
+define up to sixteen).
+
+Whether or not boards persist when you leave and re-enter can be set per
+board individually, instead of automatically persisting all boards.
+
+Some of the feature requests for MegaZeux are already implemented in Super
+ZZ Zero (and some which are planned to be implemented):
+
+* Remapping joypad buttons/hats/axes.
+
+* Custom terrains, items, creatures, etc. (This also makes possible some
+of the other feature requests for MegaZeux in Super ZZ Zero.)
+
+* Board shot limit. (This is implemented in the default template, and not
+as a part of Super ZZ Zero itself.)
+
+* Board editor find/replace. (The implementation in Super ZZ Zero is
+actually more general.)
+
+* Board list introspection: The only part which is implemented in Super ZZ
+Zero is determining the name of boards with specific board numbers; you
+cannot determine anything else about boards other than the current board.
+
+* Manipulation of text boxes.
+
+* Check blocked status at exact position.
+
+* Centipedes (implemented in the default template; not built-in).
+
+* ZZT-like side bar, outside of the viewport and separate from overlays.
+
+Some feature requests (and some features that are already implemented in
+MegaZeux) are deliberately not implemented in Super ZZ Zero.
+
+
+=== Comparison with ZZ Zero ===
+
+It is similar in many ways, although there are many differences. Super ZZ
+Zero is an entirely new program and does not use any parts of ZZ Zero.
+
+* Program memory size is now 64K instead of 32K.
+
+* Registers are now 32-bits.
+
+* Multiple screen layouts can be defined instead of only one.
+
+* Boards can now be bigger than 80x25, and different boards are allowed to
+have different board sizes.
+
+* There are no rotation maps, although this feature is planned and may be
+added in a later version of Super ZZ Zero (although it will likely be
+different in some ways, and may also be usable as general "zones").
+
+* Stats are now separate from instances of stats. Stats cannot be added or
+removed at run time, although instances can be created and destroyed (even
+if there are initially no instances); a stat can have multiple instances.
+Each stat has its own script which is shared by all instances of that stat
+(although instances can have their own instruction pointers and lock flag).
+
+* The global string table cannot be used for scripts; any board with
+scripts will have them local to the board.
+
+* There are now 32 attribute bits instead of only 16.
+
+* Some attribute bits are no longer present: Script (any stat can now have
+a script), Stat (any element can be a stat or not, but which ones are stats
+by default in the board editor are defined separately), Permanent (not
+applicable, because board memory is no longer tied to screen layouts),
+Transport (events are now used instead), Protected.
+
+* The board now has three layers, each of which has four bytes per tile
+instead of only two. Due to having multiple layers, it will not destroy
+floors when non-stats move on them, and the under kind/colour of stats
+is no longer needed (they are stored in the under layer instead).
+
+* Appearance codes now work differently and are more versatile.
+
+* The inventory menu is not implemented yet (but may be done in future).
+
+* The "printing variables" feature of ZZ Zero is not used but it is also
+not necessary; screen layouts and numeric formats are more versatile.
+
+* Many other limits have been increased.
+
+There are many other enhancements compared with ZZ Zero, as well.
+

@@ -314,6 +314,9 @@ not display the quantity, but is limited to one.
 
 * bit15 = Disallow reordering.
 
+Alternatively, item memory might be separate from program memory, although
+the opcodes might be similar like the above.
+
 
 === High scores ===
 
@@ -581,6 +584,9 @@ also be possible to specify external programs for converting other formats.
 * Secondary mark grid
 
 * World map
+
+* "Show" functions like in MegaZeux, to show certain kind of things in a
+flashy way so that you can find them.
 
 
 === Text editor features ===
