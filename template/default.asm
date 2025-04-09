@@ -44,6 +44,7 @@
 ; Predefined stat names (not necessarily present on all boards):
 ;   _1 = Creatures with speed 1 (Runner)
 ;   _2 = Creatures with speed 2 (Lion, Tiger, Bear, Shark)
+;   _3 = Speed 3 (Conveyor)
 ;   _4 = Creatures with speed 4 (Pusher)
 ;   _6 = Speed 6 (Bomb)
 ;   _C = Centipedes
@@ -1584,6 +1585,35 @@ CENMOV	LET D,Z
 	VSET H,0
 	LET S,0
 
+; **** Conveyor ****
+; Parameter:
+;   bit1-bit0 = Animation frame
+;   bit7 = Clockwise
+; Lock bit: Initialized
+	EV B,_CONVEYOR
+	LAY A,W
+	BTST A,7
+	JT A,1F
+	; Initialize
+	OR A,$80
+	LOCK A,W
+	LET A,X
+	ADD A,Y
+	MOD A,3
+	PSD A,W
+	LET S,1
+	; Do spin
+1H	LET A,%L,Z,16-7
+	AND A,%L,1,16
+	ADD A,$200FF
+	SPIN D,A
+	; Animation
+	INC A,%UR,Z,6
+	ADD A,Z
+	AND A,$83
+	PTMP A,0
+	LET S,0
+
 ; **** Destroyable objects ****
 	EV X,_EMPTY,1
 	EV X,_BREAKABLE,1
@@ -1750,6 +1780,7 @@ CENMOV	LET D,Z
 	ED 'X',"Land Mine",_LANDMINE,$0000
 	ED 'D',"Duplicator",_DUPLICATOR,$030F
 	ED 'P',"Passage",_PASSAGE,$040F
+	ED 'C',"Conveyor",E_CONV,_CONVEYOR+$8200
 	ED 2
 
 	ED1 5
@@ -1970,6 +2001,18 @@ E_BOMB	ED '=',"K9.M"
 	ED 'H',0
 	ED2 'N',"Spee~d: ",$1070,0,255
 	ED2 'N',"~Phase: ",$2070,0,255
+	ED 0
+
+E_CONV	ED '=',"-MP"
+	ED '@',"_3",3
+	ED 'P',_CONVEYOR,$5800
+	ED 0
+
+	ED0 _CONVEYOR
+	ED 'H',"Conveyor:"
+	ED 'O',$0007
+	ED2 'O',"Clock~wise",1
+	ED2 'O',"Countercloc~kwise",0
 	ED 0
 
 ; **** Editor board info ****

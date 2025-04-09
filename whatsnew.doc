@@ -21,6 +21,7 @@ GAME
 SCRIPTS
   +  Use the {D} code to display dynamic strings in text.
   +  Use "d" operator in numeric expressions for dice.
+  +  The #PUSHABLE condition to check if something is pushable.
 
 ASSEMBLY
   +  DYN opcode for dealing with dynamic strings.
@@ -28,6 +29,7 @@ ASSEMBLY
   +  Implemented the CAM instruction (affects camera position).
   +  MEM is a new instruction for memory block copy/display/exchange/fill.
   +  ED ';' and ED 'V' and ED4 65 are added.
+  +  SPIN instruction spins stuff around a tile.
   =  Correction in assembler of parsing the source part of a extension
      operand if its value is 1.
   =  Missing "break" in ED4 and ED5 cases in assembler.
@@ -41,6 +43,7 @@ EDITOR
 TEMPLATE
   +  Default settings for new boards are now specified.
   +  Added joystick configuration into template.
+  +  Add CONVEYOR element.
 
 OTHERS
   +  The TEMPLATE.DER lump is usable for affecting the creation of new

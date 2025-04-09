@@ -2263,6 +2263,12 @@ static inline char check_blocked_at(Uint32 x,Uint32 y) {
   return 1;
 }
 
+static inline char check_pushable_at(Uint32 x,Uint32 y,Uint32 a) {
+  if(x>=board_info.width || y>=board_info.height) return 0;
+  if(elem_def[b_main[y*board_info.width+x].kind].attrib&a) return 1;
+  return 0;
+}
+
 static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
   ScriptKind sk;
   Uint16 bip;
@@ -2347,6 +2353,11 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
       if(!parse_kind(s,xy,ip,&sk,0)) goto bad;
       for(z=0;z<stats->count && !v;z++)
        if((stats->xy[z].layer&3)==2 && stats->xy[z].x<board_info.width && stats->xy[z].y<board_info.height && match_script_kind(stats->xy[z].y*board_info.width+stats->xy[z].x,1,&sk)) v=1;
+    } else if(!strncmp(buf+1,"PUSHABLE:",9)) {
+      *ip=bip+10;
+      c=parse_direction(s,xy,ip);
+      if(!condflag) goto bad;
+      v=check_pushable_at(xy->x+(c==DIR_E)-(c==DIR_W),xy->y+(c==DIR_S)-(c==DIR_N),c&1?A_PUSH_NS:A_PUSH_EW);
     } else if(!strcmp(buf+1,"RANDOM")) {
       v=dice(2);
     } else if(!strncmp(buf+1,"UNDER:",6)) {
@@ -3078,6 +3089,74 @@ static void do_camera(Uint8 f,Sint32 s,Sint32 x,Sint32 y) {
   }
 }
 
+static void do_spin(Sint32 x,Sint32 y,Uint8 fo,Uint32 so) {
+  Tile ti[8];
+  Uint32 at[8];
+  StatXY*si[8]={};
+  StatXY*rs;
+  Uint8 bwall=0;
+  Uint8 bmove=0;
+  Uint8 bsolid=0;
+  Uint8 bfloor=0;
+  Sint32 x0,y0;
+  Uint32 a,b;
+  int i;
+  for(i=0;i<8;i++) {
+    x0=x+(i&3?(i&4?-1:1):0);
+    y0=y+("<<=>>>=<"[i]-'=')*(so&0x10000?1:-1);
+    if(x0>=0 && x0<board_info.width && y0>=0 && y0<board_info.height) {
+      ti[i]=b_main[at[i]=y0*board_info.width+x0];
+      if(ti[i].stat && !(si[i]=find_statxy(b_main+at[i]))) bwall|=1<<i;
+      a=elem_def[ti[i].kind].attrib;
+      if((a&A_FLOOR) && (!ti[i].kind || !((1<<19)&so))) bfloor|=1<<i; else bsolid|=1<<i;
+      switch(fo) {
+        case 0: bmove|=1<<i; break;
+        case 1: if((a^A_FLOOR)&(A_PUSH_EW|A_PUSH_NS|A_FLOOR)) bmove|=1<<i; break;
+        case 2: if(a&(A_PUSH_EW|A_PUSH_NS)) bmove|=1<<i; break;
+        case 3: if(a&(0x99&(1<<i)?A_PUSH_EW:A_PUSH_NS)) bmove|=1<<i; break;
+      }
+      if(bmove&(1<<i)) {
+        a=elem_def[b_under[at[i]].kind].attrib;
+        if((a&A_FLOOR) && (!b_under[at[i]].kind || !(so&(1<<19)))) bfloor|=1<<i;
+      }
+    } else {
+      bwall|=1<<i; bsolid|=1<<i;
+    }
+  }
+  bmove&=(bfloor*0x101)>>1;
+  for(i=0;i<8;i++) if(!(bwall&(1<<i)) && b_under[at[i]].stat) bwall|=1<<i;
+  for(i=0;i<8;i++) if(bmove&(1<<i)) {
+    a=(elem_def[ti[i].kind].attrib>>16)&0xFF;
+    if(so&(1<<17)) a&=so; else if(so&(1<<18)) a|=so; else a=so;
+    b=elem_def[ti[(i+1)&7].kind].attrib;
+    if(!(b&A_FLOOR) && !(bwall&(1<<((i+1)&7)))) b=elem_def[b_under[at[(i+1)&7]].kind].attrib;
+    b&=15;
+    if(!(a&(1<<b))) bmove^=1<<i;
+  }
+  for(i=0;i<9;i++) {
+    bmove&=~(bwall|((bwall*0x101)>>1));
+    bwall|=(((bwall|(bsolid&~bmove))*0x101)>>1)&bsolid&~bmove;
+  }
+  for(i=0;i<8;i++) {
+    if(bmove&(1<<i)&~((bmove*0x101)>>7)) {
+      b_main[at[i]]=b_under[at[i]];
+      if(b_under[at[i]].stat) if(rs=find_statxy(b_under+at[i])) rs->layer++;
+      b_under[at[i]]=(Tile){};
+    } else if(bfloor&(1<<i)&((bmove*0x101)>>7)&~bmove) {
+      b_under[at[i]]=b_main[at[i]];
+      if(b_main[at[i]].stat) if(rs=find_statxy(b_main+at[i])) rs->layer--;
+    }
+  }
+  for(i=0;i<8;i++) if(bmove&(1<<i)) {
+    b_main[a=at[(i+1)&7]]=ti[i];
+    if(rs=si[i]) {
+      if(rs->sensor.stat) move_sensor_stat(rs->sensor.stat,rs->x,rs->y,a%board_info.width,a/board_info.width);
+      rs->x=a%board_info.width;
+      rs->y=a/board_info.width;
+    }
+  }
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   StatXY*rs;
   Uint16 op;
@@ -3624,6 +3703,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_SIU: so=statxy_index_at(convxy(so,x,y),1,b_under); condflag=(so?1:0); goto store;
       case OP_SIXY: if((rs=get_statxy(so)) && (so=convxy(0,rs->x,rs->y)+1)) condflag=1; else condflag=so=0; goto store;
       case OP_SMOV: general_move(0,regs[fo],x,y,(so&0xF8)+0x8804+(so&7)*0x1100,(so&0xFF00)+1,0,0); break;
+      case OP_SPIN: do_spin(x,y,fo,so); break;
       case OP_SPOK: memory[so&0xFFFF]=fo; break;
       case OP_SUB: regs[fo]-=so; break;
       case OP_SWPA: t=regs[0]; regs[0]=so; so=t; goto store;

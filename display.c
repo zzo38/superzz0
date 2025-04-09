@@ -524,6 +524,7 @@ void redisplay(void) {
 }
 
 void display_title(const char*t) {
+  //TODO: Use X11 functions instead if X11 is the current video implementation, otherwise check that the title contains only ASCII characters and ignore otherwise.
   if(scrn) SDL_WM_SetCaption(t,t);
 }
 
@@ -567,6 +568,7 @@ int next_event(void) {
       }
       // Non-Unicode text is not currently handled; due to this, only ASCII is currently supported.
       // Implementing this will likely require going beyond the functions provided by SDL.
+      if(event.key.keysym.unicode>127) event.key.keysym.unicode=0; // this will later be used to store the character in the current character set
       return 1;
     case SDL_USEREVENT: return 1;
     case SDL_QUIT: return 0;

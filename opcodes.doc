@@ -814,6 +814,21 @@ numbers are treated as unsigned.
    G = Read byte K from position J.
    H = Write byte K to position J (the length must already be enough).
 
+[09E SPIN]
+  Spin the tiles around the X and Y coordinates (like conveyors in ZZT).
+  The first operand tells what is allowed to be moved:
+   A = Anything
+   B = Any pushable or non-floor
+   C = Only if pushable, regardless of direction
+   D = Only if pushable in direction of movement
+  The second operand is the flag bits as follows:
+   bit15-bit0 = Movement classes.
+   bit16 = Set for clockwise, clear for counterclockwise.
+   bit17 = AND mask classes.
+   bit18 = OR mask classes.
+   bit19 = Do not move on nonzero elements.
+  Sensors are always moved together with whatever is standing on it.
+
 [0A0 LETL]
   Like LET but saves the old value of the register; once this subroutine
   returns then the old value is restored. (Note that each use of LETL,

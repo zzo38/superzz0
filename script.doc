@@ -309,6 +309,12 @@ name
 #PLAYER:kind
   Same as P@kind.
 
+#PUSHABLE:dir
+  True if the tile in the specified direction is a pushable element. If
+  it can only be pushed in some directions, uses the specified direction.
+  (Does not check if there is actually any space to move it, and also does
+  not check the EV_PUSH event.)
+
 #RANDOM
   There is a 50% chance to be true.
 
