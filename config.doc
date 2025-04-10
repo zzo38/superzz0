@@ -225,6 +225,13 @@ text_editor_insert
   meaningful if text_editor_command is set). Set to 1 for insert mode
   or 0 for overwrite mode. This can be toggled by ^V at run time.
 
+text_input
+  Controls the mapping of keyboard inputs to character codes. If set to
+  0, then the internal handling of SDL is used, but this only works for
+  ASCII characters. If set to 1, then X11 keyboard handling is used. If
+  set to 2, then it uses its own internal implementation (which assumes
+  the US ASCII PC keyboard layout).
+
 time_format
   The format to use for date/time display, in the same format of the
   strftime function in C.

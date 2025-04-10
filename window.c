@@ -56,7 +56,7 @@ void ask_text(const char*prompt,Uint8*buf,int len) {
       memcpy(v_char,sv_char,80*25);
       memcpy(v_color,sv_color,80*25);
     }
-    if(n<len && i>=0x20 && i<0x7F) buf[n++]=i,buf[n]=0;
+    if(n<len && i>=0x20 && i!=0x7F && i<=0x1FF) buf[n++]=i,buf[n]=0;
     if(n && i==0x08) buf[n-1]=0;
     if(i==0x15) *buf=0;
   }
@@ -696,7 +696,7 @@ int win_text_(win_memo*wm,Uint8 key,const char*label,Uint8*v,size_t s,Uint8 q) {
         if(key==0x08 && *v) {
           r=1;
           v[strlen(v)-1]=0;
-        } else if(key>=0x20 && key<0x80) {
+        } else if(key>=0x20) {
           if(q) {
             if(key>='0' && key<='9' && !*v) key=0;
             if(key>='a' && key<='z') key+='A'-'a';

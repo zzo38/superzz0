@@ -6,6 +6,18 @@ exit
 #include "common.h"
 #include <math.h>
 
+#ifdef SDL_VIDEO_DRIVER_X11
+#define Screen XScreen
+#include "SDL_syswm.h"
+#include <X11/keysym.h>
+#undef Screen
+static Display*xdisplay;
+static Window xwindow;
+static void(*xlock)(void);
+static void(*xunlock)(void);
+static unsigned int num_mask,mode_switch_mask;
+#endif
+
 static const Uint8 font[3584]={
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x81, 0xA5, 0x81, 0x81, 0xBD,
@@ -476,7 +488,36 @@ void init_display(void) {
     }
   }
   SDL_SetColors(scrn,palet,0,34);
-  SDL_EnableUNICODE(1);
+  switch(config.text_input) {
+    case 0: SDL_EnableUNICODE(1); break;
+#ifdef SDL_VIDEO_DRIVER_X11
+    case 1:
+      {
+        int i;
+        XModifierKeymap*mods;
+        SDL_SysWMinfo info;
+        SDL_VERSION(&info.version);
+        if(!SDL_GetWMInfo(&info) || info.subsystem!=SDL_SYSWM_X11) goto bad1;
+        xdisplay=info.info.x11.display;
+        xwindow=info.info.x11.window;
+        if(xlock=info.info.x11.lock_func) xlock();
+        if(mods=XGetModifierMapping(xdisplay)) {
+          for(i=3*mods->max_keypermod;i<8*mods->max_keypermod;i++) {
+            switch(XKeycodeToKeysym(xdisplay,mods->modifiermap[i],0)) {
+              case XK_Num_Lock: num_mask=1<<(i/mods->max_keypermod); break;
+              case XK_Mode_switch: mode_switch_mask=1<<(i/mods->max_keypermod); break;
+            }
+          }
+          XFreeModifiermap(mods);
+        }
+        if(xunlock=info.info.x11.unlock_func) xunlock();
+        //TODO: handle input methods for arbitrary character sets instead of only ASCII
+      }
+      break;
+#endif
+    case 2: SDL_EnableUNICODE(0); break;
+    default: bad1: errx(1,"Unrecognized text input mode (%d)",config.text_input);
+  }
   SDL_EnableKeyRepeat(config.key_repeat_delay,config.key_repeat_interval);
   if(config.event_input==1) SDL_CreateThread(custom_event_thread,0);
   clear:
@@ -549,8 +590,43 @@ Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
   return x;
 }
 
+/*
+  The resulting event structure will be modified from the original SDL events,
+  and some events are already handled. The return value is 1 if any event other
+  than SDL_QUIT is returned. The possible events are:
+
+  SDL_KEYDOWN:
+    Keyboard input. SDLK_KP_ENTER is remapped to SDLK_RETURN, and when num lock
+    is off the numbers on the number pad are remapped to the cursor keys. The
+    event.key.keysym.unicode member is not Unicode; instead, it is meant to be
+    a character in the current character set, where 0x01 to 0x1F and 0x7F are
+    control characters, but 0x100 to 0x11F are the graphic characters with the
+    codes 0x00 to 0x1F. Codes 0x8010 to 0xFFFF are meant to be wide characters
+    (remapped from TRON code), but this is not currently implemented. The other
+    members have the usual meaning of SDL.
+
+  SDL_JOYBUTTONDOWN:
+    Joystick button or other control is pushed. This updates joystat->state as
+    well, and event.jbutton.button is the remapped logical button number (from
+    0 to 31). The other members are not meaningful.
+
+  SDL_JOYBUTTONUP:
+    Joystick button or other control is no longer pushed. This is otherwise
+    like SDL_JOYBUTTONDOWN. In some cases, the mapping from physical to logical
+    buttons will mean some are effectively released at the same time that some
+    are active (e.g. an axis or hat moves immediately from one side to another)
+    in which case only SDL_JOYBUTTONDOWN event occurs but joystat->state will
+    still be updated for all of the applicable changes.
+
+  SDL_USEREVENT:
+    A timer event; the data is not used. Call set_timer to set it.
+
+  SDL_QUIT:
+    Program is terminated.
+*/
 int next_event(void) {
   int i,j;
+  static Uint16 altk=0;
   static const SDLKey numpad[11]={
     SDLK_INSERT,
     SDLK_END, SDLK_DOWN, SDLK_PAGEDOWN,
@@ -562,14 +638,67 @@ int next_event(void) {
     case SDL_KEYDOWN:
       if(event.key.keysym.sym>=300 && event.key.keysym.sym<=314) break;
       if(event.key.keysym.sym==SDLK_KP_ENTER) event.key.keysym.sym=SDLK_RETURN;
+      if(config.text_input==2 && (event.key.keysym.mod&KMOD_ALT) && event.key.keysym.sym>=256 && event.key.keysym.sym<266) {
+        altk=10*altk+event.key.keysym.sym-256;
+        break;
+      }
       if(event.key.keysym.sym>=256 && event.key.keysym.sym<=266 && !(event.key.keysym.mod&KMOD_NUM)) {
         event.key.keysym.unicode=0;
         event.key.keysym.sym=numpad[event.key.keysym.sym-256];
+        return 1;
       }
-      // Non-Unicode text is not currently handled; due to this, only ASCII is currently supported.
-      // Implementing this will likely require going beyond the functions provided by SDL.
-      if(event.key.keysym.unicode>127) event.key.keysym.unicode=0; // this will later be used to store the character in the current character set
+      switch(config.text_input) {
+        case 0: if(event.key.keysym.unicode>127) event.key.keysym.unicode=0; break;
+#ifdef SDL_VIDEO_DRIVER_X11
+        case 1:
+          {
+            XKeyEvent ke={.type=KeyPress,.display=xdisplay,.window=xwindow,.root=xwindow,.subwindow=xwindow,.keycode=event.key.keysym.scancode};
+            char buf[2];
+            // Unfortunately, we do not have the full modifier state from the original XKeyEvent, so it must be reconstructed.
+            // If any keys other than those listed here are used as modifier keys, it might fail to work correctly.
+            if(event.key.keysym.mod&KMOD_SHIFT) ke.state|=ShiftMask;
+            if(event.key.keysym.mod&KMOD_CTRL) ke.state|=ControlMask;
+            if(event.key.keysym.mod&KMOD_CAPS) ke.state|=LockMask;
+            if(event.key.keysym.mod&KMOD_NUM) ke.state|=num_mask;
+            if(event.key.keysym.mod&KMOD_MODE) ke.state|=mode_switch_mask;
+            if(xlock) xlock();
+            // This should be changed in future to determine the current character set and use that.
+            // (Another function will be provided to change the current character set.)
+            if(XLookupString(&ke,buf,1,0,0) && !(*buf&0x80)) event.key.keysym.unicode=*buf;
+            if(xunlock) xunlock();
+          }
+          break;
+#endif
+        case 2:
+          if((i=event.key.keysym.sym)<128) {
+            if(event.key.keysym.mod&KMOD_CTRL) {
+              if(i=='6') i='^'; else if (i=='-') i='_'; else if(i=='2') i=0;
+              if(i=='?' || i=='/' || i==8) i=0x7F; else i&=0x1F;
+            } else if(i>32) {
+              if((event.key.keysym.mod&KMOD_CAPS) && i>='a' && i<='z') i+='A'-'a';
+              if(event.key.keysym.mod&KMOD_SHIFT) i="!\"#$%&\"()*+<_>?)!@#$%^&*(;:<=>?@abcdefghijklmnopqrstuvwxyz{|}^_~ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}~\x7F"[i-33];
+            }
+            event.key.keysym.unicode=i;
+          } else if(i>=256 && i<=272) {
+            event.key.keysym.unicode="0123456789./*-+\r="[i-256];
+          }
+          break;
+        default: event.key.keysym.unicode=0;
+      }
       return 1;
+    case SDL_KEYUP:
+      if(config.text_input==2 && altk && (event.key.keysym.sym==SDLK_LALT || event.key.keysym.sym==SDLK_RALT)) {
+        event.type=SDL_KEYDOWN;
+        event.key.keysym.mod=0;
+        i=altk;
+        if(i<0x20 || i==0x7F) i+=0x100;
+        event.key.keysym.sym=(i<0x7F?i:SDLK_WORLD_0);
+        altk=0;
+        if(event.key.keysym.unicode=i) return 1;
+      } else if(!(event.key.keysym.mod&KMOD_ALT)) {
+        altk=0;
+      }
+      break;
     case SDL_USEREVENT: return 1;
     case SDL_QUIT: return 0;
     case SDL_VIDEOEXPOSE: redisplay(); break;

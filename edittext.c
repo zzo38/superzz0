@@ -234,10 +234,10 @@ static Uint8*text_editor_1(Uint8*text) {
   redisplay();
   do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
   k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
-  if(k>0x7F) k=0; else if(prefix && k>0) k+=prefix*0x100,prefix=0;
+  if(k>0x1FF) k=0; else if(prefix && k>0) k+=prefix*0x1000,prefix=0;
 #define case_CTRL(x) case x-'@'
-#define case_CTRLQ(x) case 0x100+x-'@': case 0x100+x: case 0x100+x+'a'-'A'
-#define case_CTRLK(x) case 0x200+x-'@': case 0x200+x: case 0x200+x+'a'-'A'
+#define case_CTRLQ(x) case 0x1000+x-'@': case 0x1000+x: case 0x1000+x+'a'-'A'
+#define case_CTRLK(x) case 0x2000+x-'@': case 0x2000+x: case 0x2000+x+'a'-'A'
   switch(k) {
     case_CTRL('A'): if(xc) --xc; while(xc && lines[yc].ptr[xc]!=' ') --xc; break;
     case_CTRL('C'): case -SDLK_PAGEDOWN: yc+=23; scrol+=23; goto display;
@@ -279,13 +279,13 @@ static Uint8*text_editor_1(Uint8*text) {
     case_CTRL('Z'): if(scrol<nlines-1) ++scrol; if(yc<scrol) ++yc; goto display;
     case 0x1B: case -SDLK_F10: goto exit;
     case_CTRL('_'): i=config.text_editor_insert; config.text_editor_insert=0; ins_char(yc,xc,' '); config.text_editor_insert=i; break;
-    case 0x20 ... 0x7E: xc+=ins_char(yc,xc,k); break;
+    case 0x20 ... 0x7E: case 0x80 ... 0x1FF: xc+=ins_char(yc,xc,k); break;
     case -SDLK_SLASH: case -SDLK_QUESTION: online_help("edittext",0); goto display;
     case -SDLK_BACKQUOTE:
       printf("xc=%d yc=%d nlines=%d nchars=%d\n",xc,yc,nlines,nchars);
       for(i=0;i<nlines;i++) printf("[%d] len=%d mem=%d own=%d ptr=%p\n",i,lines[i].len,lines[i].mem,lines[i].own,lines[i].ptr);
       goto display;
-    case 0x240: goto exit;
+    case 0x2040: goto exit;
   }
 #undef case_CTRL
 #undef case_CTRLQ

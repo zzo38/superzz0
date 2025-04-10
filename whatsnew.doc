@@ -52,6 +52,8 @@ OTHERS
      used instead.)
   +  Joystick configuration is implemented.
   +  Added options to set the name of temporary files.
+  +  Changes to text input implementation. (This may eventually support
+     non-ASCII input, although the ability to do so is incomplete.)
   *  Carriage returns at the end of lines in the user configuration file
      are now ignored.
   *  The configuration file is now split into divisions. For backward
