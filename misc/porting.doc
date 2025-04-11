@@ -1,6 +1,9 @@
 This has ideas about porting Super ZZ Zero to other systems. It also
 includes notes about possible new or changed user configuration options.
 
+The SDL data types are used in many files, but the SDL functions should be
+used only in audio.c and display.c; they may be changed to not use SDL.
+
 
 === SDL2, SDL3, etc ===
 
@@ -32,6 +35,8 @@ video_opacity
 
 There can be a [SDL_HINT] division for setting SDL configuration hints.
 Note that not all of the hints are meaningful for Super ZZ Zero.
+
+The use of config.text_input also might need to be changed.
 
 
 === GNU/Linux ===
@@ -112,6 +117,7 @@ video_mode
 The following configuration settings are not meaningful on DOS:
   full_screen
   joy_name
+  text_input
   time_utc
   video_gamma
 
@@ -179,6 +185,10 @@ registry_key
   menu is enabled then any changed settings are written to this registry
   key if you have permission to write to that registry key.
 
+text_input
+  Mode 1 is not meaningful, although there may be a new mode 3 for use with
+  the non-Unicode functions of Windows.
+
 time_format
   If not specified, it uses the date/time format setting in Windows.
 
@@ -210,11 +220,17 @@ to work some functions (e.g. board editor automation) with AppleScript,
 but because it uses Unicode, it might not be possible to work properly
 with non-Unicode text.
 
+audio_plugin
+  Specifies a Audio Units plugin to use.
+
 native_file_picker
   Like on Windows.
 
 native_text_edit
   Like on Windows.
+
+text_input
+  Mode 1 is not applicable.
 
 time_format_mode
   Selects to use short or long date/time formats.
@@ -256,6 +272,10 @@ printer_type
   In this case, printer_command may be set to a capability to use for
   printing; if printer_command is not set, then the capabilities passed
   to the program when it starts will be used.
+
+text_input
+  Mode 0 and 1 are not applicable, but there may be a new mode 4; you can
+  then use mode 2 or 4.
 
 time_format
   If not specified, the locale setting will be used (which also makes it
@@ -303,6 +323,9 @@ js_time_format
 
 native_text_edit
   Like on Windows.
+
+text_input
+  Mode 1 is not applicable.
 
 time_format
   If this contains non-ASCII characters, then they will work within the
