@@ -1742,16 +1742,30 @@ static char show_text_window(Uint32 xyn,char help) {
       update_text_window(&wind);
       redisplay();
       if(!next_event()) errx(0,"No events available.");
+      if(event.type==SDL_JOYBUTTONDOWN || event.type==SDL_JOYBUTTONUP) {
+        switch(c=do_joystick(JL_TEXT_WINDOW)) {
+          case 9: goto tab;
+          case 13: goto select;
+          case 24: goto up;
+          case 25: goto down;
+          case 33 ... 126: goto asciikey;
+          case 'Z'+0x100: goto close;
+          case '<'+0x100: goto prevpage;
+          case '>'+0x100: goto nextpage;
+          case '['+0x100: goto top;
+          case ']'+0x100: goto bottom;
+        }
+      }
       if(event.type!=SDL_KEYDOWN) continue;
       switch(event.key.keysym.sym) {
         case SDLK_ESCAPE: goto close;
-        case SDLK_END: case SDLK_KP1: tcursor=tnlines-1; break;
-        case SDLK_DOWN: case SDLK_KP2: if(tcursor!=tnlines-1) ++tcursor; break;
-        case SDLK_PAGEDOWN: case SDLK_KP3: if(!(cur_screen.flag&SF_NO_SCROLL)) tcursor=(tcursor+scl>=tnlines?tnlines-1:tcursor+scl); break;
-        case SDLK_HOME: case SDLK_KP7: tcursor=0; break;
-        case SDLK_UP: case SDLK_KP8: if(tcursor) --tcursor; break;
-        case SDLK_PAGEUP: case SDLK_KP9: if(!(cur_screen.flag&SF_NO_SCROLL)) tcursor=(tcursor-scl>=0?tcursor-scl:0); break;
-        case SDLK_TAB:
+        case SDLK_END: case SDLK_KP1: bottom: tcursor=tnlines-1; break;
+        case SDLK_DOWN: case SDLK_KP2: down: if(tcursor!=tnlines-1) ++tcursor; break;
+        case SDLK_PAGEDOWN: case SDLK_KP3: nextpage: if(!(cur_screen.flag&SF_NO_SCROLL)) tcursor=(tcursor+scl>=tnlines?tnlines-1:tcursor+scl); break;
+        case SDLK_HOME: case SDLK_KP7: top: tcursor=0; break;
+        case SDLK_UP: case SDLK_KP8: up: if(tcursor) --tcursor; break;
+        case SDLK_PAGEUP: case SDLK_KP9: prevpage: if(!(cur_screen.flag&SF_NO_SCROLL)) tcursor=(tcursor-scl>=0?tcursor-scl:0); break;
+        case SDLK_TAB: tab:
           for(a=tcursor+1;a<tnlines;a++) if(textfile_text[a*TEXTREC] && textfile_text[a*TEXTREC+1]=='!') break;
           if(a==tnlines) {
             for(a=0;a<tcursor;a++) if(textfile_text[a*TEXTREC] && textfile_text[a*TEXTREC+1]=='!') break;
@@ -1788,7 +1802,7 @@ static char show_text_window(Uint32 xyn,char help) {
           break;
         default:
           c=event.key.keysym.unicode;
-          if(c>32 && c<127) {
+          asciikey: if(c>32 && c<127) {
             for(a=0;a<tnlines;a++) if(textfile_text[b=a*TEXTREC]>4 && textfile_text[b+1]=='!' && textfile_text[b+2]=='<' && textfile_text[b+4]=='>') {
               if(c==textfile_text[b+3] || (c>='a' && c<='z' && c+'A'-'a'==textfile_text[b+3]) || (c>='A' && c<='Z' && c+'a'-'A'==textfile_text[b+3])) {
                 tcursor=a;
@@ -3942,14 +3956,26 @@ static void message_scrollback(void) {
   memset(v_char+80,0x20,80*24);
   for(y=0;y<24;y++) draw_text(0,y+1,scrback[(n+y)%config.message_scrollback].text,0x07,80);
   redisplay();
-  do { if(!next_event()) errx(0,"No events available."); } while(event.type!=SDL_KEYDOWN);
-  switch(event.key.keysym.sym) {
+  do { if(!next_event()) errx(0,"No events available."); } while(event.type!=SDL_KEYDOWN && event.type!=SDL_JOYBUTTONDOWN && event.type!=SDL_JOYBUTTONUP);
+  if(event.type==SDL_JOYBUTTONDOWN || event.type==SDL_JOYBUTTONUP) {
+    switch(do_joystick(JL_TEXT_WINDOW)) {
+      case 13: return;
+      case 24: goto up;
+      case 25: goto down;
+      case 'Z'+0x100: return;
+      case '<'+0x100: goto prevpage;
+      case '>'+0x100: goto nextpage;
+      case '['+0x100: goto bottom;
+      case ']'+0x100: goto bottom;
+    }
+  }
+  if(event.type==SDL_KEYDOWN) switch(event.key.keysym.sym) {
     case SDLK_ESCAPE: case SDLK_RETURN: return;
-    case SDLK_END: case SDLK_KP1: n=(nscrback+config.message_scrollback-24)%config.message_scrollback; break;
-    case SDLK_UP: case SDLK_KP8: n=(n+config.message_scrollback-1)%config.message_scrollback; break;
-    case SDLK_DOWN: case SDLK_KP2: n=(n+1)%config.message_scrollback; break;
-    case SDLK_PAGEUP: case SDLK_KP9: n=(n+config.message_scrollback-24)%config.message_scrollback; break;
-    case SDLK_PAGEDOWN: case SDLK_KP3: n=(n+24)%config.message_scrollback; break;
+    case SDLK_END: case SDLK_KP1: bottom: n=(nscrback+config.message_scrollback-24)%config.message_scrollback; break;
+    case SDLK_UP: case SDLK_KP8: up: n=(n+config.message_scrollback-1)%config.message_scrollback; break;
+    case SDLK_DOWN: case SDLK_KP2: down: n=(n+1)%config.message_scrollback; break;
+    case SDLK_PAGEUP: case SDLK_KP9: prevpage: n=(n+config.message_scrollback-24)%config.message_scrollback; break;
+    case SDLK_PAGEDOWN: case SDLK_KP3: nextpage: n=(n+24)%config.message_scrollback; break;
     case SDLK_INSERT: case SDLK_KP0:
       *buf=0;
       ask_text("Note:",buf,70);
