@@ -39,6 +39,10 @@ EDITOR
   +  The :boardinfo command to alter board info.
   +  Default settings for new boards can now be made by the asm file. (This
      function can be disabled by the user configuration file.)
+  +  The editor now writes the Super ZZ Zero version number into the world
+     file by default, allowing older versions of Super ZZ Zero to recognize
+     that the world is not compatible and a newer version is required. This
+     feature can be disabled by the configuration file.
 
 TEMPLATE
   +  Default settings for new boards are now specified.

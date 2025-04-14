@@ -13,6 +13,11 @@ Uint16 maxscreen;
 #define N_GENERAL_PARTS 1
 static ASN1_Value general_der;
 static ASN1_Value*general_parts;
+static Uint32 n_general_oids;
+static ASN1_Value*general_oids; // the "class" is used for one of the below constants; when stored in the file the class is always ASN1_UNIVERSAL
+#define MANDATORY 16
+#define OPTIONAL 17
+#define REMOVED 18
 
 static void unload_general_der(void) {
   Uint32 n;
@@ -20,6 +25,47 @@ static void unload_general_der(void) {
   if(general_parts) for(n=0;n<N_GENERAL_PARTS;n++) if(general_parts[n].own) asn1_free(general_parts+n);
   free(general_parts);
   general_parts=0;
+  if(general_oids) for(n=0;n<n_general_oids;n++) if(general_oids[n].own) asn1_free(general_oids+n);
+  n_general_oids=0;
+  general_oids=0;
+}
+
+static void load_general_oids(int class,const ASN1_Value*vo) {
+  ASN1_Value v;
+  if(!asn1_first_of(&v,vo)) do {
+    general_oids=realloc(general_oids,(n_general_oids+1)*sizeof(ASN1_Value));
+    if(!general_oids) err(1,"Allocation failed");
+    v.class=class;
+    general_oids[n_general_oids++]=v;
+  } while(!asn1_next_of(&v,vo));
+}
+
+static ASN1_Value*find_general_oid(Uint32 type,const Uint8*oid,Uint32 size) {
+  //TODO: deal with sequences of OIDs
+  Uint32 n;
+  for(n=0;n<n_general_oids;n++) if(general_oids[n].type==type && general_oids[n].length==size && !memcmp(oid,general_oids[n].data,size)) return general_oids+n;
+  return 0;
+}
+
+static ASN1_Value*add_general_oid(Uint8 class,Uint32 type,const Uint8*oid,Uint32 size) {
+  ASN1_Value*v=find_general_oid(type,oid,size);
+  if(v) {
+    if(class==REMOVED || v->class>class) v->class=class;
+    return v;
+  }
+  if(class==REMOVED) return 0;
+  general_oids=realloc(general_oids,(n_general_oids+1)*sizeof(ASN1_Value));
+  if(!general_oids) err(1,"Allocation failed");
+  v=general_oids+n_general_oids++;
+  memset(v,0,sizeof(ASN1_Value));
+  v->own=1;
+  v->length=size;
+  v->data=malloc(size);
+  if(!v->data) err(1,"Allocation failed");
+  memcpy((void*)v->data,oid,size);
+  v->class=class;
+  v->type=type;
+  return v;
 }
 
 static void load_general_der(void) {
@@ -33,14 +79,16 @@ static void load_general_der(void) {
     alert_text("Error loading GENERAL.DER");
     general_der.data=0;
     general_der.length=0;
-  } else if(!asn1_first_of(&v,&general_der) && !asn1_next_of(&v,&general_der)) {
+  } else if(!asn1_first_of(&v,&general_der)) {
+    load_general_oids(MANDATORY,&v);
+    if(!asn1_next_of(&v,&general_der)) load_general_oids(OPTIONAL,&v); else errx(1,"Error loading GENERAL.DER");
     while(!asn1_next_of(&v,&general_der)) if(v.class==ASN1_CONTEXT_SPECIFIC && v.type<N_GENERAL_PARTS && !general_parts[v.type].data) general_parts[v.type]=v;
   }
   fclose(f);
 }
 
 static void save_general_der(void) {
-  Uint32 n=0;
+  Uint32 n;
   ASN1_Value v;
   ASN1_Encoder*e;
   FILE*f=open_lump("GENERAL.DER","w");
@@ -48,9 +96,24 @@ static void save_general_der(void) {
   e=asn1_create_encoder(f);
   if(!e) errx(1,"Unexpected error");
   asn1_construct(e,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+  asn1_construct(e,ASN1_UNIVERSAL,ASN1_SET,ASN1_SORT);
+  for(n=0;n<n_general_oids;n++) if(general_oids[n].class==MANDATORY) {
+    general_oids[n].class=ASN1_UNIVERSAL;
+    asn1_encode(e,general_oids+n);
+    general_oids[n].class=MANDATORY;
+  }
+  asn1_end(e);
+  asn1_construct(e,ASN1_UNIVERSAL,ASN1_SET,ASN1_SORT);
+  for(n=0;n<n_general_oids;n++) if(general_oids[n].class==OPTIONAL) {
+    general_oids[n].class=ASN1_UNIVERSAL;
+    asn1_encode(e,general_oids+n);
+    general_oids[n].class=OPTIONAL;
+  }
+  asn1_end(e);
+  n=0;
   if(general_der.data) {
-    //TODO: Update version numbers
-    if(!asn1_first_of(&v,&general_der)) do {
+    asn1_first_of(&v,&general_der); asn1_next_of(&v,&general_der); // skip OID sets
+    if(!asn1_next_of(&v,&general_der)) do {
       if(v.class==ASN1_CONTEXT_SPECIFIC) {
         while(n<v.type && n<N_GENERAL_PARTS) {
           if(general_parts[n].class) asn1_encode(e,general_parts+n);
@@ -62,12 +125,6 @@ static void save_general_der(void) {
         asn1_encode(e,&v);
       }
     } while(!asn1_next_of(&v,&general_der));
-  } else {
-    //TODO: This should set the version numbers
-    asn1_construct(e,ASN1_UNIVERSAL,ASN1_SET,0);
-    asn1_end(e);
-    asn1_construct(e,ASN1_UNIVERSAL,ASN1_SET,0);
-    asn1_end(e);
   }
   for(;n<N_GENERAL_PARTS;n++) if(general_parts[n].class) asn1_encode(e,general_parts+n);
   asn1_end(e);
@@ -1012,6 +1069,18 @@ int run_editor(void) {
       }
       if(fp=open_lump("CATALOG.DER","w")) fclose(fp);
       write_start_lump();
+      if(config.version_auto==255) config.version_auto=version_is_release;
+      if(config.version_auto) {
+        config.version_auto=0;
+        load_general_der();
+        // If any older version numbers must be kept for compatibility, then this must be changed to avoid removing those ones.
+        // In that case, a compatibility menu should be added into the editor in order to manually add and remove those version numbers.
+        for(i=0;i<n_general_oids;i++) if(general_oids[i].type==ASN1_RELATIVE_OID && general_oids[i].length && !general_oids[i].data[0]) general_oids[i].class=REMOVED;
+        if(version_rel_oid_length_2>version_rel_oid_length && version_rel_oid[version_rel_oid_length]) add_general_oid(OPTIONAL,ASN1_RELATIVE_OID,version_rel_oid,version_rel_oid_length);
+        add_general_oid(MANDATORY,ASN1_RELATIVE_OID,version_rel_oid,version_rel_oid_length_2);
+        save_general_der();
+        unload_general_der();
+      }
       save_world(0);
     }
     win_command('Q',"Quit") break;

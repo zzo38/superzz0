@@ -239,6 +239,13 @@ time_format
 time_utc
   Set to 1 to display date/time as UTC, or 0 (default) for local time.
 
+version_auto
+  Set to 1 (the default value) to automatically update the Super ZZ Zero
+  version number in the world file when saving using the editor, so that
+  an error message will be displayed when a new version of Super ZZ Zero
+  is required or recommended for this world file if it is loaded using
+  an older version.
+
 version_check
   If set to 1 (which is the default value) then it checks the world
   version and file type by the !SZ0 lump; if 0 then it ignores them.

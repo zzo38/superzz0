@@ -10,7 +10,7 @@ exit
 static int check_feature(const ASN1_Value*v) {
   // Returns 0 if feature is valid, nonzero if feature is not valid.
   // Will also enable the feature if necessary (currently this has no effect)
-  // (Note: This is not really tested properly yet)
+  // (Note: This is not really tested properly yet, but is partally tested)
   int i,j;
   if(v->type==ASN1_RELATIVE_OID && v->length<=version_rel_oid_length && !memcmp(v->data,version_rel_oid,v->length)) return 0;
   if(v->type==ASN1_RELATIVE_OID && v->length>2 && !v->data[0] && !version_rel_oid[0]) {

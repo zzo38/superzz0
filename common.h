@@ -14,6 +14,8 @@
 extern const Uint8 version_hash[32];
 extern const Uint8 version_rel_oid[];
 extern const Uint8 version_rel_oid_length;
+extern const Uint8 version_rel_oid_length_2;
+extern const Uint8 version_is_release;
 
 // === Configuration ===
 

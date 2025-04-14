@@ -129,9 +129,11 @@ static void write_version_inc(void) {
   fprintf(f,"const Uint8 version_rel_oid[]={0,");
   s=encode_number(f,major);
   s+=encode_number(f,minor);
+  i=s;
   s+=encode_number(f,patch);
   fprintf(f,"};\n");
   fprintf(f,"const Uint8 version_rel_oid_length=%d;\n",s+1);
+  fprintf(f,"const Uint8 version_rel_oid_length_2=%d;\n",i+1);
   fprintf(f,"const Uint8 version_is_release=%d;\n",*newhash==2);
   fprintf(f,"const char version_name[]=\"Super ZZ Zero\\nVersion %d.%d.%d%s\\n\";\n",major,minor,patch,*newhash==2?"":"(modified)");
   fclose(f);
