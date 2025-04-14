@@ -769,6 +769,9 @@ static void edit_joystick(void) {
       jc[yc].text[0]=0;
       for(i=0;i<16;i++) jc[yc].data[i]=0;
       goto redraw1;
+    case SDLK_SLASH: case SDLK_QUESTION:
+      online_help("editjoy",0);
+      goto redraw0;
   }
   goto input;
   stop:
@@ -811,6 +814,80 @@ static void edit_joystick(void) {
     asn1_end(enc);
   }
   asn1_finish_encoder(enc);
+}
+
+static void oid_sets_callback(Uint16 n,int y,void*f) {
+  char b[78];
+  int c=general_oids[n].class;
+  int e;
+  rewind(f);
+  if(e=asn1_print_decimal_oid(general_oids+n,general_oids[n].type,f)) fputc(e,f);
+  fprintf(f,"%72s","");
+  fflush(f);
+  rewind(f);
+  fread(b,1,72,f);
+  draw_text(1,y,b,(c==MANDATORY?14:c==OPTIONAL?11:8),72);
+}
+
+static void edit_oid_sets(void) {
+  int n=0;
+  int e;
+  char b[75]={};
+  FILE*f=fmemopen(b,72,"r+b");
+  win_form("OID sets") {
+    win_help("editadv","oid");
+    win_list(n_general_oids,f,oid_sets_callback,n) {
+      rewind(f);
+      if(e=asn1_print_decimal_oid(general_oids+n,general_oids[n].type,f)) fputc('?',f);
+      fputc(0,f);
+      fflush(f);
+      win_form("Edit OID set item") {
+        win_heading(b);
+        win_option('M',"Mandatory",general_oids[n].class,MANDATORY);
+        win_option('O',"Optional",general_oids[n].class,OPTIONAL);
+        win_option('R',"Removed",general_oids[n].class,REMOVED);
+        win_blank();
+        win_command_esc(0,"Done") break;
+      }
+    }
+    win_blank();
+    win_command('A',"Add") {
+      b[1]=0;
+      ask_text("New OID:",b+1,72);
+      if(b[1]) {
+        ASN1_Value v={};
+        Uint8 z[128];
+        if(b[1]=='.' && b[2]=='.' && b[3]=='.') {
+          b[0]=b[2]='0';
+          e=asn1_make_static_oid(b,z,128,&v);
+          v.data=z+1;
+          v.length--;
+          v.type=ASN1_RELATIVE_OID;
+        } else if(!strncmp("2.25.196954517921581521497869385664052876310.",b+1,45)) {
+          b[42]='0'; b[43]='.';
+          e=asn1_make_static_oid(b+42,z,128,&v);
+          v.data=z+1;
+          v.length--;
+          v.type=ASN1_RELATIVE_OID;
+        } else {
+          e=asn1_make_static_oid(b+1,z,128,&v);
+        }
+        if(!e) {
+          if((e=ask_yn("Mandatory?",-1))>=0) add_general_oid(e?MANDATORY:OPTIONAL,v.type,v.data,v.length);
+        } else {
+          alert_text("Invalid OID");
+        }
+      }
+    }
+    win_command('D',"Delete all") if(ask_yn("Delete all OIDs?",0)) {
+      if(general_oids) for(n=0;n<n_general_oids;n++) if(general_oids[n].own) asn1_free(general_oids+n);
+      n_general_oids=0;
+      general_oids=0;
+    }
+    win_blank();
+    win_command_esc(0,"Exit") break;
+  }
+  fclose(f);
 }
 
 static int copy_board(Uint16 inb,Uint16 outb) {
@@ -1047,6 +1124,14 @@ int run_editor(void) {
         win_help("edit","more");
         win_boolean('p',"Auto pause",config.pause,128);
         win_command('J',"Joystick configuration...") edit_joystick();
+        win_command('.',"Advanced...") {
+          win_form("Advanced editor") {
+            win_help("editadv",0);
+            win_command('O',"OID sets...") edit_oid_sets();
+            win_blank();
+            win_command_esc(0,"Go back") break;
+          }
+        }
         win_blank();
         win_command_esc(0,"Go back") break;
       }

@@ -1,0 +1,23 @@
+@Advanced Editor
+This advanced editor menu contains some advanced features that you might not
+need; you should read fileformat.doc and the other documents first. (If any
+functions here would become important for most users then the subset of that
+function that is appropriate may be added into other menus too.)
+
+:oid;OID sets
+This menu allows editing the mandatory and optional OID sets in the
+GENERAL.DER lump. (Editing sequences of OIDs is not implemented yet.)
+
+The menu displays the list of OIDs; yellow means mandatory, cyan means
+optional, and grey means removed (it will not be saved). Any line that
+begins with ... means a relative OID.
+
+If you select any OID then you can change if it is mandatory or optional,
+or remove it (it is not actually removed until the world file is saved, but
+it will be marked for being removed).
+
+When you add a OID, you must enter the OID in decimal format; if it starts
+with ... then it will add a relative OID. (If you enter an absolute OID that
+is supposed to be relative, it will automatically convert it.) You must then
+select if it will be added to the mandatory set or optional set.
+

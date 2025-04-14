@@ -43,6 +43,8 @@ EDITOR
      file by default, allowing older versions of Super ZZ Zero to recognize
      that the world is not compatible and a newer version is required. This
      feature can be disabled by the configuration file.
+  +  An advanced editor menu is added; you can use this to edit OID sets
+     directly (most users are unlikely to need this function).
 
 TEMPLATE
   +  Default settings for new boards are now specified.

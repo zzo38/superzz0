@@ -1,0 +1,39 @@
+@Joystick Configuration Editor
+This menu allows editing the joystick mapping for a world file.
+
+Joystick mapping has sixteen levels numbered from 0 to 15; each level is one
+column. Which level is active is set by the program memory; see event.doc for
+details about this. Some mappings may also temporarily set the level. The
+first (unnumbered) column is the name of the button to map.
+
+There are two pages of mappings, which both work in the same way; push TAB
+to switch between the two pages.
+
+The rows are in the order of first precedence to last precedence, in case
+there are conflicts. Push SHIFT and arrows to change their order.
+
+If the cursor is at the left side of the screen then push SPACE to set the
+button names, with semicolons in between; the first such button name has
+precedence. You can push ^P to enter special characters such as arrows in
+the button names; you should probably map the names with arrows to the
+corresponding arrow keys, since this corresponds to the D-pad or to the
+analog axes of the joystick (depending on the user configuration).
+
+When the cursor is in any cell you can set the command:
+
+þ N = Set a normal ASCII mapping; push the key that you want it to be mapped
+to which can be any printable ASCII character, or an arrow key, or an arrow
+key with SHIFT, or RETURN, or TAB, or BACKSPACE.
+
+þ C = Set a special command code. It will display the list of command codes
+and you can select one. Some commands are only valid in some contexts.
+
+þ 1 to 8 = Temporarily shift to a different level while the button is being
+held down. In this way, you can implement mappings to combinations of buttons
+such as holding the A button and the D-pad to shoot.
+
+þ X = Clear the mapping, so that the button has no effect.
+
+þ A = Toggle auto-fire. This is only valid for normal mappings. If auto-fire
+is enabled then the function of that button continues while it is held.
+

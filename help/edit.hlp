@@ -34,3 +34,11 @@ starts (you can still push the pause key to toggle it, whether or not this
 is selected). While it is paused, a turn is only advanced when a key is
 pushed, and otherwise does nothing.
 
+þ Joystick configuration: Edits the mapping of joystick buttons to the
+commands within the game world.
+!-editjoy;Joystick configuration editor
+
+þ Advanced: Advanced functions which you might not need, such as editing
+mandatory and optional OID sets directly.
+!-editadv;Advanced editor
+
