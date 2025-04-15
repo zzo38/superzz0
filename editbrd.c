@@ -2152,6 +2152,53 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
   }
 }
 
+static void do_revealing_list(Uint16 a0) {
+  Uint16 a,m,u,v;
+  Uint32 x,y,z;
+  Tile t;
+  if(!vmode) update_screen(); else ed_update_screen();
+  for(y=0;y<25;y++) {
+    if(y+scroll_y>=board_info.height) break;
+    z=(y+scroll_y)*board_info.width+scroll_x;
+    for(x=0;x<80;x++) {
+      if(x+scroll_x>=board_info.width) break;
+      for(a=a0;m=memory[a]&0x7FF;a+=2) {
+        u=(memory[a]>>12)&3;
+        tryagain:
+        t=(u==3?b_over:u==2?b_main:b_under)[z+x];
+        v=0;
+        switch(m) {
+          case 0x001: v=1; break;
+          case 0x002: v=t.stat; break;
+          case 0x004: v=!set_mark(x+scroll_x,y+scroll_y,2); break;
+          case 0x005: v=set_mark(x+scroll_x,y+scroll_y,2); break;
+          case 0x010 ... 0x01F: v=!((elem_def[t.kind].attrib^m)&15); break;
+          case 0x100 ... 0x1FF: v=(t.kind==(m&0xFF)); break;
+          case 0x200 ... 0x21F: v=!((elem_def[t.kind].attrib>>(m&31))&1); break;
+          case 0x280 ... 0x29F: v=((elem_def[t.kind].attrib>>(m&31))&1); break;
+          case 0x300 ... 0x3FF: v=(t.stat==(m&0xFF)); break;
+        }
+        if(!v) {
+          if(u) continue;
+          u=2;
+          goto tryagain;
+        }
+        if(memory[a]&0x8000) v_color[y*80+x]^=memory[a+1]>>8; else if(memory[a+1]&0xFF00) v_color[y*80+x]=memory[a+1]>>8; else v_color[y*80+x]=t.color;
+        if(memory[a]&0x4000) {
+          switch(memory[a+1]&0xFF) {
+            case 0x01: v_char[y*80+x]=t.param; break;
+          }
+        } else {
+          v_char[y*80+x]=memory[a+1];
+        }
+        break;
+      }
+    }
+  }
+  redisplay();
+  do { if(!next_event()) return; } while(event.type!=SDL_KEYDOWN);
+}
+
 static void f_menu(Uint16 f) {
   Uint8 b,c,x,y,z;
   Uint16 m;
@@ -2208,6 +2255,10 @@ static void f_menu(Uint16 f) {
     m=f-1;
   }
   if(memory[m+3]&0x8000) {
+    if(memory[m+3]&0xC000) {
+      do_revealing_list(memory[m+2]);
+      return;
+    }
     parameter_edit(memory[m+2],memory[m+3]&0xFF,memory[m+3]&0x100?clip.stat:0,0);
     if((memory[m+3]&0x400) && clip.kind==b_main[ycur*board_info.width+xcur].kind) {
       f=memory[clip.kind+0x100];

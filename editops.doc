@@ -81,9 +81,61 @@ address of a parameter editor to execute instead, and the flag is:
 
 * bit10 = Set default value of parameter of tile at cursor after completed
 
-* bit14-bit11 = (Reserved)
+* bit13-bit11 = (Reserved)
+
+* bit14 = Kind is address of revealing list (you should clear bit13-bit0)
 
 * bit15 = Abnormal flag
+
+
+=== Revealing list ===
+
+Each entry in a revealing list consists of two cells.
+
+The low 11-bits of the first cell have the format:
+
+* $000 = End of revealing list
+
+* $001 = Match everything
+
+* $002 = Match stats
+
+* $004 = Match unmarked cells
+
+* $005 = Match marked cells
+
+* $01x = Class number
+
+* $1xx = Kind number
+
+* $2xx = Bit number of attribute; bit7 is the required state to match
+
+* $3xx = Stat number
+
+The other bits have the format:
+
+* bit11 = (reserved)
+
+* bit13-bit12 = Layers to match (0=under and main, 1=under, 2=main, 3=over)
+
+* bit14 = Special character mode
+
+* bit15 = XOR colour
+
+The format of the second cell is:
+
+* bit7-bit0 = Character
+
+* bit15-bit8 = Colour (if not XOR colour, 0 means colour of matching tile)
+
+The special character modes can be:
+
+* $00 = Leave display unchanged
+
+* $01 = Use parameter
+
+If multiple matching entries are found, only the first appropriate entry
+that is found will be used for each cell.
 
 
 === Parameter editors ===

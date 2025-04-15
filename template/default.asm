@@ -1801,6 +1801,14 @@ CENMOV	LET D,Z
 	ED1 6
 	ED 0,_TEXT,$1000
 
+	ED1 7
+	ED 1,"Reveal:"
+	ED 'I',"Invisible walls",RL_INV,$C000
+	ED 'S',"Stats",RL_STA,$C000
+	ED 'U',"Under layer",RL_UND,$C000
+	ED 'L',"Under layer (only)",RL_UNO,$C000
+	ED 2
+
 ; **** Parameter edit ****
 
 	ED0 _TEXT,$0100
@@ -2013,6 +2021,22 @@ E_CONV	ED '=',"-MP"
 	ED 'O',$0007
 	ED2 'O',"Clock~wise",1
 	ED2 'O',"Countercloc~kwise",0
+	ED 0
+
+; **** Revealing lists ****
+
+RL_INV	ED _INVISIBLE+$2100,$00B0
+	ED 0
+
+RL_STA	ED $C002,$8800
+	ED 0
+
+RL_UND	ED $D100,$0000
+	ED $1001,$00B1
+	ED 0
+
+RL_UNO	ED $0100,$07F9
+	ED $1001,$00B1
 	ED 0
 
 ; **** Editor board info ****

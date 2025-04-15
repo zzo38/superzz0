@@ -45,11 +45,14 @@ EDITOR
      feature can be disabled by the configuration file.
   +  An advanced editor menu is added; you can use this to edit OID sets
      directly (most users are unlikely to need this function).
+  +  In the board editor now you can make a menu of revealing lists, to
+     temporarily reveal certain kind of tiles.
 
 TEMPLATE
   +  Default settings for new boards are now specified.
   +  Added joystick configuration into template.
   +  Add CONVEYOR element.
+  +  Add the revealing menu in the editor.
 
 OTHERS
   +  The TEMPLATE.DER lump is usable for affecting the creation of new
