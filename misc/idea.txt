@@ -539,6 +539,22 @@ be changed. Some of the things that must be changed include:
 * Line joining
 
 
+=== Forty column mode ===
+
+An idea is to implement 40-column mode. This would probably not be used in
+the editor, but only during the game, and probably also not used in the
+save/restore game menu. Some other built-in menus also might need to be
+modified for 40-column mode, or to temporarily switch to 80-columns. (Any
+screen that uses the screen layouts defined in the world, will continue to
+work as they already do, in 40-column mode.)
+
+The v_char and v_color would continue to be eighty columns wide, although
+only the first forty columns would be displayed.
+
+The F1 menu is exactly forty columns wide, so it would have a fixed
+horizontal position, although the vertical position can still be adjusted.
+
+
 === Regression testing and demo recording ===
 
 Some way to do regression testing, sort of like Free Hero Mesh. Note that
@@ -610,11 +626,6 @@ disable this feature, and might be disabled by default.
 
 
 === Versions ===
-
-Currently, it does not write the version number of Super ZZ Zero into the
-world file (in the GENERAL.DER lump) but will read it if it is there. The
-intention is for the mandatory set to include the major.minor version and
-the optional set to include the major.minor.patch version.
 
 The error message should probably be improved. Currently it only says "This
 file {requires|should use} a newer version of Super ZZ Zero", although the

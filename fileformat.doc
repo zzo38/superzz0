@@ -170,7 +170,7 @@ one does have a stat.
 * For the colour and parameter, it guesses the colour or parameter of the
 most recent cell of the same kind, or zero if there isn't any.
 
-Bit11 if the encoding flags means that "layer inversion" is in use. After
+Bit11 of the encoding flags means that "layer inversion" is in use. After
 decoding the board data, any cell where the kind in both the under layer
 and main layer are nonzero, will have the two layers exchanged. Layer
 inversion also affects stats: If they are exchanged in this way and, one
