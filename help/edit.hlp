@@ -34,6 +34,12 @@ starts (you can still push the pause key to toggle it, whether or not this
 is selected). While it is paused, a turn is only advanced when a key is
 pushed, and otherwise does nothing.
 
+þ 40 columns: If selected, then the display during the game will use 40
+columns; if not selected, then it will use 80 columns. Some built-in menus
+will always use 80 columns regardless of this. Note that if it is set to 40
+columns then only the first 40 columns of the screen are used and the other
+40 columns will not be displayed.
+
 þ Joystick configuration: Edits the mapping of joystick buttons to the
 commands within the game world.
 !-editjoy;Joystick configuration editor

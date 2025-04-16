@@ -116,9 +116,10 @@ const char*init_world(void) {
   // "START"
   fp=open_lump("START","r");
   if(!fp) return "Cannot open START lump";
-  u=read16(fp);
+  start_mode=u=read16(fp);
   if(!(u&0x0001)) config.pause|=128;
-  if(u&~0x0001) return "Unrecognized data in START lump";
+  if((u&0x0002) && !editor) v_mode&=~VIDEO_80COLUMNS;
+  if(u&~0x0003) return "Unrecognized data in START lump";
   cur_screen.message_l=222;
   cur_board_id=read16(fp);
   v=read32(fp);

@@ -41,6 +41,7 @@ Uint8*global_text;
 Uint16 global_length;
 DynaString*dynastr;
 Uint8 ndynastr;
+Uint16 start_mode=1;
 
 static uint64_t rseed;
 static char soundon;

@@ -711,6 +711,8 @@ The flags are:
 
 * bit0 = Clear to automatically pause the game when it starts.
 
+* bit1 = Forty columns mode.
+
 
 === TEMPLATE.DER ===
 

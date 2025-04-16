@@ -137,8 +137,7 @@ static void write_start_lump(void) {
   Uint16 v;
   FILE*fp=open_lump("START","w");
   if(!fp) errx(1,"Cannot open START lump for writing");
-  v=(config.pause&128?0x0000:0x0001);
-  write16(fp,v);
+  write16(fp,start_mode);
   write16(fp,cur_board_id);
   v=0;
   for(i=0;i<16;i++) if(!status_vars[i]) v|=1<<i;
@@ -1120,9 +1119,11 @@ int run_editor(void) {
     }
     win_command('.',"More...") {
       load_general_der();
+      start_mode^=0x0001;
       win_form("Editor") {
         win_help("edit","more");
-        win_boolean('p',"Auto pause",config.pause,128);
+        win_boolean('p',"Auto pause",start_mode,0x0001);
+        win_boolean('4',"40 columns",start_mode,0x0002);
         win_command('J',"Joystick configuration...") edit_joystick();
         win_command('.',"Advanced...") {
           win_form("Advanced editor") {
@@ -1135,11 +1136,13 @@ int run_editor(void) {
         win_blank();
         win_command_esc(0,"Go back") break;
       }
+      start_mode^=0x0001;
       save_general_der();
       unload_general_der();
     }
     win_blank();
     win_command('R',"Run") {
+      write_start_lump();
       run_test_game(-1);
       win_refresh();
     }

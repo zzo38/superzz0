@@ -75,6 +75,7 @@ static int compare_file_items(const void*a,const void*b) {
 }
 
 int ask_save_file(char issave) {
+  Uint8 vm=v_mode;
   FILE*fp=0;
   DIR*dir=0;
   struct dirent*ent;
@@ -98,6 +99,7 @@ int ask_save_file(char issave) {
   } else {
     *entry=xc=0;
   }
+  v_mode|=VIDEO_80COLUMNS;
   list:
   yc=ys=0;
   free(items);
@@ -177,6 +179,7 @@ int ask_save_file(char issave) {
   switch(event.key.keysym.sym) {
     case SDLK_ESCAPE: escape:
       free(items);
+      v_mode=vm;
       return 0;
     case SDLK_F1: config.file_list&=0x7F; chdir(".."); goto list;
     case SDLK_F2: config.file_list^=4; config.file_list&=0x7F; goto list;
@@ -294,6 +297,7 @@ int ask_save_file(char issave) {
   free(savename);
   savename=strdup(entry);
   if(!savename) err(1,"Allocation failed");
+  v_mode=vm;
   return 1;
 }
 

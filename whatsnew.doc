@@ -16,6 +16,7 @@ The time zone for the dates in this file is Pacific (British Columbia).
 
 GAME
   +  Dynamic strings are implemented.
+  +  A world can optionally be defined as 40-columns mode.
   =  Correct the implementation of board grid scrolling.
 
 SCRIPTS
