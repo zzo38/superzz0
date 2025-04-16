@@ -47,6 +47,7 @@ EDITOR
      directly (most users are unlikely to need this function).
   +  In the board editor now you can make a menu of revealing lists, to
      temporarily reveal certain kind of tiles.
+  +  Secondary mark grid.
 
 TEMPLATE
   +  Default settings for new boards are now specified.

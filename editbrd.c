@@ -16,6 +16,8 @@ static Uint16 numprefix;
 static Uint8 emode,vmode;
 static Uint8*markgrid;
 static Uint16 markwidth,markheight,markskip;
+static Uint8*markgrid2;
+static Uint16 markwidth2,markheight2,markskip2;
 
 static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay);
 static void stat_list_callback(Uint16 n,int y,void*uz);
@@ -65,6 +67,14 @@ static Uint8 set_mark(Uint16 x,Uint16 y,Uint8 mask) {
     if(mask&1) *g0|=1<<(x&7);
     return 0;
   }
+}
+
+static void exchange_mark_grid(void) {
+  Uint8*g;
+  Uint16 w,h,s;
+  g=markgrid2; w=markwidth2; h=markheight2; s=markskip2;
+  markgrid2=markgrid; markwidth2=markwidth; markheight2=markheight; markskip2=markskip;
+  markgrid=g; markwidth=w; markheight=h; markskip=s;
 }
 
 static void goto_board(Uint16 id) {
@@ -1130,13 +1140,15 @@ static void cc_crop(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   Tile*ko=b_over;
   Uint16 w=board_info.width;
   Uint16 h=board_info.height;
-  free(markgrid);
-  markwidth=markheight=markskip=0;
-  markgrid=0;
+  free(markgrid); markwidth=markheight=markskip=0; markgrid=0;
+  free(markgrid2); markwidth2=markheight2=markskip2=0; markgrid2=0;
   if(x0>x1) a=x0,x0=x1,x1=a;
   if(y0>y1) a=y0,y0=y1,y1=a;
   if(x0>=w || y0>=h) return;
-  if(!x0 && !y0 && x1==w-1 && y1==h-1) return;
+  if(!x0 && !y0 && x1==w-1 && y1==h-1) {
+    clear_extra_stats();
+    return;
+  }
   w=x1+1-x0;
   h=y1+1-y0;
   b_under=calloc(w*h,3*sizeof(Tile));
@@ -1502,6 +1514,11 @@ static int cf_mark(Uint16 x,Uint16 y,Filter*f) {
   return (markgrid[y*markskip+(x>>3)]&(1<<(x&7)));
 }
 
+static int cf_mark2(Uint16 x,Uint16 y,Filter*f) {
+  if(x>=markwidth2 || y>=markheight2) return 0;
+  return (markgrid2[y*markskip2+(x>>3)]&(1<<(x&7)));
+}
+
 static int cf_modulo(Uint16 x,Uint16 y,Filter*f) {
   Sint32 z=(x*f->arg[0]+y*f->arg[1])%(f->arg[2]?:1);
   int i;
@@ -1544,6 +1561,7 @@ static const FilterCode filtcode[127]={
   ['m']=cf_modulo,
   ['r']=cf_random,
   ['s']=cf_stat,
+  ['x']=cf_mark2,
 };
 
 static void do_colon_command(char*text) {
@@ -2739,12 +2757,14 @@ Uint16 edit_board(Uint16 id) {
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
         case -SDLK_i: edit_board_info(); break;
+        case -SDLK_m: exchange_mark_grid(); break;
         case -SDLK_r: resize_board(); break;
         case -SDLK_t:
           if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
           esave();
           run_test_game(brd_id);
           break;
+        case -SDLK_u: free(markgrid); free(markgrid2); markwidth=markheight=markskip=markwidth2=markheight2=markskip2=0; markgrid=markgrid2=0; break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'A': k=add_board(); if(k>0) goto_board(k); break;
@@ -2905,12 +2925,14 @@ Uint16 edit_board(Uint16 id) {
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
         case -SDLK_i: edit_board_info(); break;
+        case -SDLK_m: exchange_mark_grid(); break;
         case -SDLK_r: resize_board(); break;
         case -SDLK_t:
           if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
           esave();
           run_test_game(brd_id);
           break;
+        case -SDLK_u: free(markgrid); free(markgrid2); markwidth=markheight=markskip=markwidth2=markheight2=markskip2=0; markgrid=markgrid2=0; break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'c': case 0x03: overclip.color=ask_color_char(0,overclip.color); break;

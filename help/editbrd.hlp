@@ -24,8 +24,10 @@ TAB        Toggle normal/draw mode
 RETURN     Pick and edit parameter of tile at cursor
 0-9        Numeric prefix
 ALT+I      Board info
+ALT+M      Exchange primary/secondary mark grid
 ALT+R      Resize board
 ALT+T      Test game
+ALT+U      Unmark all (primary and secondary)
 ALT+Z      Maximum numeric prefix
 ^O         Stat list
 ^P         Edit text of stat
@@ -153,6 +155,16 @@ that are already marked will stop the flood from propagating.
 
 Also, using the f prefix will flood in four directions (not diagonally),
 but F prefix will flood in eight directions.
+
+:mark:Marks
+The mark grid stores one bit per grid cell, with no layers, and is shared
+with all boards. It only exists in the editor and is not saved in the world
+file. It is used during editing to be able to select several tiles to work
+on multiple tiles at once (usually using mass mode, although some other
+commands also do).
+
+There is also a secondary mark grid; push ALT+M to exchange the primary mark
+grid with the secondary mark grid. (Only the primary mark grid is visible.)
 
 :stat;Stats
 The stat list (CTRL+O) displays a list of all of the stats; each line is
@@ -302,6 +314,8 @@ are omitted, then "/r2,1" is assumed.
 only tiles whose stat are the specified stat number are selected (zero will
 select tiles where at least one layer does not have stats); otherwise it
 will select tiles with any stats at all. It looks on both layers.
+
+* /x selects tiles that are marked in the secondary mark grid.
 
 An optional space is allowed after the last filter and before the command.
 
