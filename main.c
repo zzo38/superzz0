@@ -331,6 +331,7 @@ int main(int argc,char**argv) {
     alert_text("Warning: This file should use a newer version of Super ZZ Zero");
   }
   if(config.audio_buffer && !editor) audio_init();
+  if(config.test_mode) v_mode&=~VIDEO_80COLUMNS;
   if(editor) run_editor(); else run_game();
   return 0;
 }

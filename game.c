@@ -79,7 +79,6 @@ static Uint32 do_joystick(Uint8 mode) {
     if(joystat->world_shift&0x200) v=(joystat->world_shift>>5)&15; else v=(memory[MEM_JOY_LEVEL]>>(4*(mode&3)))&15;
     v=joystat->map[b].a[v];
   }
-  //if(config.test_mode) printf("(mode=%X v=%X b=%X state=%lX w=%lX u=%lX)\n",mode,v,b,(long)joystat->state,(long)joystat->world_shift,(long)joystat->user_shift);
   if(event.type==SDL_JOYBUTTONDOWN) {
     switch(v) {
       case 0x000 ... 0x07F: return v;
@@ -3859,6 +3858,7 @@ static int system_menu(void) {
   autofire=0;
   v_status[1]='F';
   redraw0:
+  if(!(v_mode&VIDEO_80COLUMNS)) x=0;
   config.menu_x=x; config.menu_y=y;
   update_screen();
   if(vtexttime) display_message_text();

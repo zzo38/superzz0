@@ -354,6 +354,7 @@ Uint8 sv_char[80*25];
 Uint8 v_status[82];
 Uint8 v_xcur=128;
 Uint8 v_ycur=128;
+Uint8 v_mode=VIDEO_80COLUMNS;
 SDL_Event event;
 JoyStatus*joystat;
 
@@ -534,13 +535,39 @@ void redisplay(void) {
   SDL_LockSurface(scrn);
   r=scrn->pitch;
   p=scrn->pixels+4*r+4;
-  for(z=y=0;y<25;y++,z+=80) {
-    for(a=0;a<14;a++) {
-      for(x=0;x<80;x++) {
-        c=font[14*v_char[z+x]+a];
-        for(b=0;b<8;b++) p[b+(x<<3)]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+  if(v_mode&VIDEO_80COLUMNS) {
+    for(z=y=0;y<25;y++,z+=80) {
+      for(a=0;a<14;a++) {
+        for(x=0;x<80;x++) {
+          c=font[14*v_char[z+x]+a];
+          for(b=0;b<8;b++) p[b+(x<<3)]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+        }
+        p+=r;
       }
-      p+=r;
+    }
+    if(v_xcur<80 && v_ycur<25) {
+      p=scrn->pixels+(4+14*v_ycur)*r+4+8*v_xcur;
+      for(y=0;y<14;y++) {
+        for(x=0;x<8;x++) p[x]^=((x==0 || x==7 || y==0 | y==13)?16:8);
+        p+=r;
+      }
+    }
+  } else {
+    for(z=y=0;y<25;y++,z+=80) {
+      for(a=0;a<14;a++) {
+        for(x=0;x<40;x++) {
+          c=font[14*v_char[z+x]+a];
+          for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+        }
+        p+=r;
+      }
+    }
+    if(v_xcur<80 && v_ycur<25) {
+      p=scrn->pixels+(4+14*v_ycur)*r+4+16*v_xcur;
+      for(y=0;y<14;y++) {
+        for(x=0;x<16;x++) p[x]^=((x==0 || x==15 || y==0 | y==13)?16:8);
+        p+=r;
+      }
     }
   }
   if(config.show_status) {
@@ -550,13 +577,6 @@ void redisplay(void) {
         c=font[14*v_status[x]+a];
         for(b=0;b<8;b++) p[b+(x<<3)]=(c&128?33:32),c<<=1;
       }
-      p+=r;
-    }
-  }
-  if(v_xcur<80 && v_ycur<25) {
-    p=scrn->pixels+(4+14*v_ycur)*r+4+8*v_xcur;
-    for(y=0;y<14;y++) {
-      for(x=0;x<8;x++) p[x]^=((x==0 || x==7 || y==0 | y==13)?16:8);
       p+=r;
     }
   }

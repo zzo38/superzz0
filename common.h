@@ -39,8 +39,10 @@ extern Uint8 v_char[80*25];
 extern Uint8 sv_color[80*25];
 extern Uint8 sv_char[80*25];
 extern Uint8 v_status[82];
-extern Uint8 v_xcur,v_ycur;
+extern Uint8 v_xcur,v_ycur,v_mode;
 extern SDL_Event event;
+
+#define VIDEO_80COLUMNS 0x01
 
 void init_display(void);
 void redisplay(void);

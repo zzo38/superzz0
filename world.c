@@ -69,16 +69,6 @@ static int do_joystick_config(const ASN1_Value*v) {
       for(i=16;i<24;i++) if(joystat->map[z].a[i]&0x8000) joystat->map[z].a[i]=0x300;
     }
   }
-  if(config.test_mode) {
-    for(c=0;c<joystat->nmap;c++) {
-      printf("%d:",c);
-      for(d=0;d<24;d++) printf(" %04X",joystat->map[c].a[d]);
-      putchar('\n');
-    }
-    printf("Hat:"); for(d=0;d<joystat->nhat*4;d++) printf(" %d",joystat->hat[d]); putchar('\n');
-    printf("Axis:"); for(d=0;d<joystat->naxis*2;d++) printf(" %d",joystat->axis[d]); putchar('\n');
-    printf("Button:"); for(d=0;d<joystat->nbutton;d++) printf(" %d",joystat->button[d]); putchar('\n');
-  }
   return q!=ASN1_DONE;
 }
 
