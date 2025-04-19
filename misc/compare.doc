@@ -229,3 +229,52 @@ not necessary; screen layouts and numeric formats are more versatile.
 
 There are many other enhancements compared with ZZ Zero, as well.
 
+
+=== Comparison of file formats ===
+
+-- Program ---------- Archive format ----- Structured data -----
+   MegaZeux           ZIP archive          MZX Property List
+   OHRRPGCE           Hamster archive      RELOAD
+   Super ZZ Zero      Hamster archive      ASN.1X DER
+   Weave ZZT          Separate files       N/A
+   ZZ Zero            Hamster archive      N/A
+   ZZT                N/A                  N/A
+   ZZT Ultra          WAD                  JSON
+   Zebra GCS          Separate files       Text format
+
+The structured formats approximately from most compact to least compact
+(the actual compactness may vary and is more complicated than shown here):
+
+-- File format -------------- Min.node size --- Tags? --- Types? ---
+   DER                                    2       [1]        Yes
+   MegaZeux Property List                 6       Yes         No
+   RELOAD                                 7       Yes        Yes
+   JSON                                   ?       [2]        Yes
+   XML                                    4       Yes         No
+   ZXT                                   11       Yes         No
+
+Note [1]: Tags are not required; if they are present, then they may be
+implicit (meaning the type is not recorded) or explicit (in which case
+the tag and type are both recorded).
+
+Note [2]: Only in key/value lists.
+
+Note that MegaZeux Property List is usually compressed because it is in
+a ZIP archive file (although the world properties is not supposed to be
+compressed, according to the documentation). This means that it usually
+needs less disk space than uncompressed files, although the ZIP archive
+format will store metadata which is not always needed for this purpose.
+
+Hamster archive format does not have compression, and is concatenatable.
+Each file only uses a header with the name (variable length) and length.
+
+WAD uses fixed name lengths of eight bytes, and has a directory at the
+beginning of the file instead, meaning offsets are included as well as
+the lengths (even though some similar formats omit the lengths because
+they can be calculated from the offsets).
+
+In DER and JSON formats, each node has either a value or child nodes and
+not both. In RELOAD and XML formats, each node can have both a value and
+child nodes (RELOAD requires both but the value may be null and the number
+of child nodes may be zero).
+

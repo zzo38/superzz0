@@ -7,88 +7,57 @@ described here; other changes may also be made.)
 
 === Custom fonts ===
 
-Each custom font will have a .CHR lump and a optional .CCM (character
-code mapping) lump.
+This is a new idea of a custom font format, different than what was
+mentioned here before. It could be a DER-based format with:
 
-If the length of the .CHR lump is a multiple of 256 then it is stored in
-uncompressed format, which is like the format of MegaZeux but the height
-is not necessarily fourteen.
+* First character code (integer): For a full font this will be zero; for
+a partial font it can be any number in range 0x00 to 0xFF.
 
-The format of the .CCM lump is as follows:
+* Number of character codes (integer): For a full font this is 0x100 but
+for a partial font it is less than 0x100. If it is a wide font then this
+number is usually more than 0x100.
 
-* First byte has the high bit set if the identifier represents a subset of
-the characters in this font, and the next 3-bits specify the type of the
-identifier. The low nybble is the length of the identifier, or if it is
-fifteen then the next byte specifies the length of the identifier.
+* Text direction (enumerated, optional)
 
-* The identifier then follows (up to 255 bytes).
+* Font data; this field is normally a implicit typed sequence, where the
+type number specifies the type of font data; see below.
 
-* After this is optionally the TRON code mapping. There is an implicit 0xFE
-at the beginning which is not actually included in this file, since the
-first command must be a plane shift command.
+The further fields are optional and if one is not present but a later one
+is present, the null should be used in place of the omitted one.
 
-The TRON code mapping consists of the commands:
+* Animations (sequence): This may be empty. The animation ID number is the
+zero-based index number within this sequence.
 
-* Plane shift: One or more 0xFE bytes, followed by one byte in the range
-0x21 to 0x7E or 0x80 to 0xFD.
+* Character code mappings (set)
 
-* Character code: Two bytes, both in the range 0x21 to 0xFD except 0x7F.
-This number is big-endian.
+* Case folding (octet string)
 
-* No character: 0x7F.
+The format of the font data can be:
 
-* No mapping: 0xFF.
+* Type 0 = A fix pitch font with a width of eight pixels, and one bit per
+pixel. A sequence with a integer being the font height (normally fourteen)
+and then a octet string with the raw data of the font.
 
-* Run: One byte 0x00 to 0x20, representing a run of 1 to 33 character
-codes. If the previous character code is 0x7F or 0xFF then it repeats
-that code, but otherwise each one is the previous character code advanced
-by one; if this would advance the second byte of 0x7F then it advances the
-first byte (skipping 0x7F) and the second byte is set to 0x21, and if it
-would advance the second byte to 0xFE then it advances the first byte
-(skipping 0x7F) and the second byte is set to 0x80. If the first byte
-would be advanced to 0xFE then it becomes 0x21 and the second byte will
-then be 0x80.
+Character code mappings is a set where most kind of items will be implicit
+typed strings but some will use ordinary types instead. They are:
 
-The total number of represented character codes is 256.
+* Integer = IBM code page number (or extended code page number).
 
-Types of identifiers:
+* Object identifier.
 
-* 0 = None.
+* Type 0 = TRON code mapping.
 
-* 1 = Code page number (IBM or extended; small-endian).
+* Type 1 = IANA character set name, as used in "text" MIME types.
 
-* 2 = Object identifier, in the binary format.
+* Type 2 = XLFD character set name, which has a single hyphen.
 
-* 3 = Character set name (MIME).
+* Type 3 = ISO 2022 escape codes to select the character sets.
 
-* 4 = ISO 2022 (the ESC characters are omitted since they are implied).
-
-* 5 = Relative object identifier.
-
-* 6 = XLFD (this is the full font name, including character set).
-
-* 7 = (reserved)
-
-("None" might be unnecessary, since the length can be zero if there is no
-character set identifier, instead of needing its own type of identifiers.)
-
-(The .CCM lump probably will not be used by Super ZZ Zero at all, and it
-might not even include an editor for this lump, but it would be defined
-in case someone finds it useful, e.g. in case someone later adds the
-ability for the user to override the fonts, or for text to be copied
-between programs that use different character encodings.)
-
-I also don't know if case folding would ever be necessary, but if it is
-wanted in future, I do have idea how to make compact case folding tables,
-which is as follows:
-
-* 0x00 to 0x7F means a identity run with length 1 to 127.
-
-* 0x80 to 0xBF followed by one more byte means a difference run with
-length 1 to 64.
-
-* 0xC0 to 0xFF means a manual run with length 1 to 64; the following
-bytes are the values within the manual run.
+There cannot be more than one wide font. Wide characters always have the
+first byte in range 0x80 to 0xFF and the second byte in range 0x10 to 0xFF.
+Also, not everything supported by this format will necessarily be supported
+in Super ZZ Zero, at least at first; some might be ignored and some things
+might not be used in Super ZZ Zero.
 
 
 === Custom palettes ===
@@ -104,65 +73,6 @@ somewhere explicitly; it can be determined from the lump size.)
 The ability to enable/disable flashy text should also be added (this might
 be one of the text mode options in addition to SMZX mode; see the below
 section about enhanced graphics).
-
-
-=== Large character sets ===
-
-This is for large character sets with wide characters (e.g. JIS). A world
-file will be limited to not more than one large character set; this can be
-used together with the multiple small character sets. Wide characters are
-always 16-bits long.
-
-Probably, this will have two lumps, one for the wide font and one for the
-wide character mapping, which maps the 16-bit character codes specific to
-the world file to TRON characters (although, like with small character
-sets, some characters might not be mapped to TRON characters). (These lumps
-may be named WIDEFONT and WIDECMAP)
-
-For text windows and for single-line messages, some way will be needed to
-specify if they use wide characters; this could perhaps be a global flag,
-which can be either fixed or able to be changed at run time.
-
-Screens will also need some way to specify which tiles use wide characters;
-this is only applicable for SC_BACKGROUND. (Since this command has some
-unused bits, they could be used for this purpose.)
-
-For overlays, the OVER_RESERVED bit could be used for this purpose (in
-which case it will be renamed).
-
-And then, there is also text within the main layer of the board. This could
-be a new major code for element appearances which can be called AP_WIDE.
-
-The other consideration is knowing if a tile is the left or right half of
-a wide character. I think it is not relevant for screens and for text
-windows and single-line messages, but it may be relevant for boards and
-for overlays. This could possibly be ignored and handled by the rendering
-instead, although that will fail to work properly if the board has a
-scrolling viewport or if an overlay partially covers a wide character.
-
-There is also then the consideration to improve the rendering in order to
-allow wide characters mixed with narrow characters. (If enhanced graphics
-is implemented, then wide characters could be limited to only some of the
-video layers, rather than all of them, if that helps.)
-
-
-=== Animated fonts ===
-
-It may be meaningful to allow custom fonts (and possibly palettes, but not
-wide fonts) to be animated, so that characters can automatically change
-over time to make animations.
-
-
-=== Joypad input ===
-
-The configuration file can specify which joypad to use, as well as a
-mapping from the buttons, hats, and axes to key codes, command codes,
-and virtual buttons.
-
-There can also be a field in GENERAL.DER for then mapping the virtual
-buttons. The mappings might have multiple levels, and that each screen
-might specify the mapping level. Each one can then be mapped to a key
-code, level shift (while it is held), or other command.
 
 
 === Music ===
@@ -539,22 +449,6 @@ be changed. Some of the things that must be changed include:
 * Line joining
 
 
-=== Forty column mode ===
-
-An idea is to implement 40-column mode. This would probably not be used in
-the editor, but only during the game, and probably also not used in the
-save/restore game menu. Some other built-in menus also might need to be
-modified for 40-column mode, or to temporarily switch to 80-columns. (Any
-screen that uses the screen layouts defined in the world, will continue to
-work as they already do, in 40-column mode.)
-
-The v_char and v_color would continue to be eighty columns wide, although
-only the first forty columns would be displayed.
-
-The F1 menu is exactly forty columns wide, so it would have a fixed
-horizontal position, although the vertical position can still be adjusted.
-
-
 === Regression testing and demo recording ===
 
 Some way to do regression testing, sort of like Free Hero Mesh. Note that
@@ -600,9 +494,6 @@ also be possible to specify external programs for converting other formats.
 * Secondary mark grid
 
 * World map
-
-* "Show" functions like in MegaZeux, to show certain kind of things in a
-flashy way so that you can find them.
 
 
 === Text editor features ===
