@@ -1015,6 +1015,7 @@ Uint16 edit_screen(Uint16 id) {
         case 'n': find_next_marked(numprefix?:1); numprefix=0; break;
         case 'N': find_next_marked(-(numprefix?:1)); numprefix=0; break;
         case 'p': place_at(xcur,ycur,clip); break;
+        case 'r': clip.col=(clip.col<<4)|(clip.col>>4); break;
         case 't': emode='t'; xcur2=xcur; break;
         case 'u': unmark: if(emode!=15) emode=0; memset(markgrid,0,250); break;
         case 'v': xcur2=xcur; ycur2=ycur; emode='v'; break;

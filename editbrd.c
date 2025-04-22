@@ -2785,6 +2785,7 @@ Uint16 edit_board(Uint16 id) {
         case 'p': place_at(xcur,ycur,clip); break;
         case 'q': write_at(xcur,ycur,clip); break;
         case 'Q': write_under(xcur,ycur,clip); break;
+        case 'r': clip.color=(clip.color<<4)|(clip.color>>4); break;
         case 't': emode='t'; xcur2=xcur; break;
         case 'u': unmark: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
@@ -2950,6 +2951,7 @@ Uint16 edit_board(Uint16 id) {
         case 'N': find_next_marked(-(numprefix?:1)); numprefix=0; break;
         case 'o': goto norm; break;
         case 'p': over_place_at(xcur,ycur,overclip); break;
+        case 'r': clip.color=(clip.color<<4)|(clip.color>>4); break;
         case 't': emode='t'; xcur2=xcur; break;
         case 'T': overclip.kind|=OVER_VISIBLE; emode='t'; xcur2=xcur; break;
         case 'u': unmark1: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;

@@ -38,6 +38,7 @@ m          Mass mode
 n          Find next mark
 N          Find previous mark
 p          Place tile
+r          Reverse background/foreground colour
 t          Text entry
 u          Unmark all
 v          Block mode

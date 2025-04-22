@@ -50,6 +50,7 @@ o          Toggle overlay editing
 p          Place tile in main layer
 q          Write tile in main layer
 Q          Write tile in under layer
+r          Reverse background/foreground colour
 t          Text entry mode
 u          Unmark all
 v          Block mode

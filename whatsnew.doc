@@ -49,6 +49,8 @@ EDITOR
   +  In the board editor now you can make a menu of revealing lists, to
      temporarily reveal certain kind of tiles.
   +  Secondary mark grid.
+  +  In board editor and screen editor, "r" reverses foreground/background
+     colours of the current colour.
 
 TEMPLATE
   +  Default settings for new boards are now specified.
