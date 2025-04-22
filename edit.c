@@ -505,7 +505,8 @@ static void edit_one_help_lump(const char*name) {
   fclose(f);
 }
 
-static void edit_help_lumps(void) {
+static void lump_listing_menu(const char*fname,const char*text0,void(*call0)(const char*),const char*helpfile,const char*helptopic) {
+  // This function expects that fname must be "*." and then exactly three letters.
   char buf[40];
   char name[9];
   FILE*f;
@@ -514,7 +515,7 @@ static void edit_help_lumps(void) {
   start:
   cur=scr=xc=0;
   free(list);
-  list_lumps("*.HLP",&list,&count);
+  list_lumps(fname,&list,&count);
   draw0:
   memset(v_char,32,80*25);
   memset(v_color+80,0x07,80*24);
@@ -522,6 +523,7 @@ static void edit_help_lumps(void) {
   strcpy(v_char,"Help lumps");
   memset(v_color+24*80,0x30,80);
   strcpy(v_char+24*80+2,"<RET> Edit  <INS> Add  <DEL> Delete  <ESC> Done");
+  strcpy(v_char+24*80+72,fname+2);
   draw1:
   while(cur<scr*23) --scr;
   while(cur>=scr*23+115) ++scr;
@@ -561,8 +563,8 @@ static void edit_help_lumps(void) {
           alert_text("Too many lumps");
         } else {
           *name=0;
-          ask_text_restrict("Add new help lump:",name,8);
-          if(*name && snprintf(buf,16,"%s.HLP",name)) edit_one_help_lump(buf);
+          ask_text_restrict(text0,name,8);
+          if(*name && snprintf(buf,16,"%s%s",name,fname+1)) call0(buf);
         }
         goto start;
       case SDLK_DELETE:
@@ -573,7 +575,7 @@ static void edit_help_lumps(void) {
           goto start;
         }
         goto draw0;
-      case SDLK_SLASH: case SDLK_QUESTION: online_help("edithelp",0); goto draw0;
+      case SDLK_SLASH: case SDLK_QUESTION: online_help(helpfile,helptopic); goto draw0;
       default:
         i=event.key.keysym.unicode;
         if(i==8 && xc) {
@@ -1110,7 +1112,7 @@ int run_editor(void) {
       if(c) write_numform_lump();
     }
     win_command('H',"Help lumps...") {
-      edit_help_lumps();
+      lump_listing_menu("*.HLP","Add new help lump:",edit_one_help_lump,"edithelp",0);
       win_refresh();
     }
     win_command('G',"Global script...") {
