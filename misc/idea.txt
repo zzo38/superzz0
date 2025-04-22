@@ -8,7 +8,9 @@ described here; other changes may also be made.)
 === Custom fonts ===
 
 This is a new idea of a custom font format, different than what was
-mentioned here before. It could be a DER-based format with:
+mentioned here before. (The .CHR format of MegaZeux could also be supported
+but only for 8x14 fonts with no animations and no other features.) It could
+be a DER-based format with:
 
 * First character code (integer): For a full font this will be zero; for
 a partial font it can be any number in range 0x00 to 0xFF.
@@ -25,10 +27,9 @@ type number specifies the type of font data; see below.
 The further fields are optional and if one is not present but a later one
 is present, the null should be used in place of the omitted one.
 
-* Animations (sequence): This may be empty. The animation ID number is the
-zero-based index number within this sequence.
-
 * Character code mappings (set)
+
+* Animations
 
 * Case folding (octet string)
 
@@ -36,7 +37,7 @@ The format of the font data can be:
 
 * Type 0 = A fix pitch font with a width of eight pixels, and one bit per
 pixel. A sequence with a integer being the font height (normally fourteen)
-and then a octet string with the raw data of the font.
+and then a octet string with the raw raster data of the font.
 
 Character code mappings is a set where most kind of items will be implicit
 typed strings but some will use ordinary types instead. They are:
@@ -69,6 +70,9 @@ VGA palettes (three bytes per entry, like MegaZeux) and EGA palettes (one
 byte per entry), so that EGA can be used for smaller files when you do not
 want the VGA. It is not necessary to mark this (or the number of colours)
 somewhere explicitly; it can be determined from the lump size.)
+
+VGA format:  00rrrrrr 00gggggg 00bbbbbb
+EGA format:  00rgbRGB
 
 The ability to enable/disable flashy text should also be added (this might
 be one of the text mode options in addition to SMZX mode; see the below
