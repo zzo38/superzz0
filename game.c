@@ -2976,7 +2976,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   xy->instptr=ip;
   stop1:
   if(textfile && show_text_window((n<<16)+m,0) && (u=find_label(s,textbuf))>=0) {
-    selection: ip=u; u=0; goto begin;
+    selection: ip=u; u=0; stop=0; goto begin;
   }
 }
 

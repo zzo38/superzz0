@@ -18,6 +18,8 @@ GAME
   +  Dynamic strings are implemented.
   +  A world can optionally be defined as 40-columns mode.
   =  Correct the implementation of board grid scrolling.
+  =  A bug dealing with executing commands after a link in a long text
+     has been selected, has been corrected.
 
 SCRIPTS
   +  Use the {D} code to display dynamic strings in text.
