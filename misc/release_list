@@ -17,6 +17,7 @@ P superzz0-release/doc/
 ./opcodes.doc opcodes.doc
 ./printer.doc printer.doc
 ./script.doc script.doc
+./tutor.doc tutor.doc
 ./whatsnew.doc whatsnew.doc
 # Help files
 C /home/user/superzz0/help

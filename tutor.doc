@@ -1,0 +1,137 @@
+This file is intended to explain how to get started with making something
+with Super ZZ Zero. You will need to install it first (you can install a
+release or pre-release version (only for 64-bit x86 Linux), or you can
+compile it by yourself).
+
+
+=== Configuration ===
+
+Create a file in your home directory called ".superzz0rc". Inside of this
+file, you should add the configuration options. They are fully documented
+in the file called config.doc, but here is a simple explanation of some of
+the options which may be more common.
+
+The below is an example which you may copy and then modify according to
+your preferences. (None of these are required, but they are probably the
+most common things that you might want to add.)
+
+audio_buffer=512
+audio_filter=0.75
+audio_rate=44100
+audio_volume=8000
+help=/home/user/superzz0/help/
+
+The "help=" line should be the full path of the directory containing the
+help files. (In the releases, this is "superzz0-release/help/"; you will
+have to add the full path before that, and if you renamed the directory
+then you will need to change it to the new name of that directory.)
+
+
+=== Creating a world using a template ===
+
+A world can be created using an existing template or it can be created
+without using a template. The easier method will probably be to use a
+template, so this will be explained first.
+
+To create a new world file, enter the command:
+  superzz0 -et template/default.sz0 world1.sz0
+(This assumes that you will want to call the file "world1.sz0" and that
+the template is stored in the subdirectory called "template" of the current
+working directory.)
+
+Now, the main menu of the editor will be displayed. If you have configured
+it correctly, then on this and most other editor menus you can push ALT+?
+to display the help file for the currently displayed menu.
+
+Select the "Boards" submenu, and then select "Add new board". You can then
+enter a name for the new board, and then the board editor is displayed.
+
+In the board editor, add the player by moving the cursor to the appropriate
+position and then push F5 and then Z to add the player. (Since there is the
+default colour for the player, setting the colour at first is not necessary
+unless you configured it to not use the default colour. However, for walls
+and other stuff, it will be necessary to set the colour.)
+
+You can also add other stuff. For example, move cursor to somewhere and
+then push c and select a colour, and then F3 S adds a solid wall. If you
+push TAB and then move the cursor, it will continuously draw a wall until
+you push TAB again to cancel continuous drawing mode.
+
+You can add other stuff as well if you want to do, and push ALT+T to test
+the world; after testing, push F10 to return to the editor.
+
+You can push escape to exit this menu and push again to escape the board
+list menu. On the main menu, push ALT+S to save; you should do this often
+enough that it does not get lost, and must be done before you quit so that
+it does not get lost.
+
+If you go back into the board list menu again then you can see the list of
+the boards that are already added, and you can select one to view and edit
+that board.
+
+Next thing that will be considered here is a scriptable object. Select the
+colour (by pushing c and then selecting one of the colours), and move the
+cursor to the appropriate position, and then F5 O to add a scriptable
+object. Once you do this, it will ask you to pick which PC character it
+will be represented by, and then the text editor is displayed.
+
+See the file called script.doc for information about the script format,
+but this file also has a simple explanation. Also note that the program
+memory (which is already defined in the template) may define additional
+commands and messages which may be used. (See the next section about
+"creating a world without a template" if you want to change these.)
+
+On the first line, you should write the name of the object with a at sign
+in front. The other lines specify what it will do; the commands will be
+executed in order. Here is an example:
+
+@Salesman
+#end
+:touch
+What do you want to buy?
+!a;Ammunition
+!b;Torch
+#end
+:a
+#take c 1 =noitem
+#give a 1
+OK
+#end
+:b
+#take c 1 =noitem
+#give t 1
+OK
+#end
+:noitem
+You don't have enough.
+#end
+
+The first "#end" line prevents being executed immediately.
+
+The ":touch" line is a message defined in the template; when the player
+touches this object then it will do what is written in the next lines.
+This is a multi-line text which will be displayed; the lines with "!" are
+choices that the player may select and if one is selected, then the part
+between "!" and ";" is the name of the label to go to. After this text
+will also be "#end" to stop execution afterward.
+
+Then, lines ":a" and ":b" are the labels you had mentioned above, that
+will be used when the selection is made.
+
+The "#take c" will deduct 1 from the status variable "C", which is used
+for money in the default template. This cannot reduce it below zero; if
+it is not enough then it will execute the command on the rest of the line,
+which is "=noitem" to go to the ":noitem" label in case you do not have
+enough money to buy that.
+
+If you do have enough, then "#give a 1" will give you one ammunition,
+and then "OK" is a single line message and then "#end" stops it.
+
+If you want to try this, then you should also add some money into the
+board (the money is in the F1 menu), so that you can buy it.
+
+
+=== Creating a world without a template ===
+
+(This section is not written yet.)
+
