@@ -1,0 +1,450 @@
+This file documents the functions specific to the default template.
+
+
+=== General ===
+
+The status variables are used as follows:
+
+* A = Ammunition. If shooting is allowed then the player can shoot bullets
+by pushing shift and arrows; each shot uses up one point of ammunition.
+
+* C = Money. It does not do anything by itself, but you may have scripts
+that accept money in exchange for other stuff.
+
+* D = Keys. Each of the low 8-bits means one colour of keys.
+
+* E = Energy. While this is positive, the player is flashy and cannot be
+damaged; it will be decreased by one each turn.
+
+* G = Gems. Like money, it does not do anything by itself.
+
+* H = Health. Normally you start with 100 health (you can change this in
+the status variables menu in the editor), and stuff that damages the player
+will take ten healths; once it reaches zero, you are dead.
+
+* S = Score. Does nothing by itself, but some things will increase the
+score. You can also adjust score by the #GIVE command in a script.
+
+* T = Torches. In a dark room, push T to light the torch, which has a
+limited duration; this uses up one torch.
+
+* W = Light. This is used when a torch is lit to determine the duration of
+the torch. You should not use #GIVE and #TAKE with this variable.
+
+* X = Time. In a board that has a time limit, this is reset to the board's
+time limit when entering the board and when damaged; if it reaches zero,
+then the player is damaged.
+
+* Z = Stone. Like money, it does not do anything by itself.
+
+The first two stats on each board have a predefined meaning. Stat 1 is the
+player, and should always have exactly one instance. When you add a new
+board, you should always add the player into the new board, too. Stat 2 is
+used for projectiles, and should always be present even if there are no
+projectiles on that board.
+
+The board info has some additional options:
+
+* Restart if zapped: If selected, then whenever the player is damaged, the
+player is automatically teleported to the position where the player has
+entered this board. (This is independent of persistence, and this will not
+reset the board even if it is not persistent; a board is only reset if you
+leave and then enter a non-persistent board again.)
+
+* Time limit: If nonzero, then it sets a time limit; see the description of
+the "X" status variable above. Normally if this is set, you would also set
+"restart if zapped", so that you will go back to the beginning if damaged,
+but this is not mandatory.
+
+* Max shots: The maximum number of player bullets that can be on the board
+at once; if attempting to shoot when there are more than this many, then
+the player cannot shoot. If this is set to zero, then the player is not
+allowed to shoot at all on this board.
+
+The default overlay is filled but nor normally visible; if the overlay is
+visible then the room is dark, and a torch can be lit to temporarily allow
+a part of the area around the torch to be visible.
+
+
+=== Elements (F1) ===
+
+Items:
+
+Gem
+  Can be collected. Provides one gem and ten points. Gems (including magic
+  gems) can also be broken by player bullets and by crushing.
+
+Magic Gem
+  Like the gem, but also gives one health as well.
+
+Money
+  Can be collected. Each coin is worth one piece of money.
+
+Ammo
+  Can be collected. Each one gives you 5 points of ammunition.
+
+Torch
+  Can be collected and used in the underground for light.
+
+Heart
+  Gives five healths when collected.
+
+Key
+  Keys can be used to unlock and open doors of the same colour. You can
+  only carry up to one key of each colour at once. Bright and dark colours
+  are considered equivalent for this purpose; e.g. colour $04 and $0C are
+  both considered "red". Background colours are also ignored.
+
+Door
+  Can be unlocked by a key; the key is then used up. The background colour
+  of the door determines which key opens it, but if default colours are
+  enabled then it will automatically change your selected colour so that
+  the foreground will now be the background colour.
+
+Stone
+  Gives one stone (no inherent meaning). The colours and appearance (which
+  are English alphabets) will change at random at run time.
+
+Energizer
+  Sets your energy to 75 (any energy you already have is wasted), making
+  you temporarily invulnerable to damage.
+
+Potion
+  Potions have various possible effects:
+  * Dud: No effect.
+  * Healing: +10 health.
+  * Poison: -10 health (this does not count as damage).
+  * Energy: +70 energy.
+  * Reveal Walls: Makes invisible walls visible.
+  * Extra Healing: +50 health.
+  * Time: +25 time (should only be used if there is a time limit).
+  * Avalanche: Adds rocks into the board at random positions.
+  * Destroy Creatures: Destroys creatures.
+  * Explode Bombs: Explosives are triggered immediately.
+
+Scroll
+  Contains a script, which will be displayed or executed when the scroll is
+  collected. Each scroll can only be used once.
+
+Checkpoint
+  Useful when the board is set for restart when zapped; in this case, when
+  the player is damaged, you are moved to where the checkpoint was at,
+  instead of back to the start.
+
+Chest
+  May contain something; once it is used, then the chest will be empty. The
+  contents of the chest can be ammo, money, gems, stones, torches, or trap.
+  Ammo, money, and gems will be five times the number specified, and a trap
+  will damage the player for ten points of damage.
+
+Pouch
+  Contains money and/or gems. (The numbers specified are multiplied by 5;
+  the pouch may contain up to 75 gems and/or 75 money.)
+
+Explosives:
+
+Bomb
+  When touched, it will count down and then explode after a delay; the
+  explosion will destroy breakable walls, creatures, and some other things.
+
+Lit Bomb
+  A bomb that is already activated and will explode soon.
+
+
+=== Elements (F2) ===
+
+Creatures:
+  Most of these creatures have parameters that can be set, such as
+  intelligence, which determines how likely the creature is to move
+  toward the player. Most creatures will damage the player and themself
+  if they touch the player, and can be destroyed by the player's bullets
+  and by explosives, many can also be crushed by boulders, etc.
+
+Lion
+  A simple creature which moves according to its intelligence parameter.
+
+Tiger
+  Like the lion but can also shoot bullets or stars. The firing rate
+  specifies how likely it is to shoot.
+
+Bear
+  Always moves directly toward the player if the player is in range,
+  otherwise stands still. If it moves into a breakable wall, both the
+  wall and the bear are destroyed.
+
+Shark
+  Also works like a lion, but moves only on water, and cannot move on land.
+  Unlike ZZT, sharks can be destroyed by bullets and other methods.
+
+Runner
+  Moves in one direction, and may push things out of the way. If it cannot
+  move, it reverses direction.
+
+Slime
+  Gradually spreads over time, filling up space with breakable walls. If
+  slime is touched by the player, it stops spreading at that point, but
+  any other slime that is still spreading will continue. Slime will not
+  damage the player, but may make the player get stuck.
+
+Mouse
+  Like a lion but tries to move away from the player instead of toward.
+
+Snake
+  Moves as far as it can in one direction; once it is blocked, then it
+  will try to change direction to another way and continue moving.
+
+Spider
+  Moves only on webs.
+
+Bird
+  Is able to fly over water as well as on empty spaces.
+
+Lumberjack
+  Moves (like a lion and other creatures do), but if there is a forest or a
+  tree in the way, will destroy it to allow the lumberjack to pass.
+
+Dragon
+  A dragon will move and will spit fire. Touching a dragon will not harm
+  the dragon but does harm the player. Bullets and explosives can harm a
+  dragon, but must be damaged multiple times (according to the number of
+  its hit points) before it is destroyed. It normally always tries to go
+  directly toward the player, but you can select random movement one eighth
+  of the time.
+
+Centipedes:
+  A centipede is made up of the head and several segments; place the head
+  first, and then place the segments leading from the head, which should be
+  adjacent to form a path. The entire centipede then moves together. If one
+  piece of the centipede is broken, then it will split and the part of the
+  tail near the split point will change to another head, making it into two
+  centipedes instead of only one.
+
+
+=== Elements (F3) ===
+
+Terrains:
+
+Water
+  Blocks the movement of the player and most other things, but some things
+  are not blocked by water, such as bullets, stars, and sharks.
+
+Forest
+  Blocks movement of most things, but the player can go through it, and
+  clearing the path for other things to go through, when doing so.
+
+Ice
+  If the player steps on the ice, then the player will continue moving in
+  the same direction until stopped or if you try to move a different way.
+
+Web
+  Does not block the player, but spiders are confined to moving on webs.
+
+Tree
+  Blocks movement of most things, like a wall. However, trees can be
+  destroyed by fire and by lumberjacks.
+
+Fire
+  It is hot. The player can step on it but is damaged by doing so.
+
+Walls:
+  Most of these walls block movement of everything.
+
+Solid
+  Blocks movement of everything and cannot be destroyed.
+
+Normal
+  Blocks movement of everything and cannot be destroyed.
+
+Line
+  Like a solid or normal wall, but the lines will automatically be joined
+  together when placed on the board. If they are added or removed at run
+  time, the lines will also automatically be corrected.
+
+Breakable
+  Blocks movement, but can be destroyed by bullets, stars, explosives, etc.
+
+Text
+  Like a solid wall but any character code can be used. You can also push
+  F6 to enter text directly.
+
+Invisible
+  This wall is invisible, but will become visible when touched.
+
+Floors:
+
+Empty
+  An empty space; most things can move through it.
+
+Floor
+  Most things can move through it, like an empty space, but the floor is
+  visible and can be of a specific colour.
+
+Fake
+  Also a kind of floor, but appears to be a normal wall. However, you and
+  other stuff can still move through it since it is not a wall.
+
+
+=== Elements (F4) ===
+
+Puzzles:
+
+Rock
+  Can be pushed by the player, but cannot be pushed indirectly. If it is
+  pushed into water, it gets rid of both the rock and the water, allowing
+  the player to pass.
+
+Boulder
+  Can be pushed directly by the player or indirectly by others, and it is
+  also possible for multiples to be pushed at once.
+
+Slider N/S
+  Like the boulder but only goes in the direction of the arrows.
+
+Slider E/W
+  Like the boulder but only goes in the direction of the arrows.
+
+Pusher
+  This automatically moves in the direction it is pointing, pushing things
+  along its path.
+
+Indirect Push
+  This cannot be pushed directly by the player, but can be moved by other
+  things that are able to push it.
+
+Miscellaneous:
+
+Transporter
+  Allows movement only in the direction it is facing. If the other side is
+  not blocked (after pushing stuff out of the way, if any), then whatever
+  is moving through it will go through to the other side. If the other side
+  is blocked, then it will find the next transporter in its path that is
+  facing the opposite direction and that is not blocked, and then will be
+  transported to that one. (This is like the transporter in ZZT.)
+
+Ricochet
+  A wall that will reflect bullets that strike it, the opposite way.
+
+Spike
+  A wall that hurts the player if touched.
+
+Gate
+  Opens for a brief time when touched, allowing passing through.
+
+One Step
+  Can only be walked on once; after that, it will be a wall.
+
+Land Mine
+  If touched, hurts the player. The land mine only works once; after that,
+  it is destroyed.
+
+Duplicator
+  Periodically duplicates whatever is in the source direction into the
+  opposite direction, moving things out of the way to make room. If there
+  is no room (or whatever is there cannot be moved out of the way), then
+  the duplicator will not work until it is no longer blocked.
+
+Passage
+  Allows the player to go to another board. If there is another passage of
+  the same colour on the target board, then the player will be at the
+  location of that passage of the matching colour.
+
+Conveyor
+  Spins clockwise or counterclockwise; pushable things that are next to
+  it (even diagonally) will be moved in the appropriate direction.
+
+
+=== Elements (F5) ===
+
+Guns:
+
+Laser Gun
+  Emits beams. It will activate the beam, damaging some things that it can
+  hit (such as the player), and then deactivate the beam at a later time;
+  it will periodically switch on and off. The initial delay can be set so
+  that groups of laser guns can make a kind of "wave".
+
+Projectiles/Beams:
+
+Bullet
+  Moves in one direction until it hits something and then it disappears
+  and may damage whatever it hits.
+
+Star
+  Chases the player, damaging the player (and being destroyed in the
+  process) if it strikes the player. However, a star has a limited
+  duration; once it expires then it disappears.
+
+Spit Fire
+  Moving fire, which will stop and become ordinary fire once it hits
+  something. Trees will be burned by this fire.
+
+Beam
+  A laser beam; acts like a solid wall except if the beam hits something as
+  it is being created in which case it can damage it.
+
+Special:
+
+Empty
+  Same as in the F3 menu.
+
+Player
+  The player. There should be exactly one player per board.
+
+Object
+  A solid object, that you can specify an appearance and a script to
+  define its behaviour. An object's script is executed during every
+  turn, and can run asynchronously; use #END to stop execution. The
+  object can receive messages and then next time it is its turn it
+  will run the script if it does anything with that message. If you
+  already added an object and use y and p to add more, they will be
+  additional instances of the same stat and share the script, so
+  modifying the script will affect all instances.
+
+Sensor
+  The player can step onto a sensor, and other things can push it. A
+  sensor's script is executed when the player steps on it.
+
+
+=== Script messages ===
+
+:BOMBED
+  Sent to an object when it is caught in the area of an explosion.
+
+:ENTER
+  Sent to all objects when entering a board.
+
+:HINT
+  Sent to all objects when H is pushed.
+
+:SHOT
+  Sent to an object when a bullet hits it.
+
+:THUD
+  When an object is walking and is blocked, then it receives this message.
+
+:TOUCH
+  Sent to an object when the player touches it.
+
+
+=== Script commands ===
+
+#CHAR <number>
+  Changes the object's display character to the specified number. (This is
+  the same as #PARAMETER but with a different name.)
+
+#SHOOT <direction>
+  Shoot a bullet in the specified direction; uses up the object's turn.
+
+#WAIT <number>
+  Wait for a specified number of frames before continuing.
+
+#WAITFOR <condition>
+  Wait until the specified condition is true before continuing. Example:
+    #WAITFOR !@GEM
+  This will wait until all gems are collected and then continue.
+
+#THROWSTAR <direction> [<duration>]
+  Throw a star in the specified direction. You can also specify the
+  duration of the star, from 1 to 255; if not specified then the default
+  duration is 127.
+

@@ -18,13 +18,13 @@ GAME
   +  Dynamic strings are implemented.
   +  A world can optionally be defined as 40-columns mode.
   =  Correct the implementation of board grid scrolling.
-  =  A bug dealing with executing commands after a link in a long text
-     has been selected, has been corrected.
 
 SCRIPTS
   +  Use the {D} code to display dynamic strings in text.
   +  Use "d" operator in numeric expressions for dice.
   +  The #PUSHABLE condition to check if something is pushable.
+  =  A bug dealing with executing commands after a link in a long text
+     has been selected, has been corrected.
 
 ASSEMBLY
   +  DYN opcode for dealing with dynamic strings.
@@ -59,6 +59,7 @@ TEMPLATE
   +  Added joystick configuration into template.
   +  Add CONVEYOR element.
   +  Add the revealing menu in the editor.
+  +  There is now a documentation file for the default template.
 
 OTHERS
   +  The TEMPLATE.DER lump is usable for affecting the creation of new

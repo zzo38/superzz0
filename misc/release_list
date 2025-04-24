@@ -46,6 +46,7 @@ P superzz0-release/man6/
 P superzz0-release/template/
 ./template/default.sz0 default.sz0
 ./template/default.asm default.asm
+./template/default.doc default.doc
 # Examples
 P superzz0-release/example/
 ./example/snake.sz0 snake.sz0
