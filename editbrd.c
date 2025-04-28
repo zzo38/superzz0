@@ -1950,9 +1950,9 @@ static Sint32 parameter_which_get(Uint16 which,Uint8 par,Uint8 sta,StatXY*sxy) {
     case 0x70 ... 0x77: v=regs[(which>>8)&7]; break;
     default: return -1;
   }
+  if(which&0x8000) v=~v;
   v>>=which&15;
   v&=(2UL<<((which>>4)&15))-1;
-  if(which&0x8000) v=~v;
   return v&0xFFFF;
 }
 
@@ -2148,7 +2148,7 @@ static Uint8 parameter_edit(Uint16 addr,Uint8 par,Uint8 sta,StatXY*sxy) {
     v&=(2UL<<((j>>4)&15))-1;
     v<<=j&15;
     v|=u&~(((2UL<<((j>>4)&15))-1)<<(j&15));
-    switch(j>>8) {
+    switch((j>>8)&0x7F) {
       case 0x00 ... 0x0F: par=v; break;
       case 0x10: stats[sta-1].speed=v; break;
       case 0x11: stats[sta-1].misc1=v; break;

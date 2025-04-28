@@ -53,6 +53,7 @@ EDITOR
   +  Secondary mark grid.
   +  In board editor and screen editor, "r" reverses foreground/background
      colours of the current colour.
+  =  Use of inverse bit in parameter editors is corrected.
 
 TEMPLATE
   +  Default settings for new boards are now specified.
