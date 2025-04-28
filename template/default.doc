@@ -217,7 +217,8 @@ Centipedes:
   adjacent to form a path. The entire centipede then moves together. If one
   piece of the centipede is broken, then it will split and the part of the
   tail near the split point will change to another head, making it into two
-  centipedes instead of only one.
+  centipedes instead of only one. Note that the intelligence and deviance
+  parameters are centipedes go up to 128, rather than 15 like others do.
 
 
 === Elements (F3) ===
@@ -356,6 +357,12 @@ Conveyor
 === Elements (F5) ===
 
 Guns:
+
+Gun
+  Emits bullets or stars. All parameters other than direction and spinning
+  are for the stat; all guns of the same stat share those parameters. When
+  adding a gun from the F5 menu, a new stat is created; using y and p to
+  make copies will all share the same stat.
 
 Laser Gun
   Emits beams. It will activate the beam, damaging some things that it can

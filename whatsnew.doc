@@ -61,6 +61,7 @@ TEMPLATE
   +  Add CONVEYOR element.
   +  Add the revealing menu in the editor.
   +  There is now a documentation file for the default template.
+  +  Add GUN element.
 
 OTHERS
   +  The TEMPLATE.DER lump is usable for affecting the creation of new

@@ -1614,6 +1614,51 @@ CENMOV	LET D,Z
 	PTMP A,0
 	LET S,0
 
+; **** Gun ****
+; Parameter:
+;   bit1-bit0 = Direction
+;   but7 = Spin
+; Misc1: Intelligence (0-128)
+; Misc2: Firing rate (0-128)
+; Misc3: Firiting type (0=bullet, 1=star)
+	EV B,_GUN
+	; Get direction and spin if necessary
+	LET A,Z
+	BTST A,7
+	TINC A,Z
+	AND A,$83
+	PTMP A,0
+	; Check if it is ready to shoot
+	GM2 B,W
+	GRTR B,%R,,128
+	JF B,0
+	; Check intelligence
+	GM1 B,W
+	GRTR B,%R,,128
+	JF B,1F
+	; Only shoot toward player
+	LET C,%XP,X,0
+	LET D,%YP,Y,0
+	BTST A,0
+	LET E,%OF,C,D
+	ABS F,%OT,C,D
+	GRTR F,2
+	JT F,0
+	INC F,A
+	BTST F,1
+	MUL E,%OF,1,-1
+	JNEG E,0
+	; Do shoot
+1H	GM3 B,W
+	CASE B,1F
+1H	DATA 1F,2F,0,0
+1H	LET Z,A
+	GOTO A,SHOOT
+2H	FORW A,0
+	LET B,127
+	CALL A,THSTAR
+	LET S,0
+
 ; **** Destroyable objects ****
 	EV X,_EMPTY,1
 	EV X,_BREAKABLE,1
@@ -1674,7 +1719,8 @@ CENMOV	LET D,Z
 	FORW A,A
 	PARN B,W
 	FLET B,127
-	GTMK C,0
+	; THSTAR: B=duration, XY=location; clobbers BCD
+THSTAR	GTMK C,0
 	EMAT D,C
 	JT C,1F
 	CWOE C,$0017
@@ -1785,6 +1831,7 @@ CENMOV	LET D,Z
 
 	ED1 5
 	ED 1,"Guns:"
+	ED 'G',"Gun",_GUN,$0800
 	ED 'L',"Laser Gun",_LASERGUN,$0800
 	ED 1,"Projectiles/Beams:"
 	ED 'B',"Bullet",_BULLET+$0200,$010F
@@ -1888,7 +1935,7 @@ E_RUNN	ED '=',"-MP"
 	ED 'H',"Creature"
 	ED2 'N',"~Intelligence: ",$0030,0,15
 	ED2 'N',"~Firing rate: ",$0034,0,15
-	ED2 'B',"~Stars",$2204
+	;ED2 'B',"~Stars",$2206
 	ED 0
 
 	ED0 _BEAR
@@ -2009,6 +2056,25 @@ E_BOMB	ED '=',"K9.M"
 	ED 'H',0
 	ED2 'N',"Spee~d: ",$1070,0,255
 	ED2 'N',"~Phase: ",$2070,0,255
+	ED 0
+
+	ED0 _GUN
+	ED 'H',"Direction:"
+	ED 'O',$0010
+	ED2 'O',"~East",0
+	ED2 'O',"~North",1
+	ED2 'O',"~West",2
+	ED2 'O',"~South",3
+	ED 'H',"Firing type:"
+	ED 'O',$1310
+	ED2 'O',"~Bullet",0
+	ED2 'O',"S~tar",1
+	;ED2 'O',"Fir~e",2
+	ED 'H',0
+	ED2 'N',"Spee~d: ",$1070,0,255
+	ED2 'N',"~Intelligence: ",$1170,0,128
+	ED2 'N',"~Firing rate: ",$1270,0,128
+	ED2 'B',"S~pin",$0007
 	ED 0
 
 E_CONV	ED '=',"-MP"
