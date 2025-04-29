@@ -1,5 +1,5 @@
 #if 0
-gcc -g -O0 -o ~/bin/superzz0 -Wno-unused-result main.c asn1.o audio.o display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o printer.o savegame.o window.o world.o -lm `sdl-config --cflags --libs`
+gcc $CFLAGS -o ~/bin/superzz0 -Wno-unused-result main.c asn1.o audio.o display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o printer.o savegame.o window.o world.o -lm `sdl-config --cflags --libs`
 exit
 #endif
 

@@ -1,5 +1,5 @@
 #if 0
-gcc -g -O0 -c -std=gnu99 -Wno-unused-result -fwrapv game.c `sdl-config --cflags`
+gcc $CFLAGS -c -std=gnu99 -Wno-unused-result -fwrapv game.c `sdl-config --cflags`
 exit
 #endif
 

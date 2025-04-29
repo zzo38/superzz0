@@ -31,6 +31,7 @@ typedef struct Object {
   int*dep;
   int ndep;
   char done;
+  char unexist;
 } Object;
 
 static Object*objects;
@@ -54,12 +55,14 @@ static int find_object(const char*name) {
   objects[i].dep=0;
   objects[i].ndep=0;
   objects[i].done=0;
+  objects[i].unexist=0;
   if(*name=='$' || *name=='*') {
     objects[i].mtime=0x7FFFFFFF7FFFFFFFLL;
   } else {
     if(stat(name,&s)) {
       if(errno!=ENOENT) err(1,"Cannot stat file '%s'",name);
       objects[i].mtime=0;
+      objects[i].unexist=1;
     } else {
       objects[i].mtime=s.st_mtime;
     }
@@ -142,6 +145,15 @@ static void parse_mak_file(const char*filename) {
       parse_mak_file(s);
       continue;
     }
+    if(*s=='=') {
+      *strchrnul(s+1,'\n')=0;
+      p=strchr(s+1,'=');
+      if(!p) errx(1,"Malformed rule on line %d",n);
+      if(s[1]=='*') errx(1,"Unknown option on line %d",n);
+      *p++=0;
+      if(setenv(s+1,p,1)) err(1,"Unable to set environment variable");
+      continue;
+    }
     r=add_rule();
     if(*s!='-' || s[1]!='>' || s[2]!=' ') for(;;) {
       s=strchr(s,' ');
@@ -203,6 +215,7 @@ static void show_object(int id) {
     for(i=0;i<o->ndep;i++) printf(" %d",o->dep[i]);
     printf("\n");
   }
+  if(o->unexist) printf("  Unexist\n");
 }
 
 static void show_rule(int id) {
@@ -250,6 +263,7 @@ static void work(void) {
         exec_rule(o->rule);
       } else {
         nowork:
+        if(o->unexist && !(options&0x0020)) errx(1,"Object \"%s\" is missing",o->name);
         if(options&0x0008) fprintf(stderr,"Nothing to do for object \"%s\"\n",o->name);
       }
       o->done=1;
@@ -260,9 +274,10 @@ static void work(void) {
 
 int main(int argc,char**argv) {
   int i;
-  while((i=getopt(argc,argv,"+ag:lntv"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+ag:ilntv"))>0) switch(i) {
     case 'a': options|=0x0002; break;
     case 'g': goalname=optarg; break;
+    case 'i': options|=0x0020; break;
     case 'l': options|=0x0001; break;
     case 'n': options|=0x0004; break;
     case 't': options|=0x0010; break; // it is supposed to measure the time usage, but not implemented yet

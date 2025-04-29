@@ -1,5 +1,5 @@
 #if 0
-gcc -s -O2 -c -Wno-unused-result -fwrapv audio.c `sdl-config --cflags`
+gcc $CFLAGS -c -Wno-unused-result -fwrapv audio.c `sdl-config --cflags`
 exit
 #endif
 

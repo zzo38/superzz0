@@ -1,5 +1,5 @@
 #if 0
-gcc -g -O0 -c -Wno-unused-result -std=gnu99 editbrd.c `sdl-config --cflags`
+gcc $CFLAGS -c -Wno-unused-result -std=gnu99 editbrd.c `sdl-config --cflags`
 exit
 #endif
 

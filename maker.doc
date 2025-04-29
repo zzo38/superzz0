@@ -1,0 +1,55 @@
+Takes one argument being the file name. You can also have switches.
+
+
+=== Switches ===
+
+-a
+  Force execution of all rules regardless of file modification time.
+
+-g #
+  Specify the goal to use; if omitted, then "$" is the default.
+
+-i
+  Ignore objects that are unexisting files, and try to continue anyways.
+
+-l
+  List all objects and rules and their dependencies, instead of executing
+  any commands.
+
+-n
+  Only display commands to be executed, and assume they are successful,
+  instead of executing them. Does not touch any files, but will still check
+  the modification times unless -a is also specified.
+
+-t
+  Measure time usage (not implemented yet).
+
+-v
+  Verbose mode.
+
+
+=== File format ===
+
+A line can be blank or starting with # if it is a comment.
+
+A line starting with ! is a command to execute and its output is included
+as though it were present in the file (allowing dynamic rules).
+
+A line starting with = sets an environment variable or option. Any option
+name starts with * but none are currently defined. Either way, the name
+is followed by = and then the value.
+
+Other lines are rules and consist of input object names with spaces in
+between, and then -> and then the output object names with spaces in
+between and then : and then a command to execute which is intended to
+produce the output objects from the input objects. There must be spaces
+before and after the -> and : tokens.
+
+An object name cannot occur as output for multiple rules.
+
+Object names can be a file name, or a special name with $ or * at first.
+The names with * at first have no inherent meaning but do not correspond
+to any files; you can use that to group objects. The names with $ at
+first have special meanings, but currently only $ by itself is defined
+and it means the default goal.
+
