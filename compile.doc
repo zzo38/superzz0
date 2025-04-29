@@ -1,0 +1,24 @@
+This document describes how to compile Super ZZ Zero.
+
+Write the C compiler flags into the file called "cflags", e.g. "-s -O2"
+for release or "-g -O0" for debug. Other flags may also be specified;
+all C files that need to be compiled will use these flags. You may use
+other flags as well (e.g. "-march" and "-mtune").
+
+The program called "maker" will execute the build system. The file called
+"main.mak" specifies the dependencies and the instructions for compiling
+each file; some of these instructions are within the source files themself
+and are called by the main.mak file.
+
+Normally, the executable file will be ~/bin/superzz0 but you can modify
+main.c in order to change this if you wish.
+
+Note that the documentation file opcodes.doc is also used for compiling
+asm.c and game.c, so it is not only for documentation. The lines starting
+with a left square bracket define the opcode names.
+
+The main.mak file is only for the Super ZZ Zero game engine itself, and
+the sz0version program for handling version numbers. For assembler (asm.c)
+must be compiled separately. The programs for handling the catalog service
+are not written yet, but they will also be compiled separately.
+
