@@ -21,6 +21,9 @@ Takes one argument being the file name. You can also have switches.
   instead of executing them. Does not touch any files, but will still check
   the modification times unless -a is also specified.
 
+-q
+  Do not display commands to be executed.
+
 -t
   Measure time usage (not implemented yet).
 
@@ -52,4 +55,20 @@ The names with * at first have no inherent meaning but do not correspond
 to any files; you can use that to group objects. The names with $ at
 first have special meanings, but currently only $ by itself is defined
 and it means the default goal.
+
+If a command to execute starts with * then it is a built-in operation. It
+is assumed that having all of the dependencies satisfied is sufficient to
+satisfy all of the objects listed as the output for this rule, unless the
+built-in operation specification overrides this. The built-in operation is
+zero or more of the characters described in the below section.
+
+
+=== Built-in operations ===
+
+T
+  Attempt to update the modification time of the output files of this rule,
+  to match the latest modification time of any of the inputs of this rule.
+  (It is not an error if this fails.) (Even if this is not specified, the
+  internal modification time is set, which will affect the operation of
+  further rules.)
 

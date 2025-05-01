@@ -16,6 +16,7 @@ exit
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <utime.h>
 
 typedef struct Rule {
   const char*exe;
@@ -232,13 +233,29 @@ static void show_rule(int id) {
 
 static void exec_rule(int ru) {
   int i;
+  time_t t;
   Rule*r=rules+ru;
-  puts(r->exe);
-  if(!(options&0x0004)) {
-    i=system(r->exe);
-    if(i==-1) err(1,"pclose");
-    if(!WIFEXITED(i)) errx(1,"Subprocess exited abnormally");
-    if(i=WEXITSTATUS(i)) errx(2,"Subprocess terminated with exit code %d",i);
+  if(r->exe[0]!='*') {
+    if(!(options&0x0040)) puts(r->exe);
+    if(!(options&0x0004)) {
+      i=system(r->exe);
+      if(i==-1) err(1,"pclose");
+      if(!WIFEXITED(i)) errx(1,"Subprocess exited abnormally");
+      if(i=WEXITSTATUS(i)) errx(2,"Subprocess terminated with exit code %d",i);
+    }
+  } else {
+    t=0;
+    for(i=0;i<r->nin;i++) if(t<objects[r->in[i]].mtime) t=objects[r->in[i]].mtime;
+    if(t) for(i=0;i<r->nout;i++) {
+      if(objects[r->out[i]].mtime>t) {
+        if(options&0x0008) fprintf(stderr,"Adjusting timestamp of \"%s\"\n",objects[r->out[i]].name);
+        objects[r->out[i]].mtime=t;
+        if(objects[r->out[i]].name[0]!='*' && strchr(r->exe,'T')) {
+          struct utimbuf u={.actime=time(0),.modtime=t};
+          if(utime(objects[r->out[i]].name,&u)) warn("Cannot update modification time of \"%s\"",objects[r->out[i]].name);
+        }
+      }
+    }
   }
   for(i=0;i<r->nout;i++) objects[r->out[i]].done=1;
 }
@@ -250,11 +267,15 @@ static void work(void) {
     o=objects+(n==-1?goal:objects[goal].dep[n]);
     if(!o->done) {
       if(!o->ndep) goto nowork;
-      if(!(options&0x0002) && o->name[0]!='*' && o->name[0]!='$') {
+      if(!(options&0x0002) && o->name[0]!='$') {
         for(i=0;i<o->ndep;i++) if(objects[o->dep[i]].mtime>=o->mtime) goto work;
-        if(options&0x0008) fprintf(stderr,"Object \"%s\" skipped due to timestamp\n",o->name);
-        o->done=1;
-        goto skip;
+        if(o->name[0]=='*') {
+          for(i=0;i<o->ndep;i++) if(!objects[o->dep[i]].done) goto skip;
+        } else {
+          if(options&0x0008) fprintf(stderr,"Object \"%s\" skipped due to timestamp\n",o->name);
+          o->done=1;
+          goto skip;
+        }
       }
       work:
       for(i=0;i<rules[o->rule].nin;i++) if(!objects[rules[o->rule].in[i]].done) goto skip;
@@ -274,12 +295,13 @@ static void work(void) {
 
 int main(int argc,char**argv) {
   int i;
-  while((i=getopt(argc,argv,"+ag:ilntv"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+ag:ilnqtv"))>0) switch(i) {
     case 'a': options|=0x0002; break;
     case 'g': goalname=optarg; break;
     case 'i': options|=0x0020; break;
     case 'l': options|=0x0001; break;
     case 'n': options|=0x0004; break;
+    case 'q': options|=0x0040; break;
     case 't': options|=0x0010; break; // it is supposed to measure the time usage, but not implemented yet
     case 'v': options|=0x0008; break;
     default: return 1;
