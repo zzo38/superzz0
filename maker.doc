@@ -39,8 +39,9 @@ A line starting with ! is a command to execute and its output is included
 as though it were present in the file (allowing dynamic rules).
 
 A line starting with = sets an environment variable or option. Any option
-name starts with * but none are currently defined. Either way, the name
-is followed by = and then the value.
+name starts with * and these are listed in a below section. For all
+environment variables and most options, the name is followed by = and then
+the value, but some options do not require a value (omit the second =).
 
 Other lines are rules and consist of input object names with spaces in
 between, and then -> and then the output object names with spaces in
@@ -53,14 +54,33 @@ An object name cannot occur as output for multiple rules.
 Object names can be a file name, or a special name with $ or * at first.
 The names with * at first have no inherent meaning but do not correspond
 to any files; you can use that to group objects. The names with $ at
-first have special meanings, but currently only $ by itself is defined
-and it means the default goal.
+first have special meanings; see the below section. They are still ordinary
+objects other than whatever special properties each one has.
 
 If a command to execute starts with * then it is a built-in operation. It
 is assumed that having all of the dependencies satisfied is sufficient to
 satisfy all of the objects listed as the output for this rule, unless the
 built-in operation specification overrides this. The built-in operation is
 zero or more of the characters described in the below section.
+
+
+=== Special objects ===
+
+$
+  This object is the default goal object if the -g switch is not used.
+
+
+=== Options ===
+
+*a
+  Has the same effect as the -a switch if present.
+
+*i
+  Has the same effect as the -i switch if present.
+
+*re
+  Causes it to reread the modification time of all output files of a rule
+  after that rule is executed.
 
 
 === Built-in operations ===

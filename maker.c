@@ -149,10 +149,22 @@ static void parse_mak_file(const char*filename) {
     if(*s=='=') {
       *strchrnul(s+1,'\n')=0;
       p=strchr(s+1,'=');
-      if(!p) errx(1,"Malformed rule on line %d",n);
-      if(s[1]=='*') errx(1,"Unknown option on line %d",n);
-      *p++=0;
-      if(setenv(s+1,p,1)) err(1,"Unable to set environment variable");
+      if(s[1]=='*') {
+        if(p) *p++=0;
+        if(s[2]=='i' && !s[3]) {
+          options|=0x0020;
+        } else if(s[2]=='a' && !s[3]) {
+          options|=0x0002;
+        } else if(s[2]=='r' && s[3]=='e' && !s[4]) {
+          if(!(options&0x0004)) options|=0x8000;
+        } else {
+          errx(1,"Unknown option on line %d",n);
+        }
+      } else {
+        if(!p) errx(1,"Malformed rule on line %d",n);
+        *p++=0;
+        if(setenv(s+1,p,1)) err(1,"Unable to set environment variable");
+      }
       continue;
     }
     r=add_rule();
@@ -235,6 +247,7 @@ static void exec_rule(int ru) {
   int i;
   time_t t;
   Rule*r=rules+ru;
+  struct stat s;
   if(r->exe[0]!='*') {
     if(!(options&0x0040)) puts(r->exe);
     if(!(options&0x0004)) {
@@ -254,6 +267,17 @@ static void exec_rule(int ru) {
           struct utimbuf u={.actime=time(0),.modtime=t};
           if(utime(objects[r->out[i]].name,&u)) warn("Cannot update modification time of \"%s\"",objects[r->out[i]].name);
         }
+      }
+    }
+  }
+  if(options&0x8000) {
+    for(i=0;i<r->nout;i++) if(objects[r->out[i]].name[0]!='$' && objects[r->out[i]].name[0]!='*') {
+      if(stat(objects[r->out[i]].name,&s)) {
+        if(errno!=ENOENT) err(1,"Cannot stat file '%s'",objects[r->out[i]].name);
+        objects[r->out[i]].unexist=1;
+      } else {
+        objects[r->out[i]].mtime=s.st_mtime;
+        objects[r->out[i]].unexist=0;
       }
     }
   }
