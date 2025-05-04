@@ -54,6 +54,7 @@ EDITOR
   +  In board editor and screen editor, "r" reverses foreground/background
      colours of the current colour.
   =  Use of inverse bit in parameter editors is corrected.
+  =  Double column F menus now (seems to) work correctly.
 
 TEMPLATE
   +  Default settings for new boards are now specified.

@@ -2226,10 +2226,10 @@ static void f_menu(Uint16 f) {
   v_ycur=255;
   if(memory[f]) {
     m=f; x=0; y=2; z=0; c=0; b=255;
-    while(memory[m]!=2 && b==255) {
+    while(memory[m]!=2 && !x) {
       if(memory[m]==1) {
-        if(c!=x) b=z-1; else if(y>2) y++;
-        m+=2; c=x; z++;
+        if(y>2) y++;
+        m+=2; b=z++;
       } else {
         m+=4;
       }
@@ -2243,7 +2243,7 @@ static void f_menu(Uint16 f) {
       x=12;
     } else {
       draw_border(0x1B,25,1,55,23);
-      x=27;
+      x=27; b=255;
     }
     m=f; y=2; z=0;
     while(memory[m]!=2) {
@@ -2273,7 +2273,7 @@ static void f_menu(Uint16 f) {
     m=f-1;
   }
   if(memory[m+3]&0x8000) {
-    if(memory[m+3]&0xC000) {
+    if(memory[m+3]&0x4000) {
       do_revealing_list(memory[m+2]);
       return;
     }
