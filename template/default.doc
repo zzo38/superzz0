@@ -284,6 +284,11 @@ Fake
   Also a kind of floor, but appears to be a normal wall. However, you and
   other stuff can still move through it since it is not a wall.
 
+Still/flowing water:
+  These are not the same as the Water element. The player and many other
+  things can move on them, that cannot move on Water. When the player is
+  standing in flowing water, the player will be moved.
+
 
 === Elements (F4) ===
 

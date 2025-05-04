@@ -5,6 +5,7 @@
 ;   3 = player only
 ;   4 = ice
 ;   5 = fire
+;   6 = still/flowing water
 ; Events:
 ;   A = frame
 ;   B = stat
@@ -1659,6 +1660,19 @@ CENMOV	LET D,Z
 	CALL A,THSTAR
 	LET S,0
 
+; **** Flowing water ****
+	EV T,_STILLWATER,1
+	EV T,_EFLOW,1
+	EV T,_NFLOW,1
+	EV T,_WFLOW,1
+	EV T,_SFLOW,1
+	EV U,_EFLOW
+	EV U,_NFLOW
+	EV U,_WFLOW
+	EV U,_SFLOW
+	LET Z,%,A,-_EFLOW
+	GOTO A,MOVEPL1
+
 ; **** Destroyable objects ****
 	EV X,_EMPTY,1
 	EV X,_BREAKABLE,1
@@ -1807,6 +1821,12 @@ THSTAR	GTMK C,0
 	ED 'E',"Empty",_EMPTY,$0300
 	ED 'O',"Floor",_FLOOR,$0000
 	ED 'K',"Fake",_FAKE,$0000
+	ED 1,"Still/flowing water:"
+	ED '0',"Still Water",_STILLWATER,$0119
+	ED '1',"N. Flow",_NFLOW,$0319
+	ED '2',"S. Flow",_SFLOW,$0319
+	ED '3',"E. Flow",_EFLOW,$0319
+	ED '4',"W. Flow",_WFLOW,$0319
 	ED 2
 
 	ED1 4
