@@ -159,7 +159,8 @@ const char*init_world(void) {
         asn1_print_decimal_oid(&a3,ASN1_AUTO,stderr);
         gen1:
         fputc('\n',stderr);
-        if(config.version_check) return "Unimplemented feature in mandatory set"; else config.version_warn|=4;
+        config.version_warn|=4;
+        if(config.version_check && !editor) return "Unimplemented feature in mandatory set";
       }
     }
     // Optional features

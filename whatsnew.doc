@@ -12,7 +12,7 @@ The notation is:
 The time zone for the dates in this file is Pacific (British Columbia).
 
 
-=== Version ??? ===
+=== Version 0.5.0 (2025-05-05) ===
 
 GAME
   +  Dynamic strings are implemented.
@@ -79,6 +79,7 @@ OTHERS
   *  The configuration file is now split into divisions. For backward
      compatibility, the heading is not needed for the [Options] division.
   *  Add example file into release list.
+  *  Improved handling of versions and OID sets.
 
 
 === Version 0.4.0 (2025-02-25) ===

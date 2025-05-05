@@ -258,6 +258,37 @@ static void show_version(void) {
   putchar('\n');
 }
 
+static void version_warn_box(int n) {
+  static const char*const t[]={
+  // 2345678901234567890123456789012345678901234567890123456789012345678901234567
+    // Game, mandatory
+    "This world file cannot be loaded because it was made using a newer version",
+    "of Super ZZ Zero or contains features that are required in order for this",
+    "world to be played but that are not available in this version of Super ZZ",
+    "Zero or that have not been enabled.",
+    // Editor, mandatory
+    "This world file specifies versions or features that are not available in",
+    "this version of Super ZZ Zero (or that are not enabled) to be mandatory,",
+    "so the world might not work. You may try to edit it anyways; if this data",
+    "is known to be wrong, you can use the advanced OID set editor (select More",
+    "and then Advanced) to change the incorrect specifications to correct ones.",
+    // Game, optional
+    "This world file recommends features that are not available in this version",
+    "of Super ZZ Zero or that have not been enabled, but can be played anyways.",
+    "Some features may be unavailable.",
+    // Editor, optional
+    "This world file specifies versions or features that are not available in",
+    "this version of Super ZZ Zero (or that are not enabled) to be optional.",
+    "It may be edited anyways; if the world is modified to not use these",
+    "functions, then the OID sets should be changed.",
+  };
+  static const Uint8 s[]={0,4,9,12};
+  static const Uint8 h[]={4,5,3,4};
+  int i;
+  draw_border(0x1B,0,0,79,h[n]+1);
+  for(i=0;i<h[n];i++) draw_text(2,i+1,t[i+s[n]],0x1F,-1);
+}
+
 int main(int argc,char**argv) {
   Uint8 o=0;
   int b=-1;
@@ -317,7 +348,15 @@ int main(int argc,char**argv) {
       save_world(0);
       return 0;
   }
-  if(s=init_world()) errx(1,"Cannot initialize world settings: %s",s);
+  if(s=init_world()) {
+    if((config.version_warn&5)==5) {
+      init_display();
+      version_warn_box(0);
+      alert_text("This file requires a newer version of Super ZZ Zero");
+      return 1;
+    }
+    errx(1,"Cannot initialize world settings: %s",s);
+  }
   if(b>=0) {
     cur_board_id=b;
     if(!editor && (s=select_board(b))) errx(1,"Cannot load board: %s",s);
@@ -325,13 +364,16 @@ int main(int argc,char**argv) {
   init_display();
   if(joystat) configure_joystick(2,0);
   if(config.version_warn&4) {
+    version_warn_box(editor);
     alert_text("This file requires a newer version of Super ZZ Zero");
     if(!editor) errx(1,"This file requires a newer version of Super ZZ Zero.");
+    config.version_auto=0;
   } else if(config.version_warn&2) {
+    version_warn_box(editor+2);
     alert_text("Warning: This file should use a newer version of Super ZZ Zero");
   }
+  config.version_warn=0;
   if(config.audio_buffer && !editor) audio_init();
-  if(config.test_mode) v_mode&=~VIDEO_80COLUMNS;
   if(editor) run_editor(); else run_game();
   return 0;
 }
