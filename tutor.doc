@@ -133,5 +133,83 @@ board (the money is in the F1 menu), so that you can buy it.
 
 === Creating a world without a template ===
 
-(This section is not written yet.)
+If you want to create a world without a template, then it is more
+complicated than using a template. (It is also possible to take some
+of the code from a template if you want to use some similar things.)
+
+To create a new world file without a template:
+  superzz0 -ew world2.sz0
+
+You can now define elements and other stuff. Remember that on nearly any
+menu you can push ALT+? for help.
+
+Go to the "Elements" menu. In this menu you can select a element to define
+its name and attributes. The name must be filled in, if you want it to be
+saved; if the name is left blank then this element will not be saved.
+
+Element 0 is used as the default empty space, so should be a floor element
+that is suitable for that. Enter the name (e.g. "EMPTY"; it will convert
+your entry into uppercase automatically here), select "Floor". The other
+things can be left as they are.
+
+You can then add additional elements (you do not have to add all of them
+right away; you can add some later, too). Most games will have one "player"
+element, so you should add that one too, and should ensure that it is
+allowed to move on whatever class you want it to move on (probably class 0,
+but you can use other class numbers).
+
+You will then have to write a .asm file; by convention this should have the
+same name as the world file but with ".asm" instead of ".sz0"; for this
+example, it will be called "world2.asm". This is a plain text file that you
+can write using any text editor.
+
+See asm.doc for the syntax and usage of the assembler, and opcodes.doc for
+the details of the instruction opcodes, and event.doc for details about the
+meaning of built-in events and of the memory cells $0080 to $00FF.
+
+You can also look at the .asm files of the default template and of the
+snake game for further examples of its working, and you may copy some of
+the code if you wish (they are public domain).
+
+You will probably want to define the keyboard event; see a below section
+for a simple example, including an explanation.
+
+When Super ZZ Zero is not running, you can run the assembler like:
+  sz0asm -w world2.asm - | superzz0 -ea world2.sz0
+
+This will then compile your program into the program memory in the world
+file and will define events for the elements. You can do this again later
+if changes are made to your .asm file. This does not affect anything which
+is defined within the Super ZZ Zero editor.
+
+You will also need to define at least one screen, and have the boards to
+be associated with that screen. If you are using text windows, a separate
+screen should be added for the text windows.
+
+And then, you can add a board. If editor menus are not defined within the
+.asm file then you cannot use the function keys to display such menus in
+the board editor, although you can enter element numbers manually by the
+use of the e key.
+
+Also note that scripts do not run automatically; you must add commands to
+execute them within the .asm file in order to work.
+
+
+=== Keyboard event example ===
+
+; Address of keyboard vector.
+; TA will write the current assembling address to the vector.
+	TA $E0
+; The W register stores the key code and Z stores the direction. For this
+; purpose, only the direction is relevant. The W,X,Y,Z registers are local
+; registers, and they are not usable for all purposes, so it must be copied
+; to the A register.
+	LET A,Z
+; If no direction is pushed, then Z=-1 so ignore it.
+	JNEG A,0
+; Move the player (the first instance of stat 1). See opcodes.doc for an
+; explanation of SMOV; the value $0050 allows pushing and transporting.
+	LET B,1
+	SMOV B,$0050
+	LET S,0
 
