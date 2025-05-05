@@ -12,6 +12,13 @@ The notation is:
 The time zone for the dates in this file is Pacific (British Columbia).
 
 
+=== Version ??? ===
+
+TEMPLATE
+  -  Removed the "blank" template, which is not necessary; you can create
+     an empty world file with no template.
+
+
 === Version 0.5.0 (2025-05-05) ===
 
 GAME
