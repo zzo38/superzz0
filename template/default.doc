@@ -83,11 +83,17 @@ Money
 Ammo
   Can be collected. Each one gives you 5 points of ammunition.
 
+Hi Ammo
+  Gives 25 points of ammunition when collected.
+
 Torch
   Can be collected and used in the underground for light.
 
 Heart
   Gives five healths when collected.
+
+Hi Heart
+  Gives twenty-five healths when collected.
 
 Key
   Keys can be used to unlock and open doors of the same colour. You can
@@ -121,6 +127,7 @@ Potion
   * Avalanche: Adds rocks into the board at random positions.
   * Destroy Creatures: Destroys creatures.
   * Explode Bombs: Explosives are triggered immediately.
+  * Extinguish: Destroys fire.
 
 Scroll
   Contains a script, which will be displayed or executed when the scroll is
@@ -211,6 +218,15 @@ Dragon
   directly toward the player, but you can select random movement one eighth
   of the time.
 
+Ruffian
+  Will sometimes move, and when doing so will continue to move in that
+  direction until it is blocked or it decides to rest. You can specify
+  how likely it is to rest.
+
+Roton
+  Moves at an angle instead of directly toward the player, and will switch
+  the direction, sometimes.
+
 Centipedes:
   A centipede is made up of the head and several segments; place the head
   first, and then place the segments leading from the head, which should be
@@ -284,6 +300,9 @@ Fake
   Also a kind of floor, but appears to be a normal wall. However, you and
   other stuff can still move through it since it is not a wall.
 
+Custom Floor
+  Another floor but you can set the appearance for each one separately.
+
 Still/flowing water:
   These are not the same as the Water element. The player and many other
   things can move on them, that cannot move on Water. When the player is
@@ -317,6 +336,28 @@ Indirect Push
   This cannot be pushed directly by the player, but can be moved by other
   things that are able to push it.
 
+Guns:
+
+Gun
+  Emits bullets or stars. All parameters other than direction and spinning
+  are for the stat; all guns of the same stat share those parameters. When
+  adding a gun from the F5 menu, a new stat is created; using y and p to
+  make copies will all share the same stat.
+
+Laser Gun
+  Emits beams. It will activate the beam, damaging some things that it can
+  hit (such as the player), and then deactivate the beam at a later time;
+  it will periodically switch on and off. The initial delay can be set so
+  that groups of laser guns can make a kind of "wave".
+
+Gates:
+
+Gate
+  Opens for a brief time when touched, allowing passing through.
+
+Open Gate
+  A gate that is already open; it is a floor but will soon close.
+
 Miscellaneous:
 
 Transporter
@@ -332,9 +373,6 @@ Ricochet
 
 Spike
   A wall that hurts the player if touched.
-
-Gate
-  Opens for a brief time when touched, allowing passing through.
 
 One Step
   Can only be walked on once; after that, it will be a wall.
@@ -361,20 +399,6 @@ Conveyor
 
 === Elements (F5) ===
 
-Guns:
-
-Gun
-  Emits bullets or stars. All parameters other than direction and spinning
-  are for the stat; all guns of the same stat share those parameters. When
-  adding a gun from the F5 menu, a new stat is created; using y and p to
-  make copies will all share the same stat.
-
-Laser Gun
-  Emits beams. It will activate the beam, damaging some things that it can
-  hit (such as the player), and then deactivate the beam at a later time;
-  it will periodically switch on and off. The initial delay can be set so
-  that groups of laser guns can make a kind of "wave".
-
 Projectiles/Beams:
 
 Bullet
@@ -400,7 +424,7 @@ Empty
   Same as in the F3 menu.
 
 Player
-  The player. There should be exactly one player per board.
+  The player. There should normally be exactly one player per board.
 
 Object
   A solid object, that you can specify an appearance and a script to
@@ -415,6 +439,11 @@ Object
 Sensor
   The player can step onto a sensor, and other things can push it. A
   sensor's script is executed when the player steps on it.
+
+Destroyed
+  Immediately destroys itself at the beginning of the turn, revealing
+  what was underneath. This is used internally for some purposes, and
+  is probably not very useful to place on the board by yourself.
 
 
 === Script messages ===

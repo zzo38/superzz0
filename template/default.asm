@@ -43,7 +43,7 @@
 ;   1 = player
 ;   2 = bullets/stars
 ; Predefined stat names (not necessarily present on all boards):
-;   _1 = Creatures with speed 1 (Runner)
+;   _1 = Creatures with speed 1 (Runner, Ruffian)
 ;   _2 = Creatures with speed 2 (Lion, Tiger, Bear, Shark)
 ;   _3 = Speed 3 (Conveyor)
 ;   _4 = Creatures with speed 4 (Pusher)
@@ -361,6 +361,7 @@ SPFIRE	FORW H,Z
 ; **** Floors ****
 	EV T,_EMPTY,1
 	EV T,_FLOOR,1
+	EV T,_CUSTOMFLOOR,1
 	EV T,_FAKE,1
 	EV T,_WEB,1
 	EV T,_ICE,1
@@ -430,6 +431,8 @@ SPFIRE	FORW H,Z
 	LET S,0
 
 ; **** Ammo ****
+	EV T,_HIAMMO
+	GIVE A,20
 	EV T,_AMMO
 	GIVE A,5
 	SFX A,"@20TCC#D"
@@ -448,6 +451,8 @@ SPFIRE	FORW H,Z
 	KILM D,0
 
 ; **** Heart ****
+	EV T,_HIHEART
+	GIVE H,20
 	EV T,_HEART
 	GIVE H,5
 	SFX A,"@20TK4K5K6K12K20"
@@ -505,6 +510,8 @@ SPFIRE	FORW H,Z
 	EV T,_SPIDER
 	EV T,_BIRD
 	EV T,_LUMBERJACK
+	EV T,_RUFFIAN
+	EV T,_ROTON
 	EV T,_LANDMINE
 	EV T,_SPITFIRE
 	CALL W,OUCH
@@ -645,7 +652,7 @@ SPFIRE	FORW H,Z
 	CASE A,POTION
 1H	DATA "Dud","Healing","Poison","Energy"
 	DATA "Reveal Walls","Extra Healing","Time","Avalanche"
-	DATA "Destroy Creatures","Explode Bombs"
+	DATA "Destroy Creatures","Explode Bombs","Extinguish"
 POTION	FILL $10,1
 
 	TA POTION+1 ; Healing
@@ -698,6 +705,13 @@ POTION	FILL $10,1
 	LET S,1
 1H	DATA $8003,_BOMB,$FFFF,$FFFF,$FFFF,_LITBOMB,$FF00,$0001,$FF00
 2H	DATA $8003,_LITBOMB,$FFFF,$FFFF,$FFFF,_LITBOMB,$FF00,$0001,$FF00
+
+	TA POTION+10 ; Extinguish
+	CHA A,1F
+	CHA A,2F
+	LET S,1
+1H	DATA $0003,_FIRE,$FFFF,$FFFF,$FFFF,_FLOOR,$0008,0,0,0
+2H	DATA $0003,_SPITFIRE,$FFFF,$FFFF,$FFFF,_DESTROYED,0,0,0,0
 
 ; **** Destroyed tiles ****
 ; This is used when other objects are changed to this in order to destroy them.
@@ -1003,6 +1017,8 @@ CHEST	FILL $0F,0
 	EV S,_SPIDER
 	EV S,_BIRD
 	EV S,_LUMBERJACK
+	EV S,_RUFFIAN
+	EV S,_ROTON
 	FLET S,0
 	GIVE S,1
 	SFX A,"@24O4CO1CO5CO3C"
@@ -1064,7 +1080,7 @@ CHEST	FILL $0F,0
 	AND B,$0F
 	SEEK A,1
 2H	GRTR B,%R,,16
-	TLET A,%R,,4
+	FLET A,%R,,4
 	LET B,0
 	CALL C,MOVCRE
 	LET S,0
@@ -1111,6 +1127,70 @@ CHEST	FILL $0F,0
 	KILM A,0
 	SFX A,"@20O4CO1CO5CO3C"
 	DIE C,W
+
+; **** Ruffian ****
+; Parameter:
+;   bit3-bit0 = Intelligence
+;   bit7-bit4 = Resting time
+	EV B,_RUFFIAN
+	LAY A,W
+	BTST A,4
+	JT A,1F
+	; Resting
+	LET A,%UR,Z,4
+	ADD A,16
+	GRTR A,%R,,32
+	JT A,0
+	LET B,Z
+	AND B,$0F
+	SEEK A,1
+	GRTR B,%R,,16
+	FLET A,%R,,4
+	ADD A,4
+	LSH A,2
+	LOCK A,W
+	LET S,0
+	; Moving
+1H	RSH A,2
+	LET B,0
+	CALL C,MOVCRE
+	JZ C,1F
+1H	LET A,%UR,Z,4
+	ADD A,16
+	GRTR A,%R,,32
+	JF A,0
+	LOCK C,W
+	LET S,0
+
+; **** Roton ****
+; Parameter: Phase
+; Misc1: Intellience (0-128)
+; Misc2: Switch rate (0-128)
+; Misc3: Randomization (0-128)
+; User flag: Current state
+	EV B,_ROTON
+	LET B,0
+	LAY C,W
+	; Switching
+	GM2 D,W
+	GM3 E,W
+	ADD D,%R,E,1
+	ADD D,Z
+	GRTR D,$FF
+	JF D,1F
+	; Do switch
+	XOR C,$40
+	LOCK C,W
+1H	PTMP D,0
+	; Decide direction of movement
+	SEEK A,1
+	GM1 D,W
+	GRTR D,%R,,128
+	JT D,MOVCRE
+	RSH C,5
+	OR C,1
+	ADD A,C
+	GOTO A,MOVCRE
 
 ; **** Dragon ****
 ; Parameter:
@@ -1692,6 +1772,8 @@ CENMOV	LET D,Z
 	EV X,_SPIDER,1
 	EV X,_BIRD,1
 	EV X,_LUMBERJACK,1
+	EV X,_RUFFIAN,1
+	EV X,_ROTON,1
 
 ; **** Script commands ****
 
@@ -1767,8 +1849,10 @@ THSTAR	GTMK C,0
 	ED 'M',"Magic Gem",_MAGICGEM,$0000
 	ED 'O',"Money",_MONEY,$030E
 	ED 'A',"Ammo",_AMMO,$0303
+	ED 'Y',"Hi Ammo",_HIAMMO,$0303
 	ED 'T',"Torch",_TORCH,$0306
 	ED 'H',"Heart",_HEART,$0304
+	ED 'I',"Hi Heart",_HIHEART,$030C
 	ED 'K',"Key",_KEY,$0000
 	ED 'D',"Door",_DOOR,$040F
 	ED 'Z',"Stone",_STONE,$0000
@@ -1797,6 +1881,8 @@ THSTAR	GTMK C,0
 	ED 'I',"Bird",E_LION,_BIRD+$8600
 	ED 'J',"Lumberjack",E_LION,_LUMBERJACK+$8600
 	ED 'D',"Dragon",E_LION,_DRAGON+$8600
+	ED 'F',"Ruffian",E_RUFF,$8600
+	ED 'N',"Roton",E_ROTO,$8600
 	ED 1,"Centipedes:"
 	ED '1',"Head",E_CENT,_HEAD+$8200
 	ED '2',"Segment",E_CENT,_SEGMENT+$8200
@@ -1821,6 +1907,7 @@ THSTAR	GTMK C,0
 	ED 'E',"Empty",_EMPTY,$0300
 	ED 'O',"Floor",_FLOOR,$0000
 	ED 'K',"Fake",_FAKE,$0000
+	ED 'C',"Custom Floor",_CUSTOMFLOOR,$0000
 	ED 1,"Still/flowing water:"
 	ED '0',"Still Water",_STILLWATER,$0119
 	ED '1',"N. Flow",_NFLOW,$0319
@@ -1837,11 +1924,16 @@ THSTAR	GTMK C,0
 	ED '2',"Slider \x1D",_SLIDEREW,$0000
 	ED '3',"Pusher",E_PUSH,_PUSHER+$8200
 	ED '4',"Indirect Push",_INDIRECTPUSH,$0000
+	ED 1,"Guns:"
+	ED 'G',"Gun",_GUN,$0800
+	ED 'L',"Laser Gun",_LASERGUN,$0800
+	ED 1,"Gates:"
+	ED 'A',"Gate",_GATE,$0000
+	ED 'J',"Open Gate",_OPENGATE,$0000
 	ED 1,"Miscellaneous:"
 	ED 'T',"Transporter",_TRANSPORTER,$0000
 	ED 'R',"Ricochet",_RICOCHET,$030A
 	ED 'K',"Spike",_SPIKE,$0000
-	ED 'G',"Gate",_GATE,$0000
 	ED 'Q',"One Step",_ONESTEP,$0000
 	ED 'X',"Land Mine",_LANDMINE,$0000
 	ED 'D',"Duplicator",_DUPLICATOR,$030F
@@ -1850,9 +1942,6 @@ THSTAR	GTMK C,0
 	ED 2
 
 	ED1 5
-	ED 1,"Guns:"
-	ED 'G',"Gun",_GUN,$0800
-	ED 'L',"Laser Gun",_LASERGUN,$0800
 	ED 1,"Projectiles/Beams:"
 	ED 'B',"Bullet",_BULLET+$0200,$010F
 	ED 'S',"Star",_STAR+$0200,$010F
@@ -1863,6 +1952,7 @@ THSTAR	GTMK C,0
 	ED 'Z',"Player",_PLAYER+$0100,$031F
 	ED 'O',"Object",_OBJECT,$0800
 	ED 'X',"Sensor",_SENSOR,$0800
+	ED 'D',"Destroyed",_DESTROYED,$0000
 	ED 2
 
 	ED1 6
@@ -1874,12 +1964,15 @@ THSTAR	GTMK C,0
 	ED 'S',"Stats",RL_STA,$C000
 	ED 'U',"Under layer",RL_UND,$C000
 	ED 'L',"Under layer (only)",RL_UNO,$C000
+	ED 'F',"Fake walls",RL_FAK,$C000
 	ED 2
 
 ; **** Parameter edit ****
 
 	ED0 _TEXT,$0100
 	ED0 _SPIKE,$0100
+	ED0 _CUSTOMFLOOR,$0100
+	ED0 _OPENGATE,18
 
 	ED0 _OBJECT
 	ED0 _SENSOR
@@ -1919,6 +2012,7 @@ THSTAR	GTMK C,0
 	ED2 'O',"~Avalanche",7
 	ED2 'O',"~Destroy Creatures",8
 	ED2 'O',"Expl~ode Bombs",9
+	ED2 'O',"Extin~guish",10
 	ED 0
 
 E_LION	ED3 _LION,$0C,_TIGER,$0B,_BEAR,$06,_SHARK,$07,_MOUSE,$0F,_LUMBERJACK,$0A,_SPIDER,$07,_BIRD,$0E,_DRAGON,$0C
@@ -1993,6 +2087,31 @@ E_CENT	ED '=',"K-MP"
 	ED 'H',0
 	ED2 'N',"~Intelligence: ",$1170,0,128
 	ED2 'N',"~Deviance: ",$1270,0,128
+	ED 0
+
+E_RUFF	ED '=',"-MP"
+	ED '@',"_1",1
+	ED 'P',_RUFFIAN,$5B0D
+	ED 0
+
+	ED0 _RUFFIAN
+	ED 'H',"Creature"
+	ED2 'N',"~Intelligence: ",$0030,0,15
+	ED2 'N',"~Resting time: ",$0034,0,15
+	ED 0
+
+E_ROTO	ED '=',"-MP"
+	ED '@',"_R",1
+	ED 'P',_ROTON,$5B0D
+	ED 0
+
+	ED0 _ROTON
+	ED 'H',"Roton"
+	ED2 'N',"~Intelligence: ",$1170,0,128
+	ED2 'N',"~Switch rate: ",$1270,0,128
+	ED2 'N',"~Randomization: ",$1370,0,128
+	ED2 'N',"~Phase: ",$0070,0,255
+	ED2 'B',"Re~verse initial direction",$2206
 	ED 0
 
 E_SNAK	ED '=',"-MP2.T"
@@ -2112,6 +2231,7 @@ E_CONV	ED '=',"-MP"
 ; **** Revealing lists ****
 
 RL_INV	ED _INVISIBLE+$2100,$00B0
+	ED _DESTROYED+$2100,$082A
 	ED 0
 
 RL_STA	ED $C002,$8800
@@ -2123,6 +2243,11 @@ RL_UND	ED $D100,$0000
 
 RL_UNO	ED $0100,$07F9
 	ED $1001,$00B1
+	ED 0
+
+RL_FAK	ED _FAKE+$2100,$00FE
+	ED _FLOOR+$2100,$00FE
+	ED _STILLWATER+$2100,$00F7
 	ED 0
 
 ; **** Editor board info ****

@@ -143,6 +143,10 @@ that is found will be used for each cell.
 Use ED0 and the element number to define how element parameter editors,
 and default values (for both tiles and stats), will work.
 
+If you write ED0 and the element and then comma and a value $00 to $FF then
+it always uses that default parameter value, and if $100 then it will ask
+for a character code and use that.
+
 In the below descriptions, ! means it is only valid in a form, and + means
 it is meaningful inside and outside of a form; other commands are only
 meaningful outside of a form (but are allowed after the end of a form).

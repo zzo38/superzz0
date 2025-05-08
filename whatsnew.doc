@@ -15,6 +15,7 @@ The time zone for the dates in this file is Pacific (British Columbia).
 === Version ??? ===
 
 TEMPLATE
+  +  Many additions to default template.
   -  Removed the "blank" template, which is not necessary; you can create
      an empty world file with no template.
 
