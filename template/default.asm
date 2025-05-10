@@ -597,7 +597,9 @@ SPFIRE	FORW H,Z
 
 ; **** Transporter ****
 	EV T,_TRANSPORTER,1
+	EV T,_PUSHTRANSPORTER,1
 	EV D,_TRANSPORTER
+	EV D,_PUSHTRANSPORTER
 	REGS B,REGSAV
 	; Check direction
 	GTMP A,0
@@ -621,6 +623,7 @@ SPFIRE	FORW H,Z
 	; Check if transporter matches
 	GTMK A,0
 	EQ A,_TRANSPORTER
+	OREQ A,_PUSHTRANSPORTER
 	JF A,1B
 	GTMP A,0
 	EQ A,Z
@@ -1932,6 +1935,7 @@ THSTAR	GTMK C,0
 	ED 'J',"Open Gate",_OPENGATE,$0000
 	ED 1,"Miscellaneous:"
 	ED 'T',"Transporter",_TRANSPORTER,$0000
+	ED 'Y',"Pushable Transporter",_PUSHTRANSPORTER,$0000
 	ED 'R',"Ricochet",_RICOCHET,$030A
 	ED 'K',"Spike",_SPIKE,$0000
 	ED 'Q',"One Step",_ONESTEP,$0000
@@ -1945,7 +1949,7 @@ THSTAR	GTMK C,0
 	ED 1,"Projectiles/Beams:"
 	ED 'B',"Bullet",_BULLET+$0200,$010F
 	ED 'S',"Star",_STAR+$0200,$010F
-	ED 'F',"Fire",_SPITFIRE+$0200,$010C
+	ED 'F',"Spit Fire",_SPITFIRE+$0200,$010C
 	ED 'M',"Beam",_BEAM,$0000
 	ED 1,"Special:"
 	ED 'E',"Empty",_EMPTY,$0300
@@ -2059,6 +2063,7 @@ E_RUNN	ED '=',"-MP"
 	ED 0
 
 	ED0 _TRANSPORTER
+	ED0 _PUSHTRANSPORTER
 	ED0 _PUSHER
 	ED0 _RUNNER
 	ED0 _SPITFIRE

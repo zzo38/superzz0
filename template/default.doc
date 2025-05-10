@@ -368,6 +368,9 @@ Transporter
   facing the opposite direction and that is not blocked, and then will be
   transported to that one. (This is like the transporter in ZZT.)
 
+Pushable Transporter
+  A transporter that can be pushed.
+
 Ricochet
   A wall that will reflect bullets that strike it, the opposite way.
 
