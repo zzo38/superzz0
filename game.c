@@ -3495,6 +3495,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         so=((rs-stats[b_over[so].stat].xy)<<16)|b_over[so].stat;
         goto store;
       case OP_OR: regs[fo]|=so; break;
+      case OP_OREQ: if(so==regs[fo]) condflag=1; break;
       case OP_PACK:
         t=convxy(0,x,y);
         if(t!=-1) {

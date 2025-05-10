@@ -876,6 +876,9 @@ numbers are treated as unsigned.
    E = Exchange
    F = Fill (J is the value to be filled with)
 
+[0AC OREQ]
+  Condition is true if operands are equal, or unchanged if unequal.
+
 [100 LET]
   Copy second operand to first.
 
