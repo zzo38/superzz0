@@ -2391,6 +2391,23 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
       c=parse_direction(s,xy,ip);
       if(!condflag) goto bad;
       if(xy->layer&0x10) v=(c==((xy->layer>>2)&3)?1:0); else v=(c==-1?1:0);
+    } else if(!strncmp(buf+1,"VISIBLE",7)) {
+      if(xy->x>=scroll_x && xy->x<scroll_x+80 && xy->y>=scroll_y && xy->y<scroll_y+25 && xy->x<board_info.width && xy->y<board_info.height && (xy->layer&2)) {
+        inv^=xy->layer&1;
+        n=cur_screen.command[z=(xy->x-scroll_x)+(xy->y-scroll_y)*80];
+        if((n&0xF0)==SC_BOARD) {
+          if((n&4) || (elem_def[b_main[z].kind].attrib&A_LIGHT) || !(board_info.flag&BF_OVERLAY) || ((xy->layer&1) && !(b_over[z].kind&OVER_VISIBLE))) {
+            if((xy->layer&1) && (elem_def[b_main[z].kind].app[0]&0x3F)==AP_OVER) v=0; else v=1;
+          } else if(memory[MEM_LIGHT]<65486 && maxstat && stats->count) {
+            z0=xy->y-stats->xy->y-scroll_y;
+            if(z0>-25 && z0<25) {
+              z1=memory[memory[MEM_LIGHT]+z0+24];
+              z0=128+xy->x-stats->xy->x-scroll_x;
+              if(z0>=(z1>>8) && z0<=(z1&0xFF)) v=1;
+            }
+          }
+        }
+      }
     } else {
       bad: script_error(s+1-stats,xy,"Improper condition");
     }

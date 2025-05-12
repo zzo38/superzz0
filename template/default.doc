@@ -472,9 +472,20 @@ Destroyed
 
 === Script commands ===
 
+#BOARD <board> [<x> <y>]
+  Go to a specified board number. The coordinates are optional; if they
+  are specified then the player will be placed at those coordinates on the
+  destination board, but if not specified then the player will be in the
+  original position (either where the player was placed in the editor, or
+  where the player was when leaving that board).
+
 #CHAR <number>
   Changes the object's display character to the specified number. (This is
   the same as #PARAMETER but with a different name.)
+
+#ENDGAME
+  End the game; the player can no longer move. Other things can still move,
+  and the script can continue.
 
 #SHOOT <direction>
   Shoot a bullet in the specified direction; uses up the object's turn.

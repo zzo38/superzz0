@@ -14,6 +14,11 @@ The time zone for the dates in this file is Pacific (British Columbia).
 
 === Version ??? ===
 
+SCRIPTS
+  +  The #VISIBLE condition is implemented.
+  +  #ENDGAME command to end the game.
+  +  #BOARD command to go to another board.
+
 ASSEMBLY
   +  OREQ is like EQ but leaves condition flag unchanged if unequal.
 

@@ -235,11 +235,11 @@ MOVEPL1	XOR A,A
 ; **** Miscellaneous subroutines ****
 
 	; Game over
-GAMOVER	GSXY A,1
+GAMOVER	SFX A,"@82<S.CD#GC'GA#>DGFG#>CFO1Q.CX"
+ENDGAME	GSXY A,1
 	LET B,0
 	PTMK B,0
 	PSPD B,1
-	SFX A,"@82<S.CD#GC'GA#>DGFG#>CFO1Q.CX"
 	LET A,1F
 	POKE A,$E0
 	POKE A,$E1
@@ -1832,6 +1832,29 @@ THSTAR	GTMK C,0
 	LET S,1
 1H	CALM S,0
 	LET S,1
+
+	; #ENDGAME
+	COM "ENDGAME"
+	GOTO A,ENDGAME
+
+	; #BOARD <board> [<x> <y>]
+	COM "BOARD"
+	PARN A,W
+	FLET A,%BRD,,0
+	PARN B,W
+	JF B,1F
+	PARN C,W
+	JF C,1F
+	; Go to board at XY
+	LET X,B
+	LET Y,C
+	WARP A,2F
+	LET S,1
+2H	LET A,1
+	TELE A,0
+	GOTO A,ENTER
+	; No XY coordinates are available; use defaults
+1H	WARP A,ENTER
 
 	; #RETURN
 	TA $C5
