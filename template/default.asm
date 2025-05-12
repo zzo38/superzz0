@@ -1704,7 +1704,7 @@ CENMOV	LET D,Z
 ;   but7 = Spin
 ; Misc1: Intelligence (0-128)
 ; Misc2: Firing rate (0-128)
-; Misc3: Firiting type (0=bullet, 1=star)
+; Misc3: Firing type (0=bullet, 1=star, 2=fire)
 	EV B,_GUN
 	; Get direction and spin if necessary
 	LET A,Z
@@ -1735,13 +1735,18 @@ CENMOV	LET D,Z
 	; Do shoot
 1H	GM3 B,W
 	CASE B,1F
-1H	DATA 1F,2F,0,0
+1H	DATA 1F,2F,3F,0
+	; (Bullet)
 1H	LET Z,A
 	GOTO A,SHOOT
+	; (Star)
 2H	FORW A,0
 	LET B,127
 	CALL A,THSTAR
 	LET S,0
+	; (Fire)
+3H	LET Z,A
+	GOTO A,SPFIRE
 
 ; **** Flowing water ****
 	EV T,_STILLWATER,1
@@ -2236,7 +2241,7 @@ E_BOMB	ED '=',"K9.M"
 	ED 'O',$1310
 	ED2 'O',"~Bullet",0
 	ED2 'O',"S~tar",1
-	;ED2 'O',"Fir~e",2
+	ED2 'O',"Fir~e",2
 	ED 'H',0
 	ED2 'N',"Spee~d: ",$1070,0,255
 	ED2 'N',"~Intelligence: ",$1170,0,128
