@@ -18,6 +18,7 @@ SCRIPTS
   +  The #VISIBLE condition is implemented.
   +  #ENDGAME command to end the game.
   +  #BOARD command to go to another board.
+  +  Conditions for named flags in specific numbered positions.
 
 ASSEMBLY
   +  OREQ is like EQ but leaves condition flag unchanged if unequal.

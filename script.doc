@@ -262,6 +262,17 @@ name
   name can be up to fifteen characters long, and up to sixteen such flags
   can be set at once. It must start with a letter.
 
+number@name
+  A global named flag in a specified slot number from 0 to 15. It is only
+  true if that flag is set in that slot; they are assigned starting from
+  slot 0. You can use #SET to deliberately set it in that slot only (which
+  will overwrite what is already there), and #CLEAR to deliberately clear
+  it in that slot only (no effect if the name does not match).
+
+number@
+  Checks if any named flag is set in the specified slot number 0 to 15.
+  This cannot be used with #SET, but can be used with #CLEAR and #IF.
+
 #ALIGN
   True if this object is aligned with the player, either horizontally or
   vertically (not diagonally).

@@ -2286,7 +2286,7 @@ static inline char check_pushable_at(Uint32 x,Uint32 y,Uint32 a) {
 static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
   ScriptKind sk;
   Uint16 bip;
-  char buf[128];
+  char buf[128]={};
   char inv=0;
   char v=0;
   int c,n;
@@ -2421,6 +2421,11 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
     if(*buf=='M') goto main;
     if(*buf=='P') goto player;
     if(*buf=='U') goto under;
+    if(*buf>='0' && *buf<='9') {
+      *ip=bip+1;
+      z0=*buf-'0';
+      goto flagpos;
+    }
     goto bad;
   } else if(*buf>='A' && *buf<='Z' && buf[1]!='@' && !buf[15]) {
     for(n=0;n<16 && !v;n++) if(!strcmp(namedflag[n].name,buf)) v=1;
@@ -2428,16 +2433,28 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
     *ip=bip;
     z0=parse_number(s,xy,ip);
     if(!condflag) goto bad;
-    z=0;
-    if(s->text[*ip]=='<') z|=2,++*ip;
-    if(s->text[*ip]=='>') z|=4,++*ip;
-    if(s->text[*ip]=='=') z|=1,++*ip;
-    if(z==7 || !z) goto bad;
-    z1=parse_number(s,xy,ip);
-    if(!condflag) goto bad;
-    if(z0==z1 && (z&1)) v=1;
-    if(z0<z1 && (z&2)) v=1;
-    if(z0>z1 && (z&4)) v=1;
+    if(s->text[*ip]=='@') {
+      flagpos:
+      if(z0&~15L) goto bad;
+      if(buf[n=*ip-bip]!='@') goto bad;
+      *ip=bip+strlen(buf);
+      if(buf[n+1]) {
+        if(!strcmp(namedflag[z0].name,buf+n+1)) v=1;
+      } else {
+        if(namedflag[z0].name[0]) v=1;
+      }
+    } else {
+      z=0;
+      if(s->text[*ip]=='<') z|=2,++*ip;
+      if(s->text[*ip]=='>') z|=4,++*ip;
+      if(s->text[*ip]=='=') z|=1,++*ip;
+      if(z==7 || !z) goto bad;
+      z1=parse_number(s,xy,ip);
+      if(!condflag) goto bad;
+      if(z0==z1 && (z&1)) v=1;
+      if(z0<z1 && (z&2)) v=1;
+      if(z0>z1 && (z&4)) v=1;
+    }
   } else {
     goto bad;
   }
@@ -2445,10 +2462,12 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
 }
 
 static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
+  Uint16 bip;
   char buf[128]={};
   int c,n;
   while(s->text[*ip]==' ') ++*ip;
   if(s->text[*ip]=='!') v^=1,++*ip;
+  bip=*ip;
   for(n=0;n<127;n++) {
     c=s->text[*ip];
     if(c<=32) break;
@@ -2482,6 +2501,19 @@ static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
       if(c==16 && !namedflag[n].name[0]) c=n;
     }
     if(v && c!=16) memcpy(namedflag[c].name,buf,16);
+  } else if((*buf>='0' && *buf<='9') || *buf=='$' || *buf=='-' || *buf=='+' || *buf=='(') {
+    *ip=bip;
+    c=parse_number(s,xy,ip);
+    if((c&~15L) || s->text[*ip]!='@') goto bad;
+    if(buf[n=*ip-bip]!='@') goto bad;
+    *ip=bip+strlen(buf);
+    if(buf[n+1]) {
+      if(!v && !strcmp(namedflag[c].name,buf+n+1)) memset(namedflag[c].name,0,16);
+      if(v) memcpy(namedflag[c].name,buf+n+1,16);
+    } else {
+      if(v) goto bad;
+      memset(namedflag[c].name,0,16);
+    }
   } else {
     goto bad;
   }
