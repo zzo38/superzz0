@@ -9,18 +9,27 @@ See oid.ter for a list of OIDs and some other notes.
 
 The format of the CATALOG.DER lump is a ASN.1X DER sequence with fields:
 
+* The type of catalog data, which is enumerated: 0 means inactive or draft,
+1 means standard, and 2 means nonstandard. A catalog service should reject
+it if the type is anything other than 1, and the client software should
+refuse to send such a world file (possibly with a switch to override it,
+although the server will probably reject it anyways if you do override it).
+(Note that this type does not affect the format of the catalog data; if the
+type is 2 (nonstandard), this means that it has a nonstandard use rather
+than being a nonstandard format; the format is still standard.)
+
 * The game title, which is a PC string.
 
 * Publication date (UTC-based timestamp).
 
 * The set of authors. Each author is a set of the names of that author;
-each name can be a PC String, TRON String, Visible String, or Object
-Identifier. If it is a Visible String then it is interpreted as a URL
-(any scheme is possible, e.g. "mailto:" for a email address). OIDs are
-relative to base.1 (author identifiers).
+each name can be a PC string, TRON string, Visible string, General string,
+or Object identifier. If it is a Visible string then it is interpreted as a
+absolute URL (any scheme is possible, e.g. "mailto:" for a email address;
+if it is not a absolute URL including scheme, then it is an error).
 
-* A long description, which is a PC string, or null. This text may
-contain line breaks.
+* A long description, which is a PC string, TRON string, General string, or
+null. This text may contain line breaks.
 
 * Set of positive classifications (OIDs). (This means that the author
 claims that these classifications do apply to this world.)
@@ -28,28 +37,30 @@ claims that these classifications do apply to this world.)
 * Set of negative classifications (OIDs). (This means that the author
 claims that these classifications do not apply to this world.)
 
-* A OID to identify the hash algorithm. This may be relative to
-2.16.840.1.101.3.4.2 (not to the Super ZZ Zero base OID).
+* A OID to identify the hash algorithm to use to identify this world file.
 
 * The hash of the previous version of the world file, stored as a octet
-string. This may be null if this is the first version.
+string. If this is the first version of the world file, then this is null.
+(Note that this CATALOG.DER lump is a part of the world file.)
 
 * A set of Visible strings, which are URLs for downloading current or new
 versions of the world file. This set may be empty, but if it is not empty
 then all URLs must be direct download links. Any scheme may be used.
 
 * A key/value list of extensions. The keys are OIDs and the values are
-the values of those extensions.
+the values of those extensions (the type of the values depends on the
+extension, and some extensions may allow more than one type).
 
 
 === Side file ===
 
 The side file is also a DER file, and is a sequence with fields:
 
-* Service identifier (a OID). This may be null if not applicable.
+* Service identifier (a OID). This is null if not applicable.
 
-* A OID to identify the hash algorithm. This may be relative to
-2.16.840.1.101.3.4.2 (not to the Super ZZ Zero base OID).
+* A OID to identify the hash algorithm. (This hash algorithm will be used
+for this file as well as for the world file, and should normally be the
+same as the hash algorithm specified in the CATALOG.DER lump.)
 
 * The hash of the world file. The hash is stored as a octet string.
 
@@ -116,7 +127,7 @@ User authentication types:
 
 * HMAC (only for write access; cannot be used to restrict read access)
 
-* X.509 (only for secure connections)
+* X.509 (only for secure connections; recommended)
 
 What authentication types are acceptable, how to register new accounts,
 what hash algorithm to use for HMAC, and what criteria are used to decide
@@ -142,5 +153,13 @@ This identifier is specific to the service being used.
 * _world/ = Followed by the hash of the world file in lowercase hexadecimal
 format, to download the world file.
 
-(This section is incomplete)
+(This section is incomplete and is likely to be changed in future)
+
+
+=== Extensions ===
+
+Note that it is possible to use extensions other than the ones listed here,
+but these are a "standard" set of extensions. All extensions are optional.
+
+(This section is not fully written yet)
 
