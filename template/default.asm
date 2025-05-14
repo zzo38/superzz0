@@ -1748,6 +1748,50 @@ CENMOV	LET D,Z
 3H	LET Z,A
 	GOTO A,SPFIRE
 
+; **** Ball ****
+	EV T,_BALL
+	SFX A,"@11Z<G"
+	GTMS B,0
+	JNZ B,0
+	LET A,Z
+	PTMP A,0
+	MOVE B,$0060
+	JF B,0
+	INC A,1
+	PTMS A,0
+	MNEW W,0
+	LET S,0
+
+	EV B,_BALL
+	LET A,Z
+	LET B,W
+	GTUK C,0
+	EQ C,_FIRE
+	OREQ C,_WATER
+	JT C,1F
+	LESS C,_EFLOW
+	JT C,2F
+	GRTR C,_SFLOW
+	JT C,2F
+	; Change direction
+	LET A,%,C,-_EFLOW
+	PTMP A,0
+	; Move
+2H	SMOV B,$0060
+	JT B,0
+	; Check if hit player or edge
+	FORW B,A
+	JF B,1F
+	GTMK A,0
+	EQ A,_PLAYER
+	JT A,OUCH1
+	; Stop
+	SFX A,"@12Z>G"
+	DIE G,W
+	; Destroyed
+1H	SFX A,"@14SC<C<C"
+	DIE C,W
+
 ; **** Flowing water ****
 	EV T,_STILLWATER,1
 	EV T,_EFLOW,1
@@ -1955,6 +1999,7 @@ THSTAR	GTMK C,0
 	ED '2',"Slider \x1D",_SLIDEREW,$0000
 	ED '3',"Pusher",E_PUSH,_PUSHER+$8200
 	ED '4',"Indirect Push",_INDIRECTPUSH,$0000
+	ED 'B',"Ball",_BALL,$0000
 	ED 1,"Guns:"
 	ED 'G',"Gun",_GUN,$0800
 	ED 'L',"Laser Gun",_LASERGUN,$0800

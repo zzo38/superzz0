@@ -336,6 +336,12 @@ Indirect Push
   This cannot be pushed directly by the player, but can be moved by other
   things that are able to push it.
 
+Ball
+  It can be pushed only by the player and will move as far as it can before
+  it stops going. It is destroyed in water and fire and by falling off the
+  edge of the board. The ball is also deflected by flowing water. If the
+  ball touches the player, it will hurt the player.
+
 Guns:
 
 Gun
