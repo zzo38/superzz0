@@ -16,6 +16,7 @@ Others:
 !colon;Colon commands
 !stat;Stats
 !resize;Resizing
+!area;Area buffer
 !-gradient;Gradients
 
 :norm;Normal mode / draw mode
@@ -23,6 +24,7 @@ ESC        Exit
 TAB        Toggle normal/draw mode
 RETURN     Pick and edit parameter of tile at cursor
 0-9        Numeric prefix
+ALT+A      Place from area buffer
 ALT+I      Board info
 ALT+M      Exchange primary/secondary mark grid
 ALT+R      Resize board
@@ -107,6 +109,7 @@ Cursor movement in mass mode will also move the marks, and will copy the
 marked tiles from where the mark was to the new position of the marks.
 
 ESC        Cancel mass mode
+aø         Save to area buffer
 cø         Set colour
 dø         Delete
 fø         Place floor
@@ -137,6 +140,25 @@ m         Mark current board
 M         Mark numbered board
 q         Swap current with marked board
 u         Unmark board
+
+:area;Area buffer
+The area buffer stores tiles including their relative position to the
+origin, which is the cursor position, when the area is saved as well as
+when the area is placed, so that difference is the displacement of the
+origin. Stats are not saved; any tiles copied will be non-stat.
+
+When editing the main board, the main layer and under layer are saved
+and placed; when editing the overlay, only the overlay is. You cannot
+have both saved at once.
+
+In block mode, the entire block is saved, but in mass mode, it will
+save all marked tiles and none others.
+
+When placing the area buffer into the board, it will be relative to the
+cursor position with the same displacement as it was relative to the
+cursor when saved, and any marked cells are masked out and not pasted.
+When saving in mass mode, any cells that were not marked will also not
+be pasted, leaving the board unchanged at that position.
 
 :flood;Flooding
 The f or F prefix is used for the flooding commands. You can optionally
@@ -429,4 +451,7 @@ write/w
 writeunder/wu
   Write a tile into the under layer, like the "place" command but only
   affects the under layer.
+
+xmg
+  Exchange the primary and secondary mark grid.
 

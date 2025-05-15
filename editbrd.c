@@ -19,6 +19,11 @@ static Uint16 markwidth,markheight,markskip;
 static Uint8*markgrid2;
 static Uint16 markwidth2,markheight2,markskip2;
 
+static Tile*areabuf;
+static Uint16 area_width,area_height;
+static Sint32 area_xoffset,area_yoffset;
+static Uint8 arealayer; // bit0=under bit1=main bit2=over
+
 static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay);
 static void stat_list_callback(Uint16 n,int y,void*uz);
 static void stat_xy_edit(Stat*s,Uint16 n);
@@ -1174,21 +1179,8 @@ static void cc_crop(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   clear_extra_stats();
 }
 
-static void cc_debug_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
-  printf("(%d,%d:%d,%d)BEGIN\"%s\"",x0,y0,x1,y1,arg);
-  printf("<%02X,%02X,%02X,%02X>#%d\n",cctile.color,cctile.kind,cctile.param,cctile.stat,cctmp);
-  cctmp=0;
-}
-
-static void cc_debug_step(Uint16 x,Uint16 y,const char*arg) {
-  printf("(%d,%d)\"%s\"",x,y,arg);
-  printf("<%02X,%02X,%02X,%02X>#%d\n",cctile.color,cctile.kind,cctile.param,cctile.stat,cctmp);
-  ++cctmp;
-}
-
-static void cc_debug_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
-  printf("(%d,%d:%d,%d)END\"%s\"",x0,y0,x1,y1,arg);
-  printf("<%02X,%02X,%02X,%02X>#%d\n",cctile.color,cctile.kind,cctile.param,cctile.stat,cctmp);
+static void cc_debug(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  printf("areabuf=%p arealayer=%d\narea_width=%d area_height=%d\narea_xoffset=%d area_yoffset=%d\n",areabuf,arealayer,area_width,area_height,(int)area_xoffset,(int)area_yoffset);
 }
 
 static void cc_delete_step(Uint16 x,Uint16 y,const char*arg) {
@@ -1440,6 +1432,10 @@ static void cc_writeunder_step(Uint16 x,Uint16 y,const char*arg) {
   write_under(x,y,cctile);
 }
 
+static void cc_xmg(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  exchange_mark_grid();
+}
+
 static const ColonCommand colon_commands[]={
   {"b",0,cc_board,0,0,0},
   {"bi",0,cc_boardinfo,0,0,0},
@@ -1451,7 +1447,7 @@ static const ColonCommand colon_commands[]={
   {"count",'%',0,cc_count_begin,cc_count_step,cc_count_end},
   {"crop",'%',cc_crop,0,0,0},
   {"d",'.',0,0,cc_delete_step,0},
-  {"debug",'.',0,cc_debug_begin,cc_debug_step,cc_debug_end},
+  {"debug",0,cc_debug,0,0,0},
   {"delete",'.',0,0,cc_delete_step,0},
   {"deletex",'.',0,0,cc_deletex_step,0},
   {"dx",'.',0,0,cc_deletex_step,0},
@@ -1489,6 +1485,7 @@ static const ColonCommand colon_commands[]={
   {"writeunder",'.',0,cc_place_begin,cc_writeunder_step,0},
   {"wu",'.',0,cc_place_begin,cc_writeunder_step,0},
   {"xl",'.',0,0,cc_exchangelayer_step,0},
+  {"xmg",0,cc_xmg,0,0,0},
 };
 
 typedef struct {
@@ -2700,6 +2697,76 @@ static void gradient_menu(Uint8 lay) {
   }
 }
 
+static void area_save(Uint8 lay,Uint8 how) {
+  Tile*p;
+  Sint32 x,y,x0,y0,x1,y1;
+  free(areabuf);
+  areabuf=0;
+  if((markgrid || !how) && lay) {
+    if(how) {
+      if(markheight>board_info.height) markheight=board_info.height;
+      if(markwidth>board_info.width) markwidth=board_info.width;
+      x0=0;
+      for(x=0;x<markskip*markheight && !markgrid[x];x++);
+      y0=x/markskip;
+      x1=markwidth-1; y1=markheight-1;
+    } else {
+      x0=(xcur<xcur2?xcur:xcur2);
+      y0=(ycur<ycur2?ycur:ycur2);
+      x1=(xcur>xcur2?xcur:xcur2);
+      y1=(ycur>ycur2?ycur:ycur2);
+    }
+    area_xoffset=x0-xcur;
+    area_yoffset=y0-ycur;
+    area_width=x1+1-x0;
+    area_height=y1+1-y0;
+    if(!area_width || !area_height) goto clear;
+    p=areabuf=calloc(area_width*area_height,sizeof(Tile)*__builtin_popcount(lay));
+    if(!areabuf) err(1,"Allocation failed");
+    for(y=y0;y<=y1;y++) for(x=x0;x<=x1;x++) {
+      if(how && !set_mark(x,y,2)) {
+        if(lay&1) *p++=(Tile){0,0,0,255};
+        if(lay&2) *p++=(Tile){0,0,0,255};
+        if(lay&4) *p++=(Tile){0,0,0,255};
+      } else {
+        if(lay&1) *p=b_under[y*board_info.width+x],p->stat=0,p++;
+        if(lay&2) *p=b_main[y*board_info.width+x],p->stat=0,p++;
+        if(lay&4) *p=b_over[y*board_info.width+x],p->stat=0,p++;
+      }
+    }
+    arealayer=lay;
+  } else {
+    clear:
+    area_width=area_height=0;
+    arealayer=0;
+  }
+}
+
+static void area_place(void) {
+  Tile*p=areabuf;
+  Uint8 u=__builtin_popcount(arealayer);
+  Sint32 x,y,xx,yy;
+  Uint32 at;
+  if(!areabuf || !arealayer) return;
+  for(y=0;y<area_height;y++) for(x=0;x<area_width;x++) {
+    xx=x+xcur+area_xoffset; yy=y+ycur+area_yoffset;
+    if(xx<0 || yy<0 || xx>=board_info.width || yy>=board_info.height || (markgrid && set_mark(xx,yy,2))) {
+      p+=u;
+    } else {
+      at=yy*board_info.width+xx;
+      if(arealayer&1) {
+        if(p->stat) p++; else find_stat(x,y,b_under[at].stat,1,0),b_under[at]=*p++;
+      }
+      if(arealayer&2) {
+        if(p->stat) p++; else find_stat(x,y,b_main[at].stat,2,0),b_main[at]=*p++;
+      }
+      if(arealayer&4) {
+        if(p->stat) p++; else find_stat(x,y,b_over[at].stat,3,0),b_over[at]=*p++;
+      }
+    }
+  }
+}
+
 Uint16 edit_board(Uint16 id) {
   int i;
   Sint32 k;
@@ -2756,6 +2823,7 @@ Uint16 edit_board(Uint16 id) {
           break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
+        case -SDLK_a: if(arealayer==3) area_place(); break;
         case -SDLK_i: edit_board_info(); break;
         case -SDLK_m: exchange_mark_grid(); break;
         case -SDLK_r: resize_board(); break;
@@ -2814,6 +2882,8 @@ Uint16 edit_board(Uint16 id) {
         case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd","flood"); break;
       } emode=numprefix=0; break;
       case 'm': switch(k) {
+        case 'a': area_save(3,1); goto unmark;
+        case 'A': area_save(3,1); emode=0; break;
         case 'c': do_colon_command("&color"); goto unmark;
         case 'C': do_colon_command("&color"); emode=0; break;
         case 'd': do_colon_command("&delete"); goto unmark;
@@ -2836,6 +2906,7 @@ Uint16 edit_board(Uint16 id) {
         default: goto no_mode;
       } break;
       case 'v': switch(k) {
+        case 'a': area_save(3,0); emode=0; break;
         case 'c': do_colon_command("<:>unmark"); emode=0; break;
         case 'd': do_colon_command("<:>delete"); emode=0; break;
         case 'D': do_colon_command("<:>deletex"); emode=0; break;
@@ -2925,6 +2996,7 @@ Uint16 edit_board(Uint16 id) {
         case 0x16: vmode^=1; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
+        case -SDLK_a: if(arealayer==4) area_place(); break;
         case -SDLK_i: edit_board_info(); break;
         case -SDLK_m: exchange_mark_grid(); break;
         case -SDLK_r: resize_board(); break;
@@ -2986,6 +3058,8 @@ Uint16 edit_board(Uint16 id) {
         case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd","flood"); break;
       } emode=numprefix=0; break;
       case 'm': switch(k) {
+        case 'a': area_save(4,1); goto unmark;
+        case 'A': area_save(4,1); emode=0; break;
         case 'c': do_colon_command("&overcolor"); goto unmark1;
         case 'C': do_colon_command("&overcolor"); emode=0; break;
         case 'd': do_colon_command("&overdelete"); goto unmark1;
@@ -3006,6 +3080,7 @@ Uint16 edit_board(Uint16 id) {
         default: goto no_mode1;
       } break;
       case 'v': switch(k) {
+        case 'a': area_save(4,0); emode=0; break;
         case 'c': do_colon_command("<:>unmark"); emode=0; break;
         case 'd': do_colon_command("<:>overdelete"); emode=0; break;
         case 'g': gradient_menu(3); emode=0; break;

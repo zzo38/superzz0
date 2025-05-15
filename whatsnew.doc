@@ -23,6 +23,9 @@ SCRIPTS
 ASSEMBLY
   +  OREQ is like EQ but leaves condition flag unchanged if unequal.
 
+EDITOR
+  +  Implement area buffer in board editor.
+
 TEMPLATE
   +  Many additions to default template.
   -  Removed the "blank" template, which is not necessary; you can create
