@@ -25,6 +25,7 @@ ASSEMBLY
 
 EDITOR
   +  Implement area buffer in board editor.
+  +  Functions to copy instance data in the stat XY editor.
 
 TEMPLATE
   +  Many additions to default template.

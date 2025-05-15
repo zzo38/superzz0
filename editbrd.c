@@ -332,6 +332,16 @@ static Uint16 exchange_statxy(Stat*s,Uint16 m,Uint16 n) {
   return m;
 }
 
+static void copy_statxy(Stat*s,Uint16 m,Uint16 n) {
+  StatXY*o=s->xy+n;
+  StatXY*p=s->xy+m;
+  p->instptr=o->instptr;
+  p->layer=(p->layer&3)|(o->layer&~3);
+  p->delay=o->delay;
+  p->frame=o->frame;
+  p->extra=o->extra;
+}
+
 static void stat_xy_edit(Stat*s,Uint16 n) {
   char r;
   StatXY*o=s->xy+n;
@@ -364,6 +374,35 @@ static void stat_xy_edit(Stat*s,Uint16 n) {
     if(n) win_command('p',"Move to previous") o=s->xy+(n=exchange_statxy(s,n-1,n)),r=1;
     if(n<s->count-1) win_command('x',"Move to next") o=s->xy+(n=exchange_statxy(s,n+1,n)),r=1;
     win_command('d',"Move to end") o=s->xy+(n=exchange_statxy(s,s->count-1,n)),r=1;
+    win_blank();
+    win_command('C',"Copy instance data...") {
+      Uint16 m; Tile*b; Tile*t0; Tile*t1;
+      o->layer=(o->layer&0xF3)|(f<<2);
+      win_form("Copy instance data") {
+        win_command('A',"All") {
+          for(m=0;m<s->count;m++) copy_statxy(s,m,n);
+          break;
+        }
+        win_command('B',"Backward") {
+          for(m=0;m<n;m++) copy_statxy(s,m,n);
+          break;
+        }
+        win_command('F',"Forward") {
+          for(m=n+1;m<s->count;m++) copy_statxy(s,m,n);
+          break;
+        }
+        if(o->x<board_info.width && o->y<board_info.height && (o->layer&3)) win_command('M',"Matching tiles") {
+          b=b_under+((o->layer&3)-1)*(board_info.width*board_info.height); t0=b+o->y*board_info.width+o->x;
+          for(m=0;m<s->count;m++) if(m!=n && !((o->layer^s->xy[m].layer)&3) && s->xy[m].x<board_info.width && s->xy[m].y<board_info.height) {
+            t1=b+s->xy[m].y*board_info.width+s->xy[m].x;
+            if(t0->kind==t1->kind && t0->color==t1->color && t0->param==t1->param && t0->stat==t1->stat) copy_statxy(s,m,n);
+          }
+          break;
+        }
+        win_command_esc(0,"Cancel") break;
+      }
+      r=1;
+    }
     if(r) {
       r=0;
       win_refresh();
@@ -437,7 +476,7 @@ static void stat_edit(int n) {
             win_boolean('R',"Reverse X",j,1);
             win_boolean('v',"Reverse Y",j,2);
             win_boolean('s',"Reverse Layer",j,4);
-            win_boolean('U',"First if user bits set",j,8);
+            win_boolean('u',"First if user bits set",j,8);
             win_blank();
             win_command('E',"Execute") {
               numprefix=(i<<4)+j;

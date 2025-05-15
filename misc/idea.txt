@@ -482,11 +482,6 @@ for the screen editor.)
 * Tile queue buffer: Like the backbuffer in KevEdit. The gradient menu can
 have an option to use the tile queue buffer for making gradients.
 
-* Area buffer: Stores an area of any shape (not necessarily rectangular),
-which can later be pasted in the same or other boards, any number of times.
-It can have an origin when saved, so that pasting it will treat the cursor
-position as the origin for the paste position.
-
 * Import/export MZM: Only layer mode MZM is relevant for Super ZZ Zero.
 
 * Import/export other formats: ANSI, XBIN, etc. This may also include user
@@ -494,8 +489,6 @@ configuration options for whether or not to import/export SAUCE. It might
 also be possible to specify external programs for converting other formats.
 
 * Undo/redo
-
-* Secondary mark grid
 
 * World map
 
