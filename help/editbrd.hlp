@@ -34,6 +34,7 @@ ALT+Z      Maximum numeric prefix
 ^O         Stat list
 ^P         Edit text of stat
 ^V         Toggle view mode
+^Y         Resize tile queue
 ^Z         Find player or numbered stat
 SPACE      Toggle mark
 A          Add new board
@@ -53,6 +54,7 @@ p          Place tile in main layer
 q          Write tile in main layer
 Q          Write tile in under layer
 r          Reverse background/foreground colour
+R          Remove stat from tile to be placed
 t          Text entry mode
 u          Unmark all
 v          Block mode
@@ -63,6 +65,8 @@ z          Far movement prefix (match kind only)
 Z          Far movement prefix (match kind and colour)
  :         Colon commands
 F1-F12     Custom menus
+, .        Circulate tile queue
+ /         Toggle tile queue auto-circulation mode
 [ ]        Go to previous/next board
 { }        Go to first/last board
 < >        Go to northwest/southeast corner of board
@@ -114,6 +118,7 @@ cø         Set colour
 dø         Delete
 fø         Place floor
 pø         Place
+rø         Place random from current and tile queue
 
 "Place floor" will place in the main layer if it is empty, but otherwise
 will place in the under layer. Existing floors will be unaffected.
@@ -319,6 +324,9 @@ arguments have commas in between, and can have an optional minus sign.
 current tile. (This can be used with commands such as "place", together
 with offset filters, to copy colours of nearby tiles.)
 
+* /Q will override the argument tile with a random tile from the tile
+queue or from the current tile.
+
 * /T is like /C but overrides the entire tile and not only the colour.
 
 * /b selects only the border of the specified rectangular area, rather than
@@ -328,6 +336,8 @@ all cells inside of the area.
 arguments are the X and Y multiplier, the third argument is the modulus,
 and the rest specify what values of remainders of the above calculation
 denote tiles to be selected.
+
+* /q selects tiles that match any tile in the tile queue.
 
 * /r will select tiles at random. The first argument is the denominator
 and the second argument is the numerator of a probability. If the arguments

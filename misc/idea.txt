@@ -479,9 +479,6 @@ implement in future for ZZ Zero. (This is probably not a high priority.)
 Some ideas about board editor features. (Some of these may also be suitable
 for the screen editor.)
 
-* Tile queue buffer: Like the backbuffer in KevEdit. The gradient menu can
-have an option to use the tile queue buffer for making gradients.
-
 * Import/export MZM: Only layer mode MZM is relevant for Super ZZ Zero.
 
 * Import/export other formats: ANSI, XBIN, etc. This may also include user

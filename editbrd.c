@@ -11,6 +11,10 @@ static Uint16 brd_id;
 static Uint16 xcur,ycur,xcur2,ycur2;
 static Uint8 status_on=255;
 static Tile clip,overclip;
+static Tile*clipq;
+static Tile*overclipq;
+static Uint8*apparent_clipq;
+static Uint8 nclipq,autocirc;
 static Uint8 apparent_clip;
 static Uint16 numprefix;
 static Uint8 emode,vmode;
@@ -696,6 +700,26 @@ static void escroll(void) {
   if(scroll_y<0) scroll_y=0;
 }
 
+static void set_apparent_clipq(void) {
+  Uint8 n,c,d;
+  for(n=0;n<nclipq;n++) {
+    c=elem_def[clipq[n].kind].app[0];
+    d=elem_def[clipq[n].kind].app[1];
+    if(c&0x20) {
+      apparent_clipq[n]=appearance_mapping[((d&0x7E)+((clipq[n].param>>(c&7))&"\x01\x03\x07\x0F"[(c>>3)&3]))&0x7F];
+    } else switch(c&0x1F) {
+      case AP_FIXED: case AP_UNDER: apparent_clipq[n]=d; break;
+      case AP_PARAM: apparent_clipq[n]=d+clipq[n].param; break;
+      case AP_LINES: apparent_clipq[n]=appearance_mapping[(d&0x70)|0x0F]; break;
+      case AP_ANIMATE: apparent_clipq[n]=appearance_mapping[(animation[d&3].step[0]+(d&0x7C))&0x7F]; break;
+      case AP_MISC1: if(clipq[n].stat && clipq[n].stat<=maxstat) apparent_clipq[n]=stats[clipq[n].stat-1].misc1; else apparent_clipq[n]=d; break;
+      case AP_MISC2: if(clipq[n].stat && clipq[n].stat<=maxstat) apparent_clipq[n]=stats[clipq[n].stat-1].misc2; else apparent_clipq[n]=d; break;
+      case AP_MISC3: if(clipq[n].stat && clipq[n].stat<=maxstat) apparent_clipq[n]=stats[clipq[n].stat-1].misc3; else apparent_clipq[n]=d; break;
+      default: apparent_clipq[n]='?';
+    }
+  }
+}
+
 static void set_apparent_clip(void) {
   Uint8 c=elem_def[clip.kind].app[0];
   Uint8 d=elem_def[clip.kind].app[1];
@@ -716,9 +740,10 @@ static void set_apparent_clip(void) {
 static void estatus(void) {
   // 00000000001111111111222222222233333333334444444444555555555566666666667777777777
   // 01234567890123456789012345678901234567890123456789012345678901234567890123456789
-  // _____ee<c>_______________<pp>s*umo_____  VE                +____+____(____,____)
+  // _____ee<c>_______________<pp>s*umo_____  VE/qqqqqqqqqqqqq  +____+____(____,____)
   char buf[80];
   int y=24;
+  int x;
   if(board_info.height>24 && v_ycur>12) y=0;
   memset(v_color+y*80,0x11,80);
   draw_text(0,y,buf,0x1B,snprintf(buf,80,"%5d",brd_id));
@@ -751,12 +776,20 @@ static void estatus(void) {
   } else if(emode=='w' && xcur2) {
     draw_text(59,y,buf,0x19,snprintf(buf,80,"%05d",xcur2));
   }
+  if(nclipq) {
+    v_char[y*80+43]=autocirc?'/':'.';
+    v_color[y*80+43]=autocirc?0x1E:0x19;
+  }
+  for(x=0;x<13 && x<nclipq;x++) {
+    v_char[y*80+x+44]=apparent_clipq[x];
+    v_color[y*80+x+44]=clipq[x].color;
+  }
 }
 
 static void estatus_over(void) {
   // 00000000001111111111222222222233333333334444444444555555555566666666667777777777
   // 01234567890123456789012345678901234567890123456789012345678901234567890123456789
-  // _____^^<c>________________<p>s umo_____  VE                +____+____(____,____)
+  // _____^^<c>________________<p>s umo_____  VE/qqqqqqqqqqqqq  +____+____(____,____)
   char buf[80];
   int y=24;
   int x;
@@ -789,6 +822,14 @@ static void estatus_over(void) {
   v_char[y*80+79]=")\x1E\x1F\x04"[(scroll_y?1:0)+(scroll_y+25<board_info.height?2:0)];
   if(emode=='v') {
     draw_text(59,y,buf,0x19,snprintf(buf,80,"%c%04d%c%04d",xcur2>xcur?'-':'+',abs(xcur2-xcur),ycur2>ycur?'-':'+',abs(ycur2-ycur)));
+  }
+  if(nclipq) {
+    v_char[y*80+43]=autocirc?'/':'.';
+    v_color[y*80+43]=autocirc?0x1E:0x19;
+  }
+  for(x=0;x<13 && x<nclipq;x++) {
+    v_char[y*80+x+44]=overclipq[x].param;
+    v_color[y*80+x+44]=overclipq[x].color;
   }
 }
 
@@ -886,6 +927,27 @@ static void write_under(Uint16 x,Uint16 y,Tile t) {
   if(t.stat && z) find_stat(x,y,t.stat,0,1);
 }
 
+static void circulate_clipq(int dir,Tile*c,Tile*cq) {
+  int i;
+  Uint8 a;
+  Tile t;
+  if(!nclipq) return;
+  while(dir<0) dir+=nclipq+1;
+  dir%=nclipq+1;
+  while(dir-->0) {
+    t=*cq;
+    for(i=0;i<nclipq-1;i++) cq[i]=cq[i+1];
+    cq[nclipq-1]=*c;
+    *c=t;
+    if(cq==clipq) {
+      a=*apparent_clipq;
+      memmove(apparent_clipq,apparent_clipq+1,nclipq-1);
+      apparent_clipq[nclipq-1]=apparent_clip;
+      apparent_clip=a;
+    }
+  }
+}
+
 static void cursor_move(Sint32 xd,Sint32 yd) {
   Sint32 x=xcur+xd*(numprefix?:1);
   Sint32 y=ycur+yd*(numprefix?:1);
@@ -895,6 +957,7 @@ static void cursor_move(Sint32 xd,Sint32 yd) {
   } else {
     if(!numprefix) numprefix=1;
     while(numprefix-- && xcur+xd>=0 && xcur+xd<board_info.width && ycur+yd>=0 && ycur+yd<board_info.height) {
+      if(autocirc) circulate_clipq(-1,&clip,clipq);
       place_at(xcur+=xd,ycur+=yd,clip);
     }
   }
@@ -910,6 +973,7 @@ static void over_cursor_move(Sint32 xd,Sint32 yd) {
   } else {
     if(!numprefix) numprefix=1;
     while(numprefix-- && xcur+xd>=0 && xcur+xd<board_info.width && ycur+yd>=0 && ycur+yd<board_info.height) {
+      if(autocirc) circulate_clipq(-1,&overclip,overclipq);
       over_place_at(xcur+=xd,ycur+=yd,clip);
     }
   }
@@ -1533,9 +1597,22 @@ typedef struct {
   Uint8 narg,kind,inv;
 } Filter;
 
+static int cf_clipq(Uint16 x,Uint16 y,Filter*f) {
+  Uint32 at=y*board_info.width+x;
+  int i;
+  for(i=0;i<nclipq;i++) if(!memcmp(b_under[at].values,clipq[i].values,4) || !memcmp(b_main[at].values,clipq[i].values,4)) return 1;
+  return 0;
+}
+
 static int cf_copy_color(Uint16 x,Uint16 y,Filter*f) {
   Uint32 at=y*board_info.width+x;
   cctile.color=b_main[at].color;
+  return 1;
+}
+
+static int cf_copy_queue(Uint16 x,Uint16 y,Filter*f) {
+  int i=dice(nclipq+1);
+  cctile=i?clipq[i-1]:clip;
   return 1;
 }
 
@@ -1593,8 +1670,10 @@ static const FilterCode filtcode[127]={
   ['&']=cf_mark,
   ['?']=cf_tile,
   ['C']=cf_copy_color,
+  ['Q']=cf_copy_queue,
   ['T']=cf_copy_tile,
   ['m']=cf_modulo,
+  ['q']=cf_clipq,
   ['r']=cf_random,
   ['s']=cf_stat,
   ['x']=cf_mark2,
@@ -2526,6 +2605,7 @@ static void gradient_menu(Uint8 lay) {
       case 1: patmax=strlen(pats)?:1; break;
       case 2: patmax=grads[patn].n; break;
       case 3: patmax=(abs(xcur2-xcur)+1)*(abs(ycur2-ycur)+1); break;
+      case 4: patmax=nclipq>72?72:nclipq; break;
     }
   }
   Uint32 patconv(float m) {
@@ -2583,6 +2663,7 @@ static void gradient_menu(Uint8 lay) {
       win_option('w',"Current color with string",pat,1) win_refresh();
       win_option('P',"Preset",pat,2) win_refresh();
       win_option('B',"Block area",pat,3) win_refresh();
+      if(nclipq) win_option('q',"Tile queue",pat,4) win_refresh();
       win_command('e',"Preset menu") {
         if((patn=gradient_preset_menu())!=255) pat=2; else patn=0;
         win_refresh();
@@ -2616,6 +2697,12 @@ static void gradient_menu(Uint8 lay) {
             }
             break;
           case 3: /* ignored */ break;
+          case 4:
+            for(i=patso;i<patmax-pateo;i++) {
+              v_char[i+1]=(lay==3?overclipq[i].param:apparent_clipq[i]);
+              v_color[i+1]=(lay==3?overclipq[i].color:clipq[i].color);
+            }
+            break;
         }
       }
       win_blank();
@@ -2729,6 +2816,9 @@ static void gradient_menu(Uint8 lay) {
       case 3:
         t=(lay==3?b_over:lay==1?b_under:b_main)[k%abs(xcur2+1-xcur)+(k/abs(ycur2+1-ycur))*w];
         break;
+      case 4:
+        t=(lay==3?overclipq:clipq)[k];
+        break;
     }
     if(aff&1) b->kind=t.kind;
     if(aff&2) b->color=t.color;
@@ -2806,6 +2896,28 @@ static void area_place(void) {
   }
 }
 
+static void resize_tile_queue(Uint16 nq) {
+  int i;
+  if(nq) {
+    clipq=realloc(clipq,nq*sizeof(Tile));
+    overclipq=realloc(overclipq,nq*sizeof(Tile));
+    apparent_clipq=realloc(apparent_clipq,nq);
+    if(!clipq || !overclipq || !apparent_clipq) err(1,"Allocation failed");
+    for(i=nclipq;i<nq;i++) {
+      clipq[i]=clip;
+      overclipq[i]=overclip;
+      apparent_clipq[i]=apparent_clip;
+    }
+    nclipq=nq;
+    nq=0;
+    set_apparent_clipq();
+  } else {
+    free(clipq); free(overclipq); free(apparent_clipq);
+    nclipq=0;
+    autocirc=0;
+  }
+}
+
 Uint16 edit_board(Uint16 id) {
   int i;
   Sint32 k;
@@ -2852,6 +2964,7 @@ Uint16 edit_board(Uint16 id) {
           }
           break;
         case 0x16: vmode^=1; break;
+        case 0x19: resize_tile_queue(numprefix); numprefix=0; break;
         case 0x1A:
           if(!numprefix) numprefix=1;
           if(numprefix<=maxstat && stats[numprefix-1].count) {
@@ -2889,10 +3002,11 @@ Uint16 edit_board(Uint16 id) {
         case 'n': find_next_marked(numprefix?:1); numprefix=0; break;
         case 'N': find_next_marked(-(numprefix?:1)); numprefix=0; break;
         case 'o': goto over; break;
-        case 'p': place_at(xcur,ycur,clip); break;
-        case 'q': write_at(xcur,ycur,clip); break;
-        case 'Q': write_under(xcur,ycur,clip); break;
+        case 'p': place_at(xcur,ycur,clip); if(autocirc) circulate_clipq(-1,&clip,clipq); break;
+        case 'q': write_at(xcur,ycur,clip); if(autocirc) circulate_clipq(-1,&clip,clipq); break;
+        case 'Q': write_under(xcur,ycur,clip); if(autocirc) circulate_clipq(-1,&clip,clipq); break;
         case 'r': clip.color=(clip.color<<4)|(clip.color>>4); break;
+        case 'R': clip.stat=0; break;
         case 't': emode='t'; xcur2=xcur; break;
         case 'u': unmark: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
@@ -2900,6 +3014,9 @@ Uint16 edit_board(Uint16 id) {
         case 'y': clip=b_main[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case 'Y': clip=b_under[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case 'z': case 'Z': emode=k; break;
+        case ',': circulate_clipq(-(numprefix?:1),&clip,clipq); numprefix=0; break;
+        case '.': circulate_clipq(+(numprefix?:1),&clip,clipq); numprefix=0; break;
+        case '/': autocirc^=1; break;
         case '<': case -SDLK_HOME: xcur=ycur=0; break;
         case '>': case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
         case '[': switch_to_board(brd_id-(numprefix?:1)); numprefix=0; break;
@@ -2931,6 +3048,8 @@ Uint16 edit_board(Uint16 id) {
         case 'F': do_colon_command("&floorplace"); emode=0; break;
         case 'p': do_colon_command("&place"); goto unmark;
         case 'P': do_colon_command("&place"); emode=0; break;
+        case 'r': do_colon_command("&/Q place"); goto unmark;
+        case 'R': do_colon_command("&/Q place"); emode=0; break;
         case 'h': case -SDLK_LEFT: mass_move(-(numprefix?:1),0,copy_cell); cursor_move(-1,0); break;
         case 'j': case -SDLK_DOWN: mass_move(0,numprefix?:1,copy_cell); cursor_move(0,1); break;
         case 'k': case -SDLK_UP: mass_move(0,-(numprefix?:1),copy_cell); cursor_move(0,-1); break;
@@ -3033,6 +3152,7 @@ Uint16 edit_board(Uint16 id) {
           }
           break;
         case 0x16: vmode^=1; break;
+        case 0x19: resize_tile_queue(numprefix); numprefix=0; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
         case -SDLK_a: if(arealayer==4) area_place(); break;
@@ -3061,8 +3181,9 @@ Uint16 edit_board(Uint16 id) {
         case 'n': find_next_marked(numprefix?:1); numprefix=0; break;
         case 'N': find_next_marked(-(numprefix?:1)); numprefix=0; break;
         case 'o': goto norm; break;
-        case 'p': over_place_at(xcur,ycur,overclip); break;
-        case 'r': clip.color=(clip.color<<4)|(clip.color>>4); break;
+        case 'p': over_place_at(xcur,ycur,overclip); if(autocirc) circulate_clipq(-1,&overclip,overclipq); break;
+        case 'r': overclip.color=(overclip.color<<4)|(overclip.color>>4); break;
+        case 'R': overclip.stat=0; break;
         case 't': emode='t'; xcur2=xcur; break;
         case 'T': overclip.kind|=OVER_VISIBLE; emode='t'; xcur2=xcur; break;
         case 'u': unmark1: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
@@ -3070,6 +3191,9 @@ Uint16 edit_board(Uint16 id) {
         case 'y': overclip=b_over[xcur+ycur*board_info.width]; break;
         case 'z': case 'Z': emode=k; break;
         case ';': overclip.param=ask_color_char(1,overclip.param); break;
+        case ',': circulate_clipq(-(numprefix?:1),&overclip,overclipq); numprefix=0; break;
+        case '.': circulate_clipq(+(numprefix?:1),&overclip,overclipq); numprefix=0; break;
+        case '/': autocirc^=1; break;
         case '<': case -SDLK_HOME: xcur=ycur=0; break;
         case '>': case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
         case '[': switch_to_board(brd_id-(numprefix?:1)); numprefix=0; break;

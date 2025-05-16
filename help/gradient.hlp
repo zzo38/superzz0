@@ -77,6 +77,9 @@ and characters. The current kind is used.
 not affected by changes to the shape coordinates; it will always use the
 originally selected block.)
 
+þ Tile queue: Uses the tiles in the tile queue as the pattern. (This is
+only available if the size of the tile queue is nonzero.)
+
 You can specify the start/end offsets, which will truncate the pattern at
 the start or end by removing that many pieces. (You can see the effect of
 this in the preview area.)
