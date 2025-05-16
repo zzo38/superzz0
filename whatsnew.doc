@@ -28,6 +28,8 @@ EDITOR
   +  Implement tile queue in board editor.
   +  Functions to copy instance data in the stat XY editor.
   +  Push R in board editor to clear stat from stored tile.
+  +  The z and Z prefixes now work in block selection mode without causing
+     the block selection to be lost.
 
 TEMPLATE
   +  Many additions to default template.

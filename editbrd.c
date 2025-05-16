@@ -3082,6 +3082,8 @@ Uint16 edit_board(Uint16 id) {
         case 't': block_tiling(0); emode=0; cc_unmark(0,0,markwidth,markheight,""); break;
         case 'T': block_tiling(0); emode=0; break;
         case 'V': do_colon_command("<:>vflip"); emode=0; break;
+        case 'z': emode=0x84; break;
+        case 'Z': emode=0x8E; break;
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode;
       } break;
@@ -3112,6 +3114,12 @@ Uint16 edit_board(Uint16 id) {
         case 'k': case -SDLK_UP: far_cursor_move(0,-1,emode=='Z',0); break;
         case 'l': case -SDLK_RIGHT: far_cursor_move(1,0,emode=='Z',0); break;
       } emode=numprefix=0; break;
+      case 0x84: case 0x8E: switch(k) {
+        case 'h': case -SDLK_LEFT: far_cursor_move(-1,0,emode==0x8E,0); break;
+        case 'j': case -SDLK_DOWN: far_cursor_move(0,1,emode==0x8E,0); break;
+        case 'k': case -SDLK_UP: far_cursor_move(0,-1,emode==0x8E,0); break;
+        case 'l': case -SDLK_RIGHT: far_cursor_move(1,0,emode==0x8E,0); break;
+      } emode='v'; numprefix=0; break;
       default: emode=0;
     }
   }
