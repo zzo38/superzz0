@@ -33,6 +33,8 @@ EDITOR
   +  Push R in board editor to clear stat from stored tile.
   +  The z and Z prefixes now work in block selection mode without causing
      the block selection to be lost.
+  +  Use ALT+P in text editor for adding a character number.
+  =  Retain selection of character for ^P in text editor.
 
 TEMPLATE
   +  Many additions to default template.

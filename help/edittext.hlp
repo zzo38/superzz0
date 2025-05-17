@@ -16,6 +16,7 @@
  ^N   split line
  @N   insert line
  ^P   add character code
+ @P   add character number
  ^QC  end of document
  ^QD  end of line
  ^QE  top of screen

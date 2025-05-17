@@ -260,8 +260,9 @@ static Uint8*text_editor_1(Uint8*text) {
     case -SDLK_m: line_break(lines[yc].len,yc); xc=0; ++yc; goto display;
     case_CTRL('N'): line_break(xc,yc); goto display;
     case -SDLK_n: line_break(0,yc); xc=0; goto display;
-    case_CTRL('P'): xc+=ins_char(yc,xc,ask_color_char(1,askch)); goto display;
+    case_CTRL('P'): xc+=ins_char(yc,xc,askch=ask_color_char(1,askch)); goto display;
     case_CTRLK('P'): case -SDLK_F11: print_document(); goto display;
+    case -SDLK_p: snprintf(buf,10,"%d",askch=ask_color_char(1,askch)); for(i=0;buf[i];i++) xc+=ins_char(yc,xc,buf[i]); goto display;
     case_CTRL('Q'): prefix=1; break;
     case_CTRL('R'): case -SDLK_PAGEUP: yc=(yc>23?yc-23:0); scrol=(scrol>23?scrol-23:0); goto display;
     case_CTRLQ('R'): xc=yc=0; goto display;
