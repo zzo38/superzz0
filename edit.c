@@ -321,15 +321,17 @@ static void element_list_callback(Uint16 n,int y,void*uz) {
   v_char[80*y+32]=(e->attrib&A_SENSOR?'S':0xFA);
   v_color[80*y+33]=(e->attrib&A_TRANSPORTABLE?0x0F:0x08);
   v_char[80*y+33]=(e->attrib&A_TRANSPORTABLE?'t':0xFA);
+  v_color[80*y+34]=(e->attrib&A_PERMANENT?0x0F:0x08);
+  v_char[80*y+34]=(e->attrib&A_PERMANENT?'P':0xFA);
   for(x=0;x<8;x++) {
-    v_color[80*y+x+34]=(e->attrib&(A_MOVE_C0<<x)?0x0A:0x08);
-    v_char[80*y+x+34]=(e->attrib&(A_MOVE_C0<<x)?x+'0':0xFA);
-    v_color[80*y+x+42]=(e->attrib&(A_MISC_A<<x)?0x06:0x08);
-    v_char[80*y+x+42]=(e->attrib&(A_MISC_A<<x)?x+'A':0xFA);
+    v_color[80*y+x+35]=(e->attrib&(A_MOVE_C0<<x)?0x0A:0x08);
+    v_char[80*y+x+35]=(e->attrib&(A_MOVE_C0<<x)?x+'0':0xFA);
+    v_color[80*y+x+43]=(e->attrib&(A_MISC_A<<x)?0x06:0x08);
+    v_char[80*y+x+43]=(e->attrib&(A_MISC_A<<x)?x+'A':0xFA);
   }
   for(x=0;x<16;x++) {
-    v_color[80*y+x+52]=(e->event[x]?0x02:0x08);
-    v_char[80*y+x+52]=(e->event[x]?x+(x<8?'A':'S'-8):0xFA);
+    v_color[80*y+x+53]=(e->event[x]?0x02:0x08);
+    v_char[80*y+x+53]=(e->event[x]?x+(x<8?'A':'S'-8):0xFA);
   }
 }
 
@@ -349,6 +351,7 @@ static void edit_element(Uint8 en) {
     win_boolean('o',"Floor",e->attrib,A_FLOOR);
     win_boolean('S',"Sensor",e->attrib,A_SENSOR);
     win_boolean('n',"Transportable",e->attrib,A_TRANSPORTABLE);
+    win_boolean('t',"Permanent",e->attrib,A_PERMANENT);
     win_heading("Movement classes:");
     win_boolean('0',"Class 0",e->attrib,A_MOVE_C0);
     win_boolean('1',"Class 1",e->attrib,A_MOVE_C1);

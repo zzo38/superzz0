@@ -145,7 +145,7 @@ typedef struct {
 #define A_CRUSH 0x00000100
 #define A_FLOOR 0x00000200
 #define A_UNDER_BGCOLOR 0x00000400 // if colour<15 then use background colour of under layer
-#define A_UNKNOWN 0x00000800 // (reserved)
+#define A_PERMANENT 0x00000800 // many things are unable to overwrite it
 #define A_LIGHT 0x00001000 // suppress overlay
 #define A_SPECIAL 0x00002000 // (reserved)
 #define A_SENSOR 0x00004000

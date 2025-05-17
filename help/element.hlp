@@ -46,6 +46,9 @@ sensor event.
 
 Transportable: Allows this element to be transported through a transporter.
 
+Permanent: Prevents the tile from being overwritten by several things, such
+as #PUT, #CHANGE, SINK, DROP, and TELE (in the under layer).
+
 Movement classes: Defines which classes of other objects this object is
 normally allowed to move into (for any reason, including pushing, crushing,
 transporting, and moving across floors and other terrains); even if the

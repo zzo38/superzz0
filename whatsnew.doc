@@ -14,6 +14,9 @@ The time zone for the dates in this file is Pacific (British Columbia).
 
 === Version ??? ===
 
+GAME
+  +  Add the A_PERMANENT attribute.
+
 SCRIPTS
   +  The #VISIBLE condition is implemented.
   +  #ENDGAME command to end the game.

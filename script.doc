@@ -416,6 +416,9 @@ can optionally be preceded and/or followed by <> with two hex digits in
 between (the preceding is the colour and the following is the parameter),
 and optionally followed by ! to mean only if it is a stat.
 
+The hex digits for the colour and parameter can also be ? to mean don't
+care about that nybble.
+
 Instead of the kind of element, you may also instead use @name which is
 the name of a program, if that program uses the @name=kind form, which
 will create a XY record for that stat and use the kind specified there.

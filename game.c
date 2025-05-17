@@ -2197,6 +2197,7 @@ static void change_to_script_kind(Uint32 x,Uint32 y,Uint8 lay,const ScriptKind*s
   if(x>=board_info.width || y>=board_info.height || sk->kmask) return;
   if(lay==2) {
     // Main
+    if(elem_def[b_main[at].kind].attrib&A_PERMANENT) return;
     zc=b_main[at].color;
     zp=b_main[at].param;
     break_tile(at,2,0,0,0);
@@ -2216,6 +2217,7 @@ static void change_to_script_kind(Uint32 x,Uint32 y,Uint8 lay,const ScriptKind*s
     b_main[at].stat=sk->stat;
   } else if(lay==1) {
     // Under
+    if(elem_def[b_under[at].kind].attrib&A_PERMANENT) return;
     zc=b_under[at].color;
     zp=b_under[at].param;
     break_tile(at,1,0,0,0);
@@ -2239,6 +2241,7 @@ static void put_script_kind(Uint32 x,Uint32 y,const ScriptKind*sk) {
   Uint32 at=y*board_info.width+x;
   StatXY*o=0;
   if(x>=board_info.width || y>=board_info.height || sk->kmask) return;
+  if(elem_def[b_main[at].kind].attrib&A_PERMANENT) return;
   zc=b_main[at].color;
   zp=b_main[at].param;
   if(A_FLOOR&elem_def[b_main[at].kind].attrib&~elem_def[sk->kind].attrib) {
@@ -3362,6 +3365,8 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
               if(rs->sensor.stat) step_on_sensor_stat(u);
               goto skipdrop;
             }
+          } else if(elem_def[b_main[u].kind].attrib&A_PERMANENT) {
+            break;
           }
           b_under[u]=b_main[u];
           if(b_main[u].stat) if(rs=find_statxy(b_main+u)) rs->layer--;
@@ -3670,6 +3675,25 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           u=x+y*board_info.width;
           ((rs->layer&3)==1?b_under:(rs->layer&3)==2?b_main:b_over)[u].param=regs[fo];
         } break;
+      case OP_PTU:
+        if((t=convxy(so,x,y))!=-1) {
+          condflag=1;
+          u=b_under[t].stat;
+          if(u && u!=((regs[fo]>>24)&0xFF) && (rs=find_statxy(b_under+t))) rs->x=rs->y=rs->instptr=65535,rs->layer=128,rs->delay=255;
+          b_under[t].kind=regs[fo]&0xFF;
+          b_under[t].color=(regs[fo]>>8)&0xFF;
+          b_under[t].param=(regs[fo]>>16)&0xFF;
+          b_under[t].stat=(regs[fo]>>24)&0xFF;
+          if(b_under[t].stat && u!=b_under[t].stat && b_under[t].stat<=maxstat) {
+            rs=add_statxy(b_main[t].stat);
+            rs->x=t%board_info.width;
+            rs->y=t/board_info.width;
+            rs->layer=1;
+          }
+        } else {
+          condflag=0;
+        }
+        break;
       case OP_PTUC: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].color=regs[fo]; else condflag=0; break;
       case OP_PTUK: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].kind=regs[fo]; else condflag=0; break;
       case OP_PTUP: if((t=convxy(so,x,y))!=-1) condflag=1,b_under[t].param=regs[fo]; else condflag=0; break;
@@ -3745,7 +3769,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         goto store;
       case OP_SINK:
         t=convxy(so,x,y);
-        if(t!=-1 && !b_under[t].stat) {
+        if(t!=-1 && !b_under[t].stat && !((elem_def[b_main[t].kind].attrib|elem_def[b_under[t].kind].attrib)&A_PERMANENT)) {
           regs[fo]=pack_tile(b_under+t);
           if(b_main[t].stat) if(rs=find_statxy(b_main+t)) rs->layer--;
           b_under[t]=b_main[t];
@@ -3793,8 +3817,9 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           t=convxy(so,x,y);
           if(t==-1) break;
           if(b_under[t].stat && !(elem_def[b_main[t].kind].attrib&A_FLOOR)) break;
+          if(elem_def[b_under[t].kind].attrib&A_PERMANENT) break;
           u=rs->x+rs->y*board_info.width;
-          if(!b_main[u].stat) break;
+          if(rs->x>=board_info.width || rs->y>=board_info.height || !b_main[u].stat) break;
           if(t==u) {
             condflag=1;
             break;
