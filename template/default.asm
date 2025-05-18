@@ -41,7 +41,7 @@
 ;   UserData = Time limit (0=none)
 ; Stat uses:
 ;   1 = player
-;   2 = bullets/stars
+;   2 = projectiles and some temporary stats
 ; Predefined stat names (not necessarily present on all boards):
 ;   _1 = Creatures with speed 1 (Runner, Ruffian)
 ;   _2 = Creatures with speed 2 (Lion, Tiger, Bear, Shark)
@@ -373,7 +373,7 @@ SPFIRE	FORW H,Z
 	GTMC C,0
 	AND C,7
 	BGIV D,C
-	PEER C,2F
+	PEER C,COLOR
 	JF D,1F
 	TEXT E,"You now have the "
 	TEXT G,C
@@ -385,13 +385,13 @@ SPFIRE	FORW H,Z
 	MESS G," key!"
 	SFX A,"@22SC<C"
 	LET S,0
-2H	DATA "black","blue","green","cyan","red","purple","yellow","white"
+COLOR	DATA "black","blue","green","cyan","red","purple","yellow","white"
 	EV T,_DOOR
 	GTMC C,0
 	LET C,%B,C,$34
 	BTAK D,C
 	TEXT E,"The "
-	PEER C,2B
+	PEER C,COLOR
 	TEXT G,C
 	JF D,1F
 	MESS G," door is now open."
@@ -1461,6 +1461,66 @@ CENMOV	LET D,Z
 	PTUK A,0
 	LET S,0
 
+; **** Swinging Door ****
+; Parameter:
+;   bit0 = Set if fully open or closed, clear if half way open/closed
+;   bit1 = Orientation (clear=vertical, set=horizontal)
+;   bit3-bit2 = Direction (0=NE, 1=NW, 2=SW, 3=SE)
+;   bit7 = Locked
+; (bit7-bit4 are also used temporarily during opening)
+
+	EV T,_SWINGINGDOOR
+	GTMP A,0
+	JEV A,0
+	BTST A,7
+	JF A,1F
+	; Door is locked
+	TEXT E,"The "
+	GTMC C,0
+	AND C,7
+	BTAK D,C
+	PEER C,COLOR
+	TEXT G,C
+	JT C,2F
+	MESS G," door is locked!"
+	SFX A,"@22T<<GC"
+	LET S,0
+2H	MESS G," door is now unlocked."
+	SFX A,"@23T<CG>C"
+	XOR A,$80
+	PTMP A,0
+	; Not locked
+1H	XOR C,C
+	LET D,$19CC8
+	RSH D,A
+	MOVE C,$0013
+	JT C,1F
+	SFX A,"@22<G#<G#C"
+	MESS E,"The door is blocked from opening!"
+	LET S,0
+	; Door is opening
+1H	SFX A,"@22<<G>GD#>D#"
+	XOR A,10
+	LSH A,4
+	BTST A,6
+	FLET A,%,A,2
+	PTMP A,0
+	INC A,1
+	PTMS A,0
+	MNEW E,0
+	PSD A,E
+	LET S,0
+
+	EV B,_SWINGINGDOOR
+	LET A,%UR,Z,4
+	LET C,0
+	LET D,$4C99D
+	RSH D,A
+	MOVE C,$0013
+	JF E,0
+	PTMP A,C
+	DIE G,W
+
 ; **** Duplicator ****
 ; Parameter:
 ;   bit2-bit0 = Phase
@@ -2006,6 +2066,7 @@ THSTAR	GTMK C,0
 	ED 1,"Gates:"
 	ED 'A',"Gate",_GATE,$0000
 	ED 'J',"Open Gate",_OPENGATE,$0000
+	ED 'S',"Swinging Door",_SWINGINGDOOR,$0000
 	ED 1,"Miscellaneous:"
 	ED 'T',"Transporter",_TRANSPORTER,$0000
 	ED 'Y',"Pushable Transporter",_PUSHTRANSPORTER,$0000
@@ -2304,6 +2365,21 @@ E_CONV	ED '=',"-MP"
 	ED 'O',$0007
 	ED2 'O',"Clock~wise",1
 	ED2 'O',"Countercloc~kwise",0
+	ED 0
+
+	ED0 _SWINGINGDOOR
+	ED 'H',"Orientation:"
+	ED 'O',$0001
+	ED2 'O',"~Horizontal",1
+	ED2 'O',"~Vertical",0
+	ED 'H',"Direction:"
+	ED 'O',$0012
+	ED2 'O',"~North/East",0
+	ED2 'O',"North/~West",1
+	ED2 'O',"~South/West",2
+	ED2 'O',"South/~East",3
+	ED 'H',0
+	ED2 'B',"~Locked",$0007
 	ED 0
 
 ; **** Revealing lists ****

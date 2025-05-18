@@ -364,6 +364,13 @@ Gate
 Open Gate
   A gate that is already open; it is a floor but will soon close.
 
+Swinging Door
+  Moves out of the way when touched, allowing passing through. It cannot
+  open if it is blocked, but can move stuff out of the way if there is any
+  in the way. The door remains open until touched again to close it. The
+  door may optionally be locked; if it is locked then it can be opened with
+  a key which is then consumed and then the door will remain unlocked.
+
 Miscellaneous:
 
 Transporter

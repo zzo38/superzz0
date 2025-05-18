@@ -25,6 +25,7 @@ SCRIPTS
 
 ASSEMBLY
   +  OREQ is like EQ but leaves condition flag unchanged if unequal.
+  =  Correct return value of UNEW, MNEW, ONEW.
 
 EDITOR
   +  Implement area buffer in board editor.

@@ -3530,7 +3530,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         rs->layer=2;
         rs->x=so%board_info.width;
         rs->y=so/board_info.width;
-        so=((rs-stats[b_main[so].stat].xy)<<16)|b_main[so].stat;
+        so=((rs-stats[b_main[so].stat-1].xy)<<16)|b_main[so].stat;
         goto store;
       case OP_MOD: if(so) condflag=1,regs[fo]%=so; else condflag=0; break;
       case OP_MOVE: so=general_move(0,regs[fo],x,y,(so&0xF8)+0x8800+(so&7)*0x1100,(so&0xFF00)+1,0,0); goto setxy;
@@ -3546,7 +3546,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         rs->layer=3;
         rs->x=so%board_info.width;
         rs->y=so/board_info.width;
-        so=((rs-stats[b_over[so].stat].xy)<<16)|b_over[so].stat;
+        so=((rs-stats[b_over[so].stat-1].xy)<<16)|b_over[so].stat;
         goto store;
       case OP_OR: regs[fo]|=so; break;
       case OP_OREQ: if(so==regs[fo]) condflag=1; break;
@@ -3848,7 +3848,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         rs->layer=1;
         rs->x=so%board_info.width;
         rs->y=so/board_info.width;
-        so=((rs-stats[b_under[so].stat].xy)<<16)|b_under[so].stat;
+        so=((rs-stats[b_under[so].stat-1].xy)<<16)|b_under[so].stat;
         goto store;
       case OP_UNPC: unpack0: if(!so--) break; x=so%board_info.width; y=so/board_info.width; break;
       case OP_UPTO: condflag=(regs[fo]<so?1:0); regs[fo]+=condflag; break;
