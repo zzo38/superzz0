@@ -205,6 +205,8 @@ extern Animation animation[4];
 
 extern Uint8*global_text;
 extern Uint16 global_length;
+extern Uint16 global_frameoffset;
+extern Uint16 global_frameptr;
 
 extern Uint16 start_mode;
 

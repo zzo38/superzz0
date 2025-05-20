@@ -39,6 +39,8 @@ Uint16 vtexttime;
 NamedFlag namedflag[16];
 Uint8*global_text;
 Uint16 global_length;
+Uint16 global_frameoffset;
+Uint16 global_frameptr;
 DynaString*dynastr;
 Uint8 ndynastr;
 Uint16 start_mode=1;
@@ -173,7 +175,13 @@ static void warp_to_board(Uint16 b,char m) {
   FILE*fp;
   const char*e;
   Sint32 x,y;
-  if(maxstat && stats->text==global_text && stats->count) memory[MEM_GLOBAL_INSTPTR]=stats->xy->instptr;
+  if(global_text && maxstat && stats->text==global_text) {
+    global_frameoffset=stats->frame;
+    if(stats->count) {
+      memory[MEM_GLOBAL_INSTPTR]=stats->xy->instptr;
+      global_frameptr=stats->xy->frame;
+    }
+  }
   if((board_info.flag&BF_PERSIST) && !m) {
     for(x=0;x<maxstat;x++) {
       if(stats[x].xy) for(y=0;y<stats[x].count;y++) {
@@ -194,7 +202,11 @@ static void warp_to_board(Uint16 b,char m) {
   if(global_text && maxstat && !stats->text && !(board_info.flag&BF_NO_GLOBAL)) {
     stats->text=global_text;
     stats->length=global_length;
-    if(stats->count) stats->xy->instptr=memory[MEM_GLOBAL_INSTPTR];
+    stats->frame=global_frameoffset;
+    if(stats->count) {
+      stats->xy->instptr=memory[MEM_GLOBAL_INSTPTR];
+      stats->xy->frame=global_frameptr;
+    }
   }
   if(m || cur_screen_id!=board_info.screen) {
     fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");

@@ -325,7 +325,8 @@ void save_state(void) {
   errno=0;
   //  SAVE
   if(!(fp=open_lump("SAVE","w"))) goto error;
-  v=(condflag?1:0);
+  v=(condflag?1:0)+(global_frameoffset?4:0);
+  if(global_text && maxstat && stats->text==global_text) v+=2;
   write16(fp,v);
   write16(fp,cur_board_id);
   write16(fp,cur_screen_id);
@@ -337,6 +338,10 @@ void save_state(void) {
   write8(fp,nvtextbuf); if(nvtextbuf) fwrite(vtextbuf,1,nvtextbuf,fp);
   for(i=0;i<16;i++) fwrite(namedflag[i].name,1,strlen(namedflag[i].name)+1,fp);
   write16(fp,vtexttime);
+  if(global_frameoffset) {
+    write16(fp,global_frameoffset);
+    write16(fp,global_frameptr);
+  }
   fclose(fp);
   //  CURRENT.BRD
   if(!(fp=open_lump("CURRENT.BRD","w"))) goto error;
@@ -377,7 +382,8 @@ void load_state(void) {
   Uint8 buf[32]={'!','S','Z','0',0,0,0,7,0,0};
   FILE*fp;
   Uint32 u,v;
-  int i;
+  int i,j;
+  char useglobalscript=0;
   if(init_savegame()) return;
   if(!savename) {
     alert_text("File is not selected; push F3 or F4 to select a file");
@@ -414,8 +420,9 @@ void load_state(void) {
   //  SAVE
   if(!(fp=open_lump("SAVE","r"))) errx(1,"Invalid save game file (missing SAVE lump)");
   v=read16(fp);
-  if(v&~3) errx(1,"Invalid data in save game file");
+  if(v&~7) errx(1,"Invalid data in save game file");
   condflag=v&1;
+  useglobalscript=v&2;
   cur_board_id=read16(fp);
   cur_screen_id=read16(fp);
   scroll_x=read32(fp);
@@ -427,9 +434,18 @@ void load_state(void) {
   memset(vtextbuf,0,81);
   if((nvtextbuf=read8(fp)) && nvtextbuf<81) fread(vtextbuf,1,nvtextbuf,fp);
   if(ntextbuf>80 || nvtextbuf>80) errx(1,"Invalid data in save game file");
+  memset(namedflag,0,sizeof(namedflag));
+  for(i=0;i<16;i++) {
+    for(j=0;j<16;j++) if(!(namedflag[i].name[j]=fgetc(fp))) break;
+    if(namedflag[i].name[15]) errx(1,"Invalid data in save game file");
+  }
   vtexttime=read16(fp);
   if(vtexttime) ++vtexttime;
   if(vtexttime>config.message_timer) vtexttime=config.message_timer;
+  if(v&4) {
+    global_frameoffset=read16(fp);
+    global_frameptr=read16(fp);
+  }
   fclose(fp);
   //  MEMORY
   if(fp=open_lump("MEMORY","r")) {
@@ -458,6 +474,21 @@ void load_state(void) {
       stats->length=global_length;
     }
     fclose(fp);
+  } else {
+    free(global_text);
+    global_text=0;
+    global_length=0;
+  }
+  if(global_frameoffset) {
+    if(!global_text || global_frameoffset>global_length-4 || global_frameptr>global_length) errx(1,"Invalid data in save game file");
+  } else if(global_frameptr) {
+    errx(1,"Invalid data in save game file");
+  }
+  if(useglobalscript && maxstat) {
+    stats->text=global_text;
+    stats->length=global_length;
+    stats->frame=global_frameoffset;
+    if(stats->count) stats->xy->frame=global_frameptr;
   }
   //  DYNASTR
   if(fp=open_lump("DYNASTR","r")) {

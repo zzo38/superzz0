@@ -572,6 +572,8 @@ const char*save_board(FILE*fp,int m) {
   int i,j;
   Uint8 c,sf;
   StatXY*r;
+  Stat savedstat1={};
+  Uint16 stat1frame=0;
   // Header
   if(board_info.flag&~255) ef|=0x100;
   if(board_info.exits[0]) ef|=1;
@@ -599,8 +601,12 @@ const char*save_board(FILE*fp,int m) {
   if(ef&0x0400) layer_inversion();
   // Stats
   if(!editor && global_text && maxstat && stats->text==global_text) {
+    savedstat1=*stats;
+    if(stats->count) stat1frame=stats->xy->frame;
     stats->text=0;
     stats->length=0;
+    stats->frame=0;
+    if(stats->count) stats->xy->frame=0;
   }
   for(i=0;i<maxstat;i++) {
     if(ef&0x200) {
@@ -680,6 +686,11 @@ const char*save_board(FILE*fp,int m) {
   memset(guess,0,256);
   for(pt=b_under;pt<end;) pt+=save_board_run(fp,pt,end,2,guess);
   if(ef&0x0400) layer_inversion();
+  // Restore saved stat1
+  if(savedstat1.text) {
+    *stats=savedstat1;
+    if(stats->count) stats->xy->frame=stat1frame;
+  }
   return 0;
 }
 

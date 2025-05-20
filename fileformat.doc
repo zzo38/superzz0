@@ -671,15 +671,19 @@ It contains:
 
 * Visible text buffer.
 
-* Message timer (16-bits).
-
 * Sixteen named flags; each is a null-terminated string, with no more
 than fifteen characters (which cannot be lowercase; this fifteen characters
 does not include the null terminator).
 
+* Message timer (16-bits).
+
+* If the bit2 of the flag bits is set, then two 16-bit numbers being the
+global script frame offset and global script frame pointer.
+
 The flag bits are:
   0001 = Condition flag
   0002 = Enable global script
+  0004 = Global script frame
 
 
 === SCR.NAM ===

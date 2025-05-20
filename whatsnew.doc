@@ -16,6 +16,8 @@ The time zone for the dates in this file is Pacific (British Columbia).
 
 GAME
   +  Add the A_PERMANENT attribute.
+  =  Restore named flags from save game files.
+  =  Save/restore script frames for global scripts.
 
 SCRIPTS
   +  The #VISIBLE condition is implemented.
