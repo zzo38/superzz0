@@ -12,7 +12,7 @@ The possible modes are:
 Others:
 !flood;Flood fills
 !mark;Marks
-!info;Board info
+!-binfo;Board info
 !colon;Colon commands
 !stat;Stats
 !resize;Resizing
@@ -286,6 +286,27 @@ F7         Toggle bg thru
 F8         Toggle visible
 F9         Clear flags
 F10        Clear flags; set visible flag only
+
+The overlay flags have the following meaning:
+
+* User flags: No inherent meaning; you can use for your own use.
+
+* Solid: When moving around tiles in the overlay, this flag will block the
+movement of other objects within the overlay (it does not affect movement
+within the main layer of the board, nor is it affected by the main layer).
+If this flag is not set, then this tile is destroyed when something else
+moves into it.
+
+* Reserved: This flag is reserved for future use and should be clear. If it
+is set, it may cause problems with future versions of Super ZZ Zero that
+have a meaning for this flag.
+
+* Bg thru: Displays the background colour of the board grid.
+
+* Visible: Makes the overlay tile obscure the main layer if certain criteria
+are met. In addition to this flag being set, the "Visible overlay" flag in
+the board info also must be set, and the screen must not suppress the
+overlay, and it is not within the light area.
 
 :colon;Colon commands
 These colon commands can be used for various batch operations.

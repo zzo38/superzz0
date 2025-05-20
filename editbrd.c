@@ -180,6 +180,7 @@ static void edit_board_info(void) {
   if(brd_id<=maxboard && boardnames && boardnames[brd_id]) strncpy(nam,boardnames[brd_id],60);
   nam[60]=0;
   win_form("Board info") {
+    win_help("binfo",0);
     win_text('m',"Board name: ",nam);
     win_picture(1) {
       char buf[40];
@@ -550,6 +551,7 @@ static void resize_board(void) {
   Uint32 x,y,z;
   Sint32 ox,oy;
   win_form("Resize board") {
+    win_help("editbrd","resize");
     win_picture(1) {
       char buf[40];
       draw_text(1,0,buf,7,snprintf(buf,40,"Current: %dx%d",board_info.width,board_info.height));

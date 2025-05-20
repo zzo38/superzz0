@@ -1,0 +1,41 @@
+@Board info
+This screen allows changing board info. Note that the asm file may define
+changed names for some of these things in order to describe the meaning for
+those flags in that specific world file.
+
+þ Board name: A name for the board, which is displayed in the board list in
+the editor, and may also be displayed in game in various ways (although it
+never does this automatically).
+
+þ Dimensions: The size of this board. You cannot change the dimensions in
+this menu; use the resize menu (ALT+R from the board editor) instead.
+
+þ User data: A unsigned 16-bit integer with no inherent meaning; you can use
+it for your own use. (A template may define its use.)
+
+þ Screen: The number of the associated screen. When this board is the active
+board during the game, the specified screen is displayed.
+
+þ User flags: No inherent meaning; use them for your own use. (A template
+may define the meanings of some of them.)
+
+þ Persist: If selected, then the board's state will be saved when you leave
+this board and go to another board, and restored when you come back. If it
+is not selected, then the board is reset each time it is entered.
+
+þ Suppress global scripts: If selected, then global scripts are not loaded
+on this board. If not selected, it only has an effect if a global script is
+defined, and only if stat 1 of this board does not already have a script.
+The current state of the global script (including the current instruction,
+stack frames, etc) will be retained between any boards that use it.
+
+þ Visible overlay: Makes any visible tiles in the overlay to visible (and
+obscuring the board grid), unless suppressed by the screen layout. For a
+tile to obscure the board grid, all of the criteria are needed: the tile
+in the overlay is marked as visible, the "visible overlay" flag in the
+board info is set, the screen layout does not suppress the overlay at that
+position, and the tile is not within the light area.
+
+þ Exits: Specify the board number of the exit in each direction (0 means
+no exit in that direction).
+
