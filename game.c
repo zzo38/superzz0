@@ -179,6 +179,11 @@ static void warp_to_board(Uint16 b,char m) {
     global_frameoffset=stats->frame;
     if(stats->count) {
       memory[MEM_GLOBAL_INSTPTR]=stats->xy->instptr;
+      x=memory[MEM_GLOBAL_DELAY];
+      if(x&0x0100) x=(x&0xFF00)|(stats->xy->delay&0xFF);
+      if(x&0x0200) x=(x&0xA3FF)|((stats->xy->layer&0x5C)<<8);
+      if(x&0x2000) x=(x&0x7FFF)|((stats->xy->layer&0x80)<<8);
+      memory[MEM_GLOBAL_DELAY]=x;
       global_frameptr=stats->xy->frame;
     }
   }
@@ -206,6 +211,10 @@ static void warp_to_board(Uint16 b,char m) {
     if(stats->count) {
       stats->xy->instptr=memory[MEM_GLOBAL_INSTPTR];
       stats->xy->frame=global_frameptr;
+      x=memory[MEM_GLOBAL_DELAY];
+      if(x&0x0100) stats->xy->delay=x&0xFF;
+      if(x&0x0200) stats->xy->layer=(stats->xy->layer&0xA3)|((x>>8)&0x5C);
+      if(x&0x2000) stats->xy->layer=(stats->xy->layer&0x7F)|((x>>8)&0x80);
     }
   }
   if(m || cur_screen_id!=board_info.screen) {

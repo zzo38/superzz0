@@ -466,6 +466,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define XOP_S_IF_TRUE 0x0DC0 // (source) if true, (value) if false (-3 to +4, A to H)
 #define XOP_S_IF_FALSE 0x0DD0 // (source) if false, (value) if true (-3 to +4, A to H)
 
+#define MEM_GLOBAL_DELAY 0xC0
 #define MEM_JOY_LEVEL 0xC4
 #define MEM_RETURN_EVENT 0xC5
 #define MEM_SENSOR_EVENT 0xC6

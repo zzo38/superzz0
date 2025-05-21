@@ -6,6 +6,13 @@ addresses with a currently defined meaning are listed here. The initial
 values can be set using the assembler, and they can also be changed at
 run time.
 
+$C0 = Saves the delay and flags for the global script. The low 8-bits are
+the delay number and the high 8-bits are flags, except for: bit8 means to
+save the delay, bit9 means to save the walk/face/user flags, and bit13
+means to save the lock flag; the layers and disable flag cannot be saved.
+The bits that cause things to be saved will also cause them to be restored;
+if the bits are clear then they are neither saved nor restored.
+
 $C4 = Joystick input levels. The low nybble is for normal game mode, the
 next nybble is for text windows, and the higher two nybbles are not
 meaningful in the current version of Super ZZ Zero.
