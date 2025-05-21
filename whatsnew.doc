@@ -38,6 +38,7 @@ EDITOR
   +  The z and Z prefixes now work in block selection mode without causing
      the block selection to be lost.
   +  Use ALT+P in text editor for adding a character number.
+  +  Push i in screen editor to invert mark.
   =  Retain selection of character for ^P in text editor.
 
 TEMPLATE

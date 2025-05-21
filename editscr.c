@@ -1005,6 +1005,7 @@ Uint16 edit_screen(Uint16 id) {
         case 'e': edit_tile(); break;
         case 'h': case -SDLK_LEFT: if(event.key.keysym.mod&KMOD_SHIFT) goto shift_h; cursor_move(-1,0); break;
         case 'H': shift_h: digit_move(-1,0); break;
+        case 'i': do_colon_command("%toggle"); break;
         case 'j': case -SDLK_DOWN: if(event.key.keysym.mod&KMOD_SHIFT) goto shift_j; cursor_move(0,1); break;
         case 'J': shift_j: digit_move(0,1); break;
         case 'k': case -SDLK_UP: if(event.key.keysym.mod&KMOD_SHIFT) goto shift_k; cursor_move(0,-1); break;
