@@ -16,6 +16,7 @@ The time zone for the dates in this file is Pacific (British Columbia).
 
 GAME
   +  Add the A_PERMANENT attribute.
+  +  Counter-based random appearance of elements.
   =  Restore named flags from save game files.
   =  Save/restore script frames and delay and flags for global scripts.
 

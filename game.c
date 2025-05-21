@@ -137,6 +137,18 @@ static void debug_log(Uint8 fo,Sint32 so,Sint32 w,Sint32 x,Sint32 y,Sint32 z,Uin
   fputc('\n',f);
 }
 
+#define CBRANDOM_KEY 6738671342737314685ULL
+static inline Uint32 cbrandom(Uint64 c) {
+  // Square RNG counter-based random numbers.
+  Uint64 x=CBRANDOM_KEY*c;
+  Uint64 y=x;
+  Uint64 z=CBRANDOM_KEY+y;
+  x=x*x+y; x=(x>>32)|(x<<32);
+  x=x*x+z; x=(x>>32)|(x<<32);
+  x=x*x+y; x=(x>>32)|(x<<32);
+  return (x*x+z)>>32;
+}
+
 Uint32 dice(Uint32 n) {
   Uint32 o;
   Uint32 m=n-1;
@@ -440,6 +452,17 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
           if(e->app[1]&0x80) z+=memory[MEM_FRAME_COUNTER]>>(m&AM_SLOW?1:0);
           d=animation[e->app[1]&3].step[z&3];
           v_char[at]=appearance_mapping[((e->app[1]&0x7C)+d)&0x7F];
+          break;
+        case AP_CBRANDOM:
+          f=cbrandom((cur_board_id*123456789ULL)^(bx*54321ULL)^(by*42ULL)^(e->app[1]&0x83));
+          if((e->app[1]&0x80) && ((bx^by)&1)) f&=f>>8;
+          z=
+            "0000111122223333"
+            "0000001111122233"
+            "0000000111222333"
+            "0000000000111223"
+          [(f&15)+((e->app[1]&3)<<4)]&3;
+          v_char[at]=appearance_mapping[(e->app[1]&0x7C)+z];
           break;
         default:
           d=(t->param>>(e->app[0]&7))&~(0xFF<<(((e->app[0]>>3)&3)+1));

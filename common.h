@@ -179,6 +179,7 @@ typedef struct {
 #define AP_MISC3 0x07 // Stat misc3 (or app[1] if no stat)
 #define AP_LINES 0x08 // Line joining; low nybble of app[1] is which line classes, high nybble is appearance_mapping offset, high bit=edge join
 #define AP_ANIMATE 0x09 // Animation without using tile parameter
+#define AP_CBRANDOM 0x0A // Counter-based random
 
 // If bit5 of app[0] is set then it has a different meaning.
 //  app[0] bit2-bit0 = Shift amount of tile parameter
@@ -191,6 +192,11 @@ typedef struct {
 //  app[1] bit1-bit0 = Animation select
 //  app[1] bit6-bit2 = Offset of appearance_mapping
 //  app[1] bit7      = Clear for space only (ignore time)
+
+// AP_CBRANDOM:
+//  app[1] bit1-bit0 = Distribution select
+//  app[1] bit6-bit2 = Offset of appearance_mapping
+//  app[1] bit7      = Alternate distribution
 
 // Animation:mode
 #define AM_X1 0x01

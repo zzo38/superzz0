@@ -295,7 +295,7 @@ static void element_list_callback(Uint16 n,int y,void*uz) {
     v_char[80*y+22]='M';
   } else if(e->app[0]&0x0F) {
     v_color[80*y+22]=0x08;
-    v_char[80*y+22]="FPOUS123LA??????"[e->app[0]&0x0F];
+    v_char[80*y+22]="FPOUS123LAC?????"[e->app[0]&0x0F];
   } else {
     v_color[80*y+22]=0x0F;
     v_char[80*y+22]=e->app[1];
@@ -402,6 +402,7 @@ static void edit_element(Uint8 en) {
         win_option('e',"Over layer",m,AP_OVER) win_refresh();
         win_option('U',"Under layer",m,AP_UNDER) win_refresh();
         win_option('S',"Screen data",m,AP_SCREEN) win_refresh();
+        win_option('d',"Counter-based random",m,AP_CBRANDOM) win_refresh();
         win_heading("Character options:");
         switch(m) {
           case AP_FIXED:
@@ -426,6 +427,11 @@ static void edit_element(Uint8 en) {
             win_numeric('r',"Appearance mapping offset: 4x",ao2,0,31);
             win_boolean('T',"Time-based",e->app[1],0x80);
             break;
+          case AP_CBRANDOM:
+            win_numeric('n',"Distribution select: ",as,0,3);
+            win_numeric('r',"Appearance mapping offset: 4x",ao2,0,31);
+            win_boolean('i',"Alternate distribution",e->app[1],0x80);
+            break;
           case 0x20:
             win_numeric('h',"Parameter shift: ",bs,0,7);
             win_numeric('i',"Bits of parameter: ",bi,1,4);
@@ -443,7 +449,7 @@ static void edit_element(Uint8 en) {
       e->app[0]=m|(lj<<6);
       switch(m) {
         case AP_LINES: e->app[1]|=ao<<4; break;
-        case AP_ANIMATE: e->app[1]&=0x80; e->app[1]|=as|(ao2<<2); break;
+        case AP_ANIMATE: case AP_CBRANDOM: e->app[1]&=0x80; e->app[1]|=as|(ao2<<2); break;
         case 0x20: e->app[0]|=bs|((bi-1)<<3); e->app[1]&=0x81; e->app[1]|=ao1<<1; break;
       }
     }

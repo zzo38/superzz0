@@ -126,6 +126,15 @@ want the colour, then you should select that in the colour list as well.)
 Screen data: Show the character of the screen data. (If you also want the
 colour, then you should select that in the colour list as well.)
 
+Counter-based random: Displays a character using a pseudo-random number
+generator which only depends on the position and the board number, meaning
+that it will remain consistent and will not change over time. Select the
+appearance mapping offset which must be a multiple of four, and the type
+of distribution to use. They correspond to four different probability
+distributions, where 0 is uniform and higher numbers are less uniform.
+The alternate distribution additionally alters the distribution according
+to the tile coordinates, which also makes it less uniform.
+
 See also:
 !-appmap;Appearance mapping
 !-anima;Animations
