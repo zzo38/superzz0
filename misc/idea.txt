@@ -5,6 +5,13 @@ decided against adding in future, or in a more limited way than is
 described here; other changes may also be made.)
 
 
+=== Text compression ===
+
+A compression for the script text in GLOBAL and *.BRD lumps may be made in
+future. The code 0x00 is not valid within the text, so it can be used as a
+prefix for compression codes.
+
+
 === Custom fonts ===
 
 This is a new idea of a custom font format, different than what was
@@ -39,6 +46,8 @@ The format of the font data can be:
 pixel. A sequence with a integer being the font height (normally fourteen)
 and then a octet string with the raw raster data of the font.
 
+* Type 1 = (May be used like type 0 but with compressed raster data.)
+
 Character code mappings is a set where most kind of items will be implicit
 typed strings but some will use ordinary types instead. They are:
 
@@ -56,6 +65,9 @@ typed strings but some will use ordinary types instead. They are:
 
 There cannot be more than one wide font. Wide characters always have the
 first byte in range 0x80 to 0xFF and the second byte in range 0x10 to 0xFF.
+(These restrictions would apply to Super ZZ Zero, but if other programs use
+this font format they might not have this restriction.)
+
 Also, not everything supported by this format will necessarily be supported
 in Super ZZ Zero, at least at first; some might be ignored and some things
 might not be used in Super ZZ Zero.
