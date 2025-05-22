@@ -12,7 +12,7 @@ The following switches are available.
 An asterisk means that this switch requires a parameter.
 .IP -a
 Receive input from the assembler on stdin, and include it in the world file.
-This switch must be combined with -e.
+This switch must be combined with -e, but does not actually start the editor.
 .IP -b*
 Start on the specified board (given by number) instead of the default starting board for the world.
 .IP -c*
@@ -35,7 +35,7 @@ Receive a Hamster archive from stdin, and copy all lumps from it into the world 
 This does not process the lumps in any way; it merely copies them.
 An empty lump in the input will cause the corresponding lump to be deleted from the world file.
 Be careful if you use this; incorrect use may result in a corrupted world file.
-This switch must be combined with -e.
+This switch must be combined with -e, but does not actually start the editor.
 .IP -t*
 Create a new world file, using a specified file as the template.
 It is an error if the file already exists, and the file will not be overwritten.

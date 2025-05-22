@@ -22,7 +22,6 @@ GAME
 
 SCRIPTS
   +  The #VISIBLE condition is implemented.
-  +  #ENDGAME command to end the game.
   +  #BOARD command to go to another board.
   +  Conditions for named flags in specific numbered positions.
 
@@ -43,6 +42,7 @@ EDITOR
 
 TEMPLATE
   +  Many additions to default template.
+  +  #ENDGAME command to end the game.
   -  Removed the "blank" template, which is not necessary; you can create
      an empty world file with no template.
 
