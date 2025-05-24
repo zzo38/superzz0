@@ -38,6 +38,7 @@
 ;   Misc3 = (unused)
 ; Board flags:
 ;   bit0 = Restart if zapped
+;   bit1 = Enter key warps to east
 ;   UserData = Time limit (0=none)
 ; Stat uses:
 ;   1 = player
@@ -189,6 +190,14 @@ MOVEPL1	XOR A,A
 	LET S,0
 1H	LITE C,6
 	GIVE W,200
+	LET S,0
+
+	; Enter key warps to east
+	TA KEYS+13
+	BFLG B,0
+	JF B,0
+	EXIT A,0
+	WARP A,ENTER
 	LET S,0
 
 	; Coordinates of player
@@ -828,6 +837,7 @@ CHEST	FILL $0F,0
 
 ; **** Object ****
 	EV B,_OBJECT
+	EV B,_MONITOR
 	TA $C7
 	LET A,W
 	RUN A,1
@@ -2091,6 +2101,7 @@ THSTAR	GTMK C,0
 	ED 'O',"Object",_OBJECT,$0800
 	ED 'X',"Sensor",_SENSOR,$0800
 	ED 'D',"Destroyed",_DESTROYED,$0000
+	ED 'Y',"Monitor",_MONITOR+$0100,$0000
 	ED 2
 
 	ED1 6
@@ -2406,6 +2417,7 @@ RL_FAK	ED _FAKE+$2100,$00FE
 
 ; **** Editor board info ****
 	ED1 32,"Restart if zapped"
+	ED1 33,"Enter key warps to east"
 	ED1 36,"Time limit: "
 	ED1 37,"Max shots: "
 
@@ -2418,9 +2430,9 @@ RL_FAK	ED _FAKE+$2100,$00FE
 	ED ':',"bi s0 u0 ="
 	ED 'S',1
 	ED4 A,$FFFF
+	ED5 A,1,$1070
 	ED5 A,1,$1170
 	ED4 A,0
-	ED5 A,1,$1070
 	ED5 A,1,$1270
 	ED5 A,1,$1370
 	ED 'S',2

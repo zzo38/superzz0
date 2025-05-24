@@ -51,6 +51,11 @@ entered this board. (This is independent of persistence, and this will not
 reset the board even if it is not persistent; a board is only reset if you
 leave and then enter a non-persistent board again.)
 
+* Enter key warps to east: If you push the enter key, then you will be
+warped to the board to the east of this board (even if that board is zero).
+The player is placed where the player was last in that board, rather than
+on the west edge. (This is mainly useful for title screens.)
+
 * Time limit: If nonzero, then it sets a time limit; see the description of
 the "X" status variable above. Normally if this is set, you would also set
 "restart if zapped", so that you will go back to the beginning if damaged,
@@ -460,6 +465,11 @@ Destroyed
   Immediately destroys itself at the beginning of the turn, revealing
   what was underneath. This is used internally for some purposes, and
   is probably not very useful to place on the board by yourself.
+
+Monitor
+  On some special boards (e.g. a title screen) it could be used instead
+  of the player. This element is invisible, and can execute scripts like
+  a Object does, although some messages do not work.
 
 
 === Script messages ===
