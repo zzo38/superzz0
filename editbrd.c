@@ -2920,6 +2920,26 @@ static void resize_tile_queue(Uint16 nq) {
   }
 }
 
+static int shifted_arrows(void) {
+  Uint16 m=event.key.keysym.mod;
+  Uint16 k=event.key.keysym.sym;
+  m=(m&KMOD_ALT?config.alt_arrows:m&KMOD_CTRL?config.ctrl_arrows:m&KMOD_SHIFT?config.shift_arrows:0);
+  if(!m) return 0;
+  numprefix=(numprefix?:1)*(m&255);
+  switch(m>>8) {
+    case '-': return 0;
+    case 'm': set_mark(xcur,ycur,3); return 0;
+    case 's':
+      if(k==SDLK_UP) scroll_y-=numprefix?:1;
+      if(k==SDLK_DOWN) scroll_y+=numprefix?:1;
+      if(k==SDLK_LEFT) scroll_x-=numprefix?:1;
+      if(k==SDLK_RIGHT) scroll_x+=numprefix?:1;
+      numprefix=0;
+      return 1;
+    default: return 1;
+  }
+}
+
 Uint16 edit_board(Uint16 id) {
   int i;
   Sint32 k;
@@ -2947,6 +2967,7 @@ Uint16 edit_board(Uint16 id) {
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
     k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+    if((event.key.keysym.mod&(KMOD_ALT|KMOD_CTRL|KMOD_SHIFT)) && (k==-SDLK_UP || k==-SDLK_DOWN || k==-SDLK_LEFT || k==-SDLK_RIGHT) && shifted_arrows()) continue;
     switch(emode) {
       case 0: case 15: no_mode: switch(k) {
         case 0x08: numprefix/=10; break;
@@ -3144,6 +3165,7 @@ Uint16 edit_board(Uint16 id) {
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
     k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+    if((event.key.keysym.mod&(KMOD_ALT|KMOD_CTRL|KMOD_SHIFT)) && (k==-SDLK_UP || k==-SDLK_DOWN || k==-SDLK_LEFT || k==-SDLK_RIGHT) && shifted_arrows()) continue;
     switch(emode) {
       case 0: case '*': no_mode1: switch(k) {
         case 0x08: numprefix/=10; break;

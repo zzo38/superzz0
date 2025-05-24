@@ -18,6 +18,14 @@ static void(*xunlock)(void);
 static unsigned int num_mask,mode_switch_mask;
 #endif
 
+/*
+  Use of v_status by Super ZZ Zero:
+  [0] Current mode (editor, fast, normal, pause)
+  [1] Sub-mode
+  [79] Joystick shift state
+  [80] Display '?' if help file
+*/
+
 static const Uint8 font[3584]={
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x81, 0xA5, 0x81, 0x81, 0xBD,

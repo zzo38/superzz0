@@ -16,6 +16,12 @@ explained below. (Default values may change in future; if you want to avoid
 this, then you should explicitly set the value. Values that have been set
 explicitly will not be overridden by future versions of Super ZZ Zero.)
 
+alt_arrows
+  Configures the effect of ALT and arrows in the board editor and screen
+  editor. The first character tells what to be done and the rest is a
+  8-bit decimal integer telling the multiplier. The things to be done can
+  be "-" for normal, "s" for scrolling, and "m" for mark.
+
 audio_buffer
   Audio buffer size; zero to disable audio.
 
@@ -42,6 +48,9 @@ brd_edit_status
 confirm_overwrite
   Set to 1 (default) to ask to confirm overwriting an existing save file
   when using the F3 save menu (it never asks if you use F5).
+
+ctrl_arrows
+  See alt_arrows.
 
 debug
   Set debug mode. The -e and -d switches both enable this automatically;
@@ -185,6 +194,9 @@ save_dir
 
 scr_edit_status
   Set to 1 (default) to display the editor status line, or 0 to suppress.
+
+shift_arrows
+  See alt_arrows.
 
 show_status
   Set to 1 (default) to display the global status line, or 0 to hide it.

@@ -22,6 +22,7 @@ extern const Uint8 version_is_release;
 #define B(n,t,d) t n;
 #define F(n,t,d) t n;
 #define I(n,t,d) t n;
+#define P(n,t,d) t n;
 #define S(n,t,d) t n;
 typedef struct {
 #include "config.inc"
@@ -29,6 +30,7 @@ typedef struct {
 #undef B
 #undef F
 #undef I
+#undef P
 #undef S
 extern Config config;
 

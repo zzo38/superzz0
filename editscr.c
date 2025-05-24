@@ -968,6 +968,19 @@ static void estatus(void) {
   }
 }
 
+static int shifted_arrows(void) {
+  Uint16 m=event.key.keysym.mod;
+  Uint16 k=event.key.keysym.sym;
+  m=(m&KMOD_ALT?config.alt_arrows:m&KMOD_CTRL?config.ctrl_arrows:m&KMOD_SHIFT?config.shift_arrows:0);
+  if(!m) return 0;
+  numprefix=(numprefix?:1)*(m&255);
+  switch(m>>8) {
+    case '-': return 0;
+    case 'm': set_mark(xcur,ycur,3); return 0;
+    default: return 1;
+  }
+}
+
 Uint16 edit_screen(Uint16 id) {
   int i;
   Sint32 k;

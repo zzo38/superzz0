@@ -12,11 +12,13 @@ Config config={
 #define B(n,t,d) d,
 #define F(n,t,d) d,
 #define I(n,t,d) d,
+#define P(n,t,d) d,
 #define S(n,t,d) d,
 #include "config.inc"
 #undef B
 #undef F
 #undef I
+#undef P
 #undef S
 };
 Uint8 editor=0;
@@ -32,11 +34,13 @@ static const ConfigInfo configinfo[]={
 #define B(n,t,d) {#n,'B',sizeof(t),&config.n},
 #define F(n,t,d) {#n,'F',sizeof(t),&config.n},
 #define I(n,t,d) {#n,'I',sizeof(t),&config.n},
+#define P(n,t,d) {#n,'P',sizeof(t),&config.n},
 #define S(n,t,d) {#n,'S',sizeof(t),&config.n},
 #include "config.inc"
 #undef B
 #undef F
 #undef I
+#undef P
 #undef S
 };
 
@@ -70,6 +74,10 @@ static void set_config(const char*s) {
     case 'F':
       if(c->size==sizeof(float)) *(float*)(c->ptr)=strtod(q+1,0);
       else if(c->size==sizeof(double)) *(double*)(c->ptr)=strtod(q+1,0);
+      else errx(1,"Unexpected error in configuration");
+      break;
+    case 'P':
+      if(c->size==sizeof(Uint16)) *(Uint16*)(c->ptr)=q[1]*0x100+strtol(q+2,0,10);
       else errx(1,"Unexpected error in configuration");
       break;
     case 'S':
@@ -165,11 +173,13 @@ void run_test_game(int b) {
 #define B(n,t,d)
 #define F(n,t,d)
 #define I(n,t,d)
+#define P(n,t,d)
 #define S(n,t,d) if(config.n) { write32(fp,strlen(config.n)); fwrite(config.n,1,strlen(config.n),fp); }
 #include "config.inc"
 #undef B
 #undef F
 #undef I
+#undef P
 #undef S
   pclose(fp);
   unlink(config.temporary_file_2);
@@ -327,11 +337,13 @@ int main(int argc,char**argv) {
 #define B(n,t,d)
 #define F(n,t,d)
 #define I(n,t,d)
+#define P(n,t,d)
 #define S(n,t,d) if(config.n) { char*s; i=read32(stdin); config.n=s=malloc(i+1); if(!s) err(1,"Allocation failed"); fread(s,1,i,stdin); s[i]=0; }
 #include "config.inc"
 #undef B
 #undef F
 #undef I
+#undef P
 #undef S
     if(open_world(config.temporary_file_2)) err(1,"Error opening world");
   } else {

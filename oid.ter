@@ -17,6 +17,7 @@ author=base.1 % Author identifiers
 class=base.2 % Classifications in catalog services
 catalog=base.3 % Catalog extensions
 feature=base.4 % Features specified in GENERAL.DER
+x509ext=base.5 % X.509 extension
 
 % Hash algorithms
 nist=2.16.840.1.101.3.4.2 % OID for SHA-2 and SHA-3 hashes; this OID is for NIST

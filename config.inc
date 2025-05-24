@@ -3,10 +3,12 @@
   B = boolean
   F = float
   I = integer
+  P = pair of single character and 8-bit number
   S = string
   ?(name,type,default)
   These should be listed in ASCII order by name.
 */
+P(alt_arrows,Uint16,0)
 I(audio_buffer,Uint16,0)
 F(audio_filter,float,1e-4)
 I(audio_rate,Uint16,0)
@@ -15,6 +17,7 @@ B(auto_suffix,Uint8,0)
 I(block_color,Uint8,0x2E)
 B(brd_edit_status,Uint8,1)
 B(confirm_overwrite,Uint8,1)
+P(ctrl_arrows,Uint16,0)
 B(debug,Uint8,0)
 B(default_colors,Uint8,1)
 B(editor_auto,Uint8,1)
@@ -47,6 +50,7 @@ S(printer_type,const char*,0)
 B(return_cancels,Uint8,1)
 S(save_dir,char*,0)
 B(scr_edit_status,Uint8,1)
+P(shift_arrows,Uint16,0)
 B(show_status,Uint8,1)
 I(speed,Uint16,55)
 I(speed_fast,Uint16,5)
