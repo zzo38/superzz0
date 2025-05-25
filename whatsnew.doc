@@ -40,6 +40,7 @@ EDITOR
   +  Push i in screen editor to invert mark.
   +  Settings to specify the behaviour of arrows with modifier keys.
   +  Import MZM in screen editor.
+  +  Push s and S in board editor to edit stat instances at cursor.
   =  Retain selection of character for ^P in text editor.
 
 TEMPLATE

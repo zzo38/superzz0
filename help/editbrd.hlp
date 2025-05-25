@@ -55,6 +55,8 @@ q          Write tile in main layer
 Q          Write tile in under layer
 r          Reverse background/foreground colour
 R          Remove stat from tile to be placed
+s          Edit stat instance
+S          Edit stat instance in under layer
 t          Text entry mode
 u          Unmark all
 v          Block mode

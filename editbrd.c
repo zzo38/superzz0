@@ -418,6 +418,13 @@ static void stat_xy_edit(Stat*s,Uint16 n) {
   o->layer=(o->layer&0xF3)|(f<<2);
 }
 
+static void stat_xy_edit_at(Uint16 x,Uint16 y,Uint8 lay) {
+  StatXY*r;
+  Uint8 n=(lay==1?b_under:lay==2?b_main:b_over)[y*board_info.width+x].stat;
+  if(!n || !lay) return;
+  if(r=find_stat(x,y,n,lay,lay)) stat_xy_edit(stats+n-1,r-stats[n-1].xy);
+}
+
 static int statxy_sorter_callback(const void*aa,const void*bb) {
   const StatXY*a=aa;
   const StatXY*b=bb;
@@ -3030,6 +3037,8 @@ Uint16 edit_board(Uint16 id) {
         case 'Q': write_under(xcur,ycur,clip); if(autocirc) circulate_clipq(-1,&clip,clipq); break;
         case 'r': clip.color=(clip.color<<4)|(clip.color>>4); break;
         case 'R': clip.stat=0; break;
+        case 's': stat_xy_edit_at(xcur,ycur,2); break;
+        case 'S': stat_xy_edit_at(xcur,ycur,1); break;
         case 't': emode='t'; xcur2=xcur; break;
         case 'u': unmark: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
@@ -3216,6 +3225,7 @@ Uint16 edit_board(Uint16 id) {
         case 'p': over_place_at(xcur,ycur,overclip); if(autocirc) circulate_clipq(-1,&overclip,overclipq); break;
         case 'r': overclip.color=(overclip.color<<4)|(overclip.color>>4); break;
         case 'R': overclip.stat=0; break;
+        case 's': stat_xy_edit_at(xcur,ycur,3); break;
         case 't': emode='t'; xcur2=xcur; break;
         case 'T': overclip.kind|=OVER_VISIBLE; emode='t'; xcur2=xcur; break;
         case 'u': unmark1: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
