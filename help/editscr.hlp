@@ -184,6 +184,11 @@ memory/mem
   address, starting at the specified address and then advancing to the
   right, and the left side of the next row continues where it left off, etc.
 
+mzmimport/mzmim
+  Import a MZM file; if the file name starts with | then it is a pipe from an
+  external shell command. The area to operate in must match the dimensions of
+  the MZM file.
+
 place/p
   Place copies of the tile selected with the "y" normal command.
 

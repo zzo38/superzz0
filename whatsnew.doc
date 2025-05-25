@@ -39,6 +39,7 @@ EDITOR
   +  Use ALT+P in text editor for adding a character number.
   +  Push i in screen editor to invert mark.
   +  Settings to specify the behaviour of arrows with modifier keys.
+  +  Import MZM in screen editor.
   =  Retain selection of character for ^P in text editor.
 
 TEMPLATE

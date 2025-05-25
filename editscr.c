@@ -740,6 +740,42 @@ static void cc_memory_step(Uint16 x,Uint16 y,const char*arg) {
   ++cctmp;
 }
 
+static void cc_mzmimport(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  int c,m;
+  Uint16 x,y,w,h;
+  char buf[75];
+  FILE*fp;
+  if(!*arg) return;
+  if(*arg=='|') fp=popen(arg+1,"r"); else fp=fopen(arg,"r");
+  if(fp) {
+    if(fgetc(fp)!='M' || fgetc(fp)!='Z' || fgetc(fp)!='M') goto error;
+    if(x0>x1) m=x0,x0=x1,x1=m;
+    if(y0>y1) m=y0,y0=y1,y1=m;
+    switch(c=fgetc(fp)) {
+      case 'X': w=read8(fp); h=read8(fp); m=0; fread(buf,1,10,fp); break;
+      case '2': case '3': w=read16(fp); h=read16(fp); fread(buf,1,5,fp); m=read8(fp); fread(buf,1,c=='3'?6:2,fp); break;
+      default: goto error;
+    }
+    if(m&~1) goto error;
+    if(w==x1+1-x0 && h==y1+1-y0) {
+      for(y=y0;y<=y1;y++) for(x=x0;x<=x1;x++) {
+        cur_screen.command[y*80+x]=m?3:read8(fp);
+        cur_screen.parameter[y*80+x]=read8(fp);
+        cur_screen.color[y*80+x]=read8(fp);
+        if(!m) fread(buf,1,3,fp);
+      }
+    } else {
+      snprintf(buf,75,"MZM is wrong size; expected %dx%d but found %dx%d",x1+1-x0,y1+1-y0,w,h);
+      alert_text(buf);
+    }
+    if(0) error: alert_text("Error loading MZM");
+    if(*arg=='|') pclose(fp); else fclose(fp);
+  } else {
+    snprintf(buf,75,"%m");
+    alert_text(buf);
+  }
+}
+
 static void cc_place_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   cctile=clip;
 }
@@ -775,6 +811,8 @@ static const ColonCommand colon_commands[]={
   {"mem",'.',0,cc_memory_begin,cc_memory_step,0},
   {"memory",'.',0,cc_memory_begin,cc_memory_step,0},
   {"mo",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
+  {"mzmim",'%',cc_mzmimport,0,0,0},
+  {"mzmimport",'%',cc_mzmimport,0,0,0},
   {"p",'.',0,cc_place_begin,cc_place_step,0},
   {"place",'.',0,cc_place_begin,cc_place_step,0},
   {"status",0,cc_status,0,0,0},
@@ -996,6 +1034,7 @@ Uint16 edit_screen(Uint16 id) {
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
     k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+    if((event.key.keysym.mod&(KMOD_ALT|KMOD_CTRL|KMOD_SHIFT)) && (k==-SDLK_UP || k==-SDLK_DOWN || k==-SDLK_LEFT || k==-SDLK_RIGHT) && shifted_arrows()) continue;
     switch(emode) {
       case 0: case 15: no_mode: switch(k) {
         case 0x08: numprefix/=10; break;
