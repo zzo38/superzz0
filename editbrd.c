@@ -1405,6 +1405,57 @@ static void cc_markonly_end(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*a
   markgrid=ccdata;
 }
 
+static void cc_modify_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  cctile=clip;
+}
+
+static void cc_modify_step(Uint16 x,Uint16 y,const char*arg) {
+  Uint32 at=y*board_info.width+x;
+  const char*p=arg;
+  Tile*t;
+  Uint32 n;
+  Uint8 a,b,m,q;
+  for(;;) {
+    while(*p==' ') ++p;
+    if(!*p) break;
+    m=0;
+    while(*p>='a' && *p<='z') switch(*p++) {
+      case 'u': m|=0x01; break;
+      case 'm': m|=0x02; break;
+      case 'o': m|=0x04; break;
+      case 'k': m|=0x10; break;
+      case 'c': m|=0x20; break;
+      case 'p': m|=0x40; break;
+      //case 's': m|=0x80; break;
+      default: alert_text("Syntax error"); ccerror=1; return;
+    }
+    if((q=*p?*p++:' ')>32) {
+      n=0;
+      if(*p=='$') b=16,p++; else b=10;
+      while(*p) {
+        if(*p>='0' && *p<='9') n=b*n+*p++-'0';
+        else if(*p>='A' && *p<='F') n=b*n+*p++-'A'+10;
+        else if(*p>='a' && *p<='f') n=b*n+*p++-'a'+10;
+        else break;
+      }
+    }
+    for(a=0;a<3;a++) {
+      if(!(m&(1<<a))) continue;
+      t=(a==0?b_under:a==1?b_main:b_over)+at;
+      for(b=0;b<4;b++) if(m&(16<<b)) switch(q) {
+        case ' ': t->values[b]=(a==2?overclip:cctile).values[b]; break;
+        case '=': t->values[b]=n; break;
+        case '+': t->values[b]+=n; break;
+        case '-': t->values[b]-=n; break;
+        case '&': t->values[b]&=n; break;
+        case '|': t->values[b]|=n; break;
+        case '^': t->values[b]^=n; break;
+        default: alert_text("Syntax error"); ccerror=1; return;
+      }
+    }
+  }
+}
+
 static void cc_ohflip(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   Sint32 x,y;
   Uint32 a,b;
@@ -1575,6 +1626,8 @@ static const ColonCommand colon_commands[]={
   {"mark",'.',0,0,cc_mark_step,0},
   {"markonly",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
   {"mo",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
+  {"mod",'.',0,cc_modify_begin,cc_modify_step,0},
+  {"modify",'.',0,cc_modify_begin,cc_modify_step,0},
   {"oc",'.',0,cc_overcolor_begin,cc_overcolor_step,0},
   {"od",'.',0,0,cc_overdelete_step,0},
   {"ohflip",'%',cc_ohflip,0,0,0},

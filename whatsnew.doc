@@ -41,6 +41,7 @@ EDITOR
   +  Settings to specify the behaviour of arrows with modifier keys.
   +  Import MZM in screen editor.
   +  Push s and S in board editor to edit stat instances at cursor.
+  +  The "modify" colon command in the board editor.
   =  Retain selection of character for ^P in text editor.
 
 TEMPLATE

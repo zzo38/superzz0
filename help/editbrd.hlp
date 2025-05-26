@@ -442,6 +442,17 @@ mark/m
 markonly/mo
   Marks cells, but unmarks any cells not marked by this command.
 
+modify/mod
+  Modifies tiles. Any number of modificiations, separated by spaces, may
+  be specified. Each one starts with the flags, which are: u for under
+  layer, m for main layer, o for over layer, k for kind, c for colour,
+  p for parameter. After that, if nothing else follows then it replaces
+  by the values of current tile to be placed (filters that modify the
+  argument tile will affect what values will be used); otherwise, it can
+  be one of = + - & | ^ followed by a number (which may have $ at first
+  if it is hexadecimal), where = replaces the value and the others will
+  apply an operation to the existing value.
+
 ohflip
   Like "hflip" but affects the overlay.
 
