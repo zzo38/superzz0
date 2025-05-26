@@ -1451,6 +1451,8 @@ static Uint8 send_message_to(Stat*s,StatXY*r,Sint32 f,const char*e) {
       }
     }
     r->delay=0;
+  } else if(memory[MEM_CONTROL]&CONTROL_DELAY0_SEND) {
+    r->delay=0;
   }
   r->instptr=f;
   return h&4;
@@ -4224,6 +4226,16 @@ static void debug_menu(void) {
       }
       endmem:
       win_refresh();
+    }
+    win_command('W',"Write memory...") {
+      Uint16 a=0;
+      Uint16 b=0;
+      win_form("Write memory") {
+        win_numeric('A',"Address: ",a,0,0xFFFF);
+        win_numeric('V',"Value: ",b,0,0xFFFF);
+        win_command('W',"Write") memory[a]=b;
+        win_command_esc(0,"Done") break;
+      }
     }
     win_command('f',"Named flags...") {
       win_form("Named flags") {

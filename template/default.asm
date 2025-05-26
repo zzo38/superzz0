@@ -61,6 +61,7 @@ REGSAV	IS $10 ;x16
 
 ; **** Global parameters ****
 	TA $C4,$0010
+	TA $CB,$0002
 	TA $ED,1
 
 ; **** Keyboard handler ****
@@ -2430,8 +2431,9 @@ RL_FAK	ED _FAKE+$2100,$00FE
 	ED ':',"bi s0 u0 ="
 	ED 'S',1
 	ED4 A,$FFFF
-	ED5 A,1,$1070
 	ED5 A,1,$1170
+	ED4 A,1
+	ED5 A,1,$1070
 	ED4 A,0
 	ED5 A,1,$1270
 	ED5 A,1,$1370

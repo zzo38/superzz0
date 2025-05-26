@@ -521,6 +521,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_SCROLL_Y_RATE 0xEF
 
 #define CONTROL_NOSCROLL 0x0001
+#define CONTROL_DELAY0_SEND 0x0002
 
 extern Uint16 memory[0x10000];
 extern Sint32 regs[8];

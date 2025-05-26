@@ -17,6 +17,8 @@ The time zone for the dates in this file is Pacific (British Columbia).
 GAME
   +  Add the A_PERMANENT attribute.
   +  Counter-based random appearance of elements.
+  +  Message sending can now set the delay to zero (this can be changed
+     at run time).
   =  Restore named flags from save game files.
   =  Save/restore script frames and delay and flags for global scripts.
 
@@ -49,6 +51,7 @@ TEMPLATE
   +  #ENDGAME command to end the game.
   -  Removed the "blank" template, which is not necessary; you can create
      an empty world file with no template.
+  *  The default template now sets CONTROL_DELAY0_SEND by default.
 
 
 === Version 0.5.0 (2025-05-05) ===

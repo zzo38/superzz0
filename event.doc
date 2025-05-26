@@ -103,6 +103,10 @@ clear this flag. Also note that this is independent from the "no scroll"
 flag in the screen definition; if that no scroll flag is set, then this
 one is ignored and it never scrolls that screen automatically.)
 
+$0002 = If set, then the delay of stats that a message is successfully
+sent to is set to zero. If clear, then it will only do this if the message
+is a subroutine message.
+
 
 === Global events ===
 
