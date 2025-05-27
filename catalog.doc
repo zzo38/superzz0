@@ -4,6 +4,14 @@ likely to be changed in future before it is implemented.)
 
 See oid.ter for a list of OIDs and some other notes.
 
+The "Displayable text" type means a PC string, TRON string, or General
+string. Some are single-line text, and some are multi-line text; if it
+is multi-line text, then CRLF pairs are allowed, for representing line
+breaks; otherwise, control characters should not be used. CRLF pairs are
+treated as line breaks in multi-line PC strings, but in single-line PC
+strings they are treated as a pair of graphic characters. Character code
+zero (a null character) should not be used at all.
+
 
 === CATALOG.DER ===
 
@@ -23,13 +31,12 @@ than being a nonstandard format; the format is still standard.)
 * Publication date (UTC-based timestamp).
 
 * The set of authors. Each author is a set of the names of that author;
-each name can be a PC string, TRON string, Visible string, General string,
-or Object identifier. If it is a Visible string then it is interpreted as a
-absolute URL (any scheme is possible, e.g. "mailto:" for a email address;
-if it is not a absolute URL including scheme, then it is an error).
+each name can be a Displayable text, Visible string, or Object identifier.
+If it is a Visible string then it is interpreted as a absolute URL (any
+scheme is possible, e.g. "mailto:" for a email address; if it is not a
+absolute URL including scheme, then it is an error).
 
-* A long description, which is a PC string, TRON string, General string, or
-null. This text may contain line breaks.
+* A long description, which is a multi-line Displayable text, or null.
 
 * Set of positive classifications (OIDs). (This means that the author
 claims that these classifications do apply to this world.)
