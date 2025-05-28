@@ -109,6 +109,46 @@ static void out_p(const char*arg) {
 
 // *** Input formats
 
+static void in_artworx(const char*arg) {
+  int i,j;
+  arg=read_options(arg);
+  if(!option['x']) option['x']=80;
+  if(!option['y']) {
+    if(intype!=1) errx(Err_Argument,"Height cannot be read from pipe");
+    fseek(infile,0,SEEK_END);
+    option['y']=(ftell(infile)-4289)/(2*option['x']);
+    rewind(infile);
+  }
+  if(!videomode) videomode=Video_BrightBG;
+  paltype=Pal_VGA;
+  font512=0;
+  if(fontheight!=16) {
+    fontdata=realloc(fontdata,4096);
+    if(!fontdata) err(Err_System,"Allocation failed");
+    fontheight=16;
+  }
+  if(nrows!=option['y'] || ncolumns!=option['x']) {
+    nrows=option['y']; ncolumns=option['x'];
+    playfield=realloc(playfield,2L*nrows*ncolumns);
+    if(!playfield) err(Err_System,"Allocation failed");
+  }
+  fgetc(infile); // version number (ignored)
+  // The palette is in VGA format but is indexed by the EGA numbers of the standard PC colours.
+  // (I don't know why it works like that.)
+  for(i=0;i<64;i++) {
+    if(i<8 && i!=6) j=i; else if(i==20) j=6; else if(i>55) j=i-48; else j=-1;
+    if(j<0) {
+      fgetc(infile); fgetc(infile); fgetc(infile);
+      continue;
+    }
+    palette[j].r=fgetc(infile);
+    palette[j].g=fgetc(infile);
+    palette[j].b=fgetc(infile);
+  }
+  fread(fontdata,1,4096,infile);
+  fread(playfield,2L*nrows*ncolumns,1,infile);
+}
+
 static void in_bin(const char*arg) {
   arg=read_options(arg);
   if(!option['x']) option['x']=160;
@@ -207,6 +247,7 @@ static void in_vga(const char*arg) {
 }
 
 static void in_xbin(const char*arg) {
+  // Synchronet extensions of XBIN are not implemented.
   uint8_t head[11];
   int c,i,x,y;
   uint32_t at=0;
@@ -330,12 +371,24 @@ static void out_chr(const char*arg) {
   fwrite(fontdata,fontheight,font512?512:256,outfile);
 }
 
+static void out_ega(const char*arg) {
+  int i,j;
+  int s=(paltype==Pal_24bits?0:2);
+  if(!paltype) errx(Err_Data,"Palette is not available");
+  for(i=0;i<16;i++) {
+    j=(palette[i].r>>s)&0x20?4:0; j|=(palette[i].r>>s)&0x10?040:0;
+    j|=(palette[i].g>>s)&0x20?2:0; j|=(palette[i].g>>s)&0x10?020:0;
+    j|=(palette[i].b>>s)&0x20?1:0; j|=(palette[i].b>>s)&0x10?010:0;
+  }
+}
+
 static void out_farbfeld(const char*arg) {
   static struct {
     uint8_t data[8];
   } colors[16];
   uint32_t x,y;
   uint8_t c,f,i,xx,yy;
+  arg=read_options(arg);
   if(!playfield) errx(Err_Data,"Playfield is not available");
   if(!fontdata) errx(Err_Data,"Font is not available");
   if(!paltype) errx(Err_Data,"Palette is not available");
@@ -365,7 +418,9 @@ static void out_farbfeld(const char*arg) {
       c=playfield[y*ncolumns+x].co;
       i=playfield[y*ncolumns+x].ch;
       f=fontdata[yy+fontheight*(i+(font512&&(c&8)?256:0))];
-      if(!(videomode&Video_BrightBG)) c&=0x7F;
+      if(!(videomode&Video_BrightBG)) {
+        if((c&0x80) && option['b']) c=(c>>4)*0x11-0x88; else c&=0x7F;
+      }
       for(xx=0;xx<8;xx++) fwrite(colors[(c>>((128>>xx)&f?0:4))&15].data,1,8,outfile);
       if(videomode&Video_NineDots) fwrite(colors[(c>>(f&1?(i>191&&i<224?0:4):4))&15].data,1,8,outfile);
     }
@@ -374,9 +429,10 @@ static void out_farbfeld(const char*arg) {
 
 static void out_info(const char*arg) {
   printf("fontheight=%d\n",fontheight);
+  printf("font512=%d\n",font512);
+  printf("paltype=%d\n",paltype);
   printf("nrows=%d\n",nrows);
   printf("ncolumns=%d\n",ncolumns);
-  printf("font512=%d\n",font512);
 }
 
 static void out_mzm(const char*arg) {
@@ -388,6 +444,100 @@ static void out_mzm(const char*arg) {
   fwrite(playfield,2L*nrows*ncolumns,1,outfile);
 }
 
+static void out_vga(const char*arg) {
+  int i;
+  int s=(paltype==Pal_24bits?0:2);
+  if(!paltype) errx(Err_Data,"Palette is not available");
+  for(i=0;i<16;i++) {
+    fputc(palette[i].r>>s,outfile);
+    fputc(palette[i].g>>s,outfile);
+    fputc(palette[i].b>>s,outfile);
+  }
+}
+
+static void out_xbin(const char*arg) {
+  int i;
+  uint32_t at,w,x,y,z;
+  uint32_t hi=nrows*ncolumns;
+  arg=read_options(arg);
+  if(!nrows || !ncolumns) option['c']=0;
+  // Header
+  fwrite("XBIN\x1A",1,5,outfile);
+  fputc(ncolumns,outfile); fputc(ncolumns>>8,outfile);
+  fputc(nrows,outfile); fputc(nrows>>8,outfile);
+  fputc(fontheight?:16,outfile);
+  fputc((paltype?1:0)+(fontdata?2:0)+(option['c']?4:0)+(videomode&Video_BrightBG?8:0)+(font512?16:0),outfile);
+  // Palette
+  if(paltype==Pal_24bits) {
+    for(i=0;i<16;i++) {
+      fputc(palette[i].r>>2,outfile);
+      fputc(palette[i].g>>2,outfile);
+      fputc(palette[i].b>>2,outfile);
+    }
+  } else if(paltype) {
+    for(i=0;i<16;i++) {
+      fputc(palette[i].r,outfile);
+      fputc(palette[i].g,outfile);
+      fputc(palette[i].b,outfile);
+    }
+  }
+  // Font
+  if(fontdata) fwrite(fontdata,font512?512:256,fontheight,outfile);
+  // Image Data
+  if(option['c']) {
+    for(y=0;y<nrows;y++) {
+      for(at=y*ncolumns,x=0;x<ncolumns-1;) {
+        switch((playfield[at+x+1].ch==playfield[at+x].ch?1:0)+(playfield[at+x+1].co==playfield[at+x].co?2:0)) {
+          case 0:
+            for(z=1;z+x<ncolumns && z<64;z++) {
+              if(x+z+1<ncolumns && playfield[at+x+z].ch==playfield[at+x+z+1].ch && playfield[at+x+z].co==playfield[at+x+z+1].co) break;
+              if(x+z+2<ncolumns) {
+                if(playfield[at+x+z].ch==playfield[at+x+z+1].ch && playfield[at+x+z].ch==playfield[at+x+z+2].ch) break;
+                if(playfield[at+x+z].co==playfield[at+x+z+1].co && playfield[at+x+z].co==playfield[at+x+z+2].co) break;
+              }
+            }
+            fputc(z-1,outfile);
+            fwrite(playfield+at+x,2L*z,1,outfile);
+            x+=z;
+            break;
+          case 1:
+            for(z=1;z+x<ncolumns && z<64 && playfield[at+x+z].ch==playfield[at+x].ch;z++) {
+              if(x+z+2<ncolumns && playfield[at+x+z].co==playfield[at+x+z+1].co && playfield[at+x+z].co==playfield[at+x+z+2].co) break;
+            }
+            fputc(z+0x3F,outfile);
+            fputc(playfield[at+x].ch,outfile);
+            for(w=0;w<z;w++) fputc(playfield[at+x+w].co,outfile);
+            x+=z;
+            break;
+          case 2:
+            for(z=1;z+x<ncolumns && z<64 && playfield[at+x+z].co==playfield[at+x].co;z++) {
+              if(x+z+2<ncolumns && playfield[at+x+z].ch==playfield[at+x+z+1].ch && playfield[at+x+z].ch==playfield[at+x+z+2].ch) break;
+            }
+            fputc(z+0x7F,outfile);
+            fputc(playfield[at+x].co,outfile);
+            for(w=0;w<z;w++) fputc(playfield[at+x+w].ch,outfile);
+            x+=z;
+            break;
+          case 3:
+            for(z=1;z+x<ncolumns && z<64 && playfield[at+x+z].ch==playfield[at+x].ch && playfield[at+x+z].co==playfield[at+x].co;z++);
+            fputc(z+0xBF,outfile);
+            fputc(playfield[at+x].ch,outfile);
+            fputc(playfield[at+x].co,outfile);
+            x+=z;
+            break;
+        }
+      }
+      if(x==ncolumns-1) {
+        fputc(0,outfile);
+        fputc(playfield[at+x].ch,outfile);
+        fputc(playfield[at+x].co,outfile);
+      }
+    }
+  } else if(nrows && ncolumns) {
+    fwrite(playfield,2L*nrows*ncolumns,1,outfile);
+  }
+}
+
 // *** End of filters
 
 static const Filters filters[]={
@@ -397,6 +547,7 @@ static const Filters filters[]={
   {"+f",out_f},
   {"+p",out_p},
   // Input formats
+  {"-artworx",in_artworx},
   {"-bin",in_bin},
   {"-chr",in_chr},
   {"-ega",in_ega},
@@ -409,9 +560,12 @@ static const Filters filters[]={
   // Output formats
   {"+bin",out_bin},
   {"+chr",out_chr},
+  {"+ega",out_ega},
   {"+farbfeld",out_farbfeld},
   {"+info",out_info},
   {"+mzm",out_mzm},
+  {"+vga",out_vga},
+  {"+xbin",out_xbin},
 };
 
 int main(int argc,char**argv) {
