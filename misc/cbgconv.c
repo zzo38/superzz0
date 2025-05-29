@@ -1,10 +1,10 @@
 #if 0
-gcc -s -O2 -o ./cbgconv cbgconv.c -Wno-unused-result
+gcc -s -O2 -o ./cbgconv cbgconv.c -Wno-unused-result -Wno-multichar
 exit
 #endif
 
 // Convert character-based graphics
-// (SAUCE is not currently implemented, but may be done in future)
+// (SAUCE is not currently implemented for all formats, but may be done in future)
 
 #define _GNU_SOURCE
 #include <err.h>
@@ -20,6 +20,7 @@ exit
 
 #define Video_BrightBG 0x01
 #define Video_NineDots 0x02
+#define Video_Underline 0x04
 #define Video_Set 0x80
 
 #define Pal_None 0
@@ -51,6 +52,7 @@ static uint8_t font512;
 static uint8_t videomode;
 static Palette palette[16];
 static uint8_t paltype;
+static int32_t csi[32];
 
 typedef struct {
   const char*name;
@@ -108,6 +110,215 @@ static void out_p(const char*arg) {
 }
 
 // *** Input formats
+
+static uint16_t ansi_vscroll(uint16_t y) {
+  uint16_t x;
+  if(y<nrows) return y;
+  if(y>nrows || nrows>32767) errx(Err_Data,"Too many lines in ANSI file");
+  if(option['y']) {
+    if(option['v']) memmove(playfield,playfield+ncolumns,2L*(nrows-1));
+    y--;
+  } else {
+    playfield=realloc(playfield,2L*++nrows*ncolumns);
+    if(!playfield) err(Err_System,"Allocation failed");
+  }
+  for(x=0;x<ncolumns;x++) playfield[y*ncolumns+x]=(Tile){option['b'],option['c']?:7};
+  return y;
+}
+
+static uint8_t ansi_csi(void) {
+  int c;
+  int i=0;
+  uint32_t n=0;
+  for(;;) {
+    c=fgetc(infile);
+    if(c==';') {
+      csi[i]=n;
+      if(++i==32) goto bad;
+      n=0;
+    } else if(c>='0' && c<='9') {
+      n=10*n+c-'0';
+    } else {
+      break;
+    }
+  }
+  csi[i]=n;
+  return c;
+  bad:
+  while(fgetc(infile)/16==3);
+  return 0;
+}
+
+static void ansi_erase(uint32_t a,uint32_t b,Tile t) {
+  if(a>=ncolumns*nrows) a=ncolumns*nrows-1;
+  if(b>=ncolumns*nrows) b=ncolumns*nrows-1;
+  while(a<b) playfield[a++]=t;
+}
+
+static void in_ansi(const char*arg) {
+  int c,d,i,r;
+  uint8_t color;
+  uint8_t sgr=0;
+  uint8_t rev=0;
+  uint16_t x=0;
+  uint16_t y=0;
+  uint16_t xs=0;
+  uint16_t ys=0;
+  arg=read_options(arg);
+  ncolumns=option['x']?:80;
+  nrows=option['y']?:1;
+  color=option['c']?:7;
+  if(option['S']) {
+    uint8_t sauce[128]={};
+    if(intype!=1) errx(Err_Argument,"SAUCE cannot be read from pipe");
+    fseek(infile,-128,SEEK_END);
+    fread(sauce,128,1,infile);
+    rewind(infile);
+    if(memcmp(sauce,"SAUCE00",7)) errx(Err_Data,"Improper SAUCE data");
+    if(sauce[94]) {
+      if(memcmp(sauce+94,"\x01\x01",2)) errx(Err_Data,"SAUCE specifies non-ANSI file type");
+      if((sauce[96]|sauce[97]) && !option['x']) ncolumns=sauce[96]|(sauce[97]<<8);
+      if((sauce[98]|sauce[99]) && !option['y']) option['y']=nrows=sauce[98]|(sauce[99]<<8);
+      i=sauce[105];
+      videomode|=Video_Set;
+      if(i&1) videomode|=Video_BrightBG; else videomode&=~Video_BrightBG;
+      i&=6;
+      if(i==4) videomode|=Video_NineDots; else if(i==2) videomode&=~Video_NineDots;
+    }
+  }
+  resize:
+  free(playfield);
+  playfield=malloc(2L*nrows*ncolumns);
+  if(!playfield) err(Err_System,"Allocation failed");
+  for(y=0;y<nrows;y++) for(x=0;x<ncolumns;x++) playfield[y*ncolumns+x]=(Tile){option['b'],color};
+  for(x=y=0;;) switch(c=fgetc(infile)) {
+    case EOF: return;
+    case 0: if(option['d']) c=fgetc(infile); goto normal;
+    case 8: if(option['f']<1) goto normal; if(x) --x; break;
+    case 9: if(option['f']<1) goto normal; if((x=(x+8)&8)>=ncolumns) x=0,y=ansi_vscroll(y+1); break;
+    case 10: linefeed:
+      if(option['e']==1) x=0;
+      if(++y==nrows) y=ansi_vscroll(y);
+      break;
+    case 12:
+      if(option['f']<1) goto normal;
+      allclear:
+      for(y=0;y<nrows;y++) for(x=0;x<ncolumns;x++) playfield[y*ncolumns+x]=(Tile){option['b'],color};
+      x=y=0;
+      break;
+    case 13:
+      x=0;
+      if(option['e']==2) goto linefeed;
+      break;
+    case 26: if(option['f']<0) goto normal; return;
+    case 27:
+      c=fgetc(infile);
+      if(c!='[') {
+        if(option['f']<0) {
+          ungetc(c,infile);
+          c=27;
+          goto normal;
+        }
+        break;
+      }
+      c=fgetc(infile);
+      if((c>='0' && c<='9') || c==';' || c>='@') ungetc(c,infile),c='_';
+      memset(csi,-1,sizeof(csi));
+      d=ansi_csi();
+      if(option['D']) printf("(%d,%d)[%c,%c](%d,%d,%d,%d)\n",x,y,c,d,csi[0],csi[1],csi[2],csi[3]);
+      switch(d*'\0\1'+c*'\1\0') {
+        case '_F':
+          x=0; // fall through
+        case '_A':
+          i=(*csi<=0?1:*csi);
+          if(y>i) y-=i; else y=0;
+          break;
+        case '_E':
+          x=0; // fall through
+        case '_B':
+          i=(*csi<=0?1:*csi);
+          if(option['y'] && i+y>=nrows) y=nrows-1; else y+=i;
+          if(y>=nrows) {
+            // Handle possibility of skipping multiple lines beyond the screen size
+            i=nrows-y;
+            while(i--) ansi_vscroll(nrows);
+            if(y>=nrows) y=nrows-1;
+          }
+          break;
+        case '_C': x+=(*csi<=0?1:*csi); break;
+        case '_D': i=(*csi<=0?1:*csi); x=(x>i?x-i:0); break;
+        case '_G': x=(*csi<=0?1:*csi-1); break;
+        case '_H': case '_f':
+          x=(csi[0]<=0?1:csi[0]-1);
+          y=(csi[1]<=0?1:csi[1]-1);
+          if(x>=ncolumns) x=ncolumns-1;
+          if(y>=nrows) y=nrows-1;
+          break;
+        case '_J':
+          if(*csi<0) *csi=0; else if(*csi>=2) goto allclear;
+          ansi_erase(*csi?0:y*ncolumns+x,*csi?y*ncolumns+x:nrows*ncolumns,(Tile){option['b'],color});
+          break;
+        case '_K':
+          if(*csi<0) *csi=0; else if(*csi>2) *csi=2;
+          if(*csi==0) ansi_erase(y*ncolumns+x,(y+1)*ncolumns,(Tile){option['b'],color});
+          if(*csi==1) ansi_erase(y*ncolumns,y*ncolumns+x,(Tile){option['b'],color});
+          if(*csi==2) ansi_erase(0,(y+1)*ncolumns,(Tile){option['b'],color});
+          break;
+        case '_m':
+          if(*csi<0) *csi=0;
+          for(i=0;i<32 && csi[i]>=0;i++) switch(csi[i]) {
+            case 0: color=option['c']?:7,sgr=rev=0; break;
+            case 1: color|=0x08,sgr|=0x08; break;
+            case 4: if(videomode&Video_Underline) color=(color&0xF8)+1; break;
+            case 5: color|=0x80,sgr|=0x80; break;
+            case 7: rev=1; break;
+            case 8: color=0; break;
+            case 22: color&=0xF7,sgr&=0xF7; break;
+            case 24: if((videomode&Video_Underline) && (color&7)==1) color+=6; break;
+            case 25: color&=0x7F,sgr&=0x7F; break;
+            case 27: rev=0; break;
+            case 28: if(!color) color=option['c']?:7; break;
+            case 30 ... 37: color=(color&0xF0)|sgr|"\x00\x04\x02\x06\x01\x05\x03\x07"[csi[i]-30]; break;
+            case 39: color=((option['c']?:7)&0x0F)|sgr|(color&0xF0); break;
+            case 40 ... 47: color=(color&0x0F)|sgr|("\x00\x04\x02\x06\x01\x05\x03\x07"[csi[i]-40]<<4); break;
+            case 49: color=(option['c']&0xF0)|sgr|(color&0x0F); break;
+            case 90 ... 97: color=(color&0xF0)|sgr|"\x00\x04\x02\x06\x01\x05\x03\x07"[csi[i]-90]|0x08; break;
+            case 100 ... 107: color=(color&0x0F)|sgr|("\x00\x04\x02\x06\x01\x05\x03\x07"[csi[i]-100]<<4)|0x80; break;
+          }
+          break;
+        case '_s': xs=x; ys=y; break;
+        case '_u': x=xs; y=ys; break;
+        case '=h': case '=l':
+          for(r=i=0;i<32 && csi[i]>=0;i++) {
+            if(csi[i]==255) option['d']=(d=='h');
+            if(csi[i]==0) r=1,videomode|=Video_Underline,ncolumns=40,option['y']=nrows=25;
+            if(csi[i]==1) r=1,videomode&=~Video_Underline,ncolumns=40,option['y']=nrows=25;
+            if(csi[i]==2) r=1,videomode|=Video_Underline,ncolumns=80,option['y']=nrows=25;
+            if(csi[i]==3) r=1,videomode&=~Video_Underline,ncolumns=80,option['y']=nrows=25;
+          }
+          if(r) goto resize;
+          break;
+        case '?h': case '?l':
+          for(i=0;i<32 && csi[i]>=0;i++) if(csi[i]==3) {
+            ncolumns=(d=='h'?132:80);
+            goto resize;
+          }
+          break;
+      }
+      break;
+    default: normal:
+      if(y>=nrows) y=ansi_vscroll(y);
+      if(x>=ncolumns) {
+        x=0;
+        if(++y==nrows) y=ansi_vscroll(y);
+      }
+      playfield[y*ncolumns+x++]=(Tile){c,rev?(color>>4)|(color<<4):color};
+      if(x>=ncolumns && !option['w']) {
+        x=0;
+        if(++y==nrows) y=ansi_vscroll(y);
+      }
+  }
+}
 
 static void in_artworx(const char*arg) {
   int i,j;
@@ -332,6 +543,7 @@ static void do_mode(const char*arg) {
   while(*arg) switch(*arg++) {
     case '9': videomode|=Video_NineDots; break;
     case 'b': videomode|=Video_BrightBG; break;
+    case 'u': videomode|=Video_Underline; break;
     default: errx(Err_Argument,"Improper video mode");
   }
 }
@@ -339,21 +551,21 @@ static void do_mode(const char*arg) {
 static void do_pcpal(const char*arg) {
   static const Palette p[16]={
     {0x00,0x00,0x00},
-    {0x00,0x00,0xAA},
-    {0x00,0xAA,0x00},
-    {0x00,0xAA,0xAA},
-    {0xAA,0x00,0x00},
-    {0xAA,0x00,0xAA},
-    {0xAA,0x55,0x00},
-    {0xAA,0xAA,0xAA},
-    {0x55,0x55,0x55},
-    {0x55,0x55,0xFF},
-    {0x55,0xFF,0x55},
-    {0x55,0xFF,0xFF},
-    {0xFF,0x55,0x55},
-    {0xFF,0x55,0xFF},
-    {0xFF,0xFF,0x55},
-    {0xFF,0xFF,0xFF},
+    {0x00,0x00,0x2A},
+    {0x00,0x2A,0x00},
+    {0x00,0x2A,0x2A},
+    {0x2A,0x00,0x00},
+    {0x2A,0x00,0x2A},
+    {0x2A,0x15,0x00},
+    {0x2A,0x2A,0x2A},
+    {0x15,0x15,0x15},
+    {0x15,0x15,0x3F},
+    {0x15,0x3F,0x15},
+    {0x15,0x3F,0x3F},
+    {0x3F,0x15,0x15},
+    {0x3F,0x15,0x3F},
+    {0x3F,0x3F,0x15},
+    {0x3F,0x3F,0x3F},
   };
   paltype=Pal_VGA;
   memcpy(palette,p,sizeof(p));
@@ -421,6 +633,7 @@ static void out_farbfeld(const char*arg) {
       if(!(videomode&Video_BrightBG)) {
         if((c&0x80) && option['b']) c=(c>>4)*0x11-0x88; else c&=0x7F;
       }
+      if(yy==12 && (videomode&Video_Underline) && (c&7)==1) f=0xFF;
       for(xx=0;xx<8;xx++) fwrite(colors[(c>>((128>>xx)&f?0:4))&15].data,1,8,outfile);
       if(videomode&Video_NineDots) fwrite(colors[(c>>(f&1?(i>191&&i<224?0:4):4))&15].data,1,8,outfile);
     }
@@ -547,6 +760,7 @@ static const Filters filters[]={
   {"+f",out_f},
   {"+p",out_p},
   // Input formats
+  {"-ansi",in_ansi},
   {"-artworx",in_artworx},
   {"-bin",in_bin},
   {"-chr",in_chr},

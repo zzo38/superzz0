@@ -1,0 +1,170 @@
+
+******** FILE CONTROLS ********
+
+
+#### -f (Read file)
+
+Open the specified file for reading. If this is not used, then it will
+read from stdin. This command is required for auto-detection of the number
+of rows of some file formats.
+
+
+#### -p (Read pipe)
+
+Open a pipe for reading, and use the specified shell command.
+
+
+#### +f (Write file)
+
+Open the specified file for writing. If this is not used, then it will
+write to stdout.
+
+
+#### +p (Write pipe)
+
+Open a pipe for writing, and use the specified shell command.
+
+
+******** INPUT FORMATS ********
+
+
+#### -ansi (ANSI art)
+
+S = Set to 1 to read SAUCE data, which causes some of the other parameters
+to be set automatically.
+
+b = Blank character code (default=0)
+
+c = Initial colour (default=7)
+
+d = Set to 1 to enable doorway mode
+
+e = Line endings: 0=normal, 1=LF->CRLF, 2=CR->CRLF
+
+f = Set to 1 to treat backspace and form feed as control characters. Set
+to -1 to treat some control characters as graphic characters even though
+they are normally not treated as graphic characters.
+
+w = Wrapping behaviour; 0 means go to next line immediately after the
+last character on the previous line, 1 means wait until another character
+or a line break.
+
+v = Set to 1 to enable scrolling
+
+x = Number of columns (default=80)
+
+y = Number of rows (if 0 then decided automatically)
+
+
+#### -artworx (Artworx Data Forat)
+
+x = Number of columns (default=80)
+
+y = Number of rows (if 0 then decided automatically; requires seekable)
+
+
+#### -bin (raw binary)
+
+x = Number of columns (default=160)
+
+y = Number of rows (if 0 then decided automatically; requires seekable)
+
+
+#### -chr (raw PC font data)
+
+h = Font height (if 0 then decided automatically; requires seekable)
+
+n = Number of characters (can be 1 to 256, or 512; default=256)
+
+o = Character code offset (default=0)
+
+
+#### -ega (EGA palette)
+
+(none)
+
+
+#### -mzm (MegaZeux image file)
+
+Only the parameter and colour are read; any other data stored in the file
+will be ignored, and will not be copied into any output files.
+
+u = Set to 1 to read the under layer instead of the main layer (this is
+ignored for a layer mode MZM)
+
+
+#### -vga (VGA palette)
+
+(none)
+
+
+#### -xbin (XBIN)
+
+(none)
+
+
+******** MODIFIERS ********
+
+
+#### mode (Set video mode)
+
+The parameter is zero or more of the following characters:
+
+9 = Nine dot mode
+
+b = Bright background (no blink)
+
+u = Underline blue characters
+
+
+#### pcpal (Load default palette)
+
+Loads the default palette.
+
+
+******** OUTPUT FORMATS ********
+
+
+#### +bin (raw binary)
+
+(none)
+
+
+#### +chr (raw PC font data)
+
+(none)
+
+
+#### +ega (EGA palette)
+
+If the palette is not already EGA format, it is converted.
+
+
+#### +farbfeld (Farbfeld)
+
+Renders the picture as farbfeld. The font, palette, and grid must all be
+already loaded, in order for this to work, otherwise it is an error.
+
+Blinking is not implemented; if blinking is enabled then any blinking
+characters will be displayed as solid on, without a bright background.
+
+
+#### +info (Show information)
+
+Displays some information about the currently loaded data.
+
+
+#### +mzm (MegaZeux image file)
+
+This always writes a layer mode MZM2 file.
+
+
+#### +vga (VGA palette)
+
+If the palette is not already VGA format, it is converted.
+
+
+#### +xbin (XBIN)
+
+c = Set to 1 to enable compression.
+
