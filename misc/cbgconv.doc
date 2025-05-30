@@ -47,7 +47,8 @@ they are normally not treated as graphic characters.
 
 w = Wrapping behaviour; 0 means go to next line immediately after the
 last character on the previous line, 1 means wait until another character
-or a line break.
+or a line break, 2 or 3 means never go to the next line unless an explicit
+line break occurs.
 
 v = Set to 1 to enable scrolling
 
@@ -56,7 +57,7 @@ x = Number of columns (default=80)
 y = Number of rows (if 0 then decided automatically)
 
 
-#### -artworx (Artworx Data Forat)
+#### -artworx (Artworx Data Format)
 
 x = Number of columns (default=80)
 
@@ -64,6 +65,9 @@ y = Number of rows (if 0 then decided automatically; requires seekable)
 
 
 #### -bin (raw binary)
+
+S = Set to 1 to read SAUCE data, which causes some of the other parameters
+to be set automatically.
 
 x = Number of columns (default=160)
 
@@ -103,7 +107,27 @@ ignored for a layer mode MZM)
 (none)
 
 
+#### -zzt (ZZT board)
+
+Only ZZT board files can be loaded, and not ZZT world files.
+
+m = Set to 1 to hide the player.
+
+
 ******** MODIFIERS ********
+
+
+#### cancel (Cancel)
+
+The parameter is zero or more of the following characters:
+
+f = Cancel font
+
+g = Cancel grid
+
+m = Cancel video mode
+
+p = Cancel palette
 
 
 #### mode (Set video mode)
@@ -122,12 +146,23 @@ u = Underline blue characters
 Loads the default palette.
 
 
+#### showfont (Show font)
+
+Loads a preview of the first 256 characters of the currently selected font,
+in a 16x16 arrangement.
+
+
 ******** OUTPUT FORMATS ********
+
+
+#### +artworx (Artworx Data Format)
+
+(none)
 
 
 #### +bin (raw binary)
 
-(none)
+S = Set to 1 to apply SAUCE
 
 
 #### +chr (raw PC font data)

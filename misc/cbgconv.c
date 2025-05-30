@@ -4,7 +4,6 @@ exit
 #endif
 
 // Convert character-based graphics
-// (SAUCE is not currently implemented for all formats, but may be done in future)
 
 #define _GNU_SOURCE
 #include <err.h>
@@ -53,6 +52,7 @@ static uint8_t videomode;
 static Palette palette[16];
 static uint8_t paltype;
 static int32_t csi[32];
+static uint8_t sauce[128];
 
 typedef struct {
   const char*name;
@@ -73,6 +73,20 @@ static const char*read_options(const char*arg) {
     option[*arg]=strtol(arg+1,(char**)&arg,0);
   }
   return (*arg=='='?arg+1:(const char*)0);
+}
+
+static void make_sauce(uint8_t DataType,uint8_t FileType,uint8_t TInfo1,uint8_t TInfo2,uint8_t TInfo3,uint8_t TInfo4) {
+  memcpy(sauce,"SAUCE00",7);
+  memset(sauce+7,32,83);
+  memset(sauce+90,0,38);
+  sauce[94]=DataType;
+  sauce[95]=FileType;
+  sauce[96]=TInfo1; sauce[97]=TInfo1>>8;
+  sauce[98]=TInfo2; sauce[99]=TInfo2>>8;
+  sauce[100]=TInfo3; sauce[101]=TInfo3>>8;
+  sauce[102]=TInfo4; sauce[102]=TInfo4>>8;
+  sauce[105]=(videomode&Video_BrightBG?1:0);
+  if(videomode&Video_Set) sauce[105]|=(videomode&Video_NineDots?4:2);
 }
 
 // *** File controls
@@ -169,8 +183,8 @@ static void in_ansi(const char*arg) {
   nrows=option['y']?:1;
   color=option['c']?:7;
   if(option['S']) {
-    uint8_t sauce[128]={};
     if(intype!=1) errx(Err_Argument,"SAUCE cannot be read from pipe");
+    *sauce=0;
     fseek(infile,-128,SEEK_END);
     fread(sauce,128,1,infile);
     rewind(infile);
@@ -299,18 +313,36 @@ static void in_ansi(const char*arg) {
           if(r) goto resize;
           break;
         case '?h': case '?l':
-          for(i=0;i<32 && csi[i]>=0;i++) if(csi[i]==3) {
-            ncolumns=(d=='h'?132:80);
-            goto resize;
+          for(r=i=0;i<32 && csi[i]>=0;i++) switch(csi[i]) {
+            case 3: ncolumns=(d=='h'?132:80); r=1; break;
+            case 7: if(d=='h') option['w']|=2; else option['w']&=~2; break;
+            case 33: if(d=='h') videomode|=Video_BrightBG; else videomode&=~Video_BrightBG; break;
           }
+          if(r) goto resize;
+          break;
+        case '=\x7B':
+          // This is supposed to load a font that can then be selectable, but this
+          // program does not implement selectable fonts, so it always overrides
+          // any existing font unconditionally, instead. (The newer base64 format
+          // is not implemented.)
+          fontheight=(csi[1]==1?14:csi[1]==2?8:16);
+          free(fontdata);
+          font512=0;
+          fontdata=malloc(256*fontheight);
+          if(!fontdata) err(Err_System,"Allocation failed");
+          fread(fontdata,fontheight,256,infile);
           break;
       }
       break;
     default: normal:
       if(y>=nrows) y=ansi_vscroll(y);
       if(x>=ncolumns) {
-        x=0;
-        if(++y==nrows) y=ansi_vscroll(y);
+        if(option['w']&2) {
+          x=ncolumns-1;
+        } else {
+          x=0;
+          if(++y==nrows) y=ansi_vscroll(y);
+        }
       }
       playfield[y*ncolumns+x++]=(Tile){c,rev?(color>>4)|(color<<4):color};
       if(x>=ncolumns && !option['w']) {
@@ -361,7 +393,25 @@ static void in_artworx(const char*arg) {
 }
 
 static void in_bin(const char*arg) {
+  int i;
   arg=read_options(arg);
+  if(option['S']) {
+    if(intype!=1) errx(Err_Argument,"SAUCE cannot be read from pipe");
+    *sauce=0;
+    fseek(infile,-128,SEEK_END);
+    fread(sauce,128,1,infile);
+    rewind(infile);
+    if(memcmp(sauce,"SAUCE00",7)) errx(Err_Data,"Improper SAUCE data");
+    if(sauce[94]) {
+      if(sauce[94]!=5) errx(Err_Data,"SAUCE specifies wrong file type");
+      option['x']=sauce[95]*2;
+      i=sauce[105];
+      videomode|=Video_Set;
+      if(i&1) videomode|=Video_BrightBG; else videomode&=~Video_BrightBG;
+      i&=6;
+      if(i==4) videomode|=Video_NineDots; else if(i==2) videomode&=~Video_NineDots;
+    }
+  }
   if(!option['x']) option['x']=160;
   if(!option['y']) {
     if(intype!=1) errx(Err_Argument,"Height cannot be read from pipe");
@@ -535,7 +585,84 @@ static void in_xbin(const char*arg) {
   }
 }
 
+static void in_zzt(const char*arg) {
+  static const uint8_t el[256]={
+  //  0    1    2    3    4    5    6    7    8    9
+    0x20,0x20,0x20,0x20,0x02,0x84,0x9D,0x04,0x0C,0x0A,
+    0xE8,0xF0,0xFA,0x0B,0x7F,0xB3,0x2F,0x5C,0xF8,0xB0,
+    0xB0,0xDB,0xB2,0xB1,0xFE,0x12,0x1D,0xB2,0x20,0xCE,
+    0x5E,0xCE,0x2A,0xCD,0x99,0x05,0x00,0x2A,0x5E,0x18,
+    0x1F,0xEA,0xE3,0xBA,0xE9,0x4F,0x20,
+  };
+  uint8_t istat[128];
+  uint8_t bkind[25*60];
+  uint32_t at;
+  int i,j,k;
+  arg=read_options(arg);
+  if(nrows!=25 || ncolumns!=60) {
+    free(playfield);
+    playfield=malloc(2L*25*60);
+    if(!playfield) err(Err_System,"Allocation failed");
+    nrows=25; ncolumns=60;
+  }
+  i=fgetc(infile); i|=fgetc(infile)<<8;
+  if((i&0x8000) || i<4) errx(Err_Data,"Does not seem to be a ZZT board file");
+  fread(istat,1,51,infile); // ignore this data
+  // Board grid
+  for(at=0;at<60*25;) {
+    i=fgetc(infile)?:256; j=fgetc(infile); k=fgetc(infile);
+    while(i-- && at<60*25) playfield[at].ch=el[bkind[at]=j&255],playfield[at++].co=k;
+  }
+  fread(istat,1,86,infile); // ignore this data
+  k=fgetc(infile); fgetc(infile);
+  // Stats
+  for(i=0;i<=k;i++) {
+    fread(istat,1,33,infile);
+    if(istat[0] && istat[0]<=60 && istat[1] && istat[1]<=25) {
+      at=istat[0]+istat[1]*60-61;
+      if(!i && option['m']) playfield[at]=(Tile){32,7};
+      switch(bkind[at]) {
+        case 12: if(istat[8]<6) playfield[at].ch="\xFA\xFA\xF9\xF8oO"[istat[8]]; break;
+        case 13: if(istat[8]>1) playfield[at].ch=istat[8]+48; break;
+        case 30: playfield[at].ch=(istat[2]&0x80?'(':istat[2]?')':istat[4]&0x80?'^':istat[4]?'v':'^'); break;
+        case 36: playfield[at].ch=istat[8]; break;
+        case 40: playfield[at].ch=(istat[2]==1?16:istat[2]==255?17:istat[4]==255?30:31); break;
+      }
+    }
+    if((istat[23] || istat[24]) && istat[24]<128) {
+      j=istat[23]+(istat[24]<<8);
+      while(j>0) fread(istat,1,j>128?128:j,infile),j-=128;
+    }
+  }
+  // Conversion
+  for(at=0;at<80*25;at++) switch(bkind[at]) {
+    case 0: playfield[at].co=0; break;
+    case 31:
+      i=0;
+      if(at<60 || bkind[at-60]==1 || bkind[at-60]==31) i|=2;
+      if(at>1439 || bkind[at+60]==1 || bkind[at+60]==31) i|=8;
+      if(at%60==0 || bkind[at-1]==1 || bkind[at-1]==31) i|=4;
+      if(at%60==59 || bkind[at+1]==1 || bkind[at+1]==31) i|=1;
+      playfield[at].ch="\xF9\xC6\xD0\xC8\xB5\xCD\xBC\xCA\xD2\xC9\xBA\xCC\xBB\xCB\xB9\xCE"[i];
+      break;
+    case 47 ... 52: case 54 ... 127: playfield[at].ch=playfield[at].co; playfield[at].co=(bkind[at]-46)*16+15; break;
+    case 53: playfield[at].ch=playfield[at].co; playfield[at].co=15; break;
+    case 128 ... 255: playfield[at].ch=playfield[at].co; playfield[at].co=bkind[at]-128; break;
+  }
+}
+
 // *** Modifiers
+
+static void do_cancel(const char*arg) {
+  ReqArg;
+  while(*arg) switch(*arg++) {
+    case 'f': free(fontdata); fontdata=0; font512=0; fontheight=0; break;
+    case 'g': free(playfield); playfield=0; nrows=ncolumns=0; break;
+    case 'm': videomode=0; break;
+    case 'p': paltype=0; break;
+    default: errx(Err_Argument,"Improper argument");
+  }
+}
 
 static void do_mode(const char*arg) {
   ReqArg;
@@ -567,15 +694,65 @@ static void do_pcpal(const char*arg) {
     {0x3F,0x3F,0x15},
     {0x3F,0x3F,0x3F},
   };
-  paltype=Pal_VGA;
+  paltype=Pal_EGA;
   memcpy(palette,p,sizeof(p));
+}
+
+static void do_showfont(const char*arg) {
+  int i;
+  free(playfield);
+  nrows=ncolumns=16;
+  playfield=malloc(512);
+  if(!playfield) err(Err_System,"Allocation failed");
+  for(i=0;i<256;i++) playfield[i]=(Tile){i,7};
 }
 
 // *** Output formats
 
+static void out_artworx(const char*arg) {
+  int i,j;
+  if(!playfield) errx(Err_Data,"Playfield is not available");
+  if(!fontdata) errx(Err_Data,"Font is not available");
+  if(font512 || fontheight!=16) errx(Err_Data,"Artworx cannot use this font");
+  fputc(0,outfile); // version number
+  if(paltype==Pal_None) {
+    for(i=0;i<64;i++) {
+      fputc("\x00\x2A______\x15\x3F"[(i&044)>>2],outfile);
+      fputc("\x00\x2A______\x15\x3F"[(i&022)>>2],outfile);
+      fputc("\x00\x2A______\x15\x3F"[(i&011)>>2],outfile);
+    }
+  } else if(paltype==Pal_24bits) {
+    for(i=0;i<64;i++) {
+      j=(i==20?6:i&15);
+      fputc(palette[j].r>>2,outfile);
+      fputc(palette[j].g>>2,outfile);
+      fputc(palette[j].b>>2,outfile);
+    }
+  } else {
+    for(i=0;i<64;i++) {
+      j=(i==20?6:i&15);
+      fputc(palette[j].r,outfile);
+      fputc(palette[j].g,outfile);
+      fputc(palette[j].b,outfile);
+    }
+  }
+  fwrite(fontdata,16,256,outfile);
+  fwrite(playfield,2L*nrows*ncolumns,1,outfile);
+}
+
 static void out_bin(const char*arg) {
+  arg=read_options(arg);
+  if(option['S']) {
+    if(ncolumns&1) errx(Err_Argument,"SAUCE cannot be applied to BIN with odd number of columns");
+    if(ncolumns>510) errx(Err_Argument,"SAUCE cannot be applied to BIN with more than 510 columns");
+  }
   if(!playfield) errx(Err_Data,"Playfield is not available");
   fwrite(playfield,2L*nrows*ncolumns,1,outfile);
+  if(option['S']) {
+    fputc(26,outfile);
+    make_sauce(5,ncolumns>>1,0,0,0,0);
+    fwrite(sauce,1,128,outfile);
+  }
 }
 
 static void out_chr(const char*arg) {
@@ -768,10 +945,14 @@ static const Filters filters[]={
   {"-mzm",in_mzm},
   {"-vga",in_vga},
   {"-xbin",in_xbin},
+  {"-zzt",in_zzt},
   // Modifiers
+  {"cancel",do_cancel},
   {"mode",do_mode},
   {"pcpal",do_pcpal},
+  {"showfont",do_showfont},
   // Output formats
+  {"+artworx",out_artworx},
   {"+bin",out_bin},
   {"+chr",out_chr},
   {"+ega",out_ega},
