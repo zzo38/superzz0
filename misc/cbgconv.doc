@@ -47,8 +47,8 @@ they are normally not treated as graphic characters.
 
 w = Wrapping behaviour; 0 means go to next line immediately after the
 last character on the previous line, 1 means wait until another character
-or a line break, 2 or 3 means never go to the next line unless an explicit
-line break occurs.
+or a line break, 2 means never go to the next line unless an explicit line
+break occurs.
 
 v = Set to 1 to enable scrolling
 
@@ -153,6 +153,27 @@ in a 16x16 arrangement.
 
 
 ******** OUTPUT FORMATS ********
+
+
+#### +ansi (ANSI)
+
+S = Set to 1 or 2 to apply SAUCE. If set to 2 and the e option is nonzero,
+then the number of columns is one more than the actual number of columns.
+
+d = Doorway mode: 0=disable, 1=enable implicitly, 2=enable explicitly.
+If set to zero, some characters don't work, and are replaced by other
+characters instead.
+
+e = Line endings: 0=none, 1=LF, 2=CR, 3=CRLF
+
+f = Font export: 0=none, 1=using CTerm binary format (the base64 format is
+not currently implemented).
+
+m = Set to 1 to use monochrome output mode.
+
+s = If nonzero, then after the specified number of characters, will save
+the cursor and emit CRLF and then restore the cursor. (MegaZeux does this,
+allegedly due to a DOS ANSI viewer or editor using a fixed size buffer.)
 
 
 #### +artworx (Artworx Data Format)

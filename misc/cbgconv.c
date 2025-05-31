@@ -174,6 +174,7 @@ static void in_ansi(const char*arg) {
   uint8_t color;
   uint8_t sgr=0;
   uint8_t rev=0;
+  uint8_t dim=0;
   uint16_t x=0;
   uint16_t y=0;
   uint16_t xs=0;
@@ -205,7 +206,7 @@ static void in_ansi(const char*arg) {
   playfield=malloc(2L*nrows*ncolumns);
   if(!playfield) err(Err_System,"Allocation failed");
   for(y=0;y<nrows;y++) for(x=0;x<ncolumns;x++) playfield[y*ncolumns+x]=(Tile){option['b'],color};
-  for(x=y=0;;) switch(c=fgetc(infile)) {
+  for(dim=x=y=0;;) switch(c=fgetc(infile)) {
     case EOF: return;
     case 0: if(option['d']) c=fgetc(infile); goto normal;
     case 8: if(option['f']<1) goto normal; if(x) --x; break;
@@ -281,13 +282,14 @@ static void in_ansi(const char*arg) {
         case '_m':
           if(*csi<0) *csi=0;
           for(i=0;i<32 && csi[i]>=0;i++) switch(csi[i]) {
-            case 0: color=option['c']?:7,sgr=rev=0; break;
-            case 1: color|=0x08,sgr|=0x08; break;
+            case 0: color=option['c']?:7,sgr=rev=dim=0; break;
+            case 1: color|=0x08,sgr|=0x08; if(dim && (videomode&Video_Underline)) dim=0,color=(color&0xF0)+15; break;
+            case 2: if(videomode&Video_Underline) color=(color&0xF0)+8,dim=1; break;
             case 4: if(videomode&Video_Underline) color=(color&0xF8)+1; break;
-            case 5: color|=0x80,sgr|=0x80; break;
+            case 5: case 6: color|=0x80,sgr|=0x80; break;
             case 7: rev=1; break;
-            case 8: color=0; break;
-            case 22: color&=0xF7,sgr&=0xF7; break;
+            case 8: color=(color>>4)*0x11; break;
+            case 22: color&=0xF7,sgr&=0xF7; if(dim && (videomode&Video_Underline)) dim=0,color=(color&0xF0)+7; break;
             case 24: if((videomode&Video_Underline) && (color&7)==1) color+=6; break;
             case 25: color&=0x7F,sgr&=0x7F; break;
             case 27: rev=0; break;
@@ -315,7 +317,7 @@ static void in_ansi(const char*arg) {
         case '?h': case '?l':
           for(r=i=0;i<32 && csi[i]>=0;i++) switch(csi[i]) {
             case 3: ncolumns=(d=='h'?132:80); r=1; break;
-            case 7: if(d=='h') option['w']|=2; else option['w']&=~2; break;
+            case 7: option['w']=(d=='h'?0:2); break;
             case 33: if(d=='h') videomode|=Video_BrightBG; else videomode&=~Video_BrightBG; break;
           }
           if(r) goto resize;
@@ -709,6 +711,86 @@ static void do_showfont(const char*arg) {
 
 // *** Output formats
 
+static inline void ansi_set_sgr(uint8_t n0,uint8_t n1) {
+  char m='[';
+  fputc(27,outfile);
+  if(option['m']) {
+    fprintf(outfile,"%c0",m),m=';';
+    if((n1>>4)*0x11==n1) {
+      fputs(";8",outfile);
+    } else {
+      if((n1&7)==1) fputs(";4",outfile);
+      if((n1&15)==8) fputs(";2",outfile);
+      if((n1&15)>8) fputs(";1",outfile);
+      if((n1&0x7F)==0x70) fputs(";7",outfile);
+    }
+  } else {
+    if(n0&0x88&~n1) fprintf(outfile,"%c0",m),m=';',n0=~n1;
+    if(n1&0x08&~n0) fprintf(outfile,"%c1",m),m=';';
+    if(n1&0x80&~n0) fprintf(outfile,"%c5",m),m=';';
+    if(videomode&Video_Underline) {
+      if((n0&7)==1 && (n1&7)!=1) fprintf(outfile,"%c24",m),m=';';
+      if((n0&7)!=1 && (n1&7)==1) fprintf(outfile,"%c4",m),m=';';
+    }
+    if(n1&0x07&~n0) fprintf(outfile,"%c3%c",m,"04261537"[n1&7]),m=';';
+    if(n1&0x70&~n0) fprintf(outfile,"%c4%c",m,"04261537"[(n1>>4)&7]),m=';';
+  }
+  fputc('m',outfile);
+}
+
+static void out_ansi(const char*arg) {
+  uint32_t at;
+  if(!playfield) errx(Err_Data,"Playfield is not available");
+  arg=read_options(arg);
+  if(option['f']) {
+    if(option['f']!=1) errx(Err_Argument,"Unsupported font export format");
+    if((fontheight!=8 && fontheight!=14 && fontheight!=16) || font512) errx(Err_Data,"Cannot use this font");
+  }
+  fprintf(outfile,"\e[0m\e[2J\e[?7%c\e[?69l",option['e']?'l':'h');
+  if(videomode && !option['S']) fprintf(outfile,"\e[?33%c",videomode&Video_BrightBG?'h':'l');
+  if(fontdata) fprintf(outfile,"\e[?31%c",font512?'h':'l');
+  if(option['f']) {
+    fprintf(outfile,"\e[=255;%c\x7B",(fontheight==8?'2':fontheight==14?'1':'0'));
+    fwrite(fontdata,fontheight,256,outfile);
+    fputs("\e[?34l\e[0;255 D",outfile);
+  }
+  if(option['d']==2) fputs("\e[=255h",outfile);
+  for(at=0;at<nrows*ncolumns;at++) {
+    if(!at || playfield[at].co!=playfield[at-1].co) ansi_set_sgr(at?playfield[at-1].co:~playfield[at].co,playfield[at].co);
+    if(option['s'] && at && !(at%option['s'])) fputs("\e[s\r\n\e[u",outfile);
+    if(at>3 && !option['S'] && playfield[at].ch=='E' && playfield[at-1].ch=='C' && playfield[at-2].ch=='U' && playfield[at-3].ch=='A' && playfield[at-4].ch=='S') {
+      fputs("\e[?69l",outfile);
+    }
+    if(playfield[at].ch>=32) {
+      fputc(playfield[at].ch,outfile);
+    } else if(option['d']) {
+      fputc(0,outfile);
+      fputc(playfield[at].ch,outfile);
+    } else {
+      switch(playfield[at].ch) {
+        case 0: fputc(32,outfile); break;
+        case 7: fputc(249,outfile); break;
+        case 8: fputc(219,outfile); break;
+        case 9: fputc('o',outfile); break;
+        case 10: fputc(219,outfile); break;
+        case 13: fputc(14,outfile); break;
+        case 26: fputc('-',outfile); break;
+        case 27: fputc('-',outfile); break;
+        default: fputc(playfield[at].ch,outfile);
+      }
+    }
+    if(!((at+1)%ncolumns)) {
+      if(option['e']&2) fputc(13,outfile);
+      if(option['e']&1) fputc(10,outfile);
+    }
+  }
+  if(option['S']) {
+    fputc(26,outfile);
+    make_sauce(1,1,ncolumns+(option['S']==2 && option['e']?1:0),nrows,0,0);
+    fwrite(sauce,1,128,outfile);
+  }
+}
+
 static void out_artworx(const char*arg) {
   int i,j;
   if(!playfield) errx(Err_Data,"Playfield is not available");
@@ -952,6 +1034,7 @@ static const Filters filters[]={
   {"pcpal",do_pcpal},
   {"showfont",do_showfont},
   // Output formats
+  {"+ansi",out_ansi},
   {"+artworx",out_artworx},
   {"+bin",out_bin},
   {"+chr",out_chr},
