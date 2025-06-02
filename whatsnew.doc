@@ -44,6 +44,9 @@ EDITOR
   +  Import MZM in screen editor.
   +  Push s and S in board editor to edit stat instances at cursor.
   +  The "modify" colon command in the board editor.
+  +  Push W in board editor for a single command in boardwalk mode.
+  +  Push ^E, ^N, etc in boardwalk mode to go to board and move cursor.
+  +  Push q in mass mode to write tile in main layer.
   =  Retain selection of character for ^P in text editor.
   =  Save board when leaving due to following exits in boardwalk mode.
 

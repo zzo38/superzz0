@@ -3098,7 +3098,7 @@ Uint16 edit_board(Uint16 id) {
         case 't': emode='t'; xcur2=xcur; break;
         case 'u': unmark: cc_unmark(0,0,0xFFFF,0xFFFF,""); emode=0; break;
         case 'v': emode='v'; xcur2=xcur; ycur2=ycur; break;
-        case 'w': emode='w'; xcur2=ycur2=numprefix; numprefix=0; break;
+        case 'w': case 'W': emode=k; xcur2=ycur2=numprefix; numprefix=0; break;
         case 'y': clip=b_main[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case 'Y': clip=b_under[xcur+ycur*board_info.width]; set_apparent_clip(); break;
         case 'z': case 'Z': emode=k; break;
@@ -3136,6 +3136,8 @@ Uint16 edit_board(Uint16 id) {
         case 'F': do_colon_command("&floorplace"); emode=0; break;
         case 'p': do_colon_command("&place"); goto unmark;
         case 'P': do_colon_command("&place"); emode=0; break;
+        case 'q': do_colon_command("&write"); goto unmark;
+        case 'Q': do_colon_command("&write"); emode=0; break;
         case 'r': do_colon_command("&/Q place"); goto unmark;
         case 'R': do_colon_command("&/Q place"); emode=0; break;
         case 'h': case -SDLK_LEFT: mass_move(-(numprefix?:1),0,copy_cell); cursor_move(-1,0); break;
@@ -3175,7 +3177,11 @@ Uint16 edit_board(Uint16 id) {
         case ';': i=xcur; xcur=xcur2; xcur2=i; i=ycur; ycur=ycur2; ycur2=i; break;
         default: goto no_mode;
       } break;
-      case 'w': switch(k) {
+      case 'w': case 'W': switch(k) {
+        case 'e'&31: if(board_info.exits[DIR_E]) { xcur2=brd_id; switch_to_board(board_info.exits[DIR_E]); xcur=0; } break;
+        case 'n'&31: if(board_info.exits[DIR_N]) { xcur2=brd_id; switch_to_board(board_info.exits[DIR_N]); ycur=board_info.height-1; } break;
+        case 's'&31: if(board_info.exits[DIR_S]) { xcur2=brd_id; switch_to_board(board_info.exits[DIR_S]); ycur=0; } break;
+        case 'w'&31: if(board_info.exits[DIR_W]) { xcur2=brd_id; switch_to_board(board_info.exits[DIR_W]); xcur=board_info.width-1; } break;
         case 0x0D: emode=0; break;
         case -SDLK_e: board_info.exits[DIR_E]=0; break;
         case -SDLK_n: board_info.exits[DIR_N]=0; break;
@@ -3194,8 +3200,8 @@ Uint16 edit_board(Uint16 id) {
         case 'u': xcur2=0; break;
         case 'w': if(board_info.exits[DIR_W]) { xcur2=brd_id; switch_to_board(board_info.exits[DIR_W]); } break;
         case 'W': if(xcur2) board_info.exits[DIR_W]=xcur2; break;
-        default: goto no_mode;
-      } break;
+        default: if(emode=='W') emode=0; goto no_mode;
+      } if(emode=='W') emode=0; break;
       case 'z': case 'Z': switch(k) {
         case 'h': case -SDLK_LEFT: far_cursor_move(-1,0,emode=='Z',0); break;
         case 'j': case -SDLK_DOWN: far_cursor_move(0,1,emode=='Z',0); break;

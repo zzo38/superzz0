@@ -61,6 +61,7 @@ t          Text entry mode
 u          Unmark all
 v          Block mode
 w          Boardwalk mode
+W          Boardwalk mode (once)
 y          Copy tile from main layer (place with p)
 Y          Copy tile from under layer
 z          Far movement prefix (match kind only)
@@ -120,6 +121,7 @@ cø         Set colour
 dø         Delete
 fø         Place floor
 pø         Place
+qø         Write tile in main layer
 rø         Place random from current and tile queue
 
 "Place floor" will place in the main layer if it is empty, but otherwise
@@ -139,6 +141,7 @@ with ø can use any of the letters "e", "n", "w", "s" to link in the east,
 north, west, and south directions.
 
 ESC       Cancel boardwalk mode
+^Eø       Go east, put cursor at west edge
 ALT+Eø    Unlink east
 A         Add new board
 eø        Go east
