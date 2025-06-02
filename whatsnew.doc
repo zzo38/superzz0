@@ -45,6 +45,7 @@ EDITOR
   +  Push s and S in board editor to edit stat instances at cursor.
   +  The "modify" colon command in the board editor.
   =  Retain selection of character for ^P in text editor.
+  =  Save board when leaving due to following exits in boardwalk mode.
 
 TEMPLATE
   +  Many additions to default template.
