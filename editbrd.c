@@ -670,7 +670,10 @@ static inline void switch_to_board(Sint32 id) {
   if(id<0) return;
   esave();
   fp=open_lump_by_number(id,"BRD","r");
-  if(!fp) return;
+  if(!fp) {
+    if(id<=maxboard) goto_board(id);
+    return;
+  }
   load_board(fp);
   fclose(fp);
   if(xcur>=board_info.width || ycur>=board_info.height) xcur=ycur=0;
