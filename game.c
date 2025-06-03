@@ -1880,6 +1880,7 @@ static char show_text_window(Uint32 xyn,char help) {
   textfile=0;
   textfile_text=0;
   textfile_size=0;
+  repeating=0;
   return r;
 }
 
@@ -4275,6 +4276,7 @@ static void debug_menu(void) {
     }
     win_command_esc(0,"Cancel") break;
   }
+  repeating=0;
 }
 
 int run_game(void) {
@@ -4319,7 +4321,7 @@ int run_game(void) {
     if(!--vtexttime) nvtextbuf=0;
   }
   redisplay();
-  ka=0; kd=-1;
+  if(!repeating || playstate==PLAYSTATE_PAUSED) ka=0,kd=-1;
   for(;;) {
     if(!next_event()) errx(0,"No events available.");
     repeat_event:
@@ -4342,6 +4344,7 @@ int run_game(void) {
           case SDLK_F1: k_f1:
             a=system_menu();
             resume:
+            repeating=0; ka=0; kd=-1;
             *v_status=playstate;
             set_timer(playstate==PLAYSTATE_PAUSED?0:playstate==PLAYSTATE_NORMAL?config.speed:config.speed_fast);
             v_status[1]=0;

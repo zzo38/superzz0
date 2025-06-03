@@ -106,6 +106,13 @@ full_screen
   Set to 1 for full screen or 0 (default) for windowed. (If no windowing
   system is present, then it would be ignored.)
 
+game_key_repeat
+  Configure key repeat mode in the game. If it is 0 then this is the older
+  behaviour of version 0.5.0. If it is 1 or 2 then it handles key repeat
+  during the game in a special way while the key is held down; 1 will only
+  start when the normal key repeat starts but 2 will start immediately.
+  This does not affect menus at all.
+
 help
   Name of a directory (including the trailing slash) of the online help
   files for the editor. This is not the same as the help lumps within a

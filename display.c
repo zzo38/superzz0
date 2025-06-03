@@ -365,9 +365,11 @@ Uint8 v_ycur=128;
 Uint8 v_mode=VIDEO_80COLUMNS;
 SDL_Event event;
 JoyStatus*joystat;
+Uint8 repeating;
 
 static SDL_Surface*scrn;
 static SDL_Joystick*joy;
+static Uint8 rscancode;
 
 static SDL_Color palet[34]={
   // PC
@@ -713,6 +715,10 @@ int next_event(void) {
           break;
         default: event.key.keysym.unicode=0;
       }
+      if(config.game_key_repeat) {
+        if(config.game_key_repeat>1 || rscancode==event.key.keysym.scancode) repeating=1;
+        rscancode=event.key.keysym.scancode;
+      }
       return 1;
     case SDL_KEYUP:
       if(config.text_input==2 && altk && (event.key.keysym.sym==SDLK_LALT || event.key.keysym.sym==SDLK_RALT)) {
@@ -726,6 +732,7 @@ int next_event(void) {
       } else if(!(event.key.keysym.mod&KMOD_ALT)) {
         altk=0;
       }
+      if(event.key.keysym.sym<300 || event.key.keysym.sym>314) repeating=rscancode=0;
       break;
     case SDL_USEREVENT: return 1;
     case SDL_QUIT: return 0;
