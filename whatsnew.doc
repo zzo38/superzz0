@@ -28,6 +28,7 @@ SCRIPTS
   +  The #VISIBLE condition is implemented.
   +  #BOARD command to go to another board.
   +  Conditions for named flags in specific numbered positions.
+  =  Correction of #BECOME.
 
 ASSEMBLY
   +  OREQ is like EQ but leaves condition flag unchanged if unequal.

@@ -2744,7 +2744,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             if(!strcmp(buf,"BECOME")) {
               become:
               if(!parse_kind(s,xy,&ip,&sk,1)) {script_error(m,xy,"Improper #BECOME"); return;}
-              change_to_script_kind(xy->x,xy->y,xy->layer,&sk);
+              change_to_script_kind(xy->x,xy->y,xy->layer&3,&sk);
               ip=65535; goto stop;
             } else if(!strcmp(buf,"BIND")) {
               for(i=0;i<maxstat;i++) if(stats[i].length && match_name(stats[i].text,s->text+ip)) {
