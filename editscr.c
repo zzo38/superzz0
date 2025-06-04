@@ -189,9 +189,10 @@ static void edit_screen_info(void) {
     win_blank();
     win_boolean('m',"Left align message",cur_screen.flag,SF_LEFT_ALIGN_MESSAGE);
     win_boolean('F',"Flashy message",cur_screen.flag,SF_FLASHY_MESSAGE);
-    win_boolean('i',"Exit indicators use border character",cur_screen.flag,SF_EXIT_BORDER);
+    win_boolean('t',"Exit indicators use border character",cur_screen.flag,SF_EXIT_BORDER);
     win_boolean('U',"User indicators use border character",cur_screen.flag,SF_USER_BORDER);
     win_boolean('o',"Disable scrolling",cur_screen.flag,SF_NO_SCROLL);
+    win_boolean('i',"Message edging",cur_screen.flag,SF_MESSAGE_EDGE);
     win_blank();
     win_command('.',"Edges...") {
       win_form("Screen edges") {

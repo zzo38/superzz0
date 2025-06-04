@@ -129,6 +129,9 @@ these instead control the use of borders with scroll indicators.
 "Disable scrolling" will disable automatic scrolling if selected. In this
 case, the northwest corner of the board is placed at the hard edges.
 
+"Message edging" will add character zero (normally displayed as a blank
+space) on the left and right edge of the message text when it is displayed.
+
 In addition, there is a submenu for dealing with edges.
 :edge
 "Soft edges" are the soft limits where the player can be inside of; if the

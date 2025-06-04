@@ -262,8 +262,10 @@ static void display_message_text(void) {
     if(x<cur_screen.message_l) x=cur_screen.message_l;
   }
   z=draw_text(x,y,vtextbuf,(cur_screen.flag&SF_FLASHY_MESSAGE?memory[MEM_FRAME_COUNTER]%7+9:0),nvtextbuf);
-  if(x>cur_screen.message_l) v_char[--x +y*80]=0;
-  if(z<cur_screen.message_r) v_char[z++ +y*80]=0;
+  if(cur_screen.flag&SF_MESSAGE_EDGE) {
+    if(x>cur_screen.message_l) v_char[--x +y*80]=0,v_color[x+y*80]=0;
+    if(z<cur_screen.message_r) v_color[z+y*80]=0,v_char[z++ +y*80]=0;
+  }
   x+=y*80;
   z+=y*80;
   while(x<z) {

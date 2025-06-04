@@ -21,8 +21,11 @@ GAME
      at run time).
   +  A new way to handle the key repeat during the game play. This new way
      can be configured and can be disabled.
+  +  Screen definitions can now enable or disable message edging. (The
+     default is now to disable; this is a change from previous versions.)
   =  Restore named flags from save game files.
   =  Save/restore script frames and delay and flags for global scripts.
+  =  Message edging now uses correct colours.
 
 SCRIPTS
   +  The #VISIBLE condition is implemented.

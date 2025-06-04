@@ -247,6 +247,9 @@ instead of blank.
 
 * bit4 = Disable scrolling on this screen if set.
 
+* bit5 = If set, then message text has character zero added on the left and
+right edge of the text. If clear, then this extra edge is omitted.
+
 The screen data is compressed with the following commands:
 
 * 0-79 = Copy previous cell 1 to 80 times.
