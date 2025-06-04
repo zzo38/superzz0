@@ -117,6 +117,24 @@ m = Set to 1 to hide the player.
 ******** MODIFIERS ********
 
 
+#### blank (Make a new blank playfield grid)
+
+C = Character code (default=0)
+
+c = Colour code (default=0)
+
+x = Width (mandatory)
+
+y = Height (mandatory)
+
+
+#### border (Border)
+
+C = Character code (default=0; -1=thin lines, -2=thick lines)
+
+c = Colour code (default=0)
+
+
 #### cancel (Cancel)
 
 The parameter is zero or more of the following characters:
@@ -130,6 +148,28 @@ m = Cancel video mode
 p = Cancel palette
 
 
+#### color (Change colours)
+
+A = AND mask (default=0)
+
+X = XOR mask (default=0)
+
+
+#### crop (Crop)
+
+If any of the parameters are negative, then they are treated as counting
+backward from the lower right corner. For the size, zero is considered to
+be a negative number; for the offset, zero is considered to be positive.
+
+X = X offset
+
+Y = Y offset
+
+x = X size
+
+y = Y size
+
+
 #### mode (Set video mode)
 
 The parameter is zero or more of the following characters:
@@ -141,9 +181,38 @@ b = Bright background (no blink)
 u = Underline blue characters
 
 
+#### overlay (Overlay)
+
+Add a overlay from the grid pushed to stack to this one.
+
+c = Colour or character code for transparency (default=0). This must be
+combined with "t" to have any effect; if the colour or character (according
+to that option) matches this value, then this cell will be transparent.
+
+t = Transparency mode: 0=none, 1=colour, 2=character.
+
+x = X offset (default=0; -1=start from right)
+
+y = Y offset (default=0; -1=start from bottom)
+
+
 #### pcpal (Load default palette)
 
 Loads the default palette.
+
+
+#### pop (Pop from stack)
+
+Push the font, grid, and palette to the stack. Any state that already
+exists will not be overridden, but any that is not defined (the "cancel"
+modifier can be used to cancel them if necessary) will be restored.
+
+
+#### push (Push to stack)
+
+Push the font, grid, and palette to the stack, and then the new state will
+be with none of them loaded. This is used with some other commands which
+will use the data from the stack.
 
 
 #### showfont (Show font)

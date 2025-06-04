@@ -35,6 +35,17 @@ typedef struct {
   uint8_t r,g,b;
 } Palette;
 
+typedef struct Stack {
+  struct Stack*next;
+  uint16_t nrows,ncolumns;
+  Tile*playfield;
+  uint8_t fontheight;
+  uint8_t*fontdata;
+  uint8_t font512;
+  Palette palette[16];
+  uint8_t paltype;
+} Stack;
+
 enum {
   TileStructureSize=2/(sizeof(Tile)==2)
 };
@@ -53,6 +64,7 @@ static Palette palette[16];
 static uint8_t paltype;
 static int32_t csi[32];
 static uint8_t sauce[128];
+static Stack*stack;
 
 typedef struct {
   const char*name;
@@ -655,6 +667,43 @@ static void in_zzt(const char*arg) {
 
 // *** Modifiers
 
+static void do_blank(const char*arg) {
+  uint32_t a;
+  ReqArg;
+  arg=read_options(arg);
+  if(playfield) free(playfield);
+  nrows=option['y']; ncolumns=option['x'];
+  if(!nrows || !ncolumns) errx(Err_Argument,"Required argument missing");
+  playfield=malloc(2L*nrows*ncolumns);
+  if(!playfield) err(Err_System,"Allocation failed");
+  for(a=0;a<nrows*ncolumns;a++) playfield[a]=(Tile){option['C'],option['c']};
+}
+
+static void do_border(const char*arg) {
+  uint32_t a;
+  uint8_t c;
+  Tile*p=playfield;
+  if(!p) errx(Err_Data,"Playfield is not available");
+  ReqArg;
+  arg=read_options(arg);
+  playfield=malloc(2L*(nrows+2)*(ncolumns+2));
+  if(!playfield) err(Err_System,"Allocation failed");
+  c=(option['C']==-1?179:option['C']==-2?186:option['C']);
+  for(a=0;a<nrows;a++) {
+    playfield[(ncolumns+2)*(a+1)]=playfield[(ncolumns+2)*(a+2)-1]=(Tile){c,option['c']};
+    memcpy(playfield+(ncolumns+2)*(a+1)+1,p+ncolumns*a,2L*ncolumns);
+  }
+  c=(option['C']==-1?196:option['C']==-2?205:option['C']);
+  for(a=0;a<ncolumns;a++) playfield[a+1]=playfield[a+1+(ncolumns+2)*(nrows+1)]=(Tile){c,option['c']};
+  playfield[0]=(Tile){option['C']==-1?218:option['C']==-2?201:option['C'],option['c']};
+  playfield[ncolumns+1]=(Tile){option['C']==-1?191:option['C']==-2?187:option['C'],option['c']};
+  playfield[(ncolumns+2)*(nrows+1)]=(Tile){option['C']==-1?192:option['C']==-2?200:option['C'],option['c']};
+  playfield[(ncolumns+2)*(nrows+2)-1]=(Tile){option['C']==-1?217:option['C']==-2?188:option['C'],option['c']};
+  nrows+=2;
+  ncolumns+=2;
+  free(p);
+}
+
 static void do_cancel(const char*arg) {
   ReqArg;
   while(*arg) switch(*arg++) {
@@ -666,6 +715,33 @@ static void do_cancel(const char*arg) {
   }
 }
 
+static void do_color(const char*arg) {
+  uint32_t a;
+  if(!playfield) errx(Err_Data,"Playfield is not available");
+  ReqArg;
+  arg=read_options(arg);
+  for(a=0;a<nrows*ncolumns;a++) playfield[a].co=(playfield[a].co&option['A'])^option['X'];
+}
+
+static void do_crop(const char*arg) {
+  uint32_t x0,y0,xs,ys,y;
+  Tile*p=playfield;
+  if(!p) errx(Err_Data,"Playfield is not available");
+  ReqArg;
+  arg=read_options(arg);
+  x0=option['X']+(option['X']<0?ncolumns:0);
+  y0=option['Y']+(option['Y']<0?nrows:0);
+  xs=option['x']+(option['x']>0?0:ncolumns-x0);
+  ys=option['y']+(option['y']>0?0:nrows-y0);
+  if(!xs || !ys || x0>=ncolumns || y0>=nrows || x0+xs>ncolumns || y0+ys>nrows) errx(Err_Argument,"Invalid crop dimensions");
+  playfield=malloc(2L*xs*ys);
+  if(!playfield) err(Err_System,"Allocation failed");
+  for(y=0;y<ys;y++) memcpy(playfield+y*xs,p+(y0+y)*ncolumns+x0,2L*xs);
+  nrows=ys;
+  ncolumns=xs;
+  free(p);
+}
+
 static void do_mode(const char*arg) {
   ReqArg;
   videomode=Video_Set;
@@ -674,6 +750,23 @@ static void do_mode(const char*arg) {
     case 'b': videomode|=Video_BrightBG; break;
     case 'u': videomode|=Video_Underline; break;
     default: errx(Err_Argument,"Improper video mode");
+  }
+}
+
+static void do_overlay(const char*arg) {
+  uint32_t a,b,x0,y0,x,y;
+  if(!stack) errx(Err_Argument,"Stack underflow");
+  if(!stack->playfield) errx(Err_Data,"Playfield has not been pushed to stack");
+  if(!playfield) errx(Err_Data,"Playfield is not available");
+  arg=read_options(arg);
+  x0=option['x']+(option['x']<0?ncolumns+1-stack->ncolumns:0);
+  y0=option['y']+(option['y']<0?nrows+1-stack->nrows:0);
+  if(x0>0xFFFF || y0>0xFFFF || x0+stack->ncolumns>ncolumns || y0+stack->nrows>nrows) errx(Err_Data,"Overlay position out of range");
+  for(y=0;y<stack->nrows;y++) for(x=0;x<stack->ncolumns;x++) {
+    a=y*stack->ncolumns+x; b=(y+y0)*ncolumns+x+x0;
+    if(option['t']==1 && option['c']==stack->playfield[a].co) continue;
+    if(option['t']==2 && option['c']==stack->playfield[a].ch) continue;
+    playfield[b]=stack->playfield[a];
   }
 }
 
@@ -698,6 +791,45 @@ static void do_pcpal(const char*arg) {
   };
   paltype=Pal_EGA;
   memcpy(palette,p,sizeof(p));
+}
+
+static void do_pop(const char*arg) {
+  Stack*s=stack;
+  if(!s) errx(Err_Argument,"Stack underflow");
+  stack=s->next;
+  if(!paltype) {
+    paltype=s->paltype;
+    memcpy(palette,s->palette,sizeof(palette));
+  }
+  if(fontdata) {
+    free(s->fontdata);
+  } else {
+    fontdata=s->fontdata;
+    fontheight=s->fontheight;
+    font512=s->font512;
+  }
+  if(playfield) {
+    free(s->playfield);
+  } else {
+    nrows=s->nrows;
+    ncolumns=s->ncolumns;
+    playfield=s->playfield;
+  }
+  free(s);
+}
+
+static void do_push(const char*arg) {
+  Stack s={stack,nrows,ncolumns,playfield,fontheight,fontdata,font512,{},paltype};
+  memcpy(s.palette,palette,sizeof(palette));
+  stack=malloc(sizeof(Stack));
+  if(!stack) err(Err_System,"Allocation failed");
+  *stack=s;
+  nrows=ncolumns=0;
+  playfield=0;
+  fontheight=0;
+  fontdata=0;
+  font512=0;
+  paltype=0;
 }
 
 static void do_showfont(const char*arg) {
@@ -1029,9 +1161,16 @@ static const Filters filters[]={
   {"-xbin",in_xbin},
   {"-zzt",in_zzt},
   // Modifiers
+  {"blank",do_blank},
+  {"border",do_border},
   {"cancel",do_cancel},
+  {"color",do_color},
+  {"crop",do_crop},
   {"mode",do_mode},
+  {"overlay",do_overlay},
   {"pcpal",do_pcpal},
+  {"pop",do_pop},
+  {"push",do_push},
   {"showfont",do_showfont},
   // Output formats
   {"+ansi",out_ansi},
