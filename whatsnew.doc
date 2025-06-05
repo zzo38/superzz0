@@ -55,6 +55,7 @@ EDITOR
   +  Push q in mass mode to write tile in main layer.
   =  Retain selection of character for ^P in text editor.
   =  Save board when leaving due to following exits in boardwalk mode.
+  =  Set cursor position in board list when exiting board editor.
 
 TEMPLATE
   +  Many additions to default template.

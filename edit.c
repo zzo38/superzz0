@@ -933,7 +933,7 @@ int run_editor(void) {
         win_cursor(lbrd);
         if(boardnames) win_list(maxboard+1,0,board_list_callback,n) {
           lbrd=edit_board(n);
-          win_refresh();
+          goto boards_form;
         }
         win_blank();
         if(boardnames) win_command('F',"Find") {
