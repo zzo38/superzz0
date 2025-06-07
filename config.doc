@@ -278,6 +278,11 @@ video_gamma
   Can be three numbers with semicolons in between; affects the gamma
   setting of red, green, blue.
 
+wave_sound
+  Set to 1 to enable wave sounds (the audio also must be configured).
+  If set to 0 then wave sounds are disabled. (Note that this feature is
+  not fully implemented yet.)
+
 
 === [Joystick] ===
 

@@ -7,6 +7,7 @@ exit
 #include <math.h>
 
 #define DRUM_NOTE 0x7F00
+#define WAVE_NOTE 0x7EFF
 #define NOTE_MASK 0x1FF
 #define OVERTONE 128
 #define UNDERTONE 320
@@ -19,6 +20,12 @@ typedef struct {
   Sint16 note;
   Uint16 len;
 } SoundQueue;
+
+typedef struct {
+  Sint16*data;
+  Uint32 len;
+  char name[12];
+} WaveSound;
 
 static SDL_AudioSpec spec;
 
@@ -33,6 +40,9 @@ static Uint16 priority=0;
 static SoundQueue queue[MAXQUEUE];
 static Uint16 qfirst=0;
 static Uint16 qlast=0;
+
+static WaveSound*wavesound;
+static Uint16 nwavesound;
 
 static float note_table[NOTE_MASK+1];
 static float drum_table[256];
@@ -93,6 +103,12 @@ static void audiocb(void*userdata,Uint8*stream,int len) {
         buf[pos++]=vol*prf;
       }
       if(cpos>=cmax) cfreq=-1;
+    } else if(cfreq==WAVE_NOTE) {
+      while(pos<len && cpos<wavesound[cmax].len) buf[pos++]=(vol*wavesound[cmax].data[cpos++])/32767.0;
+      if(cpos>=wavesound[cmax].len) {
+        cfreq=-1;
+        prf=wavesound[cmax].data[wavesound[cmax].len-1]/32767.0;
+      }
     } else {
       while(pos<len && cpos<cmax) cpos++,buf[pos++]=vol*(prf*=fil);
       if(cpos>=cmax) cfreq=-1;
@@ -109,6 +125,69 @@ static void audiocb(void*userdata,Uint8*stream,int len) {
       }
     }
   }
+}
+
+static int convertwave(FILE*f,Uint32 size,WaveSound*wav,Uint16 rate,Uint8 flag1,Uint8 flag2) {
+  Uint32 a;
+  switch(flag2&15) {
+    case 0: // Unsigned 8-bits
+      //TODO: incomplete
+      break;
+    case 4: // Signed 16-bits
+      if(rate==spec.freq && !(flag1&1) && AUDIO_S16SYS==AUDIO_S16LSB) {
+        wav->data=calloc(wav->len=size>>1,2);
+        if(!wav->data) err(1,"Allocation failed");
+        fread(wav->data,2,wav->len,f);
+      } else {
+        //TODO: incomplete
+      }
+      break;
+    default: fprintf(stderr,"Unknown codec %d\n",flag2&15); return 1;
+  }
+  if(flag1&2) {
+    // Apply filter
+    float t=config.audio_filter;
+    float p=0.0;
+    for(a=0;a<wav->len;a++) wav->data[a]=p=(1.0-t)*wav->data[a]+t*p;
+  }
+  return 0;
+}
+
+static void loadwaves(void) {
+  FILE*f;
+  const char**list=0;
+  int count=0;
+  int i,j,k,r;
+  list_lumps("*.SND",&list,&count);
+  if(count) {
+    if(count>0xFFFE) errx(1,"Too many .SND lumps");
+    wavesound=calloc(nwavesound=count,sizeof(WaveSound));
+    if(!wavesound) err(1,"Allocation failed");
+    for(i=0;i<count;i++) {
+      strncpy(wavesound[i].name,list[i],8);
+      for(j=0;j<9;j++) if(wavesound[i].name[j]=='.') wavesound[i].name[j]=0;
+      if(f=open_lump(list[i],"r")) {
+        if(lump_size<6 || fgetc(f)!=4) {
+          warnx("Sound \"%s\" has unrecognized header size",list[i]);
+          goto end;
+        }
+        j=fgetc(f); k=fgetc(f);
+        if((j&~3) || (k&~15)) {
+          warnx("Sound \"%s\" has unimplemented flags",list[i]);
+          goto end;
+        }
+        r=fgetc(f); r|=fgetc(f)<<8;
+        if(convertwave(f,lump_size-5,wavesound+i,r,j,k) || !wavesound[i].data || !wavesound[i].len) {
+          warnx("Sound \"%s\" cannot be converted",list[i]);
+          free(wavesound[i].data);
+          wavesound[i].data=0;
+          wavesound[i].len=0;
+        }
+        end: fclose(f);
+      }
+    }
+  }
+  free(list);
 }
 
 void audio_init(void) {
@@ -137,6 +216,7 @@ void audio_init(void) {
   }
   muted=0;
   if(volume=config.audio_volume) SDL_PauseAudio(0);
+  if(config.wave_sound && !editor) loadwaves();
 }
 
 void audio_set_volume(Uint16 vol,Uint8 mut) {
@@ -153,6 +233,17 @@ void audio_set_volume(Uint16 vol,Uint8 mut) {
 
 Sint32 audio_get_volume(void) {
   return volume|(((Sint32)muted)<<16);
+}
+
+static Uint32 find_wave(const char*m) {
+  char a[9]={};
+  Uint32 i;
+  for(i=0;i<8 && *m && *m!=41;i++) {
+    a[i]=*m++;
+    if(a[i]>='a' && a[i]<='z') a[i]+='A'-'a';
+  }
+  for(i=0;i<nwavesound && strcmp(a,wavesound[i].name) && wavesound[i].len;i++);
+  return i;
 }
 
 void audio_set_sfx(const char*m) {
@@ -227,6 +318,7 @@ void audio_set_sfx(const char*m) {
         } else {
           d=dur;
         }
+      noted2:
         if(((qlast+1)&MAXQUEUE_MASK)==qfirst) goto end;
         queue[qlast].note=n;
         queue[qlast].len=d;
@@ -246,6 +338,14 @@ void audio_set_sfx(const char*m) {
       case '?': case '\\': case '`': case '~': case ':': case ';':
         c%=24; n=(c&15)+(c/16)+DRUM_NOTE;
         goto noted;
+      // Wave sounds
+      case 'Y': if(nwavesound) goto end; break;
+      case '(':
+        n=WAVE_NOTE;
+        d=nwavesound?find_wave(m):0;
+        while(*m && *m!='\n' && *m!=')') m++;
+        if(d<nwavesound) goto noted2;
+        break;
     }
   }
   end:
@@ -257,4 +357,3 @@ void audio_set_sfx(const char*m) {
   }
   SDL_UnlockAudio();
 }
-

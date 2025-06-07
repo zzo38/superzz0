@@ -552,6 +552,11 @@ W
 X
   Same as R.
 
+Y
+  If wave sounds are enabled and at least one wave sound is loaded, then
+  it will prevent any further notes after the Y from being played. (It is
+  still possible to play more notes with a separate #PLAY command.)
+
 Z
   Same as L64.
 
@@ -563,6 +568,12 @@ Z
 
 >
   High octave.
+
+()
+  You must put the name of a wave sound (without the .SND suffix) between
+  the parentheses; this will cause that sound to be played. The note length
+  and octave are ignored; the wave sound has its own length. (This feature
+  is not fully implemented yet, and is unlikely to work.)
 
 @
   Specify priority. If higher than the existing priority, or if equal and

@@ -369,6 +369,39 @@ where this is relative to the nearest hard edge.
 * SC_IND_USER3 = Displayed if the user3 flag of the board is set.
 
 
+=== *.SND ===
+
+(This feature is not fully implemented yet.)
+
+Wave sounds. The format is: the number of header bytes (not counting
+this byte itself), and then the header, and then the audio data.
+
+* First flags (8-bits).
+
+* Codec number (low nybble) and second flags (high nybble).
+
+* Sample rate (16-bits).
+
+The codec numbers are:
+  0 = Unsigned 8-bits
+  1 = Creative 4-bits to 8-bits ADPCM
+  2 = Creative 3-bits to 8-bits ADPCM
+  3 = Creative 2-bits to 8-bits ADPCM
+  4 = Signed 16-bits
+  5 = (unused)
+  6 = A-law
+  7 = mu-law
+
+The flags are:
+
+* bit0 = Specifies the working of the sample rate, where 1 means hertz and
+0 means the Creative Voice format.
+
+* bit1 = Set if the filter should be enabled.
+
+* bit2 = Set for stereo. (Super ZZ Zero does not currently support stereo.)
+
+
 === *.WIN ===
 
 Window info; this is optionally present for each screen, and is only used
