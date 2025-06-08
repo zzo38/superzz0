@@ -145,13 +145,13 @@ static int convertaudio(WaveSound*wav,Uint16 rate,Uint8 ratemode,Uint16 form) {
   if(!wav->data) err(1,"Allocation failed");
   cvt.buf=(void*)wav->data;
   cvt.len=2L*wav->len;
-  wav->len=(cvt.len*(Uint32)cvt.len_mult)>>1;
+  wav->len=(cvt.len*(Uint32)cvt.len_mult)>>(form&8?2:1);
   return SDL_ConvertAudio(&cvt);
 }
 
 static inline Uint8 adpcm4bits(Uint8 v,Uint8 p,Uint8*m) {
   Uint8 d=*m*(v&7)+(*m>>1);
-  Uint32 r=p+d*(v&8?1:-1);
+  Sint32 r=p+d*(v&8?1:-1);
   if(*m>1 && !(v&7)) *m>>=1;
   if(*m<8 && (v&7)>4) *m<<=1;
   return p=(r<0?0:r>255?255:r);
@@ -345,7 +345,7 @@ static Uint32 find_wave(const char*m) {
     a[i]=*m++;
     if(a[i]>='a' && a[i]<='z') a[i]+='A'-'a';
   }
-  for(i=0;i<nwavesound && strcmp(a,wavesound[i].name) && wavesound[i].len;i++);
+  for(i=0;i<nwavesound && (wavesound[i].len<1 || strcmp(a,wavesound[i].name));i++);
   return i;
 }
 
