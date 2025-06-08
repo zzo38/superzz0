@@ -373,14 +373,18 @@ where this is relative to the nearest hard edge.
 
 (This feature is not fully implemented yet.)
 
-Wave sounds. The format is: the number of header bytes (not counting
-this byte itself), and then the header, and then the audio data.
+Wave sounds. The format is: the header, and then the audio data.
+
+* Number of header bytes (8-bits; does not count this one). This must be
+4 or else it is an error; later versions might add more, or use a different
+format in which case this number will not match the number of header bytes
+of any valid formats.
 
 * First flags (8-bits).
 
 * Codec number (low nybble) and second flags (high nybble).
 
-* Sample rate (16-bits).
+* Sample rate (16-bits). (See the flags below)
 
 The codec numbers are:
   0 = Unsigned 8-bits

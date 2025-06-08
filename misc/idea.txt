@@ -114,22 +114,6 @@ many of the existing effects can be available. However, a MML compiler
 specifically for this format can also be made up.
 
 
-=== Wave sounds ===
-
-Wave sounds can be in .WAV lumps (which are in the ordinary Microsoft wave
-sound format), and may be able to be disabled by the user configuration
-file (volume might also be independently adjustable for PC sound effects,
-wave sound effects, and music, by the user configuration file). (Another
-possibility would be to use .VOC lumps, in the Creative Voice format.)
-
-Inside of a SFX or #PLAY command you can put the name of a .WAV lump in
-parentheses (without the .WAV suffix) to be treated as a note with the
-duration of the wave sound (ignoring the specified note duration and
-octave). There should be a limited number of wave sounds that can be
-queued at once. There should also be a way to optionally skip the PC
-notes if the wave notes are played (like in MegaZeux).
-
-
 === User preferences ===
 
 These user preferences are those which do not directly affect the game
