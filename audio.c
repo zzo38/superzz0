@@ -229,20 +229,20 @@ static int convertwave(FILE*f,Uint32 size,WaveSound*wav,Uint16 rate,Uint8 flag1,
       wav->data=calloc(wav->len=size>>1,2);
       if(!wav->data) err(1,"Memory error in wave sound conversion");
       fread(wav->data,2,wav->len,f);
-      if(rate!=spec.freq || !(flag1&1) || AUDIO_S16SYS!=AUDIO_S16LSB || convertaudio(wav,rate,flag1&1,AUDIO_S16SYS)) return 1;
+      if(rate!=spec.freq || !(flag1&1) || AUDIO_S16SYS!=AUDIO_S16LSB) if(convertaudio(wav,rate,flag1&1,AUDIO_S16LSB)) return 1;
       break;
 #if 0
     case 6: // A-law
       wav->data=calloc(wav->len=size,2);
       if(!wav->data) err(1,"Memory error in wave sound conversion");
       for(a=0;a<wav->len;a++) wav->data[a]=alaw[fgetc(f)&255];
-      if(rate!=spec.freq || !(flag1&1) || AUDIO_S16SYS!=AUDIO_S16LSB || convertaudio(wav,rate,flag1&1,AUDIO_S16SYS)) return 1;
+      if(rate!=spec.freq || !(flag1&1)) if(convertaudio(wav,rate,flag1&1,AUDIO_S16SYS)) return 1;
       break;
     case 7: // mu-law
       wav->data=calloc(wav->len=size,2);
       if(!wav->data) err(1,"Memory error in wave sound conversion");
       for(a=0;a<wav->len;a++) wav->data[a]=mulaw[fgetc(f)&255];
-      if(rate!=spec.freq || !(flag1&1) || AUDIO_S16SYS!=AUDIO_S16LSB || convertaudio(wav,rate,flag1&1,AUDIO_S16SYS)) return 1;
+      if(rate!=spec.freq || !(flag1&1)) if(convertaudio(wav,rate,flag1&1,AUDIO_S16SYS)) return 1;
       break;
 #endif
     default: fprintf(stderr,"Unknown codec %d\n",flag2&15); return 1;
