@@ -166,7 +166,7 @@ static void write_element_lump(void) {
       b=strlen(e->name);
       if(e->app[0] && !(e->app[0]==AP_PARAM && !e->app[1])) b|=0x80;
       if(e->app[1]) b|=0x40;
-      if(!i || e->attrib!=e[-1].attrib) b|=0x20;
+      if(!i || e->attrib!=e[-1].attrib || (e->attrib && !e[-1].name[0])) b|=0x20;
       for(j=0;j<16;j++) if(e->event[j]) b|=0x10;
       fputc(b,fp);
       fwrite(e->name,1,b&15,fp);

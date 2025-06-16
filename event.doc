@@ -13,6 +13,8 @@ means to save the lock flag; the layers and disable flag cannot be saved.
 The bits that cause things to be saved will also cause them to be restored;
 if the bits are clear then they are neither saved nor restored.
 
+$C1 = New dynamic stat callback event (see below).
+
 $C4 = Joystick input levels. The low nybble is for normal game mode, the
 next nybble is for text windows, and the higher two nybbles are not
 meaningful in the current version of Super ZZ Zero.
@@ -109,6 +111,23 @@ is a subroutine message.
 
 
 === Global events ===
+
+$00C1
+  This event is called during each frame, before $00E1, but also creates a
+  new dynamic stat when this event is nonzero. It is set to zero before
+  being called, and if set to nonzero again before it returns, another new
+  dynamic stat is added and this is repeated. When adding a new dynamic
+  stat, first it will look for an existing stat whose mode flags include
+  both bit0 (DYNAMIC) and bit1 (VACANT), and if it exists, use that one.
+  Otherwise, a new stat is created. Either way, the new mode flags will be
+  bit0 (DYNAMIC) only.
+
+  W = The stat number of the new stat (zero if failed)
+  X,Y,Z = Zero
+
+  Return = If nonzero, adds a instance of this stat; the layer/lock flags
+  of the new instance will be the return value of this event, and the X, Y,
+  and other values will be zero.
 
 $00C5
   This event occurs when a #RETURN command in a script returns to a stack
@@ -226,10 +245,12 @@ EV_FRAME (0)
   Return = Unused.
 
 EV_STAT (1)
-  Called whenever a stat's turn to be executed.
+  Called whenever a stat's turn to be executed. If it is a independent
+  stat, then W and X and Y are still set, but Z is always zero, and the
+  element number for the event will be 241 or 242 or 243.
 
   W = Stat number and stat XY index
-  Z = Parameter
+  Z = Parameter (zero for independent stats)
 
   Return = Nonzero to prevent automatically setting the delay.
 

@@ -7,7 +7,11 @@ them by using the assembler, which is documented in a separate file.
 
 On the list screen, select the element you want to edit; there are 256
 possible elements. Super ZZ Zero assumes that element 0 is always used to
-mean an empty space, so you should define it as such.
+mean an empty space, so you should define it as such. Elements 240 to 255
+also are reserved for special meanings, although you can still use them for
+your own purposes if you are not using the features that use them for their
+special meanings or if their attributes are used in the appropriate way for
+the special features that use those element numbers.
 :copy
 The "Copy attributes" submenu can be used for copying the attributes of one
 element to several others in case you want to define several elements that

@@ -242,7 +242,7 @@ typedef struct {
   Uint8*text;
   Uint16 length,frame,count;
   Uint16 misc1,misc2,misc3;
-  Uint8 speed;
+  Uint8 speed,mode;
 } Stat;
 
 typedef struct {
@@ -253,6 +253,12 @@ typedef struct {
   Uint16 userdata;
   Uint16 flag;
 } BoardInfo;
+
+// Stat:mode
+#define STAT_DYNAMIC 0x01
+#define STAT_VACANT 0x02
+#define STAT_INDEPENDENT 0x04
+#define STAT_GLOBAL 0x08
 
 // BoardInfo:flag
 #define BF_USER0 0x0001
@@ -477,6 +483,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define XOP_S_IF_FALSE 0x0DD0 // (source) if false, (value) if true (-3 to +4, A to H)
 
 #define MEM_GLOBAL_DELAY 0xC0
+#define MEM_NEW_DYNAMIC_STAT_EVENT 0xC1
 #define MEM_JOY_LEVEL 0xC4
 #define MEM_RETURN_EVENT 0xC5
 #define MEM_SENSOR_EVENT 0xC6

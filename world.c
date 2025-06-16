@@ -507,6 +507,7 @@ const char*load_board(FILE*fp) {
     }
     stats[i].speed=read8(fp);
     stats[i].frame=(sf&0x10)?read16(fp):0;
+    stats[i].mode=(sf&0x40)?read8(fp):0;
     if(stats[i].frame && stats[i].frame>stats[i].length-4) return "Incorrect frame offset";
     if(stats[i].count=read16(fp)) {
       r=stats[i].xy=calloc(stats[i].count,sizeof(StatXY));
@@ -514,8 +515,8 @@ const char*load_board(FILE*fp) {
       for(j=0;j<stats[i].count;j++) {
         c=read8(fp);
         if(!j && (c&15)!=15) return "File format error";
-        r[j].x=((c&3)==3?((board_info.width>256 || (ef&0x8000))?read16(fp):read8(fp)):r[j-1].x+(c&3)-1);
-        r[j].y=(((c>>2)&3)==3?((board_info.height>256 || (ef&0x8000))?read16(fp):read8(fp)):r[j-1].y+((c>>2)&3)-1);
+        r[j].x=((c&3)==3?((board_info.width>256 || (ef&0x8000) || (stats[i].mode&STAT_INDEPENDENT))?read16(fp):read8(fp)):r[j-1].x+(c&3)-1);
+        r[j].y=(((c>>2)&3)==3?((board_info.height>256 || (ef&0x8000) || (stats[i].mode&STAT_INDEPENDENT))?read16(fp):read8(fp)):r[j-1].y+((c>>2)&3)-1);
         r[j].instptr=(((c>>4)&3)==0?0:((c>>4)&3)==1?65535:((c>>4)&3)==2?r[j?j-1:0].instptr:read16(fp));
         r[j].layer=(c&0x40?read8(fp):j?r[j-1].layer:2);
         r[j].delay=(c&0x80?read8(fp):j?r[j-1].delay:0);
@@ -616,6 +617,7 @@ const char*save_board(FILE*fp,int m) {
       if(stats[i].misc2) sf|=0x04;
       if(stats[i].misc3) sf|=0x08;
       if(stats[i].frame) sf|=0x10;
+      if(stats[i].mode) sf|=0x40;
       for(j=0;j<stats[i].count;j++) if(stats[i].xy[j].sensor.kind || stats[i].xy[j].sensor.color || stats[i].xy[j].sensor.param || stats[i].xy[j].sensor.stat || stats[i].xy[j].frame) {
         sf|=0x20;
         break;
@@ -632,6 +634,8 @@ const char*save_board(FILE*fp,int m) {
       if(stats[i].length) fwrite(stats[i].text,1,stats[i].length,fp);
     }
     write8(fp,stats[i].speed);
+    if(sf&0x10) write16(fp,stats[i].frame);
+    if(sf&0x40) write8(fp,stats[i].mode);
     write16(fp,stats[i].count);
     r=stats[i].xy;
     for(j=0;j<stats[i].count;j++) {
@@ -647,8 +651,8 @@ const char*save_board(FILE*fp,int m) {
       }
       if(r[j].instptr==65535) c+=0x10; else if(j && r[j].instptr==r[j-1].instptr) c+=0x20; else if(r[j].instptr) c+=0x30;
       write8(fp,c);
-      if((c&0x03)==0x03) (board_info.width>256 || (ef&0x8000))?write16(fp,r[j].x):write8(fp,r[j].x);
-      if((c&0x0C)==0x0C) (board_info.height>256 || (ef&0x8000))?write16(fp,r[j].y):write8(fp,r[j].y);
+      if((c&0x03)==0x03) (board_info.width>256 || (ef&0x8000) || (stats[i].mode&STAT_INDEPENDENT))?write16(fp,r[j].x):write8(fp,r[j].x);
+      if((c&0x0C)==0x0C) (board_info.height>256 || (ef&0x8000) || (stats[i].mode&STAT_INDEPENDENT))?write16(fp,r[j].y):write8(fp,r[j].y);
       if((c&0x30)==0x30) write16(fp,r[j].instptr);
       if(c&0x40) write8(fp,r[j].layer);
       if(c&0x80) write8(fp,r[j].delay);

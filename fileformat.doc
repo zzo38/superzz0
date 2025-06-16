@@ -86,6 +86,8 @@ Each stat (the first stat number is stat 1) is as follows:
 
 * Frame offset (16-bits)
 
+* Mode bits (8-bits)
+
 * Number of XY records for this stat (16-bits)
 
 * The data of the XY records
@@ -97,7 +99,7 @@ The stat flag specifies which other fields are present, as follows:
   bit3 = Misc3
   bit4 = Frame offset
   bit5 = Additional XY data
-  bit6 = (reserved)
+  bit6 = Mode
   bit7 = (reserved)
 
 For each XY record, the first byte is the encoding flag, and then the rest

@@ -201,7 +201,7 @@ static void warp_to_board(Uint16 b,char m) {
   }
   if((board_info.flag&BF_PERSIST) && !m) {
     for(x=0;x<maxstat;x++) {
-      if(stats[x].xy) for(y=0;y<stats[x].count;y++) {
+      if(stats[x].xy && !(stats[x].mode&STAT_INDEPENDENT)) for(y=0;y<stats[x].count;y++) {
         if(!(stats[x].xy[y].layer&3) || stats[x].xy[y].x>=board_info.width && stats[x].xy[y].y>=board_info.height) {
           memmove(stats[x].xy+y,stats[x].xy+y+1,(--stats[x].count-y)*sizeof(StatXY));
           --y;
@@ -984,7 +984,7 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   if(flag&4) {
     sn=at&0xFF;
     sr=at>>16;
-    if(sn>maxstat || !sn || sr>=stats[sn-1].count) return 0;
+    if(sn>maxstat || !sn || sr>=stats[sn-1].count || (stats[sn-1].mode&STAT_INDEPENDENT)) return 0;
     qq=stats[sn-1].xy+sr;
     i=qq->layer&3;
     if(i==3) flag|=2; else if(i==2) flag&=~2; else return 0;
@@ -1198,6 +1198,7 @@ static void break_tile(Sint32 at,Uint8 lay,Uint16 sn,Uint16 sr,Uint8 f) {
   if(sn) {
     if(sn>maxstat || sr>=stats[sn-1].count) return;
     q=stats[sn-1].xy+sr;
+    if(stats[sn-1].mode&STAT_INDEPENDENT) goto die;
     if(q->layer&0x20) goto die;
     lay=q->layer&3;
     if(!lay) goto die;
@@ -2594,7 +2595,7 @@ static inline void dieitem(Uint16 m,Uint16 n) {
   StatXY yx;
   StatXY*r=stats[m-1].xy+n;
   Uint32 a,b;
-  if(xy.x>=board_info.width || xy.y>=board_info.height || !(xy.layer&3)) {
+  if(xy.x>=board_info.width || xy.y>=board_info.height || !(xy.layer&3) || (stats[m-1].mode&STAT_INDEPENDENT)) {
     r->x=r->y=r->instptr=65535; r->layer=128; r->delay=255;
     return;
   }
@@ -2776,7 +2777,9 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               y=xy->y+(i==DIR_S)-(i==DIR_N);
               z=y*board_info.width+x;
               zz=xy->y*board_info.width+xy->x;
-              if(i!=-1 && condflag && xy->x<board_info.width && xy->y<board_info.height && x<board_info.width && y<board_info.height) {
+              if((s->mode&STAT_INDEPENDENT) && condflag) {
+                goto clone;
+              } else if(i!=-1 && condflag && xy->x<board_info.width && xy->y<board_info.height && x<board_info.width && y<board_info.height) {
                 j=elem_def[b_main[z].kind].attrib;
                 if((xy->layer&3)==2 && (j&A_FLOOR) && ((1<<(j&15))&(elem_def[b_main[zz].kind].attrib>>16))) {
                   if(b_main[z].stat) if(xy2=find_statxy(b_main+z)) xy2->layer--;
@@ -2789,6 +2792,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
                 } else {
                   goto skip;
                 }
+                clone:
                 xy2=add_statxy(m);
                 xy=s->xy+n;
                 xy2->x=x; xy2->y=y;
@@ -3476,6 +3480,16 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_GM1: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].misc1); goto store;
       case OP_GM2: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].misc2); goto store;
       case OP_GM3: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].misc3); goto store;
+      case OP_GMOD:
+        so&=0xFFFF;
+        if(so>0 && so<=maxstat) {
+          condflag=1;
+          so=stats[so-1].mode;
+          goto store;
+        } else {
+          condflag=0;
+        }
+        break;
       case OP_GMOV: if(so>0xFFFC) break; so=general_move(0,regs[fo],x,y,memory[so],memory[so+1],memory[so+2],memory[so+3]); goto setxy;
       case OP_GO: t=so; so=pc; pc=t; goto store;
       case OP_GOTO: goto jump;
@@ -3513,6 +3527,14 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_ICG: condflag=(++regs[fo]>so?1:0); break;
       case OP_INC: ++so; goto store;
       case OP_INCL: ++so; goto lstore;
+      case OP_INEW:
+        if((w&0xFF)<=0 || (w&0xFF)>maxstat) break;
+        rs=add_statxy(w&=0xFF);
+        rs->layer=so;
+        rs->x=x;
+        rs->y=y;
+        so=((rs-stats[w-1].xy)<<16)|w;
+        goto store;
       case OP_INFO: so=request_info(so); goto store;
       case OP_JEV: if(!(regs[fo]&1)) goto jump; break;
       case OP_JF: if(!condflag) goto jump; break;
@@ -3671,6 +3693,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PM1: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc1=regs[fo];
       case OP_PM2: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc2=regs[fo];
       case OP_PM3: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc3=regs[fo];
+      case OP_PMOD: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].mode=regs[fo];
       case OP_POKE: memory[so&0xFFFF]=regs[fo]; break;
       case OP_PSD: if(rs=get_statxy(so)) rs->delay=regs[fo]; break;
       case OP_PSEN:
@@ -3862,6 +3885,10 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_TELE:
         condflag=0;
         if(rs=get_statxy(regs[fo])) {
+          if(stats[(regs[fo]&255)-1].mode&STAT_INDEPENDENT) {
+            if(!t) rs->x=x,rs->y=y,condflag=1;
+            break;
+          }
           if((rs->layer&3)!=2 || rs->x>=board_info.width || rs->y>=board_info.height) break;
           t=convxy(so,x,y);
           if(t==-1) break;
@@ -4416,23 +4443,71 @@ int run_game(void) {
   }
   ++memory[MEM_FRAME_COUNTER];
   if(run_program(memory[MEM_FRAME_EVENT],0,0,0,0)) goto gameloop;
+  while(b=memory[MEM_NEW_DYNAMIC_STAT_EVENT]) {
+    memory[MEM_NEW_DYNAMIC_STAT_EVENT]=0;
+    for(a=0;a<maxstat && ((STAT_DYNAMIC|STAT_VACANT)&~stats[a].mode);a++);
+    if(a==255) {
+      run_program(b,0,0,0,0);
+    } else if(a<maxstat) {
+      dynstat:
+      free(stats[a].xy);
+      stats[a].xy=0;
+      stats[a].count=0;
+      if(stats[a].text!=global_text) free(stats[a].text);
+      stats[a].text=0;
+      stats[a].frame=0;
+      stats[a].misc1=stats[a].misc2=stats[a].misc3=0;
+      stats[a].mode=STAT_DYNAMIC;
+      if(b=run_program(b,a+1,0,0,0)) add_statxy(a+1)->layer=b;
+    } else {
+      stats=realloc(stats,(maxstat=a+1)*sizeof(Stat));
+      if(!stats) err(1,"Allocation failed");
+      memset(stats+maxstat-1,0,sizeof(Stat));
+      goto dynstat;
+    }
+  }
   for(a=y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++,a++) {
     t=b_main+a;
     if(b=elem_def[t->kind].event[EV_FRAME]) run_program(b,t->kind,x,y,t->param);
   }
   for(a=0;a<maxstat;a++) {
-    if(stats[a].xy) for(b=0;b<stats[a].count;b++) {
-      if(stats[a].xy[b].layer&0x20) continue;
-      if((d=stats[a].xy[b].layer&3) && stats[a].xy[b].x<board_info.width && stats[a].xy[b].y<board_info.height) {
-        if(stats[a].speed && !stats[a].xy[b].delay--) {
-          t=(d==1?b_under:d==2?b_main:b_over)+stats[a].xy[b].y*board_info.width+stats[a].xy[b].x;
+    if(stats[a].xy && (stats[a].mode&STAT_INDEPENDENT)) {
+      for(b=0;b<stats[a].count;b++) {
+        if(stats[a].xy[b].layer&0x20) continue;
+        if(d=stats[a].xy[b].layer&3) {
           stats[a].xy[b].delay=0;
-          if(!run_program(d!=3?elem_def[t->kind].event[EV_STAT]:memory[MEM_OVERLAY_STAT_EVENT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) stats[a].xy[b].delay=stats[a].speed-1;
+          if(!run_program(elem_def[d+240].event[EV_STAT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,0)) stats[a].xy[b].delay=stats[a].speed-1;
+        } else {
+          memmove(stats[a].xy+b,stats[a].xy+b+1,(--stats[a].count-b)*sizeof(StatXY));
+          --b;
         }
-      } else {
-        // Delete this stat
-        memmove(stats[a].xy+b,stats[a].xy+b+1,(--stats[a].count-b)*sizeof(StatXY));
-        --b;
+      }
+    } else if(stats[a].mode&STAT_VACANT) {
+      if(stats[a].text && (stats[a].text!=global_text || !global_text)) {
+        free(stats[a].text);
+        stats[a].text=0;
+        stats[a].length=0;
+        stats[a].frame=0;
+      }
+      if(stats[a].count) {
+        free(stats[a].xy);
+        stats[a].xy=0;
+        stats[a].count=0;
+      }
+    } else if(stats[a].xy) {
+      for(b=0;b<stats[a].count;b++) {
+        if(stats[a].xy[b].layer&0x20) continue;
+        if((d=stats[a].xy[b].layer&3) && stats[a].xy[b].x<board_info.width && stats[a].xy[b].y<board_info.height) {
+          if(stats[a].speed && !stats[a].xy[b].delay--) {
+            t=(d==1?b_under:d==2?b_main:b_over)+stats[a].xy[b].y*board_info.width+stats[a].xy[b].x;
+            stats[a].xy[b].delay=0;
+            if(!run_program(d!=3?elem_def[t->kind].event[EV_STAT]:memory[MEM_OVERLAY_STAT_EVENT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) stats[a].xy[b].delay=stats[a].speed-1;
+          }
+        } else {
+          // Delete this stat
+          memmove(stats[a].xy+b,stats[a].xy+b+1,(--stats[a].count-b)*sizeof(StatXY));
+          --b;
+        }
       }
     }
   }

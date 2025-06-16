@@ -695,6 +695,23 @@ numbers are treated as unsigned.
   null then it is not skipped past but otherwise it is skipped past. The
   condition flag is true if it skipped past or false if it doesn't.
 
+[08A PMOD]
+  Sets the mode bits of the stat specified by second operand, to the value
+  of the first operand (only the low 8-bits are used). See GMOD for a list
+  of these mode bits. You can set bit0 and bit1 to make a stat "vacant"
+  which destroyed everything during each frame (not immediately) and allows
+  it to be reused when creating new dynamic stats. If bit2 is set, then
+  this is a "independent stat". Use this if the stat does not correspond to
+  any tiles; in this case the X and Y coordinates are just extra fields
+  that you can use for your own purpose, and you should not add any tiles
+  to the board for these stats. Independent stats use the stat event for
+  element 241, 242, or 243, for layers 1, 2, and 3, respectively, instead
+  of what is on the board in those positions, and it does not matter if the
+  coordinates are out of range. A few operations will have a different or
+  no effect with independent stats. Note that the board grid is not
+  affected at all, so you should only use this when a stat has no instances
+  or to vacate a independent stat.
+
 [08C PTSC]
   Sets the colour of the tile corresponding to the stat XY index of the
   second operand. The new colour will be the low 8-bits of the first
@@ -964,6 +981,21 @@ numbers are treated as unsigned.
   with the stat number given by the second operand, and set the condition
   flag to true. If there isn't any, then the first operand is unchanged and
   the condition flag is false.
+
+[116 GMOD]
+  Sets the first operand to the mode bits of the stat specified by the
+  second operand. Condition flag is true if valid, false otherwise. The
+  mode bits are as follows:
+   bit0 = Dynamic (see event.doc).
+   bit1 = Vacant: Text and instances are cleared during each frame.
+   bit2 = Independent (see PMOD for details).
+
+[117 INEW]
+  Add a new instance of a stat without affecting the board grid. This is
+  meant for independent stats, but can be used for any stat. The second
+  operand is the layer/lock flag to use, the W register stores the stat
+  number, the X and Y registers are the values to use for X and Y for the
+  new instance, and the first operand is the added instance.
 
 [120 GIVE]
   The first operand tells which status variable to access, where A-H are
