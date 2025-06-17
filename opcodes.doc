@@ -710,7 +710,21 @@ numbers are treated as unsigned.
   coordinates are out of range. A few operations will have a different or
   no effect with independent stats. Note that the board grid is not
   affected at all, so you should only use this when a stat has no instances
-  or to vacate a independent stat.
+  or to vacate a independent stat. (Note that you cannot use this to remove
+  the text of a stat whose text is the global script; if you want to do
+  that then you must change the board flags and then reload the board.)
+
+[08B STEX]
+  Set the text of stat W that does not currently have any text. This has no
+  effect if that stat already has text (you can use PMOD to vacate the stat
+  first and then wait for the next frame; the text will then be removed and
+  then you can add the text). Where the text is loaded from depends on what
+  the first operand is. For the modes where a string is expected, it can be
+  positive for a global string or negative for the current TEXT buffer. The
+  condition flag is true if successful, or false if it fails for any reason
+  (including that the text to use would be an empty string).
+   C = Copy text of an existing stat
+   D = Direct contents of string
 
 [08C PTSC]
   Sets the colour of the tile corresponding to the stat XY index of the

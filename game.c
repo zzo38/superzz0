@@ -3528,12 +3528,13 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_INC: ++so; goto store;
       case OP_INCL: ++so; goto lstore;
       case OP_INEW:
-        if((w&0xFF)<=0 || (w&0xFF)>maxstat) break;
-        rs=add_statxy(w&=0xFF);
+        t=w&0xFF;
+        if(t<=0 || t>maxstat) break;
+        rs=add_statxy(t);
         rs->layer=so;
         rs->x=x;
         rs->y=y;
-        so=((rs-stats[w-1].xy)<<16)|w;
+        so=((rs-stats[t-1].xy)<<16)|t;
         goto store;
       case OP_INFO: so=request_info(so); goto store;
       case OP_JEV: if(!(regs[fo]&1)) goto jump; break;
@@ -3865,6 +3866,25 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_SMOV: general_move(0,regs[fo],x,y,(so&0xF8)+0x8804+(so&7)*0x1100,(so&0xFF00)+1,0,0); break;
       case OP_SPIN: do_spin(x,y,fo,so); break;
       case OP_SPOK: memory[so&0xFFFF]=fo; break;
+      case OP_STEX:
+        condflag=0;
+        t=w&0xFF;
+        if(t<=0 || t>maxstat || stats[t-1].text) break;
+        switch(fo) {
+          case 2:
+            so&=0xFF;
+            if(so>0 && so<=maxstat && stats[so-1].text && (stats[t-1].text=strdup(stats[so-1].text))) stats[t-1].length=stats[so-1].length;
+            break;
+          case 3:
+            if(so>0 && so<ngtext) stats[t-1].text=strdup((char*)gtext[so]);
+            else if(so<0 && so>=-ndynastr) stats[t-1].text=strdup((char*)dynastr[~so].text);
+            else if(so<-255 && so>=-271) stats[t-1].text=strdup((char*)namedflag[-255-so].name);
+            if(stats[t-1].text) stats[t-1].length=strlen(stats[t-1].text);
+            break;
+        }
+        if(stats[t-1].text && !stats[t-1].text[0]) free(stats[t-1].text),stats[t-1].text=0;
+        if(stats[t-1].text) condflag=1;
+        break;
       case OP_SUB: regs[fo]-=so; break;
       case OP_SWPA: t=regs[0]; regs[0]=so; so=t; goto store;
       case OP_SWPB: t=regs[1]; regs[1]=so; so=t; goto store;
@@ -4483,7 +4503,7 @@ int run_game(void) {
         }
       }
     } else if(stats[a].mode&STAT_VACANT) {
-      if(stats[a].text && (stats[a].text!=global_text || !global_text)) {
+      if(stats[a].text && stats[a].text!=global_text) {
         free(stats[a].text);
         stats[a].text=0;
         stats[a].length=0;

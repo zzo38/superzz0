@@ -40,6 +40,7 @@ ASSEMBLY
   +  GMOD and PMOD deal with mode bits of stats (a new feature in this
      version of Super ZZ Zero).
   +  INEW adds a new stat instance independently of the board grid.
+  +  STEX sets the text of a stat that does not already have a text.
   =  Correct return value of UNEW, MNEW, ONEW.
 
 EDITOR
