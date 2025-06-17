@@ -529,7 +529,7 @@ static void lump_listing_menu(const char*fname,const char*text0,void(*call0)(con
   memset(v_char,32,80*25);
   memset(v_color+80,0x07,80*24);
   memset(v_color,0x30,80);
-  strcpy(v_char,"Help lumps");
+  strcpy(v_char,text0);
   memset(v_color+24*80,0x30,80);
   strcpy(v_char+24*80+2,"<RET> Edit  <INS> Add  <DEL> Delete  <ESC> Done");
   strcpy(v_char+24*80+72,fname+2);
@@ -572,7 +572,7 @@ static void lump_listing_menu(const char*fname,const char*text0,void(*call0)(con
           alert_text("Too many lumps");
         } else {
           *name=0;
-          ask_text_restrict(text0,name,8);
+          ask_text_restrict("Add new lump:",name,8);
           if(*name && snprintf(buf,16,"%s%s",name,fname+1)) call0(buf);
         }
         goto start;
@@ -1121,11 +1121,15 @@ int run_editor(void) {
       if(c) write_numform_lump();
     }
     win_command('H',"Help lumps...") {
-      lump_listing_menu("*.HLP","Add new help lump:",edit_one_help_lump,"edithelp",0);
+      lump_listing_menu("*.HLP","Help lumps",edit_one_help_lump,"edithelp",0);
       win_refresh();
     }
     win_command('G',"Global script...") {
       edit_one_help_lump("GLOBAL");
+      win_refresh();
+    }
+    win_command('l',"Script library...") {
+      lump_listing_menu("*.LIB","Script library",edit_one_help_lump,"sclib",0);
       win_refresh();
     }
     win_command('.',"More...") {

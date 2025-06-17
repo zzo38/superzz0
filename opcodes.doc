@@ -723,6 +723,7 @@ numbers are treated as unsigned.
   positive for a global string or negative for the current TEXT buffer. The
   condition flag is true if successful, or false if it fails for any reason
   (including that the text to use would be an empty string).
+   B = Script library
    C = Copy text of an existing stat
    D = Direct contents of string
 

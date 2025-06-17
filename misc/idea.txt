@@ -385,21 +385,6 @@ does not have to be very large; eight might be sufficient (allowing one
 byte to specify a set of zones to select).
 
 
-=== Script libraries ===
-
-It might be useful to have script libraries, although I am not quite sure
-of this. A #CHAIN command can be added to bind a script library.
-
-The script library lumps might be .LIB and #CHAIN will replace the current
-script with the contents of that lump (although it might retain the name
-if it has one, and/or other parts). The lump might also contain commands
-with \ at first for preprocessing, in order that parameters can be passed.
-
-However, such a specification would mean that the bound script cannot
-receive any messages until it starts to execute, since it will not be
-bound until it is executed.
-
-
 === Script subroutines ===
 
 This feature is implemented now, although possibly it may be improved.

@@ -183,6 +183,26 @@ const char*select_board(Uint16 b) {
   }
 }
 
+static void load_script_library(Stat*s,const Uint8*name) {
+  FILE*fp;
+  char buf[16];
+  int i;
+  for(i=0;i<8;i++) {
+    if(name[i]=='.' || name[i]==';' || name[i]<39) break;
+    buf[i]=name[i];
+  }
+  buf[i]='.'; buf[i+1]='L'; buf[i+2]='I'; buf[i+3]='B'; buf[i+4]=0;
+  fp=open_lump(buf,"r");
+  if(!fp) errx(1,"Cannot open %s",buf);
+  if(lump_size>65530) errx(1,"Script library is too big");
+  if(s->text!=global_text) free(s->text);
+  s->text=malloc(lump_size+1);
+  if(!s->text) err(1,"Allocation failed");
+  fread(s->text,1,s->length=lump_size,fp);
+  s->text[s->length]=0;
+  fclose(fp);
+}
+
 static void warp_to_board(Uint16 b,char m) {
   FILE*fp;
   const char*e;
@@ -216,6 +236,7 @@ static void warp_to_board(Uint16 b,char m) {
   if(cur_board_id!=b || !board_info.width || (!m && !(board_info.flag&BF_PERSIST))) {
     if(e=select_board(cur_board_id=b)) errx(1,"Error loading board #%d: %s",b,e);
   }
+  for(x=0;x<maxstat;x++) if(stats[x].text && stats[x].text[0]=='@' && stats[x].text[1]=='!' && stats[x].text!=global_text) load_script_library(stats+x,stats[x].text+2);
   if(global_text && maxstat && !stats->text && !(board_info.flag&BF_NO_GLOBAL)) {
     stats->text=global_text;
     stats->length=global_length;
@@ -3871,6 +3892,11 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         t=w&0xFF;
         if(t<=0 || t>maxstat || stats[t-1].text) break;
         switch(fo) {
+          case 1:
+            if(so>0 && so<ngtext) load_script_library(stats+t-1,gtext[so]);
+            else if(so<0 && so>=-ndynastr) load_script_library(stats+t-1,dynastr[~so].text);
+            else if(so<-255 && so>=-271) load_script_library(stats+t-1,namedflag[-255-so].name);
+            break;
           case 2:
             so&=0xFF;
             if(so>0 && so<=maxstat && stats[so-1].text && (stats[t-1].text=strdup(stats[so-1].text))) stats[t-1].length=stats[so-1].length;

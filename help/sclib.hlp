@@ -1,0 +1,19 @@
+@Script library editor
+In this editor, you can create script libraries which can then be loaded
+in stats in boards. This way, the same script can be used on multiple
+boards without needing to make copies of them, and changes will then affect
+all of them. Once the script is loaded at run time, the copies will be
+independent from each other, so #ZAP etc will only affect the one copy (but
+all instances of that stat will be affected).
+
+The .LIB suffix will automatically be added to any lumps you create.
+
+Within scripts in a board (not global scripts or scripts that are loaded at
+run time, including other script libraries), if the first line starts with
+the two characters @! then the rest is the name of a script library without
+the .LIB suffix, and it will be replaced with the specified script library
+when the board is loaded at run time.
+
+The other way to load a script library is by the STEX instruction; see the
+opcodes.doc file for details. This makes it possible to use script libraries
+with dynamic stats and to decide which script library to load at run time.
