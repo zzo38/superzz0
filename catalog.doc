@@ -4,6 +4,9 @@ likely to be changed in future before it is implemented.)
 
 See oid.ter for a list of OIDs and some other notes.
 
+
+=== Data types ===
+
 The "Displayable text" type means a PC string, TRON string, or General
 string. Some are single-line text, and some are multi-line text; if it
 is multi-line text, then CRLF pairs are allowed, for representing line
@@ -11,6 +14,24 @@ breaks; otherwise, control characters should not be used. CRLF pairs are
 treated as line breaks in multi-line PC strings, but in single-line PC
 strings they are treated as a pair of graphic characters. Character code
 zero (a null character) should not be used at all.
+
+Some Displayable fields are also "bibliographic" fields, and allow the use
+of ISO-IR-67 controls if it is a General string. The first instance of any
+one of the control characters listed below must be preceded by three bytes
+<1B 22 42> to designate the use of these controls. (It is not required to
+be a General string, but if it is not, then you cannot use these controls.)
+
+<88> and <89> surround a part of a text which is ignored for sorting.
+
+<95> and <96> surround a part of a text which is only used for collation.
+
+<97> and <98> surround a part of a text with subordinate collation value.
+
+<9C> and <9D> surround a part of a text which is to be treated as a keyword
+for bibliographic purposes.
+
+<9E> and <9F> surround a part of a text which is to be permuted to the
+front of the element when references and indices are generated.
 
 
 === CATALOG.DER ===
@@ -26,33 +47,7 @@ although the server will probably reject it anyways if you do override it).
 type is 2 (nonstandard), this means that it has a nonstandard use rather
 than being a nonstandard format; the format is still standard.)
 
-* The game title, which is a PC string.
-
-* Publication date (UTC-based timestamp).
-
-* The set of authors. Each author is a set of the names of that author;
-each name can be a Displayable text, Visible string, or Object identifier.
-If it is a Visible string then it is interpreted as a absolute URL (any
-scheme is possible, e.g. "mailto:" for a email address; if it is not a
-absolute URL including scheme, then it is an error).
-
-* A long description, which is a multi-line Displayable text, or null.
-
-* Set of positive classifications (OIDs). (This means that the author
-claims that these classifications do apply to this world.)
-
-* Set of negative classifications (OIDs). (This means that the author
-claims that these classifications do not apply to this world.)
-
 * A OID to identify the hash algorithm to use to identify this world file.
-
-* The hash of the previous version of the world file, stored as a octet
-string. If this is the first version of the world file, then this is null.
-(Note that this CATALOG.DER lump is a part of the world file.)
-
-* A set of Visible strings, which are URLs for downloading current or new
-versions of the world file. This set may be empty, but if it is not empty
-then all URLs must be direct download links. Any scheme may be used.
 
 * A key/value list of extensions. The keys are OIDs and the values are
 the values of those extensions (the type of the values depends on the
@@ -73,18 +68,6 @@ same as the hash algorithm specified in the CATALOG.DER lump.)
 
 * A sequence, which is a copy of the sequence in the CATALOG.DER lump of
 the world file.
-
-* Set of positive classificaitions (OIDs). (This is like the set of
-classifications in the CATALOG.DER lump, but what the service claims
-instead of what the author claims.)
-
-* Set of negative classifications (OIDs).
-
-* A copy of the first field of GENERAL.DER (or an empty set if that
-lump is not present in the world file).
-
-* A copy of the second field of GENERAL.DER (or an empty set if that
-lump is not present in the world file).
 
 * A key/value list of extensions. The keys are OIDs and the values are
 the values of those extensions. Some extensions are meaningful in both
@@ -167,6 +150,51 @@ format, to download the world file.
 
 Note that it is possible to use extensions other than the ones listed here,
 but these are a "standard" set of extensions. All extensions are optional.
+Some extensions are only meaningful or only recommended in the CATALOG.DER
+lump, others are only meaningful or only recommended in the side file, and
+some are suitable for both.
 
-(This section is not fully written yet)
+...3.0 (Author) [Set]
+  Set of authors. Each item in the set represents one author, and is a set
+  of author names. Each author name can be a Displayable text, a Visible
+  string (representing a absolute URL using any scheme), or a OID.
+
+...3.1 (Title) [PC string]
+  The title of the world file.
+
+...3.1.0 (Title, general) [Displayable text]
+  Like ...3.1 but is not limited to PC characters.
+
+...3.2 (Long description) [Displayable text]
+  A multi-line Displayable text which is a long description of the world.
+
+...3.3 (Positive and negative classifications) [Sequence]
+  A sequence of two sets of OIDs. The first is the set of classifications
+  which the author claims are applicable to this world, and the second is
+  the set of classifications which the author claims are not applicable to
+  this world. In the side file, they are the claims of the catalog service
+  instead of the claims of the author.
+
+...3.4 (Hash of previous version of world file) [Octet string]
+  Should be used in the CATALOG.DER lump, if this is a new version of a
+  world file which an older version was previously published. This is the
+  hash of the previous version of the world file.
+
+...3.5 (Downloads) [Set or Sequence]
+  A set or sequence of Visible strings, which are URLs for downloading the
+  world file (any schemes may be used). If it is a sequence, then the first
+  URL listed has preference; if it is a set then there is no preference.
+
+...3.6 (Publish date/time) [Date/time]
+  Specifies when the world file is published. This should be the UTC-based
+  timestamp, although Generalized time is also supported.
+
+...3.7 (Mandatory and optional feature sets) [Sequence]
+  A sequence of two sets, which are the copy of the first two fields of the
+  GENERAL.DER lump. (This is only useful in the side file; it should not be
+  included in the CATALOG.DER lump, because it is redundant.)
+
+...3.8 (File size) [Integer]
+  The size of the world file in bytes. This should be used in the side file
+  and not within the world file itself.
 
