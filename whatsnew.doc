@@ -33,6 +33,9 @@ SCRIPTS
   +  The #VISIBLE condition is implemented.
   +  #BOARD command to go to another board.
   +  Conditions for named flags in specific numbered positions.
+  +  Script libraries are possible. You can use this to create scripts
+     which can then be loaded in multiple boards at run time. The use of
+     STEX instruction can be used to decide the loading at run time, too.
   =  Correction of #BECOME.
 
 ASSEMBLY
@@ -41,6 +44,7 @@ ASSEMBLY
      version of Super ZZ Zero).
   +  INEW adds a new stat instance independently of the board grid.
   +  STEX sets the text of a stat that does not already have a text.
+  +  OVM to work with overlay memory (not the same as board overlays).
   =  Correct return value of UNEW, MNEW, ONEW.
 
 EDITOR

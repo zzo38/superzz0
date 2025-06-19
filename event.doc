@@ -15,6 +15,13 @@ if the bits are clear then they are neither saved nor restored.
 
 $C1 = New dynamic stat callback event (see below).
 
+$C2 = The starting address of the overlay memory (not to be confused with
+the board overlay).
+
+$C3 = The size of the most recently loaded overlay memory. This will also
+be used when saving an overlay memory at run time, so you can change it if
+you want to save it with a different size than it was loaded with.
+
 $C4 = Joystick input levels. The low nybble is for normal game mode, the
 next nybble is for text windows, and the higher two nybbles are not
 meaningful in the current version of Super ZZ Zero.

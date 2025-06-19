@@ -908,6 +908,16 @@ numbers are treated as unsigned.
    E = Exchange
    F = Fill (J is the value to be filled with)
 
+[0AB OVM]
+  Deal with overlay memory. The second operand specifies the lump to use
+  (four hex digits followed by ".OVM"), or if negative, uses the text
+  buffer followed by ".OVM" as the lump name. The $C2 and $C3 fields in
+  the zero page are also meaningful (see event.doc). The first operand
+  selects the operation to be made:
+   A = Load overlay memory
+   B = Save overlay memory
+   C = Revert overlay memory lump (does not affect current memory)
+
 [0AC OREQ]
   Condition is true if operands are equal, or unchanged if unequal.
 

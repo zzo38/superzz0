@@ -3297,6 +3297,40 @@ static void do_spin(Sint32 x,Sint32 y,Uint8 fo,Uint32 so) {
   }
 }
 
+static void do_overlay_memory(Uint8 fo,Sint32 so) {
+  char buf[32];
+  FILE*f;
+  Uint32 n;
+  int c;
+  if(fo>2) errx(1,"Invalid OVM opcode");
+  if(so>=0) {
+    snprintf(buf,32,"%04X.OVM",so&0xFFFF);
+  } else {
+    for(n=0;n<ntextbuf && n<8 && textbuf[n]>39 && textbuf[n]!='.';n++) buf[n]=textbuf[n];
+    buf[n]='.'; buf[n+1]='O'; buf[n+2]='V'; buf[n+3]='M'; buf[n+4]=0;
+  }
+  if(fo==2) {
+    revert_lump(buf);
+  } else {
+    f=open_lump(buf,fo?"w":"r");
+    if(!f) return;
+    if(fo) {
+      for(n=0;n<memory[MEM_OVERLAYMEM_SIZE] && n+memory[MEM_OVERLAYMEM_ADDRESS]<0x10000;n++) {
+        fputc(memory[n+memory[MEM_OVERLAYMEM_ADDRESS]],f);
+        fputc(memory[n+memory[MEM_OVERLAYMEM_ADDRESS]]>>8,f);
+      }
+    } else {
+      memory[MEM_OVERLAYMEM_SIZE]=lump_size/2;
+      for(n=memory[MEM_OVERLAYMEM_ADDRESS];n<0x10000;n++) {
+        c=fgetc(f);
+        if(c==EOF) break;
+        memory[n]=c|(fgetc(f)<<8);
+      }
+    }
+    fclose(f);
+  }
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   StatXY*rs;
   Uint16 op;
@@ -3643,6 +3677,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         goto store;
       case OP_OR: regs[fo]|=so; break;
       case OP_OREQ: if(so==regs[fo]) condflag=1; break;
+      case OP_OVM: do_overlay_memory(fo,so); break;
       case OP_PACK:
         t=convxy(0,x,y);
         if(t!=-1) {

@@ -484,6 +484,8 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 
 #define MEM_GLOBAL_DELAY 0xC0
 #define MEM_NEW_DYNAMIC_STAT_EVENT 0xC1
+#define MEM_OVERLAYMEM_ADDRESS 0xC2
+#define MEM_OVERLAYMEM_SIZE 0xC3
 #define MEM_JOY_LEVEL 0xC4
 #define MEM_RETURN_EVENT 0xC5
 #define MEM_SENSOR_EVENT 0xC6

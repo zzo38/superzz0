@@ -198,6 +198,17 @@ Line breaks are LF only. The text is not compressed.
 is implemented in future, only a few commands are likely to work.)
 
 
+=== *.LIB ===
+
+A script library. This has the same format of the script file.
+
+
+=== *.OVM ===
+
+Overlay memory. Has the same format as the MEMORY lump, but the load
+address is not necessarily zero.
+
+
 === *.SCR ===
 
 Screen definitions.
@@ -372,8 +383,6 @@ where this is relative to the nearest hard edge.
 
 
 === *.SND ===
-
-(This feature is not fully implemented yet.)
 
 Wave sounds. The format is: the header, and then the audio data.
 
