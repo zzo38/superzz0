@@ -878,6 +878,7 @@ CHEST	FILL $0F,0
 
 	EV T,_SCROLL
 	SIM A,0
+	SFX A,"@30T<C'CD'DE'EF'FG'G"
 	RUN A,0
 	KILM C,0
 
@@ -2423,7 +2424,7 @@ RL_FAK	ED _FAKE+$2100,$00FE
 	ED1 37,"Max shots: "
 
 	; Text editor
-	ED1 64,60
+	ED1 64,42
 
 	; New board
 	ED1 65
