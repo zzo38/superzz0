@@ -66,12 +66,14 @@ EDITOR
   =  Retain selection of character for ^P in text editor.
   =  Save board when leaving due to following exits in boardwalk mode.
   =  Set cursor position in board list when exiting board editor.
+  =  Correct a bug in the board editor when adding a stat by a F1 menu.
 
 TEMPLATE
   +  Many additions to default template.
   +  #ENDGAME command to end the game.
   -  Removed the "blank" template, which is not necessary; you can create
      an empty world file with no template.
+  =  Correct the right margin.
   *  The default template now sets CONTROL_DELAY0_SEND by default.
 
 

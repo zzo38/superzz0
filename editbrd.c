@@ -2476,7 +2476,7 @@ static void f_menu(Uint16 f) {
       return;
     }
     clip.stat=new_stat();
-    if(f>=0x200 && memory[f]==1) stats[clip.stat].speed=memory[f+1]>>8;
+    if(f>=0x200 && memory[f]==1) stats[clip.stat-1].speed=memory[f+1]>>8;
   } else {
     clip.stat=memory[m+2]>>8;
   }
