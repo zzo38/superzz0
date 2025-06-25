@@ -135,6 +135,7 @@ typedef struct {
 #define EV_STAT 1
 #define EV_PUSH 2
 #define EV_TRANSPORT 3
+#define EV_SENSOR 4
 
 // ElementDef:attrib
 #define A_CLASS1 0x00000001 // class number

@@ -12,6 +12,7 @@ also are reserved for special meanings, although you can still use them for
 your own purposes if you are not using the features that use them for their
 special meanings or if their attributes are used in the appropriate way for
 the special features that use those element numbers.
+!num;Special element numbers
 :copy
 The "Copy attributes" submenu can be used for copying the attributes of one
 element to several others in case you want to define several elements that
@@ -142,3 +143,21 @@ to the tile coordinates, which also makes it less uniform.
 See also:
 !-appmap;Appearance mapping
 !-anima;Animations
+
+:num;Special element numbers
+These special element numbers have the special uses described below. They
+are otherwise ordinary elements and can be used like any others.
+
+0: When a tile must be replaced by an empty space, this element is used.
+This includes when moving off of a floor, the floor is moved from the
+under layer to the main layer, and the under layer in the tile that it
+moved from is set to element 0. In the board editor, it is filled with
+this element by default.
+
+240: This element is used for overlay tiles, although not all attributes
+and events are meaningful (and some attributes are overridden by the SOLID
+bit of the overlay tile). The appearance is never used.
+
+241-243: The stat event of these elements is used for independent stats.
+The other events and attributes are not used for this purpose.
+

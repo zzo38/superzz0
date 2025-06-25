@@ -28,11 +28,6 @@ meaningful in the current version of Super ZZ Zero.
 
 $C5 = Script return event (see below).
 
-$C6 = Sensor event (see below).
-
-$C7 = Overlay stat event. This is like EV_STAT but is used for stats in
-the overlay.
-
 $C8 = Transport event (see below).
 
 $C9 = The default overlay, which is used when objects within the overlay
@@ -117,6 +112,53 @@ sent to is set to zero. If clear, then it will only do this if the message
 is a subroutine message.
 
 
+=== Order of execution ===
+
+Each turn consists of the following order:
+
+* Do warping, if there is a pending warp. This will go to another board
+(saving the old board if the old board is set as persistent), and then
+will call the warp subroutine, setting the warp subroutine register to 0
+before it is called. If another warp is set during this warp subroutine,
+then this step repeats until no more warps are set.
+
+* Do automatic scrolling, if enabled.
+
+* Display the current screen.
+
+* Wait for the next frame, and process the keyboard during this time. Some
+keys affect the system and will work immediately; a key will also work
+immediately if the game is paused.
+
+* Execute the key event, if a key was pushed that can be handled by the
+game world (see $00E0 below for the list of these keys). This is skipped
+if no key is pushed or if the INSERT key is pushed. Saving and restoring
+the game is handled at this step, when applicable.
+
+* If the dynamic stat event is set, add a new dynamic stat (which is given
+a new number if there are no vacant dynamic stat numbers available) and
+execute the dynamic stat event. The dynamic stat event is set to 0 before
+this is executed; if it is set to nonzero during this time then this step
+is repeated until it is no longer set.
+
+* Increment the frame counter and execute the global frame event. If the
+return value is nonzero, the rest of the below steps are skipped.
+
+* Scan the board, starting at (0,0) and going to the east, continuing on
+west edge of the next row when reaching the end of each row; during this
+scan it will execute the frame event of the element on the main layer of
+each tile that is scanned.
+
+* For each stat in numerical order, it will handle each instance of that
+stat. If the stat is vacant, everything about the stat and its instances
+is reset to zero (including the text), otherwise it will execute the stat
+event of each instance in order. If the layer is zero or if the coordinates
+are out of range (the coordinates are ignored for independent stats) then
+that instance is deleted from the list, renumbering all further instances
+of that stat (but the stat itself is not renumbered). (When a stat is
+deleted by DIE, KILM, etc, it will mark it for deletion in this way.)
+
+
 === Global events ===
 
 $00C1
@@ -148,25 +190,6 @@ $00C5
   Z = Saved delay number
 
   Return = New delay value. A negative number means to continue execution.
-
-$00C6
-  This event occurs when a stat tries to move onto a sensor (which does not
-  necessarily have the A_FLOOR attribute). Only stats can try to move onto
-  sensors, and only in the main layer, although the sensor doesn't have to
-  be a stat (but it is OK if it is). Sensors cannot move onto sensors.
-
-  W = Stat number and stat XY index trying to move onto the sensor
-  X = X coordinate of sensor
-  Y = Y coordinate of sensor
-  Z = Movement flags (see below)
-
-  Return = Nonzero to allow movement onto the sensor; zero for normal move.
-
-  For the movement flags, bit7-bit3 are the same as for GMOV, but the other
-  bits have other meanings. The bit31-bit16 are the movement classes, and
-  the bit15-bit8 are the element number of the object being moved, and the
-  bit0 is set if it is moving from one sensor to another sensor, and bit1
-  is set if DROP is used, and bit2 is not currently meaningful.
 
 $00C8
   This event occurs whenever something tries to move through a transporter,
@@ -212,8 +235,8 @@ $00E0
   Return = Unused.
 
 $00E1
-  Event called at each frame, after key (if any) but before everything else
-  happens during this frame.
+  Event called at each frame, after the key event (if any) but before
+  everything else happens during this frame.
 
   W,X,Y,Z = Zero
 
@@ -280,4 +303,21 @@ EV_TRANSPORT (3)
   Condition flag = Suppression flag
 
   Return = Target coordinates; zero to prevent transport.
+
+EV_SENSOR (4)
+  This event occurs when a stat tries to move onto a sensor (which does not
+  necessarily have the A_FLOOR attribute). Only stats can try to move onto
+  sensors, and only in the main layer, although the sensor doesn't have to
+  be a stat (but it is OK if it is). Sensors cannot move onto sensors.
+
+  W = Stat number and stat XY index trying to move onto the sensor
+  Z = Movement flags (see below)
+
+  Return = Nonzero to allow movement onto the sensor; zero for normal move.
+
+  For the movement flags, bit7-bit3 are the same as for GMOV, but the other
+  bits have other meanings. The bit31-bit16 are the movement classes, and
+  the bit15-bit8 are the element number of the object being moved, and the
+  bit0 is set if it is moving from one sensor to another sensor, and bit1
+  is set if DROP is used, and bit2 is not currently meaningful.
 

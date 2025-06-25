@@ -25,6 +25,7 @@ GAME
      default is now to disable; this is a change from previous versions.)
   +  Wave sounds. (Currently lacks support in the editor.)
   +  Dynamic stats and independent stats.
+  +  Element 240 is now used for overlay tiles.
   =  Restore named flags from save game files.
   =  Save/restore script frames and delay and flags for global scripts.
   =  Message edging now uses correct colours.
@@ -45,6 +46,7 @@ ASSEMBLY
   +  INEW adds a new stat instance independently of the board grid.
   +  STEX sets the text of a stat that does not already have a text.
   +  OVM to work with overlay memory (not the same as board overlays).
+  -  The original $C6 and $C7 global events are removed.
   =  Correct return value of UNEW, MNEW, ONEW.
 
 EDITOR

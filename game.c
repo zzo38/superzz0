@@ -1042,8 +1042,8 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   // Determine attributes
   if(flag&2) {
     b=b_over;
-    e0=(A_PUSH_NS|A_PUSH_EW);
-    e1=(b[to].kind&OVER_SOLID)?(A_PUSH_NS|A_PUSH_EW):(A_FLOOR);
+    e0=elem_def[240].attrib&~(A_SENSOR|A_TRANSPORTABLE);
+    e1=(b[to].kind&OVER_SOLID)?(e0&~(A_FLOOR|A_PUSH_EW|A_PUSH_NS)):(e0|A_FLOOR);
   } else {
     b=b_main;
     e0=elem_def[b[at].kind].attrib; e1=elem_def[b[to].kind].attrib;
@@ -1062,7 +1062,7 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   if(qq && (e1&A_SENSOR&~e0)) {
     if(qq->sensor.kind) {
       // Trying to move from one sensor to another sensor
-      if(!pushing && run_program(memory[MEM_SENSOR_EVENT],sn|(sr<<16),tx,ty,(flag&0xF8)|(((Uint32)cla)<<16)|(b[at].kind<<8)|0x01)) {
+      if(!pushing && run_program(elem_def[b[to].kind].event[EV_SENSOR],sn|(sr<<16),tx,ty,(flag&0xF8)|(((Uint32)cla)<<16)|(b[at].kind<<8)|0x01)) {
         Tile tt=b[at];
         b[at]=qq->sensor;
         if(qq->sensor.stat) restore_sensor_stat(at);
@@ -1071,7 +1071,7 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
         b[to]=tt;
         goto sensorok;
       }
-    } else if(run_program(memory[MEM_SENSOR_EVENT],sn|(sr<<16),tx,ty,(flag&0xF8)|(((Uint32)cla)<<16)|(b[at].kind<<8))) {
+    } else if(run_program(elem_def[b[to].kind].event[EV_SENSOR],sn|(sr<<16),tx,ty,(flag&0xF8)|(((Uint32)cla)<<16)|(b[at].kind<<8))) {
       if(!(flag&8)) {
         qq->sensor=b[to];
         if(qq->sensor.stat) step_on_sensor_stat(to);
@@ -1134,7 +1134,7 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   }
   // Push other objects out of the way
   if((flag&0x10) && (e1&(A_PUSH_EW|A_PUSH_NS))) {
-    if(!(flag&2) && (i=elem_def[b[to].kind].event[EV_PUSH])) {
+    if(i=elem_def[flag&2?240:b[to].kind].event[EV_PUSH]) {
       condflag=(flag>>3)&1;
       i=run_program(i,(rx>0?DIR_E:rx<0?DIR_W:ry>0?DIR_S:DIR_N),tx,ty,b[to].param);
       condflag=0;
@@ -3468,7 +3468,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           u=x+y*board_info.width;
           if(b_under[u].stat) break;
           if(elem_def[b_main[u].kind].attrib&A_SENSOR&~elem_def[regs[fo]&0xFF].attrib) {
-            if(run_program(memory[MEM_SENSOR_EVENT],so,rs->x,rs->y,(b_main[u].kind<<8)|0xFFFF0082)) {
+            if(run_program(elem_def[b_main[u].kind].event[EV_SENSOR],so,rs->x,rs->y,(b_main[u].kind<<8)|0xFFFF0082)) {
               rs->sensor=b_main[u];
               if(rs->sensor.stat) step_on_sensor_stat(u);
               goto skipdrop;
@@ -4522,8 +4522,6 @@ int run_game(void) {
   } else if(autofire) {
     ka=autofire; kd=autofire_dir; goto sendkey;
   }
-  ++memory[MEM_FRAME_COUNTER];
-  if(run_program(memory[MEM_FRAME_EVENT],0,0,0,0)) goto gameloop;
   while(b=memory[MEM_NEW_DYNAMIC_STAT_EVENT]) {
     memory[MEM_NEW_DYNAMIC_STAT_EVENT]=0;
     for(a=0;a<maxstat && ((STAT_DYNAMIC|STAT_VACANT)&~stats[a].mode);a++);
@@ -4547,6 +4545,8 @@ int run_game(void) {
       goto dynstat;
     }
   }
+  ++memory[MEM_FRAME_COUNTER];
+  if(run_program(memory[MEM_FRAME_EVENT],0,0,0,0)) goto gameloop;
   for(a=y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++,a++) {
     t=b_main+a;
     if(b=elem_def[t->kind].event[EV_FRAME]) run_program(b,t->kind,x,y,t->param);
@@ -4582,7 +4582,7 @@ int run_game(void) {
           if(stats[a].speed && !stats[a].xy[b].delay--) {
             t=(d==1?b_under:d==2?b_main:b_over)+stats[a].xy[b].y*board_info.width+stats[a].xy[b].x;
             stats[a].xy[b].delay=0;
-            if(!run_program(d!=3?elem_def[t->kind].event[EV_STAT]:memory[MEM_OVERLAY_STAT_EVENT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) stats[a].xy[b].delay=stats[a].speed-1;
+            if(!run_program(elem_def[d!=3?t->kind:240].event[EV_STAT],a+(b<<16)+1,stats[a].xy[b].x,stats[a].xy[b].y,t->param)) stats[a].xy[b].delay=stats[a].speed-1;
           }
         } else {
           // Delete this stat

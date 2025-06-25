@@ -839,7 +839,7 @@ CHEST	FILL $0F,0
 ; **** Object ****
 	EV B,_OBJECT
 	EV B,_MONITOR
-	TA $C7
+	EV B,240
 	LET A,W
 	RUN A,1
 	LAY A,W
@@ -884,7 +884,7 @@ CHEST	FILL $0F,0
 
 ; **** Sensor ****
 	EV T,_SENSOR,1
-	TA $C6
+	EV E,_SENSOR
 	DEC T,W
 	TLET S,0
 	LETL A,W
