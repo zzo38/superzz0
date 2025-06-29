@@ -3487,8 +3487,6 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         }
         break;
       case OP_DYN: do_dynamic_strings(fo,so); break;
-      case OP_EAP0: so=elem_def[so&255].app[0]; goto store;
-      case OP_EAP1: so=elem_def[so&255].app[1]; goto store;
       case OP_EATT: so=elem_def[so&255].attrib; goto store;
       case OP_EJMP: so=elem_def[so&255].event[fo]; goto jump;
       case OP_EMAT: condflag=(elem_def[so&255].attrib&(0x1000000UL<<fo)?1:0); break;

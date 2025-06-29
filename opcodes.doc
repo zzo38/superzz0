@@ -1084,14 +1084,6 @@ numbers are treated as unsigned.
   the first operand (A=bit0, Z=bit15). If the second operand is nonzero, it
   will then alter that bit: set if positive or clear if negative.
 
-[12C EAP0]
-  The second operand is the element number; write the major appearance code
-  of that element definition to the first operand.
-
-[12D EAP1]
-  The second operand is the element number; write the minor appearance code
-  of that element definition to the first operand.
-
 [12E EATT]
   The second operand is the element number; write the attribute of that
   element definition to the first operand.
