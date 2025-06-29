@@ -46,6 +46,8 @@ extern SDL_Event event;
 extern Uint8 repeating;
 
 #define VIDEO_80COLUMNS 0x01
+#define VIDEO_MONO 0x04 // (not implemented)
+#define VIDEO_FLASHY 0x20 // (not implemented)
 
 void init_display(void);
 void redisplay(void);

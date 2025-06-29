@@ -227,6 +227,9 @@ not display the quantity, but is limited to one.
 Alternatively, item memory might be separate from program memory, although
 the opcodes might be similar like the above.
 
+New commands to be used in scripts might also be made for working with item
+memory, such as #GIVEITEM and #TAKEITEM and #ASKITEM.
+
 
 === High scores ===
 
@@ -267,7 +270,7 @@ specified in the world file to work.
 
 Each screen can have an associated transition animation, perhaps numbered
 from 0 (meaning no animation) to some number (one less than a power of
-two), such as 15.
+two), such as 15 or 63.
 
 The transition animations themself can be defined in a lump called
 TRANSIT.DER, containing a sequence of the definitions, with 1-based
@@ -279,37 +282,9 @@ indexing. Each definition can have the fields:
 If this is omitted, the current game speed is used. (Either way, it can be
 overridden by the user configuration file.)
 
-* A octet string defining the reveal time grid. This might be optional (if
-reveal time is not needed and other options are used). It would probably
-have predictions like some picture formats (e.g. JPEG-LS) use, in order to
-store the data in a compact format.
-
-* Others depending on the animation method.
-
-The possible animation methods might be:
-
-* Only reveal time; some screen cells are updated during each frame, until
-all of the cells have been updated. (It might also be possible to combine
-reveal time with other methods.)
-
-* Screen scrolling. A rectangular area might be possible to be specified
-(usually matching the viewport defined in the screen layout). This way,
-if you walk out of a board edge to another one, the next board would be
-scrolled into view.
-
-* Motion of parts of the screen layout. For example, this would be used to
-emulate the scroll opening/closing animation in ZZT.
-
-* Changing screen cells to fixed values before changing them again to the
-new screen values. This is like the board transition animation in ZZT.
-
-(These are probably sufficient.)
-
-For some of these methods, it would be more useful for programs to specify
-some details (or possibly even entirely overriding it) at run time, perhaps
-specified as warp registers. (For example, in the case of screen scrolling,
-this would include the direction of movement. When using passages instead
-of edges, it would need to switch to a different animation instead.)
+* The effect. This can be a implicit typed sequence, or it can be a single
+Set (for multiple simultaneous effects) or Sequence (for multiple effects
+that are done in sequence).
 
 
 === Enhanced graphics ===
@@ -337,6 +312,7 @@ It could also combine the multiple ways and have layers:
 * Video slice layer
 * Video bobs layer
 * Video window layer
+(These will probably be changed)
 
 (The video window layer allows text and/or slices to be displayed in
 a fixed area in a way that overlays anything else on the screen and
@@ -344,13 +320,6 @@ is not affected by screen scrolling.)
 
 Some worlds might support enhanced graphics as an optional feature.
 (It can be specified as mandatory or optional in GENERAL.DER.)
-
-
-=== Memory overlays ===
-
-This means that in addition to the MEMORY lump you can also have other
-lumps that contain parts of program memory, and have an instruction to
-load them at a specified address.
 
 
 === Custom windows ===
@@ -453,6 +422,14 @@ for testing). If demo recordings can include assertions, that will help.
 
 This feature has been mentioned in the document of ideas of features to
 implement in future for ZZ Zero. (This is probably not a high priority.)
+
+
+=== Save game upgrading ===
+
+Currently, a save game can only be used with the same version of the world
+file that was used to play the game. A new lump called UPGRADE.DER could
+be made in order to allow using old save games with new world files in some
+circumstances, making the save game upgraded to use the new world file.
 
 
 === Board editor features ===
