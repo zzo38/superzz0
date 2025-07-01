@@ -50,3 +50,6 @@ C_publishtime=catalog.6
 C_featureset=catalog.7
 C_filesize=catalog.8
 
+% Features specified in GENERAL.DER
+G_font=feature.0 % G_font.<height>
+

@@ -38,16 +38,24 @@ extern Config config;
 
 extern Uint8 v_color[80*25];
 extern Uint8 v_char[80*25];
+extern Uint8 v_font[80*25];
 extern Uint8 sv_color[80*25];
 extern Uint8 sv_char[80*25];
+extern Uint8 sv_font[80*25];
 extern Uint8 v_status[82];
 extern Uint8 v_xcur,v_ycur,v_mode;
 extern SDL_Event event;
 extern Uint8 repeating;
 
 #define VIDEO_80COLUMNS 0x01
-#define VIDEO_MONO 0x04 // (not implemented)
-#define VIDEO_FLASHY 0x20 // (not implemented)
+#define VIDEO_MONO 0x04
+#define VIDEO_FLASHY 0x20
+#define VIDEO_SMZX 0x80
+
+#define VF_SYSTEM 0x01
+#define VF_FRONT 0x02
+#define VF_WIDE_L 0x04
+#define VF_WIDE_R 0x08
 
 void init_display(void);
 void redisplay(void);
@@ -55,6 +63,21 @@ void display_title(const char*);
 void set_timer(Uint32);
 Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n);
 int next_event(void);
+
+// === Fonts/palettes ===
+
+extern const Uint8 pcfont[3584];
+extern Uint8*font;
+
+int load_font(const char*name,Uint8 z);
+int load_palette(const char*name,Uint8 z);
+
+#define LOADFONT_BASE 0
+#define LOADFONT_WIDE 1
+#define LOADFONT_EGS_BASE 2
+#define LOADFONT_EGS_WIDE 3
+
+#define LOADPAL_BASE 0
 
 // === Joystick ===
 

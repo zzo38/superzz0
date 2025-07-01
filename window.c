@@ -10,6 +10,7 @@ static win_memo*cwin;
 void draw_border(Uint8 c,Uint8 x0,Uint8 y0,Uint8 x1,Uint8 y1) {
   Uint8 x,y;
   for(y=y0;y<=y1;y++) {
+    memset(v_font+y*80+x0,VF_SYSTEM|VF_FRONT,x1+1-x0);
     memset(v_color+y*80+x0,c,x1+1-x0);
     v_char[y*80+x0]=(y==y0?0xDA:y==y1?0xC0:0xB3);
     memset(v_char+y*80+x0+1,y==y0?0xC4:y==y1?0xC4:0x00,x1-1-x0);

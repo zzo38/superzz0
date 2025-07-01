@@ -24,9 +24,17 @@ static unsigned int num_mask,mode_switch_mask;
   [1] Sub-mode
   [79] Joystick shift state
   [80] Display '?' if help file
+
+  Use of palette:
+  0x00-0x0F = System colours
+  0x10-0x1F = Cursor colours
+  0x20-0x2F = Border/status
+  0x30-0x3F = Custom (normal)
+  0x40-0x7F = Custom (64; not used)
+  0x80-0xFF = Custom (128; not used)
 */
 
-static const Uint8 font[3584]={
+const Uint8 pcfont[3584]={
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x81, 0xA5, 0x81, 0x81, 0xBD,
   0x99, 0x81, 0x7E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0xFF, 0xDB,
@@ -357,8 +365,10 @@ static const Uint8 font[3584]={
 
 Uint8 v_color[80*25];
 Uint8 v_char[80*25];
+Uint8 v_font[80*25];
 Uint8 sv_color[80*25];
 Uint8 sv_char[80*25];
+Uint8 sv_font[80*25];
 Uint8 v_status[82];
 Uint8 v_xcur=128;
 Uint8 v_ycur=128;
@@ -366,8 +376,10 @@ Uint8 v_mode=VIDEO_80COLUMNS;
 SDL_Event event;
 JoyStatus*joystat;
 Uint8 repeating;
+Uint8*font;
 
 static SDL_Surface*scrn;
+static float gamma_r,gamma_g,gamma_b;
 static SDL_Joystick*joy;
 static Uint8 rscancode;
 
@@ -464,6 +476,98 @@ static int custom_event_thread(void*unuse) {
   return 1;
 }
 
+int load_font(const char*name,Uint8 z) {
+  //TODO: also support DER-based fonts (.FNT instead of .CHR)
+  FILE*f;
+  char buf[16];
+  int i;
+  if(!name) {
+    free(font);
+    font=0;
+    return 1;
+  }
+  for(i=0;i<8;i++) {
+    if(name[i]=='.' || name[i]<43) break;
+    buf[i]=name[i];
+  }
+  buf[i++]='.'; buf[i]='C'; buf[i+1]='H'; buf[i+2]='R'; buf[i+3]=0;
+  f=open_lump(buf,"r");
+  if(!f) {
+    warnx("Font '%s' is not available",buf);
+    return 0;
+  }
+  if(lump_size!=3584) {
+    fclose(f);
+    warnx("Font '%s' is not 3584 bytes long; ignoring",buf);
+    return 0;
+  }
+  if(!font) {
+    font=malloc(3584);
+    if(!font) err(1,"Allocation failed");
+  }
+  fread(font,14,256,f);
+  fclose(f);
+  return 1;
+}
+
+static inline void adjust_gamma(SDL_Color*c,int n) {
+  int i,x;
+  if(config.video_gamma) for(i=0;i<n;i++,c++) {
+    x=255.0*pow(c->r/255.0,gamma_r); c->r=x>255?255:x;
+    x=255.0*pow(c->g/255.0,gamma_g); c->g=x>255?255:x;
+    x=255.0*pow(c->b/255.0,gamma_b); c->b=x>255?255:x;
+  }
+}
+
+int load_palette(const char*name,Uint8 z) {
+  FILE*f;
+  char buf[16];
+  int i,n,x;
+  SDL_Color c[128];
+  if(!name) {
+    // Reset the palette to the default values
+    SDL_SetColors(scrn,palet,0x30,16);
+    return 1;
+  }
+  for(i=0;i<8;i++) {
+    if(name[i]=='.' || name[i]<43) break;
+    buf[i]=name[i];
+  }
+  buf[i++]='.'; buf[i]='P'; buf[i+1]='A'; buf[i+2]='L'; buf[i+3]=0;
+  f=open_lump(buf,"r");
+  if(!f) {
+    warnx("Palette '%s' is not available",buf);
+    return 0;
+  }
+  switch(lump_size) {
+    case 16: case 64: case 128:
+      n=lump_size;
+      for(i=0;i<n;i++) {
+        x=fgetc(f);
+        c[i].r=(x&040?0x55:0)+(x&04?0xAA:0);
+        c[i].g=(x&020?0x55:0)+(x&02?0xAA:0);
+        c[i].b=(x&010?0x55:0)+(x&01?0xAA:0);
+      }
+      break;
+    case 48: case 192: case 384:
+      n=lump_size/3;
+      for(i=0;i<n;i++) {
+        c[i].r=(fgetc(f)*65)>>4;
+        c[i].g=(fgetc(f)*65)>>4;
+        c[i].b=(fgetc(f)*65)>>4;
+      }
+      break;
+    default:
+      fclose(f);
+      warnx("Unsupported palette type");
+      return 0;
+  }
+  fclose(f);
+  adjust_gamma(c,n);
+  SDL_SetColors(scrn,c,n?:0x30,n);
+  return 1;
+}
+
 void init_display(void) {
   if(scrn) goto clear;
   if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO)) errx(1,"SDL error: %s",SDL_GetError());
@@ -489,9 +593,9 @@ void init_display(void) {
     const char*s=config.video_gamma;
     float r,g,b;
     int i,j;
-    r=strtod(s,(char**)&s);
-    if(*s==';') ++s,g=strtod(s,(char**)&s);
-    if(*s==';') ++s,b=strtod(s,(char**)&s);
+    gamma_r=r=strtod(s,(char**)&s);
+    if(*s==';') ++s,gamma_g=g=strtod(s,(char**)&s); else gamma_g=g=r;
+    if(*s==';') ++s,gamma_b=b=strtod(s,(char**)&s); else gamma_b=b=r;
     for(i=0;i<16;i++) {
       j=255.0*pow(palet[i].r/255.0,r); palet[i].r=j>255?255:j;
       j=255.0*pow(palet[i].g/255.0,g); palet[i].g=j>255?255:j;
@@ -499,6 +603,7 @@ void init_display(void) {
     }
   }
   SDL_SetColors(scrn,palet,0,34);
+  SDL_SetColors(scrn,palet,0x30,16);
   switch(config.text_input) {
     case 0: SDL_EnableUNICODE(1); break;
 #ifdef SDL_VIDEO_DRIVER_X11
@@ -534,6 +639,7 @@ void init_display(void) {
   clear:
   memset(v_color,7,80*25);
   memset(v_char,32,80*25);
+  memset(v_font,VF_SYSTEM,80*25);
   memset(v_status,0,82);
 }
 
@@ -549,8 +655,13 @@ void redisplay(void) {
     for(z=y=0;y<25;y++,z+=80) {
       for(a=0;a<14;a++) {
         for(x=0;x<80;x++) {
-          c=font[14*v_char[z+x]+a];
-          for(b=0;b<8;b++) p[b+(x<<3)]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+          if(v_font[z+x]&VF_SYSTEM) {
+            c=pcfont[14*v_char[z+x]+a];
+            for(b=0;b<8;b++) p[b+(x<<3)]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+          } else {
+            if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
+            for(b=0;b<8;b++) p[b+(x<<3)]=(15&(v_color[z+x]>>(c&128?0:4)))+0x30,c<<=1;
+          }
         }
         p+=r;
       }
@@ -566,8 +677,13 @@ void redisplay(void) {
     for(z=y=0;y<25;y++,z+=80) {
       for(a=0;a<14;a++) {
         for(x=0;x<40;x++) {
-          c=font[14*v_char[z+x]+a];
-          for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+          if(v_font[z+x]&VF_SYSTEM) {
+            c=pcfont[14*v_char[z+x]+a];
+            for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+          } else {
+            if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
+            for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=(15&(v_color[z+x]>>(c&128?0:4)))+0x30,c<<=1;
+          }
         }
         p+=r;
       }
@@ -584,7 +700,7 @@ void redisplay(void) {
     p=scrn->pixels+(14*25+8)*r;
     for(a=0;a<14;a++) {
       for(x=0;x<81;x++) {
-        c=font[14*v_status[x]+a];
+        c=pcfont[14*v_status[x]+a];
         for(b=0;b<8;b++) p[b+(x<<3)]=(c&128?33:32),c<<=1;
       }
       p+=r;

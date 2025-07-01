@@ -180,6 +180,15 @@ layer has a stat at those coordinates but the other doesn't, then the
 layer field of the corresponding stat XY record is updated.
 
 
+=== *.CHR ===
+
+A font with 256 characters. This is stored as the raw raster data, starting
+with the top scanline of character 0 and ending with the bottom scanline of
+character 255. The high bit of each byte corresponds to the left pixel.
+
+This lump must be exactly 3584 bytes long, otherwise it is an error.
+
+
 === *.HLP ===
 
 A help file.
@@ -207,6 +216,28 @@ A script library. This has the same format of the script file.
 
 Overlay memory. Has the same format as the MEMORY lump, but the load
 address is not necessarily zero.
+
+
+=== *.PAL ===
+
+Stores a palette. The format of this lump depends on the lump size:
+     16   EGA 16 colours
+     48   VGA 16 colours
+     64   EGA 64 colours
+    128   EGA 128 colours
+    192   VGA 64 colours
+    384   VGA 128 colours
+      ?   EGA with SMZX
+      ?   VGA with SMZX
+
+In the current implementation, more than 16 colours is not meaningful.
+
+The format for EGA is each colour has one byte, and the high two bits must
+be clear. The bits are made "00rgbRGB" where the 6-bit output value will
+be bits made "RrRrRr" red, "GgGgGg" green, "BbBbBb" blue.
+
+The format for VGA is each colour has three bytes, in order red, green,
+blue, each value being in range zero to sixty-three.
 
 
 === *.SCR ===
@@ -551,6 +582,9 @@ optional and should normally only be used in the optional set. The
 version number without the (patch) should be used in the mandatory set.
 If in future it becomes necessary to emulate bugs of older versions of
 Super ZZ Zero, it will use this version number to enable such emulation.
+
+* ...4.0.(height) means that the world uses custom fonts and/or palettes.
+The (height) must be fourteen; other numbers are not currently supported.
 
 All of the further fields are optional. Each one is a implicit typed
 sequence with context-specific class; the type number indicates the

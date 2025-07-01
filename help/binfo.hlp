@@ -34,7 +34,8 @@ obscuring the board grid), unless suppressed by the screen layout. For a
 tile to obscure the board grid, all of the criteria are needed: the tile
 in the overlay is marked as visible, the "visible overlay" flag in the
 board info is set, the screen layout does not suppress the overlay at that
-position, and the tile is not within the light area.
+position, the element of that tile does not suppress the overlay, and the
+tile is not within the light area.
 
 þ Exits: Specify the board number of the exit in each direction (0 means
 no exit in that direction).
