@@ -20,6 +20,8 @@ The main screen of the editor contains the following submenus:
 !-numform;Numeric formats
 !-edithelp;Help lumps
 !global;Global script
+!-sclib;Script library
+!-editgr;Graphics
 !more;More
 
 :global

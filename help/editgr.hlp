@@ -1,0 +1,19 @@
+@Graphics editing
+This menu can be used to edit the graphics for the game. If the graphics
+are not defined then the default graphics (PC characters and colours) will
+be used, so using this menu is not mandatory for making a game world.
+
+!chr;Font (simple)
+!fnt;Font (advanced)
+!pal;Palette
+
+:chr;Font (simple)
+This is for making simple 8x14 full fonts with 256 characters. These fonts
+cannot include animations, character code mapping, etc, and cannot be
+partial fonts, and are also not compressed.
+
+:fnt;Font (advanced)
+Not implemented yet.
+
+:pal;Palette
+Defines a palette.

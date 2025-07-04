@@ -28,6 +28,7 @@ static int check_feature(const ASN1_Value*v) {
     // OK
     return 0;
   }
+//  if(v->type==ASN1_RELATIVE_OID && v->length==3 && !memcmp(v->data,"\x04\x00\x0E",3)) return 0;
   return -1;
 }
 

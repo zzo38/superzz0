@@ -66,6 +66,8 @@ same as the hash algorithm specified in the CATALOG.DER lump.)
 
 * The hash of the world file. The hash is stored as a octet string.
 
+* The file size of the world file (integer).
+
 * A sequence, which is a copy of the sequence in the CATALOG.DER lump of
 the world file.
 
@@ -194,7 +196,9 @@ some are suitable for both.
   GENERAL.DER lump. (This is only useful in the side file; it should not be
   included in the CATALOG.DER lump, because it is redundant.)
 
-...3.8 (File size) [Integer]
-  The size of the world file in bytes. This should be used in the side file
-  and not within the world file itself.
+...3.8 (World version) [Printable string]
+  The world version. This should be different for each version of that
+  world, and is the version for the world and is not the version number of
+  Super ZZ Zero (which is separate). This specification does not make any
+  interpretation of the specific value, so you can use it in your own way.
 

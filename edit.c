@@ -557,7 +557,7 @@ static void lump_listing_menu(const char*fname,const char*text0,void(*call0)(con
   for(;;) {
     if(!next_event()) return;
     if(event.type==SDL_KEYDOWN) switch(event.key.keysym.sym) {
-      case SDLK_ESCAPE: free(list); return;
+      case SDLK_ESCAPE: free(list); win_refresh(); return;
       case SDLK_HOME: cur=scr=xc=0; goto draw0;
       case SDLK_END: scr=xc=0; if(count) cur=count-1; goto draw0;
       case SDLK_UP: xc=0; if(cur) --cur; goto draw1;
@@ -566,7 +566,7 @@ static void lump_listing_menu(const char*fname,const char*text0,void(*call0)(con
       case SDLK_RIGHT: xc=0; cur+=23; if(cur>=count) cur=(count?count-1:0); goto draw1;
       case SDLK_PAGEUP: xc=0; scr-=115; if(scr<0) scr=0; cur-=115; if(cur<0) cur=0; goto draw1;
       case SDLK_PAGEDOWN: xc=0; scr+=115; cur+=115; if(cur>=count) cur=(count?count-1:0); goto draw1;
-      case SDLK_RETURN: xc=0; if(cur<count) edit_one_help_lump(list[cur]); goto draw0;
+      case SDLK_RETURN: xc=0; if(cur<count) call0(list[cur]); goto draw0;
       case SDLK_INSERT:
         if(count>10000) {
           alert_text("Too many lumps");
@@ -916,6 +916,193 @@ static int copy_board(Uint16 inb,Uint16 outb) {
   return 1;
 }
 
+static void edit_simple_font(const char*name) {
+  FILE*f=open_lump(name,"r");
+  FILE*g;
+  Uint8*t=0;
+  char b[70]={};
+  int i=0;
+  int j;
+  Uint8 x,y;
+  Uint8 cch=0;
+  char mode=0;
+  char draw=0;
+  Uint8 batch[256/8]={};
+  static Uint8 clip[14];
+  Sint16 nclip=-1;
+  // Add new font if necessary
+  if(f && lump_size) {
+    fclose(f);
+  } else {
+    win_form("Add new font") {
+      win_help("editgr","chr");
+      win_heading("Initialize new font:");
+      win_option('B',"Blank",i,0) win_refresh();
+      win_option('P',"PC",i,1) win_refresh();
+      win_option('A',"ASCII",i,2) win_refresh();
+      win_option('I',"Import",i,3) win_refresh();
+      if(font) win_option('C',"Current",i,4) win_refresh();
+      if(i==3) win_text('F',"File: ",b) win_refresh();
+      win_blank();
+      if(i!=3 || *b) win_command('O',"OK") break;
+      win_command_esc(0,"Cancel") return;
+    }
+    f=open_lump(name,"w");
+    if(!f) errx(1,"Unexpected error when opening simple font for writing");
+    switch(i) {
+      case 0:
+        for(i=0;i<3584;i++) fputc(0,f);
+        break;
+      case 1:
+        fwrite(pcfont,14,256,f);
+        break;
+      case 2:
+        for(i=0;i<0x20*14;i++) fputc(0,f);
+        fwrite(pcfont+0x20*14,14,0x7F-0x20,f);
+        for(i=0x7F*14;i<0x100*14;i++) fputc(0,f);
+        break;
+      case 3:
+        if(g=(*b=='|')?popen(b+1,"r"):fopen(b,"r")) {
+          copy_stream(g,f,14*256);
+          if(*b=='|') pclose(g); else fclose(g);
+        } else {
+          warn("Error importing font");
+        }
+        break;
+      case 4:
+        fwrite(font,14,256,f);
+        break;
+    }
+    fclose(f);
+  }
+  if(!load_font(name,LOADFONT_BASE)) {
+    alert_text("Cannot load");
+    return;
+  }
+  // Font editing
+  x=y=0;
+  v_status[1]='c';
+  draw0:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
+  memset(v_color,0x07,80*25);
+  memset(v_char,0x20,80*25);
+  draw_text(0,0,name,0x0E,-1);
+  draw_border(0x0A,0,1,17,18);
+  for(i=0;i<256;i++) {
+    v_font[(i>>4)*80+(i&15)+161]=0;
+    v_char[(i>>4)*80+(i&15)+161]=i;
+  }
+  if(!mode) {
+    draw_border(0x0A,41,1,58,16);
+    draw_text(19,1,"Character code:",0x0F,-1);
+  }
+  draw_text(0,19,"<\x18\x19\x1A\x1B> Cursor",7,-1);
+  draw_text(0,20,"<SHIFT+\x18\x19\x1A\x1B> Shift",7,-1);
+  draw_text(0,21,"<SPACE> Plot",7,-1);
+  draw_text(0,22,"<TAB> Draw",7,-1);
+  draw_text(20,19,"<I> Inverse",7,-1);
+  draw_text(20,20,"<F> Flip",7,-1);
+  draw_text(20,21,"<M> Mirror",7,-1);
+  draw_text(20,22,"<DEL> Erase",7,-1);
+  draw_text(20,23,"<INS> PC",7,-1);
+  draw_text(40,19,"<Y> Memory",7,-1);
+  draw_text(40,20,"<Z> Exchange",7,-1);
+  draw_text(40,21,"<P> Replace",7,-1);
+  draw_text(40,22,"<A> AND",7,-1);
+  draw_text(40,23,"<O> OR",7,-1);
+  draw_text(40,24,"<X> XOR",7,-1);
+  draw_text(60,19,"<ALT+\x18\x19\x1A\x1B> Select",7,-1);
+  draw1:
+  if(!mode) {
+    draw_text(20,2,b,0x0B,snprintf(b,30,"%3d",cch));
+    draw_text(20,3,b,0x0B,snprintf(b,30,"$%02X",cch));
+  }
+  draw_text(20,4,"*Draw*",draw?0x0C:0x00,6);
+  for(i=0;i<256;i++) v_color[(i>>4)*80+(i&15)+161]=(i==cch?0x1E:0x07);
+  for(i=0;i<14;i++) for(j=0;j<8;j++) {
+    v_color[i*80+202+j*2]=v_color[i*80+203+j*2]=(x==j && y==i)?0x1B:0x07;
+    v_char[i*80+202+j*2]=v_char[i*80+203+j*2]=(font[cch*14+i]&(128>>j))?177:250;
+  }
+  redisplay();
+  input:
+  if(!next_event()) return;
+  if(event.type!=SDL_KEYDOWN) goto input;
+  switch(event.key.keysym.sym) {
+    case SDLK_ESCAPE: goto exit;
+    case SDLK_F12: goto draw0;
+    case SDLK_SPACE: font[cch*14+y]^=128>>x; break;
+    case SDLK_LEFT: case SDLK_KP4: case SDLK_h:
+      if(event.key.keysym.mod&KMOD_ALT) {
+        cch--;
+      } else if(event.key.keysym.mod&KMOD_SHIFT) {
+        for(i=0;i<14;i++) font[14*cch+i]=(font[14*cch+i]<<1)|(font[14*cch+i]>>7);
+      } else {
+        x=(x-1)&7;
+      }
+      break;
+    case SDLK_RIGHT: case SDLK_KP6: case SDLK_l:
+      if(event.key.keysym.mod&KMOD_ALT) {
+        cch++;
+      } else if(event.key.keysym.mod&KMOD_SHIFT) {
+        for(i=0;i<14;i++) font[14*cch+i]=(font[14*cch+i]<<7)|(font[14*cch+i]>>1);
+      } else {
+        x=(x+1)&7;
+      }
+      break;
+    case SDLK_UP: case SDLK_KP8: case SDLK_k:
+      if(event.key.keysym.mod&KMOD_ALT) {
+        cch-=16;
+      } else if(event.key.keysym.mod&KMOD_SHIFT) {
+        i=font[14*cch];
+        memmove(font+14*cch,font+14*cch+1,13);
+        font[14*cch+13]=i;
+      } else {
+        y=(y+13)%14;
+      }
+      break;
+    case SDLK_DOWN: case SDLK_KP2: case SDLK_j:
+      if(event.key.keysym.mod&KMOD_ALT) {
+        cch+=16;
+      } else if(event.key.keysym.mod&KMOD_SHIFT) {
+        i=font[14*cch+13];
+        memmove(font+14*cch+1,font+14*cch,13);
+        font[14*cch]=i;
+      } else {
+        y=(y+1)%14;
+      }
+      break;
+    case SDLK_DELETE: case SDLK_BACKSPACE: memset(font+14*cch,0,14); break;
+    case SDLK_INSERT: memcpy(font+14*cch,pcfont+14*cch,14); break;
+    case SDLK_TAB: draw^=1; break;
+    case SDLK_a: for(i=0;i<14;i++) font[14*cch+i]&=clip[i]; break;
+    case SDLK_f: for(i=0;i<7;i++) j=font[14*cch+i],font[14*cch+i]=font[14*cch+13-i],font[14*cch+13-i]=j; break;
+    case SDLK_i: for(i=0;i<14;i++) font[14*cch+i]^=-1; break;
+    case SDLK_m: for(i=0;i<14;i++) font[14*cch+i]=((font[14*cch+i]*0x0202020202ULL)&0x010884422010ULL)%0x3FF; break;
+    case SDLK_o: for(i=0;i<14;i++) font[14*cch+i]|=clip[i]; break;
+    case SDLK_p: memcpy(font+14*cch,clip,14); break;
+    case SDLK_x: for(i=0;i<14;i++) font[14*cch+i]^=clip[i]; break;
+    case SDLK_y: memcpy(clip,font+14*cch,14); nclip=cch; break;
+    case SDLK_z: if((nclip&~255) || nclip==cch) break; memcpy(b,font+14*nclip,14); memcpy(font+14*nclip,font+14*cch,14); memcpy(font+14*cch,b,14); break;
+    default:
+      if(event.key.keysym.unicode==27) goto exit;
+      goto input;
+  }
+  if(draw) font[cch*14+y]|=128>>x;
+  goto draw1;
+  exit:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
+  v_ycur=127;
+  v_status[1]=0;
+  f=open_lump(name,"w");
+  if(!f) errx(1,"Unexpected error when opening simple font for writing");
+  fwrite(font,14,256,f);
+  fclose(f);
+}
+
+static void edit_palette(const char*name) {
+  
+}
+
 int run_editor(void) {
   int i,n,lo,hi;
   char c,b;
@@ -1122,7 +1309,6 @@ int run_editor(void) {
     }
     win_command('H',"Help lumps...") {
       lump_listing_menu("*.HLP","Help lumps",edit_one_help_lump,"edithelp",0);
-      win_refresh();
     }
     win_command('G',"Global script...") {
       edit_one_help_lump("GLOBAL");
@@ -1130,7 +1316,16 @@ int run_editor(void) {
     }
     win_command('l',"Script library...") {
       lump_listing_menu("*.LIB","Script library",edit_one_help_lump,"sclib",0);
-      win_refresh();
+    }
+    win_command('a',"Graphics...") {
+      win_form("Graphics") {
+        win_help("editgr",0);
+        win_command('s',"Font (simple)") lump_listing_menu("*.CHR","Fonts (simple)",edit_simple_font,"editgr","chr");
+        win_command('a',"Font (advanced)") alert_text("Not implemented");
+        win_command('P',"Palette") lump_listing_menu("*.PAL","Palettes",edit_palette,"editgr","pal");
+        win_blank();
+        win_command_esc(0,"Go back") break;
+      }
     }
     win_command('.',"More...") {
       load_general_der();

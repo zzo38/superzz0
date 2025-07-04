@@ -138,6 +138,7 @@ Uint8 ask_color_char(Uint8 m,Uint8 v) {
     } else {
       for(x=0;x<256;x++) v_char[(x>>4)*80+(x&15)+351]=0x07,v_color[(x>>4)*80+(x&15)+351]=x;
     }
+    for(x=0;x<256;x++) v_font[(x>>4)*80+(x&15)+351]=VF_FRONT;
     memset(v_color+20*80+30,0x11,18);
     x=(v>>4)*80+(v&15)+351;
     if(m) v_color[x]=0x0F;
@@ -430,6 +431,7 @@ void win_step_(win_memo*wm,const char*title) {
   if(cwin!=wm) {
     cwin=wm;
     scrolled:
+    memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
     memset(v_char,0x00,80*25);
     memset(v_color,0x30,80);
     memset(v_color+80,0x00,80*24);
@@ -765,6 +767,7 @@ int win_color_char_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,int m
     if(s==sizeof(Uint32)) *(Uint32*)v=n;
   }
   if(cwin && visible()) {
+    memset(v_font+Y*80+x+1,VF_FRONT,3);
     if(m) {
       memset(v_color+Y*80+x+1,0x1F,3);
       v_char[Y*80+x+2]=n;

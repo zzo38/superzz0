@@ -76,6 +76,7 @@ int load_palette(const char*name,Uint8 z);
 #define LOADFONT_WIDE 1
 #define LOADFONT_EGS_BASE 2
 #define LOADFONT_EGS_WIDE 3
+#define LOADFONT_RESET 4
 
 #define LOADPAL_BASE 0
 
