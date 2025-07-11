@@ -50,10 +50,12 @@ void ask_text(const char*prompt,Uint8*buf,int len) {
     i=event.key.keysym.unicode;
     if(i==0x0D || i==0x0A) break;
     if(n<len && i==0x10) {
+      memcpy(sv_font,v_font,80*25);
       memcpy(sv_char,v_char,80*25);
       memcpy(sv_color,v_color,80*25);
       buf[n++]=ask_color_char(1,128);
       buf[n]=0;
+      memcpy(v_font,sv_font,80*25);
       memcpy(v_char,sv_char,80*25);
       memcpy(v_color,sv_color,80*25);
     }
@@ -81,10 +83,12 @@ void ask_text_restrict(const char*prompt,Uint8*buf,int len) {
     i=event.key.keysym.unicode;
     if(i==0x0D || i==0x0A) break;
     if(n<len && i==0x10) {
+      memcpy(sv_font,v_font,80*25);
       memcpy(sv_char,v_char,80*25);
       memcpy(sv_color,v_color,80*25);
       buf[n++]=ask_color_char(1,128);
       buf[n]=0;
+      memcpy(v_font,sv_font,80*25);
       memcpy(v_char,sv_char,80*25);
       memcpy(v_color,sv_color,80*25);
     }

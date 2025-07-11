@@ -916,24 +916,32 @@ static int copy_board(Uint16 inb,Uint16 outb) {
   return 1;
 }
 
+#define M(N) if(rec && nmacro<128) macro[nmacro++]=N; M##N:
+#define MM(N) case N: goto M##N;
 static void edit_simple_font(const char*name) {
   FILE*f=open_lump(name,"r");
   FILE*g;
   Uint8*t=0;
   char b[70]={};
   int i=0;
-  int j;
+  int j,k;
   Uint8 x,y;
   Uint8 cch=0;
   char mode=0;
   char draw=0;
   Uint8 batch[256/8]={};
+  Uint8 batch2[256/8];
+  Uint8 macro[128];
+  Uint8 nmacro=0;
+  char rec=0;
+  Uint8 play=255;
   static Uint8 clip[14];
   Sint16 nclip=-1;
   // Add new font if necessary
   if(f && lump_size) {
     fclose(f);
   } else {
+    if(f) fclose(f);
     win_form("Add new font") {
       win_help("editgr","chr");
       win_heading("Initialize new font:");
@@ -992,34 +1000,67 @@ static void edit_simple_font(const char*name) {
     v_font[(i>>4)*80+(i&15)+161]=0;
     v_char[(i>>4)*80+(i&15)+161]=i;
   }
-  if(!mode) {
-    draw_border(0x0A,41,1,58,16);
-    draw_text(19,1,"Character code:",0x0F,-1);
+  if(!mode) draw_border(0x0A,41,1,58,16);
+  if(mode<2) draw_text(19,1,"Character code:",0x0F,-1);
+  if(mode==0) {
+    draw_text(0,19,"<\x18\x19\x1A\x1B> Cursor",7,-1);
+    draw_text(0,20,"<SHIFT+\x18\x19\x1A\x1B> Shift",7,-1);
+    draw_text(0,21,"<SPACE> Plot",7,-1);
+    draw_text(0,22,"<TAB> Draw",7,-1);
+    draw_text(20,19,"<I> Inverse",7,-1);
+    draw_text(20,20,"<F> Flip",7,-1);
+    draw_text(20,21,"<M> Mirror",7,-1);
+    draw_text(20,22,"<DEL> Erase",7,-1);
+    draw_text(20,23,"<INS> PC",7,-1);
+    draw_text(40,18,"<Y> Memory",7,-1);
+    draw_text(40,19,"<1-9> Pattern",7,-1);
+    draw_text(40,20,"<Z> Exchange",7,-1);
+    draw_text(40,21,"<P> Replace",7,-1);
+    draw_text(40,22,"<A> AND",7,-1);
+    draw_text(40,23,"<O> OR",7,-1);
+    draw_text(40,24,"<X> XOR",7,-1);
+    draw_text(60,18,"<ALT+\x18\x19\x1A\x1B> Select",7,-1);
+    draw_text(60,19,"<G> Go to",7,-1);
+    draw_text(60,20,"<B> Batch",7,-1);
+    draw_text(60,23,"<F1> Record",7,-1);
+    draw_text(60,24,"<F2> Play",7,-1);
+  } else if(mode==1) {
+    draw_text(0,19,"<\x18\x19\x1A\x1B> Cursor",7,-1);
+    draw_text(0,20,"<CTRL+\x18\x19\x1A\x1B> Cur+Mrk",7,-1);
+    draw_text(0,21,"<SPACE> Mark/Unmark",7,-1);
+    draw_text(0,22,"<U> Unmark All",7,-1);
+    draw_text(20,19,"<I> Inverse",7,-1);
+    draw_text(20,20,"<F> Flip",7,-1);
+    draw_text(20,21,"<M> Mirror",7,-1);
+    draw_text(20,22,"<DEL> Erase",7,-1);
+    draw_text(20,23,"<INS> PC",7,-1);
+    draw_text(40,21,"<P> Replace",7,-1);
+    draw_text(40,22,"<A> AND",7,-1);
+    draw_text(40,23,"<O> OR",7,-1);
+    draw_text(40,24,"<X> XOR",7,-1);
+    draw_text(60,19,"<RETURN> Edit Char",7,-1);
   }
-  draw_text(0,19,"<\x18\x19\x1A\x1B> Cursor",7,-1);
-  draw_text(0,20,"<SHIFT+\x18\x19\x1A\x1B> Shift",7,-1);
-  draw_text(0,21,"<SPACE> Plot",7,-1);
-  draw_text(0,22,"<TAB> Draw",7,-1);
-  draw_text(20,19,"<I> Inverse",7,-1);
-  draw_text(20,20,"<F> Flip",7,-1);
-  draw_text(20,21,"<M> Mirror",7,-1);
-  draw_text(20,22,"<DEL> Erase",7,-1);
-  draw_text(20,23,"<INS> PC",7,-1);
-  draw_text(40,19,"<Y> Memory",7,-1);
-  draw_text(40,20,"<Z> Exchange",7,-1);
-  draw_text(40,21,"<P> Replace",7,-1);
-  draw_text(40,22,"<A> AND",7,-1);
-  draw_text(40,23,"<O> OR",7,-1);
-  draw_text(40,24,"<X> XOR",7,-1);
-  draw_text(60,19,"<ALT+\x18\x19\x1A\x1B> Select",7,-1);
   draw1:
-  if(!mode) {
+  if(play<nmacro) {
+    switch(macro[play++]) {
+      MM(1)MM(2)MM(3)MM(4)MM(5)MM(6)MM(7)MM(8)MM(9)MM(10)MM(11)MM(12)MM(13)MM(14)MM(15)
+      MM(16)MM(17)MM(18)MM(19)MM(20)MM(21)MM(22)MM(23)MM(24)MM(25)
+      case 49 ... 58: event.key.keysym.sym=macro[play-1]; goto M49;
+    }
+  }
+  if(mode<2) {
     draw_text(20,2,b,0x0B,snprintf(b,30,"%3d",cch));
     draw_text(20,3,b,0x0B,snprintf(b,30,"$%02X",cch));
   }
-  draw_text(20,4,"*Draw*",draw?0x0C:0x00,6);
-  for(i=0;i<256;i++) v_color[(i>>4)*80+(i&15)+161]=(i==cch?0x1E:0x07);
-  for(i=0;i<14;i++) for(j=0;j<8;j++) {
+  if(mode==1) draw_text(20,4,"*Batch*",0x0C,7); else draw_text(20,4,"*Draw*",draw?0x0C:0x00,6);
+  draw_text(19,6,"\x07Record\x07",rec?4:0,8);
+  draw_text(27,6,b,2,snprintf(b,4,"%3d",nmacro));
+  if(!mode) {
+    for(i=0;i<256;i++) v_color[(i>>4)*80+(i&15)+161]=(i==cch?0x1E:0x07);
+  } else if(mode==1) {
+    for(i=0;i<256;i++) v_color[(i>>4)*80+(i&15)+161]=(i==cch?0x1E:0x06)+(batch[i>>3]&(1<<(i&7))?0x21:0x00);
+  }
+  if(!mode) for(i=0;i<14;i++) for(j=0;j<8;j++) {
     v_color[i*80+202+j*2]=v_color[i*80+203+j*2]=(x==j && y==i)?0x1B:0x07;
     v_char[i*80+202+j*2]=v_char[i*80+203+j*2]=(font[cch*14+i]&(128>>j))?177:250;
   }
@@ -1027,67 +1068,122 @@ static void edit_simple_font(const char*name) {
   input:
   if(!next_event()) return;
   if(event.type!=SDL_KEYDOWN) goto input;
+  if(mode==1) goto mode1;
   switch(event.key.keysym.sym) {
     case SDLK_ESCAPE: goto exit;
     case SDLK_F12: goto draw0;
-    case SDLK_SPACE: font[cch*14+y]^=128>>x; break;
+    case SDLK_SPACE: M(1); font[cch*14+y]^=128>>x; break;
     case SDLK_LEFT: case SDLK_KP4: case SDLK_h:
       if(event.key.keysym.mod&KMOD_ALT) {
-        cch--;
+        M(2); cch--;
       } else if(event.key.keysym.mod&KMOD_SHIFT) {
-        for(i=0;i<14;i++) font[14*cch+i]=(font[14*cch+i]<<1)|(font[14*cch+i]>>7);
+        M(3); for(i=0;i<14;i++) font[14*cch+i]=(font[14*cch+i]<<1)|(font[14*cch+i]>>7);
       } else {
-        x=(x-1)&7;
+        M(4); x=(x-1)&7;
       }
       break;
     case SDLK_RIGHT: case SDLK_KP6: case SDLK_l:
       if(event.key.keysym.mod&KMOD_ALT) {
-        cch++;
+        M(5); cch++;
       } else if(event.key.keysym.mod&KMOD_SHIFT) {
-        for(i=0;i<14;i++) font[14*cch+i]=(font[14*cch+i]<<7)|(font[14*cch+i]>>1);
+        M(6); for(i=0;i<14;i++) font[14*cch+i]=(font[14*cch+i]<<7)|(font[14*cch+i]>>1);
       } else {
-        x=(x+1)&7;
+        M(7); x=(x+1)&7;
       }
       break;
     case SDLK_UP: case SDLK_KP8: case SDLK_k:
       if(event.key.keysym.mod&KMOD_ALT) {
-        cch-=16;
+        M(8); cch-=16;
       } else if(event.key.keysym.mod&KMOD_SHIFT) {
-        i=font[14*cch];
+        M(9); i=font[14*cch];
         memmove(font+14*cch,font+14*cch+1,13);
         font[14*cch+13]=i;
       } else {
-        y=(y+13)%14;
+        M(10); y=(y+13)%14;
       }
       break;
     case SDLK_DOWN: case SDLK_KP2: case SDLK_j:
       if(event.key.keysym.mod&KMOD_ALT) {
-        cch+=16;
+        M(11); cch+=16;
       } else if(event.key.keysym.mod&KMOD_SHIFT) {
-        i=font[14*cch+13];
+        M(12); i=font[14*cch+13];
         memmove(font+14*cch+1,font+14*cch,13);
         font[14*cch]=i;
       } else {
-        y=(y+1)%14;
+        M(13); y=(y+1)%14;
       }
       break;
-    case SDLK_DELETE: case SDLK_BACKSPACE: memset(font+14*cch,0,14); break;
-    case SDLK_INSERT: memcpy(font+14*cch,pcfont+14*cch,14); break;
-    case SDLK_TAB: draw^=1; break;
-    case SDLK_a: for(i=0;i<14;i++) font[14*cch+i]&=clip[i]; break;
-    case SDLK_f: for(i=0;i<7;i++) j=font[14*cch+i],font[14*cch+i]=font[14*cch+13-i],font[14*cch+13-i]=j; break;
-    case SDLK_i: for(i=0;i<14;i++) font[14*cch+i]^=-1; break;
-    case SDLK_m: for(i=0;i<14;i++) font[14*cch+i]=((font[14*cch+i]*0x0202020202ULL)&0x010884422010ULL)%0x3FF; break;
-    case SDLK_o: for(i=0;i<14;i++) font[14*cch+i]|=clip[i]; break;
-    case SDLK_p: memcpy(font+14*cch,clip,14); break;
-    case SDLK_x: for(i=0;i<14;i++) font[14*cch+i]^=clip[i]; break;
-    case SDLK_y: memcpy(clip,font+14*cch,14); nclip=cch; break;
-    case SDLK_z: if((nclip&~255) || nclip==cch) break; memcpy(b,font+14*nclip,14); memcpy(font+14*nclip,font+14*cch,14); memcpy(font+14*cch,b,14); break;
+    case SDLK_DELETE: case SDLK_BACKSPACE: M(14); memset(font+14*cch,0,14); break;
+    case SDLK_INSERT: M(15); memcpy(font+14*cch,pcfont+14*cch,14); break;
+    case SDLK_TAB: M(16); draw^=1; break;
+    case SDLK_a: M(17); for(i=0;i<14;i++) font[14*cch+i]&=clip[i]; break;
+    case SDLK_b: mode=1; rec=draw=0; goto draw0;
+    case SDLK_f: M(18); for(i=0;i<7;i++) j=font[14*cch+i],font[14*cch+i]=font[14*cch+13-i],font[14*cch+13-i]=j; break;
+    case SDLK_g:
+      b[0]=b[1]=b[2]=0;
+      ask_text("Go to:",b,2);
+      if(*b) cch=(b[1]?strtol(b,0,16):*b);
+      goto draw0;
+    case SDLK_i: M(19); for(i=0;i<14;i++) font[14*cch+i]^=-1; break;
+    case SDLK_m: M(20); for(i=0;i<14;i++) font[14*cch+i]=((font[14*cch+i]*0x0202020202ULL)&0x010884422010ULL)%0x3FF; break;
+    case SDLK_o: M(21); for(i=0;i<14;i++) font[14*cch+i]|=clip[i]; break;
+    case SDLK_p: M(22); memcpy(font+14*cch,clip,14); break;
+    case SDLK_x: M(23); for(i=0;i<14;i++) font[14*cch+i]^=clip[i]; break;
+    case SDLK_y: M(24); memcpy(clip,font+14*cch,14); nclip=cch; break;
+    case SDLK_z: M(25); if((nclip&~255) || nclip==cch) break; memcpy(b,font+14*nclip,14); memcpy(font+14*nclip,font+14*cch,14); memcpy(font+14*cch,b,14); break;
+    case SDLK_1 ... SDLK_9:
+      if(rec && nmacro<128) macro[nmacro++]=event.key.keysym.sym; M49:
+      memcpy(clip,pcfont+14*(Uint8)"\xB0\xB1\xB2\xDB\xDC\xDD\xDE\xDF\xFE"[event.key.keysym.sym-SDLK_1],14); nclip=-1;
+      break;
+    case SDLK_F1: if(rec) rec=0; else rec=1,nmacro=0,play=255; break;
+    case SDLK_F2: rec=play=0; break;
     default:
       if(event.key.keysym.unicode==27) goto exit;
       goto input;
   }
   if(draw) font[cch*14+y]|=128>>x;
+  goto draw1;
+  mode1:
+  switch(event.key.keysym.sym) {
+    case SDLK_ESCAPE: goto exit;
+    case SDLK_F12: goto draw0;
+    case SDLK_RETURN: mode=0; goto draw0;
+    case SDLK_SPACE: batch[cch>>3]^=1<<(cch&7); break;
+    case SDLK_LEFT: case SDLK_KP4: case SDLK_h:
+      if(event.key.keysym.mod&KMOD_CTRL) batch[cch>>3]|=1<<(cch&7);
+      cch--;
+      if(event.key.keysym.mod&KMOD_CTRL) batch[cch>>3]|=1<<(cch&7);
+      break;
+    case SDLK_RIGHT: case SDLK_KP6: case SDLK_l:
+      if(event.key.keysym.mod&KMOD_CTRL) batch[cch>>3]|=1<<(cch&7);
+      cch++;
+      if(event.key.keysym.mod&KMOD_CTRL) batch[cch>>3]|=1<<(cch&7);
+      break;
+    case SDLK_UP: case SDLK_KP8: case SDLK_k:
+      if(event.key.keysym.mod&KMOD_CTRL) batch[cch>>3]|=1<<(cch&7);
+      cch-=16;
+      if(event.key.keysym.mod&KMOD_CTRL) batch[cch>>3]|=1<<(cch&7);
+      break;
+    case SDLK_DOWN: case SDLK_KP2: case SDLK_j:
+      if(event.key.keysym.mod&KMOD_CTRL) batch[cch>>3]|=1<<(cch&7);
+      cch+=16;
+      if(event.key.keysym.mod&KMOD_CTRL) batch[cch>>3]|=1<<(cch&7);
+      break;
+    case SDLK_DELETE: case SDLK_BACKSPACE: for(i=0;i<256;i++) if(batch[i>>3]&(1<<(i&7))) memset(font+14*i,0,14); break;
+    case SDLK_INSERT: for(i=0;i<256;i++) if(batch[i>>3]&(1<<(i&7))) memcpy(font+14*i,pcfont+14*i,14); break;
+    case SDLK_a: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<14;i++) font[14*k+i]&=clip[i]; break;
+    case SDLK_b: mode=0; goto draw0;
+    case SDLK_f: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<7;i++) j=font[14*k+i],font[14*k+i]=font[14*k+13-i],font[14*k+13-i]=j; break;
+    case SDLK_i: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<14;i++) font[14*k+i]^=-1; break;
+    case SDLK_m: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<14;i++) font[14*k+i]=((font[14*k+i]*0x0202020202ULL)&0x010884422010ULL)%0x3FF; break;
+    case SDLK_o: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<14;i++) font[14*k+i]|=clip[i]; break;
+    case SDLK_p: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) memcpy(font+14*k,clip,14); break;
+    case SDLK_u: memset(batch,0,256/8); break;
+    case SDLK_x: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<14;i++) font[14*k+i]^=clip[i]; break;
+    default:
+      if(event.key.keysym.unicode==27) goto exit;
+      goto input;
+  }
   goto draw1;
   exit:
   memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
@@ -1098,6 +1194,8 @@ static void edit_simple_font(const char*name) {
   fwrite(font,14,256,f);
   fclose(f);
 }
+#undef M
+#undef MM
 
 static void edit_palette(const char*name) {
   
