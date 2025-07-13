@@ -28,6 +28,11 @@ meaningful in the current version of Super ZZ Zero.
 
 $C5 = Script return event (see below).
 
+$C6 = Stores the address of the next instruction after a branch or a write
+to a S operand (causing returning from the subroutine). The address which
+is stored is of the instruction that would be executed next if the branch
+or return did not occur.
+
 $C8 = Transport event (see below).
 
 $C9 = The default overlay, which is used when objects within the overlay

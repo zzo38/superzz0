@@ -15,6 +15,8 @@ The time zone for the dates in this file is Pacific (British Columbia).
 === Version ??? ===
 
 ASSEMBLY
+  +  The $C6 memory cell now stores the address of the next instruction if
+     a branch or return occurs, as though it did not occur.
   -  Remove EAP0 and EAP1.
 
 

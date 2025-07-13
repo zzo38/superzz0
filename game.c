@@ -4040,7 +4040,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
     store:
     switch(fo) {
       case 0 ... 7: regs[fo]=so; break;
-      case 8: return so; break;
+      case 8: memory[MEM_RETURNED_PC]=pc; return so; break;
       case 9: condflag=(so?1:0); break;
       case 10:
         memory[MEM_COROUTINE_U_W_HI]=w>>16; memory[MEM_COROUTINE_U_W_LO]=w; w=so;
@@ -4072,6 +4072,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
     if(regs[fo]) regs[fo]=so; else so--,x=so%board_info.width,y=so/board_info.width;
     continue;
     jump:
+    memory[MEM_RETURNED_PC]=pc;
     pc=so;
     if(pc<256) return pc;
   }
