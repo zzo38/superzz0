@@ -568,6 +568,13 @@ int load_palette(const char*name,Uint8 z) {
   return 1;
 }
 
+void set_palette_vga(Uint8 k,Uint8 r,Uint8 g,Uint8 b) {
+  SDL_Color c={(r*65)>>4,(g*65)>>4,(b*65)>>4,0};
+  if(k<0x30) k|=0x30;
+  adjust_gamma(&c,1);
+  SDL_SetColors(scrn,&c,k,1);
+}
+
 void init_display(void) {
   if(scrn) goto clear;
   if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO)) errx(1,"SDL error: %s",SDL_GetError());

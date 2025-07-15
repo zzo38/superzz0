@@ -918,7 +918,8 @@ static int copy_board(Uint16 inb,Uint16 outb) {
 
 #define M(N) if(rec && nmacro<128) macro[nmacro++]=N; M##N:
 #define MM(N) case N: goto M##N;
-static void edit_simple_font(const char*name) {
+static void edit_font(const char*name) {
+  char adv=(name[strlen(name)-1]=='T');
   FILE*f=open_lump(name,"r");
   FILE*g;
   Uint8*t=0;
@@ -937,12 +938,13 @@ static void edit_simple_font(const char*name) {
   Uint8 play=255;
   static Uint8 clip[14];
   Sint16 nclip=-1;
+  char bplay=0;
   // Add new font if necessary
   if(f && lump_size) {
     fclose(f);
   } else {
     if(f) fclose(f);
-    win_form("Add new font") {
+    win_form(adv?"Add new font (advanced)":"Add new font (simple)") {
       win_help("editgr","chr");
       win_heading("Initialize new font:");
       win_option('B',"Blank",i,0) win_refresh();
@@ -1028,7 +1030,8 @@ static void edit_simple_font(const char*name) {
     draw_text(0,19,"<\x18\x19\x1A\x1B> Cursor",7,-1);
     draw_text(0,20,"<CTRL+\x18\x19\x1A\x1B> Cur+Mrk",7,-1);
     draw_text(0,21,"<SPACE> Mark/Unmark",7,-1);
-    draw_text(0,22,"<U> Unmark All",7,-1);
+    draw_text(0,22,"<N> Invert Mark",7,-1);
+    draw_text(0,23,"<U> Unmark All",7,-1);
     draw_text(20,19,"<I> Inverse",7,-1);
     draw_text(20,20,"<F> Flip",7,-1);
     draw_text(20,21,"<M> Mirror",7,-1);
@@ -1039,6 +1042,7 @@ static void edit_simple_font(const char*name) {
     draw_text(40,23,"<O> OR",7,-1);
     draw_text(40,24,"<X> XOR",7,-1);
     draw_text(60,19,"<RETURN> Edit Char",7,-1);
+    draw_text(60,24,"<F2> Play Marked",7,-1);
   }
   draw1:
   if(play<nmacro) {
@@ -1046,6 +1050,13 @@ static void edit_simple_font(const char*name) {
       MM(1)MM(2)MM(3)MM(4)MM(5)MM(6)MM(7)MM(8)MM(9)MM(10)MM(11)MM(12)MM(13)MM(14)MM(15)
       MM(16)MM(17)MM(18)MM(19)MM(20)MM(21)MM(22)MM(23)MM(24)MM(25)
       case 49 ... 58: event.key.keysym.sym=macro[play-1]; goto M49;
+    }
+  } else if(bplay) {
+    bplay=0;
+    for(k=cch+1;k<256;k++) if(batch[k>>3]&(1<<(k&7))) {
+      cch=k,bplay=1,play=0;
+      batch[k>>3]&=~(1<<(k&7));
+      goto draw1;
     }
   }
   if(mode<2) {
@@ -1176,10 +1187,12 @@ static void edit_simple_font(const char*name) {
     case SDLK_f: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<7;i++) j=font[14*k+i],font[14*k+i]=font[14*k+13-i],font[14*k+13-i]=j; break;
     case SDLK_i: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<14;i++) font[14*k+i]^=-1; break;
     case SDLK_m: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<14;i++) font[14*k+i]=((font[14*k+i]*0x0202020202ULL)&0x010884422010ULL)%0x3FF; break;
+    case SDLK_n: for(i=0;i<256/8;i++) batch[i]^=-1; break;
     case SDLK_o: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<14;i++) font[14*k+i]|=clip[i]; break;
     case SDLK_p: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) memcpy(font+14*k,clip,14); break;
     case SDLK_u: memset(batch,0,256/8); break;
     case SDLK_x: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<14;i++) font[14*k+i]^=clip[i]; break;
+    case SDLK_F2: for(k=0;k<256 && !bplay;k++) if(batch[k>>3]&(1<<(k&7))) cch=k,bplay=1,play=0; batch[cch>>3]&=~(1<<(cch&7)); break;
     default:
       if(event.key.keysym.unicode==27) goto exit;
       goto input;
@@ -1190,7 +1203,7 @@ static void edit_simple_font(const char*name) {
   v_ycur=127;
   v_status[1]=0;
   f=open_lump(name,"w");
-  if(!f) errx(1,"Unexpected error when opening simple font for writing");
+  if(!f) errx(1,"Unexpected error when opening font for writing");
   fwrite(font,14,256,f);
   fclose(f);
 }
@@ -1198,7 +1211,142 @@ static void edit_simple_font(const char*name) {
 #undef MM
 
 static void edit_palette(const char*name) {
-  
+  FILE*f=open_lump(name,"r");
+  char b[64];
+  Uint8 kind=1; // 1(16),2(64),4(128),8(SMZX),16(Animation)
+  Uint8 red[16];
+  Uint8 grn[16];
+  Uint8 blu[16];
+  int i,j;
+  Uint8 x=0;
+  Uint8 y=0;
+  Uint8 pre=177;
+  if(f) {
+    if(lump_size) {
+      i=fgetc(f); rewind(f);
+      if(lump_size==16 && i<64) {
+        for(i=0;i<16;i++) {
+          j=fgetc(f);
+          red[i]=(j&040?0x15:0)+(j&04?0x2A:0);
+          grn[i]=(j&020?0x15:0)+(j&02?0x2A:0);
+          blu[i]=(j&010?0x15:0)+(j&01?0x2A:0);
+        }
+      } else if(lump_size==48 && i<64) {
+        for(i=0;i<16;i++) red[i]=fgetc(f),grn[i]=fgetc(f),blu[i]=fgetc(f);
+      } else {
+        alert_text("This file uses an unimplemented palette type");
+        fclose(f);
+        return;
+      }
+    }
+    fclose(f);
+  } else {
+    for(i=0;i<16;i++) red[i]=(i&4?0x2A:0)+(i&8?0x15:0),grn[i]=(i&2?0x2A:0)+(i&8?0x15:0),blu[i]=(i&1?0x2A:0)+(i&8?0x15:0);
+  }
+  for(i=0;i<16;i++) set_palette_vga(i,red[i],grn[i],blu[i]);
+  // Palette editing (currently only 16-colours palette)
+  v_status[1]='p';
+  draw0:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
+  memset(v_color,0x07,80*25);
+  memset(v_char,0x20,80*25);
+  draw_text(0,0,name,0x0E,-1);
+  for(i=0;i<16;i++) {
+    v_color[i*80+162]=v_color[i*80+163]=v_color[i*80+164]=0x8F;
+    v_char[i*80+163]="0123456789ABCDEF"[i];
+    memset(v_color+i*80+165,i*17,5);
+    memset(v_font+i*80+165,VF_FRONT,5);
+  }
+  draw_text(60,1,"<\x18\x19> Select Index",7,-1);
+  draw_text(60,2,"<\x1A\x1B> Select Channel",7,-1);
+  draw_text(60,3,"<U> Decrease",7,-1);
+  draw_text(60,4,"<I> Increase",7,-1);
+  draw_text(60,5,"<T> Decrease All",7,-1);
+  draw_text(60,6,"<Y> Increase All",7,-1);
+  draw_text(60,7,"<0-9> Direct Entry",7,-1);
+  draw_text(60,8,"<P> Set Preview",7,-1);
+  draw1:
+  for(i=0;i<16;i++) {
+    v_char[i*80+162]=(y==i?'<':32); v_char[i*80+164]=(y==i?'>':32);
+    draw_text(10,i+2,b,0x4C,snprintf(b,64," %02d ",red[i]));
+    draw_text(14,i+2,b,0x2A,snprintf(b,64," %02d ",grn[i]));
+    draw_text(18,i+2,b,0x19,snprintf(b,64," %02d ",blu[i]));
+  }
+  v_char[y*80+x*4+170]='<'; v_char[y*80+x*4+173]='>';
+  for(i=0;i<16;i++) {
+    v_font[2*i+1760]=v_font[2*i+1761]=v_font[2*i+1840]=v_font[2*i+1841]=VF_FRONT;
+    v_color[2*i+1760]=v_color[2*i+1761]=i*16+y; v_color[2*i+1840]=v_color[2*i+1841]=y*16+i;
+    v_char[2*i+1760]=v_char[2*i+1761]=v_char[2*i+1840]=v_char[2*i+1841]=pre;
+  }
+  redisplay();
+  input:
+  if(!next_event()) return;
+  if(event.type!=SDL_KEYDOWN) goto input;
+  switch(event.key.keysym.sym) {
+    case SDLK_ESCAPE: goto exit;
+    case SDLK_F12: goto draw0;
+    case SDLK_BACKSPACE:
+      if(x==0) red[y]/=10;
+      if(x==1) grn[y]/=10;
+      if(x==2) blu[y]/=10;
+      set_palette_vga(y,red[y],grn[y],blu[y]);
+      break;
+    case SDLK_0 ... SDLK_9: numbers:
+      if(x==0) j=red[y]*10+event.key.keysym.sym-SDLK_0,red[y]=j>63?63:j;
+      if(x==1) j=grn[y]*10+event.key.keysym.sym-SDLK_0,grn[y]=j>63?63:j;
+      if(x==2) j=blu[y]*10+event.key.keysym.sym-SDLK_0,blu[y]=j>63?63:j;
+      set_palette_vga(y,red[y],grn[y],blu[y]);
+      break;
+    case SDLK_TAB: x=(x+1)%3; break;
+    case SDLK_LEFT: case SDLK_h: if(x>0) x--; break;
+    case SDLK_RIGHT: case SDLK_l: if(x<2) x++; break;
+    case SDLK_UP: case SDLK_k: y=(y-1)&15; break;
+    case SDLK_DOWN: case SDLK_j: y=(y+1)&15; break;
+    case SDLK_KP_PLUS: case SDLK_i:
+      if(x==0 && red[y]<63) ++red[y];
+      if(x==1 && grn[y]<63) ++grn[y];
+      if(x==2 && blu[y]<63) ++blu[y];
+      set_palette_vga(y,red[y],grn[y],blu[y]);
+      break;
+    case SDLK_KP_MINUS: case SDLK_u:
+      if(x==0 && red[y]) --red[y];
+      if(x==1 && grn[y]) --grn[y];
+      if(x==2 && blu[y]) --blu[y];
+      set_palette_vga(y,red[y],grn[y],blu[y]);
+      break;
+    case SDLK_y:
+      if(red[y]<63) ++red[y];
+      if(grn[y]<63) ++grn[y];
+      if(blu[y]<63) ++blu[y];
+      set_palette_vga(y,red[y],grn[y],blu[y]);
+      break;
+    case SDLK_t:
+      if(red[y]) --red[y];
+      if(grn[y]) --grn[y];
+      if(blu[y]) --blu[y];
+      set_palette_vga(y,red[y],grn[y],blu[y]);
+      break;
+    case SDLK_p: pre=ask_color_char(1,pre); goto draw0;
+    default:
+      if(event.key.keysym.unicode>='0' && event.key.keysym.unicode<='9') {
+        event.key.keysym.sym=event.key.keysym.unicode;
+        goto numbers;
+      }
+      if(event.key.keysym.unicode==27) goto exit;
+      goto input;
+  }
+  goto draw1;
+  exit:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
+  v_ycur=127;
+  v_status[1]=0;
+  f=open_lump(name,"w");
+  if(!f) errx(1,"Unexpected error when opening palette for writing");
+  for(i=j=0;i<16 && !j;i++) j=red[i]%0x15+grn[i]%0x15+blu[i]%0x15;
+  for(i=0;i<16;i++) {
+    if(j) fputc(red[i],f),fputc(grn[i],f),fputc(blu[i],f); else fputc(+(red[i]&1?040:0)+(grn[i]&1?020:0)+(blu[i]&1?010:0)+(red[i]&2?4:0)+(grn[i]&2?2:0)+(blu[i]&2?1:0),f);
+  }
+  fclose(f);
 }
 
 int run_editor(void) {
@@ -1418,7 +1566,7 @@ int run_editor(void) {
     win_command('a',"Graphics...") {
       win_form("Graphics") {
         win_help("editgr",0);
-        win_command('s',"Font (simple)") lump_listing_menu("*.CHR","Fonts (simple)",edit_simple_font,"editgr","chr");
+        win_command('s',"Font (simple)") lump_listing_menu("*.CHR","Fonts (simple)",edit_font,"editgr","chr");
         win_command('a',"Font (advanced)") alert_text("Not implemented");
         win_command('P',"Palette") lump_listing_menu("*.PAL","Palettes",edit_palette,"editgr","pal");
         win_blank();

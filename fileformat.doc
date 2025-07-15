@@ -227,8 +227,11 @@ Stores a palette. The format of this lump depends on the lump size:
     128   EGA 128 colours
     192   VGA 64 colours
     384   VGA 128 colours
-      ?   EGA with SMZX
-      ?   VGA with SMZX
+
+If the first byte has either of the two high bits set, then it is DER
+format instead, and may be of any size. (Not currently implemented. This
+will be needed in future in case of having multiple palettes in one file,
+SMZX indices, and/or palette animations.)
 
 In the current implementation, more than 16 colours is not meaningful.
 

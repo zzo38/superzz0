@@ -71,6 +71,7 @@ extern Uint8*font;
 
 int load_font(const char*name,Uint8 z);
 int load_palette(const char*name,Uint8 z);
+void set_palette_vga(Uint8 k,Uint8 r,Uint8 g,Uint8 b);
 
 #define LOADFONT_BASE 0
 #define LOADFONT_WIDE 1
