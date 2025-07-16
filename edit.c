@@ -10,7 +10,7 @@ exit
 Uint8**screennames;
 Uint16 maxscreen;
 
-#define N_GENERAL_PARTS 1
+#define N_GENERAL_PARTS 2
 static ASN1_Value general_der;
 static ASN1_Value*general_parts;
 static Uint32 n_general_oids;
@@ -1349,6 +1349,57 @@ static void edit_palette(const char*name) {
   fclose(f);
 }
 
+static void graphics_global_options(void) {
+  ASN1_Encoder*enc;
+  ASN1_Value v={};
+  ASN1_Value*vv;
+  char mfont[9]={};
+  char mpal[9]={};
+  Uint8 bit=0;
+  int i;
+  load_general_der();
+  if(vv=find_general_oid(ASN1_RELATIVE_OID,"\x04\x00\x0E",3)) {
+    if(vv->class==MANDATORY) bit=1;
+    if(vv->class==OPTIONAL) bit=2;
+  }
+  if(general_parts[1].class) {
+    if(!asn1_first_of(&v,general_parts+1)) for(i=0;i<2;i++) {
+      if(v.class!=ASN1_UNIVERSAL) {
+        bad1: alert_text("Invalid data in GENERAL.DER will be removed"); break;
+      }
+      if(v.type!=ASN1_NULL) {
+        if(v.type!=ASN1_VISIBLE_STRING || v.length>8 || v.length<1) goto bad1;
+        memcpy(i?mpal:mfont,v.data,v.length);
+      }
+      if(!i && asn1_next_of(&v,general_parts+1)) goto bad1;
+    }
+  }
+  win_form("Graphics - global options") {
+    win_help("editgr","glo");
+    win_boolean('4',"40 columns",start_mode,0x0002);
+    win_boolean('M',"Mandatory fonts/palettes",bit,1);
+    win_boolean('R',"Recommended fonts/palettes",bit,2);
+    win_text_restrict('f',"Main font: ",mfont);
+    win_text_restrict('p',"Main palette: ",mpal);
+    win_blank();
+    win_command_esc(0,"Done") break;
+  }
+  asn1_free(general_parts+1);
+  if(*mfont || *mpal) {
+    enc=asn1_start_encoding_constructed_value(general_parts+1,ASN1_CONTEXT_SPECIFIC,1,0);
+    if(!enc) err(1,"Allocation failed");
+    if(*mfont) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,mfont); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    if(*mpal) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,mpal); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    asn1_finish_encoder(enc);
+  } else {
+    general_parts[1].class=0;
+  }
+  add_general_oid(REMOVED,ASN1_RELATIVE_OID,"\x04\x00\x0E",3);
+  if(bit&3) add_general_oid(bit&1?MANDATORY:OPTIONAL,ASN1_RELATIVE_OID,"\x04\x00\x0E",3);
+  save_general_der();
+  unload_general_der();
+}
+
 int run_editor(void) {
   int i,n,lo,hi;
   char c,b;
@@ -1569,6 +1620,8 @@ int run_editor(void) {
         win_command('s',"Font (simple)") lump_listing_menu("*.CHR","Fonts (simple)",edit_font,"editgr","chr");
         win_command('a',"Font (advanced)") alert_text("Not implemented");
         win_command('P',"Palette") lump_listing_menu("*.PAL","Palettes",edit_palette,"editgr","pal");
+        win_blank();
+        win_command('G',"Graphics global options...") graphics_global_options();
         win_blank();
         win_command_esc(0,"Go back") break;
       }

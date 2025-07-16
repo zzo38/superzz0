@@ -180,9 +180,7 @@ kinds of built-in information which does not use this.
 
 === Item window ===
 
-The item window is meant for a kind of inventory menu. There is also the
-item memory, which is a part of the program memory, which can be used to
-store this inventory list.
+The item window is meant for a kind of inventory menu.
 
 Opcodes related to item memory and item windows:
 
@@ -197,35 +195,6 @@ to be discarded. You can also restrict display by classes of items.
 * ICNT = Count how many of a specific item you have (or of all items that
 have a specific quality or are in a specific class). Can also be used to
 total the value of a specific field (e.g. mass) of items.
-
-* IFND = Find the address of a specific item or quality.
-
-The address of the item memory may be one of the special memory cells in
-the $00C0 to $00FF range. Each entry may then consist of two cells:
-
-* Address of item definition.
-
-* Quantity and flags.
-
-The item definition consists of the first cell specifying attributes and
-the rest being packed text specifying the name of the item; there may then
-be other fields, but these are not used by Super ZZ Zero itself (the code
-in the world might use them, though; ICNT can also read these fields). The
-attributes are as follows:
-
-* bit7-bit0 = Maximum heap size. Zero means it is a "key item" which does
-not display the quantity, but is limited to one.
-
-* bit10-bit8 = Item class.
-
-* bit13-bit11 = User-defined flags.
-
-* bit14 = Disallow discarding.
-
-* bit15 = Disallow reordering.
-
-Alternatively, item memory might be separate from program memory, although
-the opcodes might be similar like the above.
 
 New commands to be used in scripts might also be made for working with item
 memory, such as #GIVEITEM and #TAKEITEM and #ASKITEM.
@@ -291,32 +260,25 @@ that are done in sequence).
 
 Super ZZ Zero is and will continue to be primarily emulating PC text mode
 instead of having enhanced graphics, although it might be possible in
-future (but unsure) to add enhanced graphics modes, possibly with the
-ability to run simultaneously with the emulated text mode graphics.
+future to add enhanced graphics modes, with the ability to run at the same
+time as the emulated text mode graphics. Each cell of the text grid has a
+VF_FRONT flag, which can be used to display it in front of the graphics
+(which causes the graphics layer to be obscured); if not set then it is
+displayed behind the graphics and may be obscured by the graphics.
 
 One possible idea is to make a slice tree like OHRRPGCE has, although we
 probably should not need all of the features that OHRRPGCE has. (Slice
 trees could be DER-encoded lumps whose names have a .EGS suffix (which
 stands for "Enhanced Graphics Screen").)
 
-Other possibility is SMZX mode like MegaZeux does.
+One component of the slice tree can be the board view; one of the mode
+flags of stats can be used to display them as sprites in a separate layer,
+and the board view component will be able to specify a sprite offset,
+which will allow sprites to be displayed partially in front of walls.
 
-Another way would be that bobs can be defined and drawn over anything else
-on the screen; the bobs can be defined from pictures stored in other lumps
-and then at run time it can be programmed to draw the bobs.
-
-It could also combine the multiple ways and have layers:
-* Video playfield layer
-* Video mobs layer
-* Video text layer
-* Video slice layer
-* Video bobs layer
-* Video window layer
-(These will probably be changed)
-
-(The video window layer allows text and/or slices to be displayed in
-a fixed area in a way that overlays anything else on the screen and
-is not affected by screen scrolling.)
+Other possibility is SMZX mode like MegaZeux does (this can be used as an
+optional mode for the text grid layer; when combined with 40-columns mode
+then it might be a vertical SMZX mode).
 
 Some worlds might support enhanced graphics as an optional feature.
 (It can be specified as mandatory or optional in GENERAL.DER.)

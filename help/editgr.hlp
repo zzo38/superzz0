@@ -7,6 +7,8 @@ be used, so using this menu is not mandatory for making a game world.
 !fnt;Font (advanced)
 !pal;Palette
 
+!glo;Global options
+
 :chr;Font (simple)
 This is for making simple 8x14 full fonts with 256 characters. These fonts
 cannot include animations, character code mapping, etc, and cannot be
@@ -17,3 +19,29 @@ Not implemented yet.
 
 :pal;Palette
 Defines a palette.
+
+:glo;Global options
+The graphics global options contains the following settings:
+
+þ 40 columns: If selected, then the display during the game will use 40
+columns; if not selected, then it will use 80 columns. Some built-in menus
+will always use 80 columns regardless of this. Note that if it is set to 40
+columns then only the first 40 columns of the screen are used and the other
+40 columns will not be displayed.
+
+þ Mandatory font/palettes: If selected, then it means that this world file
+requires these fonts/palettes for the game to work properly. Super ZZ Zero
+will refuse to run the world if you try to run it on a computer that is not
+capable of using these features.
+
+þ Recommended font/palettes: If selected, then it is recommended to use the
+custom fonts/palettes included in the world file; it will not work as well,
+but is still playable, if they are not used. A warning message will be
+displayed if you try to run it on a computer that cannot use custom fonts.
+
+þ Main font: The name of the main font to use. Leave it blank to use the
+built-in PC font.
+
+þ Main palette: The name of the main palette to use. Leave it blank to use
+the built-in PC colours.
+

@@ -598,6 +598,11 @@ a sequence, where the first item in the sequence is a PC string with the
 button names with semicolons in between, and the second item is a octet
 string, with a format described below.
 
+* 1 = Default font/palette. It contains two Visible strings, the first
+being the font name and the second being the palette name, in both cases
+without the suffix (.CHR, .FNT, or .PAL). Either one may be null to use
+the built-in font/palette.
+
 The octet strings in the joystick mappings are made as a sequence of the
 mappings for levels 0 to 15; there can be less than sixteen mappings in
 which case the rest are null. Each byte will be one of:
