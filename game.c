@@ -137,6 +137,20 @@ static void debug_log(Uint8 fo,Sint32 so,Sint32 w,Sint32 x,Sint32 y,Sint32 z,Uin
   fputc('\n',f);
 }
 
+static int allow_saving(void) {
+  int i;
+  if(!(memory[MEM_CONTROL]&CONTROL_DISABLE_SAVING)) return 1;
+  if(!(board_info.flag&0x0300) || !maxstat || !stats->count) return 0;
+  for(i=0;i<stats->count;i++) {
+    if((board_info.flag&BF_SAVE_ON_SENSOR) && stats->xy[i].sensor.kind) return 1;
+    if(stats->xy[i].x<board_info.width && stats->xy[i].y<board_info.height) {
+      if(((elem_def[stats->xy[i].sensor.kind].attrib|elem_def[b_under[stats->xy[i].y*board_info.width+stats->xy[i].x].kind].attrib|elem_def[b_main[stats->xy[i].y*board_info.width+stats->xy[i].x].kind].attrib)
+       &A_SENSOR?BF_SAVE_ON_SENSOR:BF_SAVE_NOT_SENSOR)&board_info.flag) return 1;
+    }
+  }
+  return 0;
+}
+
 #define CBRANDOM_KEY 6738671342737314685ULL
 static inline Uint32 cbrandom(Uint64 c) {
   // Square RNG counter-based random numbers.
@@ -2432,6 +2446,10 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
     } else if(!strncmp(buf+1,"MAIN:",5)) {
       n=6; main: *ip=bip+n;
       if(count_script_kind(2,&sk)) v=1;
+    } else if(!strcmp(buf+1,"NOSAVE")) {
+      if(memory[MEM_CONTROL]&CONTROL_DISABLE_SAVING) v=1;
+    } else if(!strcmp(buf+1,"NOSCROLL")) {
+      if(memory[MEM_CONTROL]&CONTROL_NOSCROLL) v=1;
     } else if(!strcmp(buf+1,"OVERLAY")) {
       if(board_info.flag&BF_OVERLAY) v=1;
     } else if(!strcmp(buf+1,"PERSIST")) {
@@ -2554,6 +2572,10 @@ static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
   if(*buf=='#') {
     if(!strcmp(buf+1,"LOCKED")) {
       if(v) xy->layer|=0x80; else xy->layer&=0x7F;
+    } else if(!strcmp(buf+1,"NOSAVE")) {
+      if(v) memory[MEM_CONTROL]|=CONTROL_DISABLE_SAVING; else memory[MEM_CONTROL]&=~CONTROL_DISABLE_SAVING;
+    } else if(!strcmp(buf+1,"NOSCROLL")) {
+      if(v) memory[MEM_CONTROL]|=CONTROL_NOSCROLL; else memory[MEM_CONTROL]&=~CONTROL_NOSCROLL;
     } else if(!strcmp(buf+1,"OVERLAY")) {
       if(v) board_info.flag|=BF_OVERLAY; else board_info.flag&=~BF_OVERLAY;
     } else if(!strcmp(buf+1,"PERSIST")) {
@@ -4085,6 +4107,7 @@ static int system_menu(void) {
   Uint8 x=config.menu_x;
   Uint8 y=config.menu_y;
   Uint8 z;
+  Uint8 sav=allow_saving();
   char buf[16];
   set_timer(0);
   autofire=0;
@@ -4116,9 +4139,9 @@ static int system_menu(void) {
   redraw1:
   draw_text(x+2,y+1," F1  ",0x30,-1); draw_text(x+8,y+1,"Menu",0x1F,-1);
   draw_text(x+2,y+2," F2  ",0x70,-1); // Sound
-  draw_text(x+2,y+3," F3  ",0x30,-1); draw_text(x+8,y+3,"Save",0x1F,-1);
+  draw_text(x+2,y+3," F3  ",0x30,-1); if(sav) draw_text(x+8,y+3,"Save",0x1F,-1);
   draw_text(x+2,y+4," F4  ",0x70,-1); draw_text(x+8,y+4,"Restore",0x1F,-1);
-  draw_text(x+2,y+5," F5  ",0x30,-1); draw_text(x+8,y+5,"Q. Save",0x1F,-1);
+  draw_text(x+2,y+5," F5  ",0x30,-1); if(sav) draw_text(x+8,y+5,"Q. Save",0x1F,-1);
   draw_text(x+2,y+6," F6  ",0x70,-1); if(config.debug) draw_text(x+8,y+6,"Debug",0x1F,-1);
   draw_text(x+21,y+1," F7  ",0x30,-1); draw_text(x+27,y+1,"Q. Restore",0x1F,-1);
   draw_text(x+21,y+2," F8  ",0x70,-1);
@@ -4427,7 +4450,7 @@ int run_game(void) {
   update_screen();
   if(vtexttime) {
     display_message_text();
-    if(!--vtexttime) nvtextbuf=0;
+    if(!(memory[MEM_CONTROL]&CONTROL_VTEXT_FOREVER) && !--vtexttime) nvtextbuf=0;
   }
   redisplay();
   if(!repeating || playstate==PLAYSTATE_PAUSED) ka=0,kd=-1;
@@ -4466,9 +4489,9 @@ int run_game(void) {
             soundon=(audio_get_volume()<0x10000?1:0);
             audio_set_sfx("@0ZCX");
             break;
-          case SDLK_F3: if(ask_save_file(1)) save_state(); goto resume;
+          case SDLK_F3: if(allow_saving() && ask_save_file(1)) save_state(); goto resume;
           case SDLK_F4: if(ask_save_file(0)) load_state(); goto resume;
-          case SDLK_F5: k_f5: save_state(); goto resume;
+          case SDLK_F5: k_f5: if(allow_saving()) save_state(); goto resume;
           case SDLK_F6: if(config.debug) debug_menu(); a=0; goto resume;
           case SDLK_F7: k_f7: load_state(); goto resume;
           case SDLK_F9: k_f9: set_timer(0); v_status[1]=24; message_scrollback(); a=0; goto resume;

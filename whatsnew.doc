@@ -14,9 +14,21 @@ The time zone for the dates in this file is Pacific (British Columbia).
 
 === Version ??? ===
 
+GAME
+  +  Board flags to always allow saving the game in certain circumstances;
+     this applies only if saving is disabled due to control flags.
+
+SCRIPTS
+  +  The #NOSAVE flag can be used to disable saving (this modifies a
+     control flag).
+  +  The #NOSCROLL flag can be used to disable scrolling (this modifies a
+     control flag).
+
 ASSEMBLY
   +  The $C6 memory cell now stores the address of the next instruction if
      a branch or return occurs, as though it did not occur.
+  +  Control flag to make message line text last forever until overridden.
+  +  Control flag to disallow saving the game by F3 and F5 keys.
   -  Remove EAP0 and EAP1.
 
 

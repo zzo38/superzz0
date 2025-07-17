@@ -287,6 +287,7 @@ typedef struct {
 #define STAT_VACANT 0x02
 #define STAT_INDEPENDENT 0x04
 #define STAT_GLOBAL 0x08
+#define STAT_SPRITES 0x10
 
 // BoardInfo:flag
 #define BF_USER0 0x0001
@@ -296,6 +297,8 @@ typedef struct {
 #define BF_PERSIST 0x0010  // save board state before going to another board
 #define BF_NO_GLOBAL 0x0020  // suspend execution of global scripts
 #define BF_OVERLAY 0x0040  // display overlay
+#define BF_SAVE_ON_SENSOR 0x0100
+#define BF_SAVE_NOT_SENSOR 0x0200
 
 // Overlay kind bits (the low nybble has user-defined meanings)
 #define OVER_SOLID 0x10  // affects movement of stats in overlay
@@ -560,6 +563,10 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 
 #define CONTROL_NOSCROLL 0x0001
 #define CONTROL_DELAY0_SEND 0x0002
+#define CONTROL_VTEXT_FOREVER 0x0004
+#define CONTROL_DISABLE_SAVING 0x0008
+#define CONTROL_SAVE_BOARD 0x0010
+#define CONTROL_RESTORE_BOARD 0x0020
 
 extern Uint16 memory[0x10000];
 extern Sint32 regs[8];

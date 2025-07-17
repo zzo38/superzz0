@@ -37,6 +37,12 @@ board info is set, the screen layout does not suppress the overlay at that
 position, the element of that tile does not suppress the overlay, and the
 tile is not within the light area.
 
+þ Always allow saving: Always allows saving the game by the F3 and F5 keys
+in the specified circumstances, regardless of the control flags. Normally,
+saving is always allowed even if these board flags are not specified, but
+when the control flags disable saving, these flags can be used to override
+the control flags and allow saving anyways.
+
 þ Exits: Specify the board number of the exit in each direction (0 means
 no exit in that direction).
 

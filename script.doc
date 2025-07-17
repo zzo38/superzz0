@@ -317,6 +317,13 @@ number@
 #MAIN:kind
   Same as M@kind.
 
+#NOSAVE
+  Disables saving when set. This is a global control flag, and can be
+  overridden by the board flags.
+
+#NOSCROLL
+  Disables automatic scrolling when set. This is a global control flag.
+
 #OVERLAY
   The board overlay flag.
 

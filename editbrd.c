@@ -195,6 +195,8 @@ static void edit_board_info(void) {
     win_boolean('P',"Persist",board_info.flag,BF_PERSIST);
     win_boolean('g',"Suppress global scripts",board_info.flag,BF_NO_GLOBAL);
     win_boolean('V',"Visible overlay",board_info.flag,BF_OVERLAY);
+    win_boolean('o',"Always allow saving on sensors",board_info.flag,BF_SAVE_ON_SENSOR);
+    win_boolean('y',"Always allow saving not on sensors",board_info.flag,BF_SAVE_NOT_SENSOR);
     if(config.editor_custom_labels && memory[0x225] && maxstat) win_numeric('5',gtext[memory[0x225]],stats->misc1,0,65535);
     if(config.editor_custom_labels && memory[0x226] && maxstat) win_numeric('6',gtext[memory[0x226]],stats->misc2,0,65535);
     if(config.editor_custom_labels && memory[0x227] && maxstat) win_numeric('7',gtext[memory[0x227]],stats->misc3,0,65535);

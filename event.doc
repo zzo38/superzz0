@@ -116,6 +116,12 @@ $0002 = If set, then the delay of stats that a message is successfully
 sent to is set to zero. If clear, then it will only do this if the message
 is a subroutine message.
 
+$0004 = If set, then the message timer never expires, allowing the message
+line text to be displayed until overridden or erased by the user.
+
+$0008 = Disables saving the game by the F3 and F5 keys. Board flags may
+specify to allow saving regardless of this in specific circumstances.
+
 
 === Order of execution ===
 
