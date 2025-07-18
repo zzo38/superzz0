@@ -564,7 +564,7 @@ int load_palette(const char*name,Uint8 z) {
   }
   fclose(f);
   adjust_gamma(c,n);
-  SDL_SetColors(scrn,c,n?:0x30,n);
+  SDL_SetColors(scrn,c,n==16?0x30:n,n);
   return 1;
 }
 

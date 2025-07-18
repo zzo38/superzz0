@@ -17,6 +17,7 @@ The time zone for the dates in this file is Pacific (British Columbia).
 GAME
   +  Board flags to always allow saving the game in certain circumstances;
      this applies only if saving is disabled due to control flags.
+  +  Custom fonts/palettes.
 
 SCRIPTS
   +  The #NOSAVE flag can be used to disable saving (this modifies a

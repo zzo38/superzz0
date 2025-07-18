@@ -360,9 +360,9 @@ int main(int argc,char**argv) {
       save_world(0);
       return 0;
   }
+  init_display();
   if(s=init_world()) {
     if((config.version_warn&5)==5) {
-      init_display();
       version_warn_box(0);
       alert_text("This file requires a newer version of Super ZZ Zero");
       return 1;
@@ -373,7 +373,6 @@ int main(int argc,char**argv) {
     cur_board_id=b;
     if(!editor && (s=select_board(b))) errx(1,"Cannot load board: %s",s);
   }
-  init_display();
   if(joystat) configure_joystick(2,0);
   if(config.version_warn&4) {
     version_warn_box(editor);

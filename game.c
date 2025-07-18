@@ -554,6 +554,7 @@ void update_screen(void) {
   int i;
   Uint32 v,x,y;
   Uint8 cmd,col,chr;
+  memset(v_font,0,80*25);
   for(i=0;i<80*25;i++) {
     cmd=cur_screen.command[i];
     col=cur_screen.color[i];

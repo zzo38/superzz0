@@ -114,19 +114,10 @@ static void save_general_der(void) {
   if(general_der.data) {
     asn1_first_of(&v,&general_der); asn1_next_of(&v,&general_der); // skip OID sets
     if(!asn1_next_of(&v,&general_der)) do {
-      if(v.class==ASN1_CONTEXT_SPECIFIC) {
-        while(n<v.type && n<N_GENERAL_PARTS) {
-          if(general_parts[n].class) asn1_encode(e,general_parts+n);
-          n++;
-        }
-        asn1_encode(e,general_parts[n].class?general_parts+n:&v);
-        n=v.type+1;
-      } else {
-        asn1_encode(e,&v);
-      }
+      if(v.class!=ASN1_CONTEXT_SPECIFIC || v.type>=N_GENERAL_PARTS) asn1_encode(e,&v);
     } while(!asn1_next_of(&v,&general_der));
   }
-  for(;n<N_GENERAL_PARTS;n++) if(general_parts[n].class) asn1_encode(e,general_parts+n);
+  for(n=0;n<N_GENERAL_PARTS;n++) if(general_parts[n].class) asn1_encode(e,general_parts+n);
   asn1_end(e);
   asn1_finish_encoder(e);
   fclose(f);

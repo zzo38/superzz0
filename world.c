@@ -28,7 +28,7 @@ static int check_feature(const ASN1_Value*v) {
     // OK
     return 0;
   }
-//  if(v->type==ASN1_RELATIVE_OID && v->length==3 && !memcmp(v->data,"\x04\x00\x0E",3)) return 0;
+  if(v->type==ASN1_RELATIVE_OID && v->length==3 && !memcmp(v->data,"\x04\x00\x0E",3)) return 0;
   return -1;
 }
 
@@ -71,6 +71,28 @@ static int do_joystick_config(const ASN1_Value*v) {
     }
   }
   return q!=ASN1_DONE;
+}
+
+static int do_font_palette(const ASN1_Value*v) {
+  char m[12];
+  ASN1_Value a;
+  if(asn1_first_of(&a,v) || a.class!=ASN1_UNIVERSAL || a.constructed || a.length>8) return 1;
+  if(a.type==ASN1_VISIBLE_STRING && a.length>0) {
+    memcpy(m,a.data,a.length);
+    m[a.length]=0;
+    if(!load_font(m,LOADFONT_BASE)) return 1;
+  } else if(a.type!=ASN1_NULL) {
+    return 1;
+  }
+  if(asn1_next_of(&a,v) || a.class!=ASN1_UNIVERSAL || a.constructed || a.length>8) return 1;
+  if(a.type==ASN1_VISIBLE_STRING && a.length>0) {
+    memcpy(m,a.data,a.length);
+    m[a.length]=0;
+    if(!load_palette(m,LOADPAL_BASE)) return 1;
+  } else if(a.type!=ASN1_NULL) {
+    return 1;
+  }
+  return 0;
 }
 
 const char*init_world(void) {
@@ -192,6 +214,9 @@ const char*init_world(void) {
     while(!asn1_next(&i1,&a2)) if(a2.class==ASN1_CONTEXT_SPECIFIC && a2.constructed) switch(a2.type) {
       case 0: // Joystick configuration
         if(joystat && do_joystick_config(&a2)) return "Error in joystick configuration in world file";
+        break;
+      case 1: // Font/palette
+        if(do_font_palette(&a2) && !editor) return "World specification of font/palette is incorrect";
         break;
     }
     // Done
