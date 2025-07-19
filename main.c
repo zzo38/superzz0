@@ -6,7 +6,6 @@ exit
 #define USING_RW_DATA
 #include "common.h"
 #include "version.inc"
-#include "asn1.h"
 
 Config config={
 #define B(n,t,d) d,

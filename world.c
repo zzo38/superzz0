@@ -5,7 +5,6 @@ exit
 
 #define USING_RW_DATA
 #include "common.h"
-#include "asn1.h"
 
 static int check_feature(const ASN1_Value*v) {
   // Returns 0 if feature is valid, nonzero if feature is not valid.

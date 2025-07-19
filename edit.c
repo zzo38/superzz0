@@ -5,7 +5,6 @@ exit
 
 #define USING_RW_DATA
 #include "common.h"
-#include "asn1.h"
 
 Uint8**screennames;
 Uint16 maxscreen;
