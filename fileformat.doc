@@ -740,7 +740,9 @@ including editor-related stuff. An external program is used to unpack it.
 
 === SAVE ===
 
-This lump is only for save game files.
+This lump is only for save game files, but it is no longer used in the
+current version; see SAVE.DER instead. (This section might be deleted from
+this document in a later commit.)
 
 It contains:
 
@@ -777,6 +779,11 @@ The flag bits are:
   0001 = Condition flag
   0002 = Enable global script
   0004 = Global script frame
+
+
+=== SAVE.DER ===
+
+Only used in save game files. See savegame.c for the definition.
 
 
 === SCR.NAM ===

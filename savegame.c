@@ -303,7 +303,7 @@ int ask_save_file(char issave) {
 
 static void discard_unused_lumps(void) {
   // Some lumps are only used in save games, so discard them from memory after saving/restoring.
-  revert_lump("SAVE");
+  revert_lump("SAVE.DER");
   revert_lump("CURRENT.BRD");
   revert_lump("MEMORY");
   revert_lump("GLOBAL");
@@ -311,6 +311,7 @@ static void discard_unused_lumps(void) {
 }
 
 void save_state(void) {
+  ASN1_Encoder*enc;
   FILE*fp;
   Uint32 u,v;
   int i;
@@ -323,7 +324,40 @@ void save_state(void) {
   draw_text(0,0," Saving... ",0x6F,-1);
   redisplay();
   errno=0;
-  //  SAVE
+  //  SAVE.DER
+  if(!(fp=open_lump("SAVE.DER","w"))) goto error;
+  if(!(enc=asn1_create_encoder(fp))) errx(1,"Error with asn1_create_encoder");
+  asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+    asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_RELATIVE_OID,version_rel_oid,version_rel_oid_length);
+    asn1_encode_integer(enc,cur_board_id);
+    asn1_encode_integer(enc,cur_screen_id);
+    asn1_encode_integer(enc,scroll_x);
+    asn1_encode_integer(enc,scroll_y);
+    asn1_encode_boolean(enc,condflag);
+    for(i=0;i<8;i++) asn1_encode_integer(enc,regs[i]);
+    asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+      for(i=0;i<16;i++) asn1_encode_integer(enc,status_vars[i]);
+    asn1_end(enc);
+    asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,textbuf,ntextbuf);
+    asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,vtextbuf,nvtextbuf);
+    asn1_encode_integer(enc,vtexttime);
+    asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+      for(i=0;i<16;i++) asn1_encode_c_string(enc,ASN1_OCTET_STRING,namedflag[i].name);
+    asn1_end(enc);
+    asn1_encode_boolean(enc,(global_text && maxstat && stats->text==global_text));
+    if(global_frameoffset) {
+      asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+        asn1_encode_integer(enc,global_frameoffset);
+        asn1_encode_integer(enc,global_frameptr);
+      asn1_end(enc);
+    } else {
+      asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    }
+  asn1_end(enc);
+  asn1_finish_encoder(enc);
+  fclose(fp);
+#if 0
+  //  SAVE (no longer used; this code may be deleted in a later commit)
   if(!(fp=open_lump("SAVE","w"))) goto error;
   v=(condflag?1:0)+(global_frameoffset?4:0);
   if(global_text && maxstat && stats->text==global_text) v+=2;
@@ -343,6 +377,7 @@ void save_state(void) {
     write16(fp,global_frameptr);
   }
   fclose(fp);
+#endif
   //  CURRENT.BRD
   if(!(fp=open_lump("CURRENT.BRD","w"))) goto error;
   save_board(fp,1);
@@ -376,6 +411,50 @@ void save_state(void) {
   return;
   error: v_status[1]='!'; if(errno) alert_text(strerror(errno)); else alert_text("Error saving game");
   discard_unused_lumps();
+}
+
+static void load_saveder(FILE*fp,char*useglobalscript) {
+  ASN1_Value v0,v1,v2;
+  int i,j;
+  if(asn1_read_item(fp,&v0,0) || v0.class) bad: errx(1,"Invalid data in save game file: Error in SAVE.DER lump");
+  if(asn1_first_of(&v1,&v0) || v1.class || (v1.type!=ASN1_RELATIVE_OID && v1.type!=ASN1_OID)) goto bad;
+  if(asn1_next_of(&v1,&v0) || asn1_decode_number(&v1,ASN1_AUTO,&cur_board_id)) goto bad;
+  if(asn1_next_of(&v1,&v0) || asn1_decode_number(&v1,ASN1_AUTO,&cur_screen_id)) goto bad;
+  if(asn1_next_of(&v1,&v0) || asn1_decode_number(&v1,ASN1_AUTO,&scroll_x)) goto bad;
+  if(asn1_next_of(&v1,&v0) || asn1_decode_number(&v1,ASN1_AUTO,&scroll_y)) goto bad;
+  if(asn1_next_of(&v1,&v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) goto bad;
+  condflag=(*v1.data?1:0);
+  for(i=0;i<8;i++) if(asn1_next_of(&v1,&v0) || asn1_decode_number(&v1,ASN1_AUTO,regs+i)) goto bad;
+  if(asn1_next_of(&v1,&v0) || v1.class || v1.type!=ASN1_SEQUENCE || asn1_first_of(&v2,&v1)) goto bad;
+  for(i=0;i<16;i++) {
+    if(asn1_decode_number(&v2,ASN1_AUTO,status_vars+i)) goto bad;
+    if((j=asn1_next_of(&v2,&v1))!=(i==15?ASN1_DONE:ASN1_OK)) goto bad;
+  }
+  if(asn1_next_of(&v1,&v0) || v1.class || v1.type!=ASN1_OCTET_STRING || v1.constructed || v1.length>80) goto bad;
+  memset(textbuf,0,81); memcpy(textbuf,v1.data,v1.length);
+  if(asn1_next_of(&v1,&v0) || v1.class || v1.type!=ASN1_OCTET_STRING || v1.constructed || v1.length>80) goto bad;
+  memset(vtextbuf,0,81); memcpy(vtextbuf,v1.data,v1.length);
+  if(asn1_next_of(&v1,&v0) || asn1_decode_number(&v1,ASN1_AUTO,&vtexttime)) goto bad;
+  if(vtexttime) ++vtexttime;
+  if(vtexttime>config.message_timer) vtexttime=config.message_timer;
+  if(asn1_next_of(&v1,&v0) || v1.class || v1.type!=ASN1_SEQUENCE || asn1_first_of(&v2,&v1)) goto bad;
+  for(i=0;i<16;i++) {
+    if(v2.constructed || v2.class || v2.type!=ASN1_OCTET_STRING || v2.length>15) goto bad;
+    memset(namedflag[i].name,0,16); memcpy(namedflag[i].name,v2.data,v2.length);
+    if((j=asn1_next_of(&v2,&v1))!=(i==15?ASN1_DONE:ASN1_OK)) goto bad;
+  }
+  if(asn1_next_of(&v1,&v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) goto bad;
+  *useglobalscript=(*v1.data?1:0);
+  if(asn1_next_of(&v1,&v0) || v1.class || (v1.type!=ASN1_SEQUENCE && v1.type!=ASN1_NULL)) goto bad;
+  if(v1.type==ASN1_SEQUENCE) {
+    if(asn1_first_of(&v2,&v1) || asn1_decode_number(&v2,ASN1_AUTO,&global_frameoffset)) goto bad;
+    if(asn1_next_of(&v2,&v1) || asn1_decode_number(&v2,ASN1_AUTO,&global_frameptr)) goto bad;
+    if(asn1_next_of(&v2,&v1)!=ASN1_DONE) goto bad;
+  } else {
+    global_frameoffset=global_frameptr=0;
+  }
+  // Further items (there are currently none) might not be present in a older file, so do not error if they are missing.
+  asn1_free(&v0);
 }
 
 void load_state(void) {
@@ -417,7 +496,12 @@ void load_state(void) {
   }
   rewind(fp); // ensure that the !SZ0 lump is not discarded
   restore_game(fp);
-  //  SAVE
+  //  SAVE.DER
+  if(!(fp=open_lump("SAVE.DER","r"))) errx(1,open_lump("SAVE","r")?"This is an old save game file; not compatible with this version of Super ZZ Zero.":"Invalid save game file (missing SAVE.DER lump)");
+  load_saveder(fp,&useglobalscript);
+  fclose(fp);
+#if 0
+  //  SAVE (no longer used; this code may be deleted in a later commit)
   if(!(fp=open_lump("SAVE","r"))) errx(1,"Invalid save game file (missing SAVE lump)");
   v=read16(fp);
   if(v&~7) errx(1,"Invalid data in save game file");
@@ -447,6 +531,7 @@ void load_state(void) {
     global_frameptr=read16(fp);
   }
   fclose(fp);
+#endif
   //  MEMORY
   if(fp=open_lump("MEMORY","r")) {
     u=lump_size>>1;

@@ -32,6 +32,10 @@ ASSEMBLY
   +  Control flag to disallow saving the game by F3 and F5 keys.
   -  Remove EAP0 and EAP1.
 
+OTHERS
+  *  The save game format has been changed (and is no longer compatible
+     with older versions of Super ZZ Zero).
+
 
 === Version 0.6.0 (2025-06-28) ===
 
