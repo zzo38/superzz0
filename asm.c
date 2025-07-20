@@ -1,5 +1,6 @@
 #if 0
 (sed -rn 's/^\[(...) (.*)]$/{"\2",0x\1},/p' < opcodes.doc; sed -rn 's/\/\/PSEUDO!(.*)$/{\1},/p' < asm.c) | sort > opcodes.inc
+sed -rn 's/^\[(...) (.*)]$/#define OP_\2 0x\1/p' < opcodes.doc > opcodes.h
 gcc -s -O2 -o ~/bin/sz0asm -fwrapv -Wno-multichar -Wno-unused-result asm.c
 exit
 #endif
@@ -11,6 +12,7 @@ exit
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "opcodes.h"
 
 typedef uint32_t Uint32;
 typedef int32_t Sint32;
@@ -344,7 +346,28 @@ static void do_pass(void) {
     ++linept;
     if(op<0x8000) {
       // Normal
-      i=parse_reg16();
+      if(*linept=='J' || *linept=='K') {
+        switch(op) {
+          case OP_LET: i=0; break;
+          case OP_FLET: i=1; break;
+          case OP_TLET: i=2; break;
+          case OP_ADD: i=3; break;
+          case OP_SUB: i=4; break;
+          case OP_POKE: i=5; break;
+          case OP_PEEK: i=6; break;
+          case OP_PEER: i=7; break;
+          case OP_EQ: i=8; break;
+          case OP_OREQ: i=9; break;
+          case OP_JZ: i=10; break;
+          case OP_JNZ: i=11; break;
+          case OP_CASE: i=13; break;
+          case OP_LOOP: i=14; break;
+          default: errx(1,"Invalid register on line %d",linenum);
+        }
+        op=(*linept++=='J'?OP_OPJ:OP_OPK);
+      } else {
+        i=parse_reg16();
+      }
       parse_comma();
       if(i&8) {
         if(op&0x100) i&=7,op|=0x80; else errx(1,"Invalid register on line %d",linenum);

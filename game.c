@@ -3696,6 +3696,25 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         rs->y=so/board_info.width;
         so=((rs-stats[b_over[so].stat-1].xy)<<16)|b_over[so].stat;
         goto store;
+      case OP_OPJ: case OP_OPK:
+        op=((op&0x1FF)==OP_OPJ?MEM_ARG_J:MEM_ARG_K);
+        switch(fo) {
+          case 0: memory[op]=so; break;
+          case 1: if(!condflag) memory[op]=so; break;
+          case 2: if(condflag) memory[op]=so; break;
+          case 3: memory[op]+=so; break;
+          case 4: memory[op]-=so; break;
+          case 5: memory[so&0xFFFF]=memory[op]; break;
+          case 6: memory[op]=memory[so&0xFFFF]; break;
+          case 7: memory[op]=memory[(so+memory[op])&0xFFFF]; break;
+          case 8: condflag=(memory[op]==(so&0xFFFF)?1:0); break;
+          case 9: if(memory[op]==(so&0xFFFF)) condflag=1; break;
+          case 10: if(!memory[op]) goto jump; break;
+          case 11: if(memory[op]) goto jump; break;
+          case 13: so=memory[(so+memory[op])&0xFFFF]; goto jump;
+          case 14: if(!memory[op]) break; --memory[op]; goto jump;
+        }
+        break;
       case OP_OR: regs[fo]|=so; break;
       case OP_OREQ: if(so==regs[fo]) condflag=1; break;
       case OP_OVM: do_overlay_memory(fo,so); break;

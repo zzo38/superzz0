@@ -30,6 +30,7 @@ ASSEMBLY
      a branch or return occurs, as though it did not occur.
   +  Control flag to make message line text last forever until overridden.
   +  Control flag to disallow saving the game by F3 and F5 keys.
+  +  Some instructions can now use J and K as the first operand.
   -  Remove EAP0 and EAP1.
 
 OTHERS

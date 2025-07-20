@@ -1154,6 +1154,30 @@ numbers are treated as unsigned.
   Copy K register to first operand and then second operand to K register.
   (The K register is a 16-bit memory cell, not an actual register.)
 
+[14A OPJ]
+  More operations where the first operand is the J register. The assembler
+  will automatically convert them to this instruction; you do not need to
+  use this instruction directly. The operations are:
+   A = LET
+   B = FLET
+   C = TLET
+   D = ADD
+   E = SUB
+   F = POKE
+   G = PEEK
+   H = PEER
+   S = EQ
+   T = OREQ
+   U = JZ
+   V = JNZ
+   W = (reserved)
+   X = CASE
+   Y = LOOP
+   Z = (reserved)
+
+[14B OPK]
+  Like OPJ but with K instead of J.
+
 [14C SWPW]
   Copy W register to first operand and then second operand to W register.
 
