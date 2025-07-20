@@ -431,9 +431,9 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
     if((j=asn1_next_of(&v2,&v1))!=(i==15?ASN1_DONE:ASN1_OK)) goto bad;
   }
   if(asn1_next_of(&v1,&v0) || v1.class || v1.type!=ASN1_OCTET_STRING || v1.constructed || v1.length>80) goto bad;
-  memset(textbuf,0,81); memcpy(textbuf,v1.data,v1.length);
+  memset(textbuf,0,81); memcpy(textbuf,v1.data,ntextbuf=v1.length);
   if(asn1_next_of(&v1,&v0) || v1.class || v1.type!=ASN1_OCTET_STRING || v1.constructed || v1.length>80) goto bad;
-  memset(vtextbuf,0,81); memcpy(vtextbuf,v1.data,v1.length);
+  memset(vtextbuf,0,81); memcpy(vtextbuf,v1.data,nvtextbuf=v1.length);
   if(asn1_next_of(&v1,&v0) || asn1_decode_number(&v1,ASN1_AUTO,&vtexttime)) goto bad;
   if(vtexttime) ++vtexttime;
   if(vtexttime>config.message_timer) vtexttime=config.message_timer;
