@@ -32,7 +32,7 @@ file, these six bytes match those in the world file.
 The definition of a board. The parts are:
   Header
   Stats
-  Stat grid (only CURRENT.BRD)
+  Stat grid (only CURRENT.BRD and PREVIOUS.BRD)
   Grid other than stats
 
 The header consists of:
@@ -736,6 +736,12 @@ Not currently used. In future, might be used for storing the .asm file and
 some editor-only lumps in a compressed pack, for distributing the game when
 you want to include the editor-related stuff; it is omitted if you are not
 including editor-related stuff. An external program is used to unpack it.
+
+
+=== PREVIOUS.BRD ===
+
+This has the same format as CURRENT.BRD, and is used when the control flags
+to save/restore the board are used.
 
 
 === SAVE ===

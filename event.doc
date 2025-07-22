@@ -122,6 +122,24 @@ line text to be displayed until overridden or erased by the user.
 $0008 = Disables saving the game by the F3 and F5 keys. Board flags may
 specify to allow saving regardless of this in specific circumstances.
 
+$0010 = If set, then the current state of the current board is saved when
+warping to another board; this ignores the persist flag and will not
+restore the saved board by warping to that board number; see below for
+restoring the saved board state. This bit is automatically cleared after
+the board state is saved. (Note that setting bits $0030 together will first
+save and then immediately restore it and delete the saved state, so this is
+probably not a useful combination.)
+
+$0020 = If this bit is set when warping to another board, and a board state
+has been saved by the $0010 bit, then it will restore the saved board state
+instead of loading the board normally. The board number is still set to the
+requested board number when warping, which is not necessarily the number of
+the saved board, and this works even if there is no board with the board
+number of the warp (in which case it will be created if you warp out of the
+board with the persist flag set). This bit will not be cleared after it is
+restored, but it will delete the saved board state, so this bit will be
+ineffective unless the board state is saved again.
+
 
 === Order of execution ===
 

@@ -31,11 +31,14 @@ ASSEMBLY
   +  Control flag to make message line text last forever until overridden.
   +  Control flag to disallow saving the game by F3 and F5 keys.
   +  Some instructions can now use J and K as the first operand.
+  +  Control flags to save/restore the board state in a separate lump.
   -  Remove EAP0 and EAP1.
 
 OTHERS
   *  The save game format has been changed (and is no longer compatible
-     with older versions of Super ZZ Zero).
+     with older versions of Super ZZ Zero; if you have a save game file
+     from an older version of Super ZZ Zero, it will not work with this
+     version, although the world file will (probably) still work).
 
 
 === Version 0.6.0 (2025-06-28) ===

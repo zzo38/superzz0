@@ -185,12 +185,15 @@ Uint32 reseed(uint64_t n) {
 }
 
 const char*select_board(Uint16 b) {
-  FILE*fp=open_lump_by_number(b,"BRD","r");
+  FILE*fp=0;
   const char*e;
   if(maxstat && stats->text==global_text) stats->text=0;
+  if((memory[MEM_CONTROL]&CONTROL_RESTORE_BOARD) && (fp=open_lump("PREVIOUS.BRD","r")) && !lump_size) fclose(fp),fp=0;
+  if(!fp) fp=open_lump_by_number(b,"BRD","r");
   if(fp) {
     e=load_board(fp);
     fclose(fp);
+    if(!e && (memory[MEM_CONTROL]&CONTROL_RESTORE_BOARD)) revert_lump("PREVIOUS.BRD");
     return e;
   } else {
     return "Cannot open lump";
@@ -233,7 +236,13 @@ static void warp_to_board(Uint16 b,char m) {
       global_frameptr=stats->xy->frame;
     }
   }
-  if((board_info.flag&BF_PERSIST) && !m) {
+  if((memory[MEM_CONTROL]&CONTROL_SAVE_BOARD) && !m) {
+    fp=open_lump("PREVIOUS.BRD","w");
+    if(!fp) err(1,"Cannot open PREVIOUS.BRD");
+    if(e=save_board(fp,1)) errx(1,"Error saving board #%d as PREVIOUS.BRD: %s",cur_board_id,e);
+    fclose(fp);
+    memory[MEM_CONTROL]&=~CONTROL_SAVE_BOARD;
+  } else if((board_info.flag&BF_PERSIST) && !m) {
     for(x=0;x<maxstat;x++) {
       if(stats[x].xy && !(stats[x].mode&STAT_INDEPENDENT)) for(y=0;y<stats[x].count;y++) {
         if(!(stats[x].xy[y].layer&3) || stats[x].xy[y].x>=board_info.width && stats[x].xy[y].y>=board_info.height) {
@@ -247,7 +256,7 @@ static void warp_to_board(Uint16 b,char m) {
     if(e=save_board(fp,0)) errx(1,"Error saving board #%d: %s",cur_board_id,e);
     fclose(fp);
   }
-  if(cur_board_id!=b || !board_info.width || (!m && !(board_info.flag&BF_PERSIST))) {
+  if(cur_board_id!=b || !board_info.width || (!m && !(board_info.flag&BF_PERSIST)) || (memory[MEM_CONTROL]&CONTROL_RESTORE_BOARD)) {
     if(e=select_board(cur_board_id=b)) errx(1,"Error loading board #%d: %s",b,e);
   }
   for(x=0;x<maxstat;x++) if(stats[x].text && stats[x].text[0]=='@' && stats[x].text[1]=='!' && stats[x].text!=global_text) load_script_library(stats+x,stats[x].text+2);
