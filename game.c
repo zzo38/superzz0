@@ -606,6 +606,7 @@ void update_screen(void) {
         v_color[i]=col;
         x=i%80; y=i/80;
         switch(cmd) {
+          case SC_IND_USERDATA: v_char[i]=board_info.userdata?chr:0; break;
           case SC_IND_CURSOR: v_char[i]=(stats->count && (x+scroll_x==stats->xy->x || y+scroll_y==stats->xy->y))?chr:0; break;
           case SC_IND_SCROLL_Y: v_char[i]=((y<cur_screen.view_y)?(scroll_y>cur_screen.hard_edge[DIR_N]):(scroll_y+board_info.height<cur_screen.hard_edge[DIR_S]))?chr:0; break;
           case SC_IND_SCROLL_X: v_char[i]=((x<cur_screen.view_x)?(scroll_x>cur_screen.hard_edge[DIR_W]):(scroll_x+board_info.width<cur_screen.hard_edge[DIR_E]))?chr:0; break;
@@ -1658,6 +1659,7 @@ static void update_text_window(const WindowInfo*wind) {
         v_color[i]=col;
         x=i%80; y=i/80;
         switch(cmd) {
+          case SC_IND_USERDATA: v_char[i]=board_info.userdata?chr:0; break;
           case SC_IND_CURSOR: v_char[i]=(cur_screen.flag&SF_NO_SCROLL?(y-top-tscroll==tcursor):(y==mid))?chr:0; break;
           case SC_IND_SCROLL_Y: v_char[i]=(y>cur_screen.view_y?(tscroll>mid-top):(tscroll<tnlines+mid-bot))
            ?chr:(cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[y>cur_screen.view_y?DIR_S:DIR_N]:0); break;

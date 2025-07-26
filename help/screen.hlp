@@ -55,6 +55,8 @@ An indicator has a character code to display if it is "set"; if the
 indicator is "clear" then a blank space is displayed (unless you set in
 the screen info menu to use the border characters instead).
 
+þ Board user data - Displayed if the board's user data field is nonzero.
+
 þ Cursor - In the main game, displayed if the player's X or Y coordinate
 is lined up with the indicator. In a text window, displayed if the cursor
 is at the current line.

@@ -31,6 +31,7 @@ file, these six bytes match those in the world file.
 
 The definition of a board. The parts are:
   Header
+  Variable properties
   Stats
   Stat grid (only CURRENT.BRD and PREVIOUS.BRD)
   Grid other than stats
@@ -66,11 +67,16 @@ Summary of encoding flags:
   0100 = Long flag
   0200 = New stat format
   0400 = Layer inversion
-  0800 = (reserved)
+  0800 = Variable properties
   1000 = (reserved)
   2000 = (reserved)
   4000 = (reserved)
   8000 = Save game
+
+If bit11 of the encoding flags is set then the variable property list
+follows. It starts with one byte being the number of variable properties,
+and then each variable property consists of one type byte and then the
+data; the length of the data is equal to the low nybble of the type byte.
 
 Each stat (the first stat number is stat 1) is as follows:
 
@@ -249,7 +255,9 @@ Screen definitions.
 
 The header is (each coordinate, etc are one byte each):
 
-* Always zero; if this byte is nonzero then it is an error.
+* Either 0x00 or 0x80; if 0x80 then it has a variable property list, which
+comes immediately after the header. See the .BRD format specification for
+details about the format of this variable property list.
 
 * Flags.
 

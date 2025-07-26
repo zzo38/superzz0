@@ -255,7 +255,7 @@ static void make_border(Uint8 thic) {
 
 static void edit_tile(void) {
   char buf[8];
-  static const char*const indic[16]={0,"Cursor","Scroll Y","Scroll X",0,0,0,0,"Exit East","Exit North","Exit West","Exit South","User 0","User 1","User 2","User 3"};
+  static const char*const indic[16]={"Board user data","Cursor","Scroll Y","Scroll X",0,0,0,0,"Exit East","Exit North","Exit West","Exit South","User 0","User 1","User 2","User 3"};
   static const char*const valu[32]={"(A)","(B)","(C)","(D)","(E)","(F)","(G)","(H)","(S)","(T)","(U)","(V)","(W)","(X)","(Y)","(Z)",
    "Player X","Player Y","Camera X","Camera Y","Scroll %","Line number","Line count","Cur. board","Exit East","Exit North","Exit West","Exit South","Width","Height","User",0};
   Uint8 x=xcur;
@@ -354,7 +354,7 @@ static void edit_tile(void) {
         }
         win_command('d',"Select indicator...") {
           win_form("Select indicator") {
-            for(i=0;i<16;i++) if(indic[i]) win_option(".uol....ENWS0123"[i],indic[i],b,i);
+            for(i=0;i<16;i++) if(indic[i]) win_option("tuol....ENWS0123"[i],indic[i],b,i);
             win_blank();
             win_command_esc(0,"OK") break;
           }
@@ -445,6 +445,7 @@ static void f_menu(Uint8 mnu) {
     {'X',SC_TEXT,3,"Text window"},
     {'I',SC_ITEM,4,"Item window"},
     {0,2,0,"Indicators:"},
+    {'T',SC_IND_USERDATA,1,"Board user data"},
     {'U',SC_IND_CURSOR,1,"Cursor"},
     {'O',SC_IND_SCROLL_Y,1,"Scroll \x12"},
     {'L',SC_IND_SCROLL_X,1,"Scroll \x1D"},

@@ -362,6 +362,25 @@ const char*init_world(void) {
   return 0;
 }
 
+static void load_varproperties(FILE*fp,Uint32 on,VarPropertyList*vp) {
+  int i;
+  free(vp->item);
+  vp->item=0;
+  vp->count=0;
+  if(!on) return;
+  vp->count=fgetc(fp);
+  if(!vp->count) return;
+  vp->item=calloc(vp->count,sizeof(VarProperty));
+  if(!vp->item) err(1,"Allocation failed");
+  for(i=0;i<vp->count;i++) if((vp->item[i].type=fgetc(fp))&15) fread(vp->item[i].data,1,vp->item[i].type&15,fp);
+}
+
+static void save_varproperties(FILE*fp,const VarPropertyList*vp) {
+  int i;
+  fputc(vp->count,fp);
+  for(i=0;i<vp->count;i++) fputc(vp->item[i].type,fp),fwrite(vp->item[i].data,1,vp->item[i].type&15,fp);
+}
+
 static inline void fill_layer(Tile*p,Tile t,Uint32 c) {
   while(c--) *p++=t;
 }
@@ -483,7 +502,7 @@ const char*load_board(FILE*fp) {
   Tile*end;
   StatXY*r;
   int i,j;
-  if(ef&0x78C0) return "Unrecognized file format";
+  if(ef&0x70C0) return "Unrecognized file format";
   free(b_under);
   b_under=b_main=b_over=0;
   for(i=0;i<maxstat;i++) {
@@ -507,6 +526,8 @@ const char*load_board(FILE*fp) {
   }
   if(ef&0x20) board_info.userdata=read16(fp);
   maxstat=read8(fp)?:1;
+  // Variable property list
+  load_varproperties(fp,ef&0x800,&board_info.varprop);
   // Board grid
   if(board_info.width*(unsigned long long)board_info.height>0x100000) return "Board size is too big";
   b_under=calloc(3*sizeof(Tile),tc=board_info.width*board_info.height);
@@ -608,6 +629,7 @@ const char*save_board(FILE*fp,int m) {
   if(board_info.exits[3]) ef|=8;
   if(board_info.width>256 || board_info.height>256) ef|=0x10;
   if(board_info.userdata) ef|=0x20;
+  if(board_info.varprop.count) ef|=0x800;
   write16(fp,ef);
   if(ef&0x100) write16(fp,board_info.flag); else write8(fp,board_info.flag);
   write16(fp,board_info.screen);
@@ -625,6 +647,8 @@ const char*save_board(FILE*fp,int m) {
   if(ef&0x20) write16(fp,board_info.userdata);
   write8(fp,maxstat);
   if(ef&0x0400) layer_inversion();
+  // Variable property list
+  if(ef&0x0800) save_varproperties(fp,&board_info.varprop);
   // Stats
   if(!editor && global_text && maxstat && stats->text==global_text) {
     savedstat1=*stats;
@@ -724,11 +748,13 @@ const char*save_board(FILE*fp,int m) {
 }
 
 const char*load_screen(FILE*fp) {
+  Uint8 vp;
   Uint8 c;
   Uint32 at=0;
   int i,n;
   memset(&cur_screen,0,sizeof(Screen));
-  if(fgetc(fp)) return "Unrecognized file format";
+  vp=fgetc(fp);
+  if(vp&0x7F) return "Unrecognized file format";
   cur_screen.flag=fgetc(fp);
   cur_screen.border_color=fgetc(fp);
   fread(cur_screen.border,1,4,fp);
@@ -740,6 +766,8 @@ const char*load_screen(FILE*fp) {
   cur_screen.message_y=fgetc(fp);
   cur_screen.message_l=fgetc(fp);
   cur_screen.message_r=fgetc(fp);
+  // Variable property list
+  load_varproperties(fp,vp&0x80,&cur_screen.varprop);
   // Screen grid
   for(at=0;at<80*25;) {
     c=fgetc(fp);
@@ -785,7 +813,7 @@ const char*save_screen(FILE*fp) {
   Uint32 at=0;
   Uint8 run0,run1,run2,run3,run4;
   int i,n;
-  fputc(0,fp);
+  fputc(cur_screen.varprop.count?0x80:0x00,fp);
   fputc(cur_screen.flag,fp);
   fputc(cur_screen.border_color,fp);
   fwrite(cur_screen.border,1,4,fp);
@@ -797,6 +825,8 @@ const char*save_screen(FILE*fp) {
   fputc(cur_screen.message_y,fp);
   fputc(cur_screen.message_l,fp);
   fputc(cur_screen.message_r,fp);
+  // Variable property list
+  if(cur_screen.varprop.count) save_varproperties(fp,&cur_screen.varprop);
   // Screen grid
   for(at=0;at<80*25;) {
     run0=run1=run2=run3=run4=0;

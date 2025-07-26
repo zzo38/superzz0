@@ -18,6 +18,7 @@ GAME
   +  Board flags to always allow saving the game in certain circumstances;
      this applies only if saving is disabled due to control flags.
   +  Custom fonts/palettes.
+  +  An indicator type for if the board user data is nonzero.
 
 SCRIPTS
   +  The #NOSAVE flag can be used to disable saving (this modifies a
@@ -33,6 +34,9 @@ ASSEMBLY
   +  Some instructions can now use J and K as the first operand.
   +  Control flags to save/restore the board state in a separate lump.
   -  Remove EAP0 and EAP1.
+
+TEMPLATE
+  +  "Time:" is no longer displayed unless the board has a time limit.
 
 OTHERS
   *  The save game format has been changed (and is no longer compatible
@@ -61,7 +65,6 @@ GAME
 
 SCRIPTS
   +  The #VISIBLE condition is implemented.
-  +  #BOARD command to go to another board.
   +  Conditions for named flags in specific numbered positions.
   +  Script libraries are possible. You can use this to create scripts
      which can then be loaded in multiple boards at run time. The use of
@@ -101,6 +104,7 @@ EDITOR
 
 TEMPLATE
   +  Many additions to default template.
+  +  #BOARD command to go to another board.
   +  #ENDGAME command to end the game.
   -  Removed the "blank" template, which is not necessary; you can create
      an empty world file with no template.

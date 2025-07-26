@@ -248,6 +248,18 @@ extern Uint16 global_frameptr;
 
 extern Uint16 start_mode;
 
+// === Variable properties ===
+
+typedef struct {
+  Uint8 type;
+  Uint8 data[15];
+} VarProperty;
+
+typedef struct {
+  VarProperty*item;
+  Uint8 count;
+} VarPropertyList;
+
 // === Board/stats ===
 
 typedef union {
@@ -278,9 +290,9 @@ typedef struct {
   Uint16 width,height;
   Uint16 screen;
   Uint16 exits[4];
-  //Uint16 music; // 0=quiet, 65535=continue
   Uint16 userdata;
   Uint16 flag;
+  VarPropertyList varprop;
 } BoardInfo;
 
 // Stat:mode
@@ -348,13 +360,6 @@ typedef struct {
 #define NF_METER_HALF_EXT 'H'
 #define NF_BINARY 'b'
 #define NF_BINARY_EXT 'B'
-#define NF_SCIENTIFIC_GIGA '0'
-#define NF_SCIENTIFIC_MEGA '1'
-#define NF_SCIENTIFIC_KILO '2'
-#define NF_SCIENTIFIC '3'
-#define NF_SCIENTIFIC_MILLI '4'
-#define NF_SCIENTIFIC_MICRO '5'
-#define NF_SCIENTIFIC_NANO '6'
 #define NF_CHARACTER 'c'
 #define NF_APPEARANCE '?'
 #define NF_NONZERO '!'
@@ -373,6 +378,7 @@ typedef struct {
   Uint8 hard_edge[4];
   Uint8 border[4];  // character codes for default borders; 0=none
   Uint8 border_color;  // 0=same colour
+  VarPropertyList varprop;
 } Screen;
 
 // Screen:command (high nybble)
@@ -409,6 +415,7 @@ typedef struct {
 #define SC_SPEC_HEIGHT 0x3D
 #define SC_SPEC_USERDATA 0x3E
 
+#define SC_IND_USERDATA 0x50
 #define SC_IND_CURSOR 0x51
 #define SC_IND_SCROLL_Y 0x52
 #define SC_IND_SCROLL_X 0x53
@@ -441,7 +448,7 @@ const char*load_screen(FILE*fp);
 const char*save_screen(FILE*fp);
 void update_screen(void);
 
-// === Windows ===
+// === Screen windows ===
 
 typedef struct {
   Uint8 command[80];
