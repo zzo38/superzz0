@@ -49,6 +49,7 @@ static void goto_screen(Uint16 id) {
   }
   scr_id=id;
   scroll_x=scroll_y=0;
+  work_varproperties(&cur_screen.varprop);
 }
 
 static void edit_window(void) {
@@ -1041,6 +1042,7 @@ Uint16 edit_screen(Uint16 id) {
       case 0: case 15: no_mode: switch(k) {
         case 0x08: numprefix/=10; break;
         case 0x09: if(emode=(emode?0:15)) place_at(xcur,ycur,clip); break;
+        case 0x11: load_font(0,LOADFONT_RESET); load_palette(0,LOADPAL_RESET); break;
         case 0x16: viewmode^=1; break;
         case 0x1A: xcur=cur_screen.view_x; ycur=cur_screen.view_y; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
@@ -1051,7 +1053,7 @@ Uint16 edit_screen(Uint16 id) {
         case -SDLK_r: cur_screen.message_r=xcur; break;
         case -SDLK_v: cur_screen.view_x=xcur; cur_screen.view_y=ycur; break;
         case -SDLK_w: edit_window(); break;
-        case -SDLK_y: edit_varprop(&cur_screen.varprop); break;
+        case -SDLK_y: edit_varprop(&cur_screen.varprop); work_varproperties(&cur_screen.varprop); break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'c': case 0x03: clip.col=ask_color_char(0,clip.col); break;

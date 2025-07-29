@@ -19,6 +19,9 @@ GAME
      this applies only if saving is disabled due to control flags.
   +  Custom fonts/palettes.
   +  An indicator type for if the board user data is nonzero.
+  +  Variable property lists for boards and screens. These are currently
+     used for setting fonts/palettes per board, and may be used for other
+     purposes in future (e.g. music).
 
 SCRIPTS
   +  The #NOSAVE flag can be used to disable saving (this modifies a

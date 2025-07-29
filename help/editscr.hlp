@@ -18,6 +18,7 @@ Others:
 :norm;Normal mode / draw mode
 ESC        Exit
 TAB        Toggle normal/draw mode
+^Q         Reset font/palette
 ^V         Toggle view mode
 0-9        Numeric prefix
 ALT+I      Screen info

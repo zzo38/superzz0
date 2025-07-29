@@ -171,6 +171,7 @@ static void goto_board(Uint16 id) {
   }
   if(xcur>=board_info.width || ycur>=board_info.height) xcur=ycur=0;
   brd_id=id;
+  work_varproperties(&board_info.varprop);
 }
 
 static void edit_board_info(void) {
@@ -2050,6 +2051,7 @@ static void ed_update_screen(void) {
   int a,b,x,y;
   memset(v_color,0x01,80*25);
   memset(v_char,177,80*25);
+  memset(v_font,VF_FRONT|VF_SYSTEM,80*25);
   for(y=0;y<25;y++) {
     if(y+scroll_y>=board_info.height) break;
     if(y+scroll_y>=markheight) g=0; else if(g) g=markgrid+markskip*(y+scroll_y);
@@ -3055,6 +3057,7 @@ Uint16 edit_board(Uint16 id) {
             stats[i-1].length=(stats[i-1].text?strlen(stats[i-1].text):0);
           }
           break;
+        case 0x11: load_font(0,LOADFONT_RESET); load_palette(0,LOADPAL_RESET); break;
         case 0x16: vmode^=1; break;
         case 0x19: resize_tile_queue(numprefix); numprefix=0; break;
         case 0x1A:
@@ -3077,7 +3080,7 @@ Uint16 edit_board(Uint16 id) {
           run_test_game(brd_id);
           break;
         case -SDLK_u: free(markgrid); free(markgrid2); markwidth=markheight=markskip=markwidth2=markheight2=markskip2=0; markgrid=markgrid2=0; break;
-        case -SDLK_y: edit_varprop(&board_info.varprop); break;
+        case -SDLK_y: edit_varprop(&board_info.varprop); work_varproperties(&board_info.varprop); break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'A': k=add_board(); if(k>0) goto_board(k); break;
@@ -3261,6 +3264,7 @@ Uint16 edit_board(Uint16 id) {
             stats[i-1].length=(stats[i-1].text?strlen(stats[i-1].text):0);
           }
           break;
+        case 0x11: load_font(0,LOADFONT_RESET); load_palette(0,LOADPAL_RESET); break;
         case 0x16: vmode^=1; break;
         case 0x19: resize_tile_queue(numprefix); numprefix=0; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
@@ -3275,7 +3279,7 @@ Uint16 edit_board(Uint16 id) {
           run_test_game(brd_id);
           break;
         case -SDLK_u: free(markgrid); free(markgrid2); markwidth=markheight=markskip=markwidth2=markheight2=markskip2=0; markgrid=markgrid2=0; break;
-        case -SDLK_y: edit_varprop(&board_info.varprop); break;
+        case -SDLK_y: edit_varprop(&board_info.varprop); work_varproperties(&board_info.varprop); break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'c': case 0x03: overclip.color=ask_color_char(0,overclip.color); break;

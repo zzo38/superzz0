@@ -78,9 +78,10 @@ void set_palette_vga(Uint8 k,Uint8 r,Uint8 g,Uint8 b);
 #define LOADFONT_WIDE 1
 #define LOADFONT_EGS_BASE 2
 #define LOADFONT_EGS_WIDE 3
-#define LOADFONT_RESET 4
+#define LOADFONT_RESET 255
 
 #define LOADPAL_BASE 0
+#define LOADPAL_RESET 255
 
 // === Joystick ===
 
