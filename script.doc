@@ -167,6 +167,12 @@ are not allowed in this case.
 #IF condition command
   Execute the command only if the condition is true.
 
+#LOADFONT name
+  Loads a font, given the lump name (excluding the .CHR or .FNT suffix).
+
+#LOADPAL name
+  Loads a palette, given the lump name (excluding the .PAL suffix).
+
 #LOCK
   Lock the program from receiving messages.
 

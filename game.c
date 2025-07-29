@@ -2937,7 +2937,13 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               }
             } else goto badcommand; break;
           case 'L':
-            if(!strcmp(buf,"LOCK")) {
+            if(!strcmp(buf,"LOADFONT")) {
+              while(s->text[ip]==' ') ++ip;
+              load_font(s->text+ip,LOADFONT_BASE);
+            } else if(!strcmp(buf,"LOADPAL")) {
+              while(s->text[ip]==' ') ++ip;
+              load_palette(s->text+ip,LOADFONT_BASE);
+            } else if(!strcmp(buf,"LOCK")) {
               xy->layer|=0x80;
             } else goto badcommand; break;
           case 'M':
