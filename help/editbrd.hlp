@@ -30,6 +30,7 @@ ALT+M      Exchange primary/secondary mark grid
 ALT+R      Resize board
 ALT+T      Test game
 ALT+U      Unmark all (primary and secondary)
+ALT+Y      Variable property list
 ALT+Z      Maximum numeric prefix
 ^O         Stat list
 ^P         Edit text of stat

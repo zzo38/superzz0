@@ -1,0 +1,13 @@
+@Variable property list
+Each screen and board can have a variable property list of up to 255
+variable properties. Each one can be one of the following types:
+
+þ Font: Load the specified font when this board or screen is entered.
+
+þ Palette: Load the specified palette when this board or screen is entered.
+
+Normally, the variable property list for the screen is applied first, and
+then the variable property list for the board is applied and overrides the
+specifications for the screen. However, for screens used as a text window
+or other window, the screen's variable properties apply and override those
+specified for the board.

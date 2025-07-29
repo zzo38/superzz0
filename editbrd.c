@@ -3077,6 +3077,7 @@ Uint16 edit_board(Uint16 id) {
           run_test_game(brd_id);
           break;
         case -SDLK_u: free(markgrid); free(markgrid2); markwidth=markheight=markskip=markwidth2=markheight2=markskip2=0; markgrid=markgrid2=0; break;
+        case -SDLK_y: edit_varprop(&board_info.varprop); break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'A': k=add_board(); if(k>0) goto_board(k); break;
@@ -3274,6 +3275,7 @@ Uint16 edit_board(Uint16 id) {
           run_test_game(brd_id);
           break;
         case -SDLK_u: free(markgrid); free(markgrid2); markwidth=markheight=markskip=markwidth2=markheight2=markskip2=0; markgrid=markgrid2=0; break;
+        case -SDLK_y: edit_varprop(&board_info.varprop); break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
         case 'c': case 0x03: overclip.color=ask_color_char(0,overclip.color); break;

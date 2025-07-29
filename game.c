@@ -278,6 +278,7 @@ static void warp_to_board(Uint16 b,char m) {
     if(!fp) err(1,"Cannot open %04X.SCR",cur_screen_id);
     if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
     fclose(fp);
+    work_varproperties(&cur_screen.varprop);
   }
   // Initial scrolling
   if((cur_screen.flag&SF_NO_SCROLL) || !maxstat || !stats->count) {
@@ -292,6 +293,7 @@ static void warp_to_board(Uint16 b,char m) {
     if(scroll_y<-(Sint32)cur_screen.hard_edge[DIR_N]) scroll_y=cur_screen.hard_edge[DIR_N];
      else if(scroll_y>=board_info.height-(Sint32)cur_screen.hard_edge[DIR_S]) scroll_y=board_info.height-cur_screen.hard_edge[DIR_S]-1;
   }
+  work_varproperties(&board_info.varprop);
 }
 
 static void display_message_text(void) {
@@ -1833,6 +1835,7 @@ static char show_text_window(Uint32 xyn,char help) {
       tscroll=0;
     }
     v_status[1]=232;
+    work_varproperties(&cur_screen.varprop);
     open:
     for(;;) {
       update_text_window(&wind);
@@ -1925,6 +1928,8 @@ static char show_text_window(Uint32 xyn,char help) {
     fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
     if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
     fclose(fp);
+    work_varproperties(&cur_screen.varprop);
+    work_varproperties(&board_info.varprop);
   }
   free(textfile_text);
   textfile=0;

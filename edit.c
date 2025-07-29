@@ -18,6 +18,93 @@ static ASN1_Value*general_oids; // the "class" is used for one of the below cons
 #define OPTIONAL 17
 #define REMOVED 18
 
+void edit_varprop(VarPropertyList*vp) {
+  char text[81];
+  char name[9];
+  Uint8 cur=0;
+  int i,j,k;
+  draw0:
+  v_ycur=127;
+  memset(v_char,0x20,80*25);
+  memset(v_color,0x07,80*25);
+  memset(v_font,VF_FRONT|VF_SYSTEM,80*25);
+  draw_text(0,0," Variable Property List ",0x30,-1);
+  draw_text(0,24,"<\x18\x19> Cursor  <INS> Insert  <DEL> Delete  <RET> Edit  <ESC> Done",7,-1);
+  draw1:
+  draw_text(40,0,text,0x07,snprintf(text,40,"%3d/%3d",cur,vp->count));
+  if(cur>15) draw_text(0,1,"\x1EMORE\x1E",10,-1); else draw_text(0,1,"----- ",0,-1);
+  if((cur&0xF0)+16<vp->count) draw_text(0,18,"\x1FMORE\x1F",10,-1); else draw_text(0,18,"----- ",0,-1);
+  for(i=0;i<16;i++) {
+    memset(v_color+80*i+160,0x00,80);
+    if((k=i+(cur&0xF0))<vp->count) {
+      v_char[80*i+160]=((cur&0x0F)==i?16:250);
+      v_color[80*i+160]=((cur&0x0F)==i?14:0);
+      switch(j=vp->item[k].type) {
+        case 0x11 ... 0x18: draw_text(1,i+2,text,7,snprintf(text,80,"Font: %*.*s",j&15,j&15,vp->item[k].data)); break;
+        case 0x21 ... 0x28: draw_text(1,i+2,text,7,snprintf(text,80,"Palette: %*.*s",j&15,j&15,vp->item[k].data)); break;
+        default: draw_text(1,i+2,"???",12,3);
+      }
+    } else if(k==vp->count) {
+      v_char[80*i+160]=((cur&0x0F)==i?16:0);
+      v_color[80*i+160]=((cur&0x0F)==i?14:0);
+      draw_text(1,i+2,"<End>",8,-1);
+    }
+  }
+  key:
+  redisplay();
+  for(;;) {
+    if(!next_event()) return;
+    if(event.type!=SDL_KEYDOWN) continue;
+    switch(event.key.keysym.sym) {
+      case SDLK_UP: if(cur) --cur; break;
+      case SDLK_DOWN: if(cur<vp->count) ++cur; break;
+      case SDLK_HOME: cur=0; break;
+      case SDLK_END: cur=vp->count; break;
+      case SDLK_PAGEUP: if(cur>16) cur-=16; else cur=0; break;
+      case SDLK_PAGEDOWN: j=cur+16; cur=(j<vp->count?j:vp->count); break;
+      case SDLK_DELETE:
+        if(cur<vp->count) {
+          if(cur!=vp->count-1) memmove(vp->item+cur,vp->item+cur+1,(vp->count-1-cur)*sizeof(VarProperty));
+          --vp->count;
+        }
+        break;
+      case SDLK_INSERT:
+        if(vp->count==255) goto key;
+        vp->item=realloc(vp->item,(vp->count+1)*sizeof(VarProperty));
+        if(cur<vp->count) memmove(vp->item+cur+1,vp->item+cur,(vp->count-cur)*sizeof(VarProperty));
+        memset(vp->item+cur,0,sizeof(VarProperty));
+        ++vp->count;
+        // fall through
+      case SDLK_RETURN:
+        if(cur==vp->count) goto key;
+        *name=0;
+        switch(vp->item[cur].type) {
+          case 0x11 ... 0x18: i=1; snprintf(name,9,"%s",vp->item[cur].data); break;
+          case 0x21 ... 0x28: i=2; snprintf(name,9,"%s",vp->item[cur].data); break;
+          default: i=0;
+        }
+        win_form("Variable Property Edit") {
+          win_option('F',"Font",i,1) win_refresh();
+          win_option('P',"Palette",i,2) win_refresh();
+          win_blank();
+          if(i==1 || i==2) win_text_restrict('u',"Lump name: ",name);
+          win_blank();
+          win_command_esc(0,"Done") break;
+        }
+        switch(i) {
+          case 1: case 2:
+            vp->item[cur].type=(i<<4)+snprintf(vp->item[cur].data,9,"%s",name);
+            break;
+        }
+        goto draw0;
+      case SDLK_ESCAPE: return;
+      case SDLK_SLASH: case SDLK_QUESTION: online_help("varprop",0); goto draw0;
+      default: continue;
+    }
+    goto draw1;
+  }
+}
+
 static void unload_general_der(void) {
   Uint32 n;
   asn1_free(&general_der);

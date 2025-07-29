@@ -133,11 +133,14 @@ Uint32 reseed(uint64_t n);
 
 // === Editor ===
 
+typedef struct VarPropertyList VarPropertyList;
+
 extern Uint8 editor;
 
 int run_editor(void);
 Uint16 edit_board(Uint16);
 Uint16 edit_screen(Uint16);
+void edit_varprop(VarPropertyList*vp);
 void combine_assembled(void);
 void set_board_name(Uint16 id,const char*name);
 void set_screen_name(Uint16 id,const char*name);
@@ -250,15 +253,17 @@ extern Uint16 start_mode;
 
 // === Variable properties ===
 
-typedef struct {
+typedef struct VarProperty {
   Uint8 type;
   Uint8 data[15];
 } VarProperty;
 
-typedef struct {
+typedef struct VarPropertyList {
   VarProperty*item;
   Uint8 count;
 } VarPropertyList;
+
+void work_varproperties(const VarPropertyList*vp);
 
 // === Board/stats ===
 

@@ -77,6 +77,16 @@ If bit11 of the encoding flags is set then the variable property list
 follows. It starts with one byte being the number of variable properties,
 and then each variable property consists of one type byte and then the
 data; the length of the data is equal to the low nybble of the type byte.
+The possible types are:
+
+* 0x11 to 0x18 = Load a font; the data is the lump name excluding the .CHR
+or .FNT suffix.
+
+* 0x1F = Replace a single character from the loaded font. The first byte of
+the data is the character code, and the rest is the raster data.
+
+* 0x21 to 0x28 = Load a peltte; the data is the lump name excluding the
+.PAL suffix.
 
 Each stat (the first stat number is stat 1) is as follows:
 

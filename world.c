@@ -919,3 +919,23 @@ const char*load_window(FILE*fp,WindowInfo*wind) {
   return 0;
 }
 
+void work_varproperties(const VarPropertyList*vp) {
+  int i;
+  VarProperty*p;
+  for(i=0;i<vp->count;i++) switch((p=vp->item+i)->type) {
+    case 0x11 ... 0x18:
+      p->data[p->type&15]=0;
+      load_font(p->data,LOADFONT_BASE);
+      break;
+    case 0x1F:
+      if(font) memcpy(font+p->data[0]*14,p->data+1,14);
+      break;
+    case 0x21 ... 0x28:
+      p->data[p->type&15]=0;
+      load_palette(p->data,LOADPAL_BASE);
+      break;
+    default:
+      if(!editor) errx(1,"Improper variable property list");
+  }
+}
+
