@@ -353,31 +353,10 @@ void save_state(void) {
     } else {
       asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
     }
+    save_fontpal_state(enc);
   asn1_end(enc);
   asn1_finish_encoder(enc);
   fclose(fp);
-#if 0
-  //  SAVE (no longer used; this code may be deleted in a later commit)
-  if(!(fp=open_lump("SAVE","w"))) goto error;
-  v=(condflag?1:0)+(global_frameoffset?4:0);
-  if(global_text && maxstat && stats->text==global_text) v+=2;
-  write16(fp,v);
-  write16(fp,cur_board_id);
-  write16(fp,cur_screen_id);
-  write32(fp,scroll_x);
-  write32(fp,scroll_y);
-  for(i=0;i<16;i++) write32(fp,status_vars[i]);
-  for(i=0;i<7;i++) write32(fp,regs[i]);
-  write8(fp,ntextbuf); if(ntextbuf) fwrite(textbuf,1,ntextbuf,fp);
-  write8(fp,nvtextbuf); if(nvtextbuf) fwrite(vtextbuf,1,nvtextbuf,fp);
-  for(i=0;i<16;i++) fwrite(namedflag[i].name,1,strlen(namedflag[i].name)+1,fp);
-  write16(fp,vtexttime);
-  if(global_frameoffset) {
-    write16(fp,global_frameoffset);
-    write16(fp,global_frameptr);
-  }
-  fclose(fp);
-#endif
   //  CURRENT.BRD
   if(!(fp=open_lump("CURRENT.BRD","w"))) goto error;
   save_board(fp,1);
@@ -453,8 +432,11 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
   } else {
     global_frameoffset=global_frameptr=0;
   }
-  // Further items (there are currently none) might not be present in a older file, so do not error if they are missing.
-  asn1_free(&v0);
+  // Further items might not be present in a older file, so do not error if they are missing.
+  if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j) goto bad;
+  load_fontpal_state(&v1);
+  // End
+  done: asn1_free(&v0);
 }
 
 void load_state(void) {
@@ -500,38 +482,6 @@ void load_state(void) {
   if(!(fp=open_lump("SAVE.DER","r"))) errx(1,open_lump("SAVE","r")?"This is an old save game file; not compatible with this version of Super ZZ Zero.":"Invalid save game file (missing SAVE.DER lump)");
   load_saveder(fp,&useglobalscript);
   fclose(fp);
-#if 0
-  //  SAVE (no longer used; this code may be deleted in a later commit)
-  if(!(fp=open_lump("SAVE","r"))) errx(1,"Invalid save game file (missing SAVE lump)");
-  v=read16(fp);
-  if(v&~7) errx(1,"Invalid data in save game file");
-  condflag=v&1;
-  useglobalscript=v&2;
-  cur_board_id=read16(fp);
-  cur_screen_id=read16(fp);
-  scroll_x=read32(fp);
-  scroll_y=read32(fp);
-  for(i=0;i<16;i++) status_vars[i]=read32(fp);
-  for(i=0;i<7;i++) regs[i]=read32(fp);
-  memset(textbuf,0,81);
-  if((ntextbuf=read8(fp)) && ntextbuf<81) fread(textbuf,1,ntextbuf,fp);
-  memset(vtextbuf,0,81);
-  if((nvtextbuf=read8(fp)) && nvtextbuf<81) fread(vtextbuf,1,nvtextbuf,fp);
-  if(ntextbuf>80 || nvtextbuf>80) errx(1,"Invalid data in save game file");
-  memset(namedflag,0,sizeof(namedflag));
-  for(i=0;i<16;i++) {
-    for(j=0;j<16;j++) if(!(namedflag[i].name[j]=fgetc(fp))) break;
-    if(namedflag[i].name[15]) errx(1,"Invalid data in save game file");
-  }
-  vtexttime=read16(fp);
-  if(vtexttime) ++vtexttime;
-  if(vtexttime>config.message_timer) vtexttime=config.message_timer;
-  if(v&4) {
-    global_frameoffset=read16(fp);
-    global_frameptr=read16(fp);
-  }
-  fclose(fp);
-#endif
   //  MEMORY
   if(fp=open_lump("MEMORY","r")) {
     u=lump_size>>1;

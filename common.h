@@ -83,6 +83,9 @@ void set_palette_vga(Uint8 k,Uint8 r,Uint8 g,Uint8 b);
 #define LOADPAL_BASE 0
 #define LOADPAL_RESET 255
 
+void load_fontpal_state(const ASN1_Value*);
+void save_fontpal_state(ASN1_Encoder*);
+
 // === Joystick ===
 
 #define JL_NORMAL 16

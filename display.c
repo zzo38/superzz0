@@ -378,10 +378,16 @@ JoyStatus*joystat;
 Uint8 repeating;
 Uint8*font;
 
+typedef struct {
+  Uint8 name[9];
+  Uint8 which; // 1=16-colours 2=64-colours 4=128-colours
+} PaletteInfo;
+
 static SDL_Surface*scrn;
 static float gamma_r,gamma_g,gamma_b;
 static SDL_Joystick*joy;
 static Uint8 rscancode;
+static PaletteInfo palinf[3];
 
 static SDL_Color palet[34]={
   // PC
@@ -520,6 +526,7 @@ static inline void adjust_gamma(SDL_Color*c,int n) {
 }
 
 int load_palette(const char*name,Uint8 z) {
+  //TODO: also support DER-based format (first byte is 0x40); the handling of palinf will be changed when it is implemented
   FILE*f;
   char buf[16];
   int i,n,x;
@@ -527,6 +534,7 @@ int load_palette(const char*name,Uint8 z) {
   if(!name) {
     // Reset the palette to the default values
     SDL_SetColors(scrn,palet,0x30,16);
+    palinf[0].name[0]=palinf[0].which=0;
     return 1;
   }
   for(i=0;i<8;i++) {
@@ -539,8 +547,16 @@ int load_palette(const char*name,Uint8 z) {
     warnx("Palette '%s' is not available",buf);
     return 0;
   }
+  if(fgetc(f)&0xC0) {
+    warnx("This palette format is not implemented");
+    fclose(f);
+    return 0;
+  }
+  rewind(f);
   switch(lump_size) {
     case 16: case 64: case 128:
+      snprintf(palinf[lump_size==128?2:lump_size==64?1:0].name,9,"%s",buf);
+      palinf[lump_size==128?2:lump_size==64?1:0].which=(lump_size==128?4:lump_size==64?2:1);
       n=lump_size;
       for(i=0;i<n;i++) {
         x=fgetc(f);
@@ -550,6 +566,8 @@ int load_palette(const char*name,Uint8 z) {
       }
       break;
     case 48: case 192: case 384:
+      snprintf(palinf[lump_size==384?2:lump_size==192?1:0].name,9,"%s",buf);
+      palinf[lump_size==384?2:lump_size==192?1:0].which=(lump_size==384?4:lump_size==192?2:1);
       n=lump_size/3;
       for(i=0;i<n;i++) {
         c[i].r=(fgetc(f)*65)>>4;
@@ -573,6 +591,46 @@ void set_palette_vga(Uint8 k,Uint8 r,Uint8 g,Uint8 b) {
   if(k<0x30) k|=0x30;
   adjust_gamma(&c,1);
   SDL_SetColors(scrn,&c,k,1);
+}
+
+void load_fontpal_state(const ASN1_Value*v) {
+  char name[9];
+  ASN1_Value v0,v1;
+  if(v->class) goto bad;
+  load_font(0,LOADFONT_RESET);
+  load_palette(0,LOADPAL_RESET);
+  if(v->type==ASN1_SEQUENCE) {
+    if(asn1_first_of(&v0,v) || v0.class || v0.constructed) goto bad;
+    if(v0.type==ASN1_OCTET_STRING && v0.length==0xE00) {
+      if(!(font=malloc(0xE00))) err(1,"Allocation failed");
+      memcpy(font,v0.data,0xE00);
+    } else if(v0.type!=ASN1_NULL) {
+      goto bad;
+    }
+    if(asn1_next_of(&v0,v) || v0.class || v0.type!=ASN1_SEQUENCE) goto bad;
+    if(!asn1_first_of(&v1,&v0)) do {
+      if(v1.class || v1.type!=ASN1_VISIBLE_STRING || v1.constructed || v1.length<1 || v1.length>8) goto bad;
+      snprintf(name,9,"%*.*s",(int)v1.length,(int)v1.length,v1.data);
+      load_palette(name,LOADPAL_BASE);
+    } while(!asn1_next_of(&v1,&v0));
+  } else if(v->type!=ASN1_NULL) {
+    bad: errx(1,"Font/palette state in save game file has unexpected format");
+  }
+}
+
+void save_fontpal_state(ASN1_Encoder*enc) {
+  if(!font && !palinf[0].name[0] && !palinf[1].name[0] && !palinf[2].name[0]) {
+    asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    return;
+  }
+  asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+    if(font) asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,font,0xE00); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+      if(palinf[0].name[0]) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[0].name);
+      if(palinf[1].name[0]) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[1].name);
+      if(palinf[2].name[0]) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[2].name);
+    asn1_end(enc);
+  asn1_end(enc);
 }
 
 void init_display(void) {
