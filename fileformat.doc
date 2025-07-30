@@ -79,6 +79,10 @@ and then each variable property consists of one type byte and then the
 data; the length of the data is equal to the low nybble of the type byte.
 The possible types are:
 
+* 0x04 = Set scroll position; the data is two unsigned 16-bit numbers,
+first the X scroll and then the Y scroll, of the board coordinates that
+will be placed at the view center.
+
 * 0x11 to 0x18 = Load a font; the data is the lump name excluding the .CHR
 or .FNT suffix.
 
@@ -765,44 +769,7 @@ to save/restore the board are used.
 === SAVE ===
 
 This lump is only for save game files, but it is no longer used in the
-current version; see SAVE.DER instead. (This section might be deleted from
-this document in a later commit.)
-
-It contains:
-
-* Flags (16-bits). See the list of flag bits below.
-
-* Current board number (16-bits).
-
-* Current screen number (16-bits).
-
-* Scroll position (two signed numbers, of 32-bits each).
-
-* Status variables (sixteen, of 32-bits each).
-
-* Registers (eight, of 32-bits each).
-
-* Length of text buffer (one byte).
-
-* Text buffer.
-
-* Length of visible text buffer (one byte).
-
-* Visible text buffer.
-
-* Sixteen named flags; each is a null-terminated string, with no more
-than fifteen characters (which cannot be lowercase; this fifteen characters
-does not include the null terminator).
-
-* Message timer (16-bits).
-
-* If the bit2 of the flag bits is set, then two 16-bit numbers being the
-global script frame offset and global script frame pointer.
-
-The flag bits are:
-  0001 = Condition flag
-  0002 = Enable global script
-  0004 = Global script frame
+current version; see SAVE.DER instead.
 
 
 === SAVE.DER ===

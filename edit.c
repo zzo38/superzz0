@@ -22,7 +22,7 @@ void edit_varprop(VarPropertyList*vp) {
   char text[81];
   char name[9];
   Uint8 cur=0;
-  int i,j,k;
+  int i,j,k,x,y;
   draw0:
   v_ycur=127;
   memset(v_char,0x20,80*25);
@@ -40,7 +40,9 @@ void edit_varprop(VarPropertyList*vp) {
       v_char[80*i+160]=((cur&0x0F)==i?16:250);
       v_color[80*i+160]=((cur&0x0F)==i?14:0);
       switch(j=vp->item[k].type) {
+        case 0x04: draw_text(1,i+2,text,7,snprintf(text,80,"Scroll to (%d,%d)",vp->item[k].data[0]|(vp->item[k].data[1]<<8),vp->item[k].data[2]|(vp->item[k].data[3]<<8))); break;
         case 0x11 ... 0x18: draw_text(1,i+2,text,7,snprintf(text,80,"Font: %*.*s",j&15,j&15,vp->item[k].data)); break;
+        case 0x1F: draw_text(1,i+2,text,7,snprintf(text,80,"Edit font character %d",vp->item[k].data[0])); break;
         case 0x21 ... 0x28: draw_text(1,i+2,text,7,snprintf(text,80,"Palette: %*.*s",j&15,j&15,vp->item[k].data)); break;
         default: draw_text(1,i+2,"???",12,3);
       }
@@ -77,8 +79,9 @@ void edit_varprop(VarPropertyList*vp) {
         // fall through
       case SDLK_RETURN:
         if(cur==vp->count) goto key;
-        *name=0;
+        *name=0; x=y=0;
         switch(vp->item[cur].type) {
+          case 0x04: i=3; x=vp->item[cur].data[0]|(vp->item[cur].data[1]<<8); y=vp->item[cur].data[2]|(vp->item[cur].data[3]<<8); break;
           case 0x11 ... 0x18: i=1; snprintf(name,9,"%s",vp->item[cur].data); break;
           case 0x21 ... 0x28: i=2; snprintf(name,9,"%s",vp->item[cur].data); break;
           default: i=0;
@@ -86,14 +89,24 @@ void edit_varprop(VarPropertyList*vp) {
         win_form("Variable Property Edit") {
           win_option('F',"Font",i,1) win_refresh();
           win_option('P',"Palette",i,2) win_refresh();
+          win_option('S',"Scroll",i,3) win_refresh();
           win_blank();
           if(i==1 || i==2) win_text_restrict('u',"Lump name: ",name);
+          if(i==3) {
+            win_numeric('X',"X: ",x,0,0xFFFF);
+            win_numeric('Y',"Y: ",y,0,0xFFFF);
+          }
           win_blank();
           win_command_esc(0,"Done") break;
         }
         switch(i) {
           case 1: case 2:
             vp->item[cur].type=(i<<4)+snprintf(vp->item[cur].data,9,"%s",name);
+            break;
+          case 3:
+            vp->item[cur].type=0x04;
+            vp->item[cur].data[0]=x; vp->item[cur].data[1]=x>>8;
+            vp->item[cur].data[2]=y; vp->item[cur].data[3]=y>>8;
             break;
         }
         goto draw0;

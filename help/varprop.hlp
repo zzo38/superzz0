@@ -6,6 +6,11 @@ variable properties. Each one can be one of the following types:
 
 þ Palette: Load the specified palette when this board or screen is entered.
 
+þ Scroll: Set the initial scroll position, by specifying the board
+coordinates of the view center. This is only meaningful in boards and not
+in screens, and if it is specified then it will override the default
+handling of centering at the player.
+
 Normally, the variable property list for the screen is applied first, and
 then the variable property list for the board is applied and overrides the
 specifications for the screen. However, for screens used as a text window

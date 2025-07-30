@@ -923,6 +923,12 @@ void work_varproperties(const VarPropertyList*vp) {
   int i;
   VarProperty*p;
   for(i=0;i<vp->count;i++) switch((p=vp->item+i)->type) {
+    case 0x04:
+      if(!editor) {
+        scroll_x=(p->data[0]|(p->data[1]<<8))-cur_screen.view_x;
+        scroll_y=(p->data[2]|(p->data[3]<<8))-cur_screen.view_y;
+      }
+      break;
     case 0x11 ... 0x18:
       p->data[p->type&15]=0;
       load_font(p->data,LOADFONT_BASE);
