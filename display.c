@@ -526,22 +526,28 @@ static inline void adjust_gamma(SDL_Color*c,int n) {
 }
 
 int load_palette(const char*name,Uint8 z) {
-  //TODO: also support DER-based format (first byte is 0x40); the handling of palinf will be changed when it is implemented
+  //TODO: also support DER-based format (first byte is 0x40)
+  PaletteInfo pin;
+  Uint8 nlen=0;
+  Uint8 which=0;
   FILE*f;
   char buf[16];
   int i,n,x;
   SDL_Color c[128];
-  if(!name) {
+  if(!name || *name=='*') {
     // Reset the palette to the default values
     SDL_SetColors(scrn,palet,0x30,16);
-    palinf[0].name[0]=palinf[0].which=0;
-    return 1;
+    if(!((palinf[0].which|palinf[1].which|palinf[2].which)&1)) return 1;
+    name="*";
+    nlen=1;
+    which=1;
+    goto set_palinf;
   }
   for(i=0;i<8;i++) {
     if(name[i]=='.' || name[i]<43) break;
     buf[i]=name[i];
   }
-  buf[i++]='.'; buf[i]='P'; buf[i+1]='A'; buf[i+2]='L'; buf[i+3]=0;
+  buf[nlen=i++]='.'; buf[i]='P'; buf[i+1]='A'; buf[i+2]='L'; buf[i+3]=0;
   f=open_lump(buf,"r");
   if(!f) {
     warnx("Palette '%s' is not available",buf);
@@ -555,8 +561,6 @@ int load_palette(const char*name,Uint8 z) {
   rewind(f);
   switch(lump_size) {
     case 16: case 64: case 128:
-      snprintf(palinf[lump_size==128?2:lump_size==64?1:0].name,9,"%s",buf);
-      palinf[lump_size==128?2:lump_size==64?1:0].which=(lump_size==128?4:lump_size==64?2:1);
       n=lump_size;
       for(i=0;i<n;i++) {
         x=fgetc(f);
@@ -566,8 +570,6 @@ int load_palette(const char*name,Uint8 z) {
       }
       break;
     case 48: case 192: case 384:
-      snprintf(palinf[lump_size==384?2:lump_size==192?1:0].name,9,"%s",buf);
-      palinf[lump_size==384?2:lump_size==192?1:0].which=(lump_size==384?4:lump_size==192?2:1);
       n=lump_size/3;
       for(i=0;i<n;i++) {
         c[i].r=(fgetc(f)*65)>>4;
@@ -583,6 +585,18 @@ int load_palette(const char*name,Uint8 z) {
   fclose(f);
   adjust_gamma(c,n);
   SDL_SetColors(scrn,c,n==16?0x30:n,n);
+  which=(n==16?1:n==64?2:4);
+  set_palinf:
+  for(i=0;i<3;i++) if(palinf[i].which&which) {
+    palinf[i].which&=~which;
+    if(i==0) pin=palinf[0],palinf[0]=palinf[1],palinf[1]=pin,i=-1;
+    if(i==1) pin=palinf[1],palinf[1]=palinf[2],palinf[2]=pin,i=-0;
+  }
+  if(!palinf[0].which) palinf[0]=palinf[1],palinf[1]=palinf[2],palinf[2].which=0;
+  if(!palinf[1].which) palinf[1]=palinf[2],palinf[2].which=0;
+  memcpy(palinf[2].name,name,nlen);
+  palinf[2].name[nlen]=0;
+  palinf[2].which=which;
   return 1;
 }
 
@@ -626,9 +640,9 @@ void save_fontpal_state(ASN1_Encoder*enc) {
   asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
     if(font) asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,font,0xE00); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
     asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
-      if(palinf[0].name[0]) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[0].name);
-      if(palinf[1].name[0]) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[1].name);
-      if(palinf[2].name[0]) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[2].name);
+      if(palinf[0].name[0] && palinf[0].which) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[0].name);
+      if(palinf[1].name[0] && palinf[1].which) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[1].name);
+      if(palinf[2].name[0] && palinf[2].which) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[2].name);
     asn1_end(enc);
   asn1_end(enc);
 }
