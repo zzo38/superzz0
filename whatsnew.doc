@@ -36,6 +36,7 @@ ASSEMBLY
   +  Control flag to disallow saving the game by F3 and F5 keys.
   +  Some instructions can now use J and K as the first operand.
   +  Control flags to save/restore the board state in a separate lump.
+  +  Deck of cards working, using instructions DPUT, DTAK, DEAL.
   -  Remove EAP0 and EAP1.
 
 TEMPLATE

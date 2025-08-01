@@ -3489,6 +3489,18 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_CWOE: t=regs[fo]&0xFF; cwoe: t=(elem_def[t].attrib); if(t&A_FLOOR) condflag=((1<<(t&15))&so)?1:0; else condflag=0; break;
       case OP_CWOT: if((t=convxy(regs[fo],x,y))!=-1) { t=b_main[t].kind; goto cwoe; } else condflag=0; break;
       case OP_DCL: condflag=(--regs[fo]<so?1:0); break;
+      case OP_DEAL:
+        if(memory[so&0xFFFF]) {
+          condflag=1;
+          t=dice(memory[so&0xFFFF])+1;
+          u=memory[(so+t)&0xFFFF];
+          memory[(so+t)&0xFFFF]=memory[(so+memory[so&0xFFFF])&0xFFFF];
+          regs[fo]=memory[(so+memory[so&0xFFFF])&0xFFFF]=u;
+          --memory[so&0xFFFF];
+        } else {
+          condflag=0;
+        }
+        break;
       case OP_DEC: --so; goto store;
       case OP_DECL: --so; goto lstore;
       case OP_DIE: if(so&0xFF) break_tile(0,0,so&0xFFFF,so>>16,fo&4); died: if(fo&=3) return fo-2; break;
@@ -3505,6 +3517,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         }
         break;
       case OP_DIV: if(so) condflag=1,regs[fo]/=so; else condflag=0; break;
+      case OP_DPUT: t=++memory[so&0xFFFF]; memory[(so+t)&0xFFFF]=regs[fo]; break;
       case OP_DROP:
         condflag=0;
         if(rs=get_statxy(so)) {
@@ -3529,6 +3542,15 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           b_main[u].color=regs[fo]>>8;
           b_main[u].param=regs[fo]>>16;
           condflag=1;
+        }
+        break;
+      case OP_DTAK:
+        if(memory[so&0xFFFF]) {
+          t=memory[so&0xFFFF]--;
+          regs[fo]=memory[(so+t)&0xFFFF];
+          condflag=1;
+        } else {
+          condflag=0;
         }
         break;
       case OP_DYN: do_dynamic_strings(fo,so); break;

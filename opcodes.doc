@@ -921,6 +921,24 @@ numbers are treated as unsigned.
 [0AC OREQ]
   Condition is true if operands are equal, or unchanged if unequal.
 
+[0AD DPUT]
+  Adds the value of first operand on the top of a deck of cards, whose
+  address is specified by the second operand. The format of the deck of
+  cards is the first cell tells how many cards, and then one cell per
+  card, from bottom to top.
+
+[0AE DTAK]
+  If the deck of cards is not empty, takes the top card and stores it in
+  the first operand, and the condition flag is true; the number of cards
+  in the deck will be decremented. If the deck is empty, the condition
+  flag is false and the first operand is unchanged.
+
+[0AF DEAL]
+  Like DTAK but first will select one of the cards at random and exchange
+  that with the top card, before taking the new top card (it is possible
+  that no change will be made, if the selected card is the same as the
+  original top card).
+
 [100 LET]
   Copy second operand to first.
 
