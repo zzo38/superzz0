@@ -47,6 +47,7 @@ OTHERS
      with older versions of Super ZZ Zero; if you have a save game file
      from an older version of Super ZZ Zero, it will not work with this
      version, although the world file will (probably) still work).
+  *  When config.show_status=0 the border is removed.
 
 
 === Version 0.6.0 (2025-06-28) ===

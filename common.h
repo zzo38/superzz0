@@ -51,12 +51,14 @@ extern Uint8 repeating;
 #define VIDEO_80COLUMNS 0x01
 #define VIDEO_MONO 0x04
 #define VIDEO_FLASHY 0x20
+#define VIDEO_EGS 0x40
 #define VIDEO_SMZX 0x80
 
 #define VF_SYSTEM 0x01
 #define VF_FRONT 0x02
 #define VF_WIDE_L 0x04
 #define VF_WIDE_R 0x08
+#define VF_ALTERNATE 0x10
 
 void init_display(void);
 void redisplay(void);
@@ -73,6 +75,7 @@ extern Uint8*font;
 int load_font(const char*name,Uint8 z);
 int load_palette(const char*name,Uint8 z);
 void set_palette_vga(Uint8 k,Uint8 r,Uint8 g,Uint8 b);
+void set_palette_vga_multi(Uint8 k,Uint8 n,const Uint8*r,const Uint8*g,const Uint8*b);
 
 #define LOADFONT_BASE 0
 #define LOADFONT_WIDE 1

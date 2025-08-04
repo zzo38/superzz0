@@ -30,8 +30,8 @@ static unsigned int num_mask,mode_switch_mask;
   0x10-0x1F = Cursor colours
   0x20-0x2F = Border/status
   0x30-0x3F = Custom (normal)
-  0x40-0x7F = Custom (64; not used)
-  0x80-0xFF = Custom (128; not used)
+  0x40-0x7F = Custom (64 colours)
+  0x80-0xFF = Custom (128 colours)
 */
 
 const Uint8 pcfont[3584]={
@@ -526,7 +526,6 @@ static inline void adjust_gamma(SDL_Color*c,int n) {
 }
 
 int load_palette(const char*name,Uint8 z) {
-  //TODO: also support DER-based format (first byte is 0x40)
   PaletteInfo pin;
   Uint8 nlen=0;
   Uint8 which=0;
@@ -607,6 +606,15 @@ void set_palette_vga(Uint8 k,Uint8 r,Uint8 g,Uint8 b) {
   SDL_SetColors(scrn,&c,k,1);
 }
 
+void set_palette_vga_multi(Uint8 k,Uint8 n,const Uint8*r,const Uint8*g,const Uint8*b) {
+  int i;
+  SDL_Color c[256];
+  if(k<0x30) k|=0x30;
+  for(i=0;i<n;i++) c[i]=(SDL_Color){(r[i]*65)>>4,(g[i]*65)>>4,(b[i]*65)>>4};
+  adjust_gamma(c+i,n);
+  SDL_SetColors(scrn,c,k,n);
+}
+
 void load_fontpal_state(const ASN1_Value*v) {
   char name[9];
   ASN1_Value v0,v1;
@@ -651,7 +659,7 @@ void init_display(void) {
   if(scrn) goto clear;
   if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO)) errx(1,"SDL error: %s",SDL_GetError());
   atexit(SDL_Quit);
-  scrn=SDL_SetVideoMode(81*8,(config.show_status?26:25)*14+8,8,SDL_SWSURFACE|(config.full_screen?SDL_FULLSCREEN:0));
+  scrn=SDL_SetVideoMode(config.show_status?648:640,config.show_status?372:350,8,SDL_SWSURFACE|(config.full_screen?SDL_FULLSCREEN:0));
   if(!scrn) errx(1,"SDL error: %s",SDL_GetError());
   if(config.joy_name || config.joy_index>=0) {
     if(SDL_InitSubSystem(SDL_INIT_JOYSTICK)) errx(1,"SDL error: %s",SDL_GetError());
@@ -729,7 +737,7 @@ void redisplay(void) {
   SDL_FillRect(scrn,0,32);
   SDL_LockSurface(scrn);
   r=scrn->pitch;
-  p=scrn->pixels+4*r+4;
+  p=scrn->pixels+(config.show_status?4*r+4:0);
   if(v_mode&VIDEO_80COLUMNS) {
     for(z=y=0;y<25;y++,z+=80) {
       for(a=0;a<14;a++) {

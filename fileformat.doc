@@ -248,10 +248,9 @@ Stores a palette. The format of this lump depends on the lump size:
     192   VGA 64 colours
     384   VGA 128 colours
 
-If the first byte has either of the two high bits set, then it is DER
-format instead, and may be of any size. (Not currently implemented. This
-will be needed in future in case of having multiple palettes in one file,
-SMZX indices, and/or palette animations.)
+If either of the two high bits of any byte is set then it is not valid. (It
+might be used in future if necessary to make a DER format palette file, in
+case the existing functions are insufficient.)
 
 In the current implementation, more than 16 colours is not meaningful.
 
