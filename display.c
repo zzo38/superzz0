@@ -732,55 +732,95 @@ void init_display(void) {
 
 void redisplay(void) {
   Uint8*p;
-  int a,b,c,r,x,y,z;
+  Uint32 m;
+  int a,b,c,d,r,x,y,z;
   if(!scrn) return;
   SDL_FillRect(scrn,0,32);
   SDL_LockSurface(scrn);
   r=scrn->pitch;
   p=scrn->pixels+(config.show_status?4*r+4:0);
-  if(v_mode&VIDEO_80COLUMNS) {
-    for(z=y=0;y<25;y++,z+=80) {
-      for(a=0;a<14;a++) {
-        for(x=0;x<80;x++) {
-          if(v_font[z+x]&VF_SYSTEM) {
-            c=pcfont[14*v_char[z+x]+a];
-            for(b=0;b<8;b++) p[b+(x<<3)]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
-          } else {
-            if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
-            for(b=0;b<8;b++) p[b+(x<<3)]=(15&(v_color[z+x]>>(c&128?0:4)))+0x30,c<<=1;
+  switch(v_mode) {
+    case 0:
+      for(z=y=0;y<25;y++,z+=80) {
+        for(a=0;a<14;a++) {
+          for(x=0;x<40;x++) {
+            if(v_font[z+x]&VF_SYSTEM) {
+              c=pcfont[14*v_char[z+x]+a];
+              for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+            } else {
+              if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
+              for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=(15&(v_color[z+x]>>(c&128?0:4)))+0x30,c<<=1;
+            }
           }
+          p+=r;
         }
-        p+=r;
       }
-    }
-    if(v_xcur<80 && v_ycur<25) {
-      p=scrn->pixels+(4+14*v_ycur)*r+4+8*v_xcur;
-      for(y=0;y<14;y++) {
-        for(x=0;x<8;x++) p[x]^=((x==0 || x==7 || y==0 | y==13)?16:8);
-        p+=r;
-      }
-    }
-  } else {
-    for(z=y=0;y<25;y++,z+=80) {
-      for(a=0;a<14;a++) {
-        for(x=0;x<40;x++) {
-          if(v_font[z+x]&VF_SYSTEM) {
-            c=pcfont[14*v_char[z+x]+a];
-            for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
-          } else {
-            if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
-            for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=(15&(v_color[z+x]>>(c&128?0:4)))+0x30,c<<=1;
+      break;
+    case VIDEO_80COLUMNS:
+      for(z=y=0;y<25;y++,z+=80) {
+        for(a=0;a<14;a++) {
+          for(x=0;x<80;x++) {
+            if(v_font[z+x]&VF_SYSTEM) {
+              c=pcfont[14*v_char[z+x]+a];
+              for(b=0;b<8;b++) p[b+(x<<3)]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+            } else {
+              if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
+              for(b=0;b<8;b++) p[b+(x<<3)]=(15&(v_color[z+x]>>(c&128?0:4)))+0x30,c<<=1;
+            }
           }
+          p+=r;
         }
-        p+=r;
       }
-    }
-    if(v_xcur<80 && v_ycur<25) {
-      p=scrn->pixels+(4+14*v_ycur)*r+4+16*v_xcur;
-      for(y=0;y<14;y++) {
-        for(x=0;x<16;x++) p[x]^=((x==0 || x==15 || y==0 | y==13)?16:8);
-        p+=r;
+      break;
+    case VIDEO_SMZX:
+      for(z=y=0;y<25;y++,z+=80) {
+        for(a=0;a<14;a++) {
+          for(x=0;x<40;x++) {
+            if(v_font[z+x]&VF_SYSTEM) {
+              c=pcfont[14*v_char[z+x]+a];
+              for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+            } else if(!(a&1)) {
+              if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
+              if(font) d=font[14*v_char[z+x]+a+1]; else d=pcfont[14*v_char[z+x]+a+1];
+              if(!(v_font[z+x]&VF_ALTERNATE)) {
+                m=v_color[z+x]; m|=((m>>4)|(m<<4))<<8; m|=m<<16;
+                for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+1+(x<<4)]=p[b+b+1+r+(x<<4)]=p[b+b+r+(x<<4)]=(m>>(c&128?(d&128?12:8):(d&128?0:4)))|0x80,c<<=1,d<<=1;
+              } else {
+              }
+            }
+          }
+          p+=r;
+        }
       }
+      break;
+    case VIDEO_SMZX+VIDEO_80COLUMNS:
+      for(z=y=0;y<25;y++,z+=80) {
+        for(a=0;a<14;a++) {
+          for(x=0;x<80;x++) {
+            if(v_font[z+x]&VF_SYSTEM) {
+              c=pcfont[14*v_char[z+x]+a];
+              for(b=0;b<8;b++) p[b+(x<<3)]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+            } else {
+              if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
+              if(!(v_font[z+x]&VF_ALTERNATE)) {
+                m=v_color[z+x]; m|=((m>>4)|(m<<4))<<8; m|=m<<16;
+                for(b=0;b<8;b+=2) p[b+(x<<3)]=p[b+1+(x<<3)]=(m>>"\x04\x00\x08\x0C"[(c>>6)&3])|0x80,c<<=2;
+              } else {
+                for(b=0;b<8;b+=2) p[b+(x<<3)]=p[b+1+(x<<3)]=((c>>2)&0x30)|0x40|((v_color[z+x]>>((c>>4)&4))&0x0F),c<<=2;
+              }
+            }
+          }
+          p+=r;
+        }
+      }
+      break;
+  }
+  if(v_xcur<80 && v_ycur<25) {
+    a=(v_mode&VIDEO_80COLUMNS?8:16);
+    p=scrn->pixels+(4+14*v_ycur)*r+4+a*v_xcur;
+    for(y=0;y<14;y++) {
+      for(x=0;x<a;x++) p[x]^=((x==0 || x==7 || y==0 | y==13)?16:8);
+      p+=r;
     }
   }
   if(config.show_status) {

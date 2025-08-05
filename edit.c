@@ -1303,67 +1303,145 @@ static void edit_font(const char*name) {
 static void edit_palette(const char*name) {
   FILE*f=open_lump(name,"r");
   char b[64];
-  Uint8 kind=1; // 1(16),2(64),4(128),8(SMZX),16(Animation)
-  Uint8 red[16];
-  Uint8 grn[16];
-  Uint8 blu[16];
+  Uint8 kind=1; // 1(16),2(64),4(128)
+  Uint8 red[256];
+  Uint8 grn[256];
+  Uint8 blu[256];
   int i,j;
   Uint8 x=0;
   Uint8 y=0;
+  Uint8 page;
+  Uint8 lo=0x00;
+  Uint8 hi=0x0F;
   Uint8 pre=177;
   if(f) {
     if(lump_size) {
       i=fgetc(f); rewind(f);
-      if(lump_size==16 && i<64) {
-        for(i=0;i<16;i++) {
-          j=fgetc(f);
-          red[i]=(j&040?0x15:0)+(j&04?0x2A:0);
-          grn[i]=(j&020?0x15:0)+(j&02?0x2A:0);
-          blu[i]=(j&010?0x15:0)+(j&01?0x2A:0);
-        }
-      } else if(lump_size==48 && i<64) {
-        for(i=0;i<16;i++) red[i]=fgetc(f),grn[i]=fgetc(f),blu[i]=fgetc(f);
-      } else {
-        alert_text("This file uses an unimplemented palette type");
-        fclose(f);
-        return;
+      if(i&~63) goto unknown;
+      switch(lump_size) {
+        case 16: kind=1; lo=0x00; hi=0x0F; goto ega;
+        case 48: kind=1; lo=0x00; hi=0x0F; goto vga;
+        case 64: kind=2; lo=0x40; hi=0x7F; goto ega;
+        case 128: kind=4; lo=0x80; hi=0xFF; goto ega;
+        case 192: kind=2; lo=0x40; hi=0x7F; goto vga;
+        case 384: kind=4; lo=0x80; hi=0xFF; goto vga;
+        ega:
+          for(i=lo;i<=hi;i++) {
+            j=fgetc(f);
+            red[i]=(j&040?0x15:0)+(j&04?0x2A:0);
+            grn[i]=(j&020?0x15:0)+(j&02?0x2A:0);
+            blu[i]=(j&010?0x15:0)+(j&01?0x2A:0);
+          }
+          break;
+        vga:
+          for(i=lo;i<=hi;i++) red[i]=fgetc(f),grn[i]=fgetc(f),blu[i]=fgetc(f);
+          break;
+        unknown:
+          alert_text("This file uses an unimplemented palette type");
+          fclose(f);
+          return;
       }
     }
     fclose(f);
   } else {
-    for(i=0;i<16;i++) red[i]=(i&4?0x2A:0)+(i&8?0x15:0),grn[i]=(i&2?0x2A:0)+(i&8?0x15:0),blu[i]=(i&1?0x2A:0)+(i&8?0x15:0);
+    win_form("New palette") {
+      win_heading("Palette type:");
+      win_option('1',"16 colors",kind,1);
+      win_option('4',"64 colors",kind,2);
+      win_option('8',"128 colors",kind,4);
+      win_blank();
+      win_command('O',"OK") break;
+      win_command_esc(0,"Cancel") return;
+    }
+    lo="\x00\x40\x80"[kind>>1]; hi="\x0F\x7F\xFF"[kind>>1];
+    if(kind==1) for(i=0;i<16;i++) red[i]=(i&4?0x2A:0)+(i&8?0x15:0),grn[i]=(i&2?0x2A:0)+(i&8?0x15:0),blu[i]=(i&1?0x2A:0)+(i&8?0x15:0);
+    if(kind==2) for(i=0x40;i<0x80;i++) {
+      red[i]=(i&040?0x15:0)+(i&04?0x2A:0);
+      grn[i]=(i&020?0x15:0)+(i&02?0x2A:0);
+      blu[i]=(i&010?0x15:0)+(i&01?0x2A:0);
+    }
+    if(kind==4) {
+      memset(red,0,256);
+      memset(grn,0,256);
+      memset(blu,0,256);
+    }
   }
-  for(i=0;i<16;i++) set_palette_vga(i,red[i],grn[i],blu[i]);
-  // Palette editing (currently only 16-colours palette)
+  page=lo;
+  if(kind==1) set_palette_vga_multi(0,16,red,grn,blu); else set_palette_vga_multi(0x40,0xC0,red+0x40,grn+0x40,blu+0x40);
+  // Palette editing
   v_status[1]='p';
+  if(kind==1) {
+    v_mode=VIDEO_80COLUMNS;
+  } else {
+    v_mode=VIDEO_80COLUMNS|VIDEO_SMZX;
+    if(!font) font=malloc(0xE00);
+    if(!font) err(1,"Allocation failed");
+    memset(font+0,0x00,14);
+    memset(font+14,0x55,14);
+    memset(font+28,0xAA,14);
+    memset(font+42,0xFF,14);
+    memcpy(font+176*14,pcfont+176*14,42);
+  }
   draw0:
   memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
   memset(v_color,0x07,80*25);
   memset(v_char,0x20,80*25);
   draw_text(0,0,name,0x0E,-1);
+  draw_text(17,0,kind==1?"(16)":kind==2?"(64)":"(128)",0x06,-1);
   for(i=0;i<16;i++) {
     v_color[i*80+162]=v_color[i*80+163]=v_color[i*80+164]=0x8F;
     v_char[i*80+163]="0123456789ABCDEF"[i];
-    memset(v_color+i*80+165,i*17,5);
-    memset(v_font+i*80+165,VF_FRONT,5);
+    if(kind==1) {
+      memset(v_color+i*80+165,i*17,5);
+      memset(v_font+i*80+165,VF_FRONT,5);
+    } else if(kind==2) {
+      memset(v_char+i*80+165,page/16-4,5);
+      memset(v_color+i*80+165,i*17,5);
+      memset(v_font+i*80+165,VF_FRONT|VF_ALTERNATE,5);
+    } else if(kind==4) {
+      memset(v_char+i*80+165,1,5);
+      memset(v_color+i*80+165,i+page,5);
+      memset(v_font+i*80+165,VF_FRONT,5);
+    }
   }
-  draw_text(60,1,"<\x18\x19> Select Index",7,-1);
-  draw_text(60,2,"<\x1A\x1B> Select Channel",7,-1);
-  draw_text(60,3,"<U> Decrease",7,-1);
-  draw_text(60,4,"<I> Increase",7,-1);
-  draw_text(60,5,"<T> Decrease All",7,-1);
-  draw_text(60,6,"<Y> Increase All",7,-1);
-  draw_text(60,7,"<0-9> Direct Entry",7,-1);
-  draw_text(60,8,"<P> Set Preview",7,-1);
+  draw_text(55,1,"<\x18\x19> Select Index",7,-1);
+  draw_text(55,2,"<\x1A\x1B> Select Channel",7,-1);
+  draw_text(55,3,"<U> Decrease",7,-1);
+  draw_text(55,4,"<I> Increase",7,-1);
+  draw_text(55,5,"<T> Decrease All",7,-1);
+  draw_text(55,6,"<Y> Increase All",7,-1);
+  draw_text(55,7,"<0-9> Direct Entry",7,-1);
+  draw_text(55,8,kind==1?"<P> Set Preview":"<PgUp/PgDn> Page",7,-1);
+  draw_text(55,9,"<C> Copy from",7,-1);
+  draw_text(55,10,"<V> Copy to",7,-1);
+  if(kind==2) {
+    draw_text(4,19,b,0x07,snprintf(b,40,"\xFE Page I%c%c"," IIV"[page/16-4],page==0x60?'I':' '));
+    draw_border(8,24,1,41,6);
+    for(i=0;i<64;i++) {
+      j=(i>>4)*80+(i&15)+185;
+      v_char[j]=(i>>4)&3;
+      v_color[j]=(i&15)*17;
+      v_font[j]=VF_FRONT|VF_ALTERNATE;
+    }
+  } else if(kind==4) {
+    draw_text(4,19,b,0x07,snprintf(b,40,"\xFE Page %c",(page>>4)+0x28));
+    draw_border(8,24,1,41,10);
+    for(i=0;i<128;i++) {
+      j=(i>>4)*80+(i&15)+185;
+      v_char[j]=1;
+      v_color[j]=i+128;
+      v_font[j]=VF_FRONT;
+    }
+  }
   draw1:
   for(i=0;i<16;i++) {
     v_char[i*80+162]=(y==i?'<':32); v_char[i*80+164]=(y==i?'>':32);
-    draw_text(10,i+2,b,0x4C,snprintf(b,64," %02d ",red[i]));
-    draw_text(14,i+2,b,0x2A,snprintf(b,64," %02d ",grn[i]));
-    draw_text(18,i+2,b,0x19,snprintf(b,64," %02d ",blu[i]));
+    draw_text(10,i+2,b,0x4C,snprintf(b,64," %02d ",red[i+page]));
+    draw_text(14,i+2,b,0x2A,snprintf(b,64," %02d ",grn[i+page]));
+    draw_text(18,i+2,b,0x19,snprintf(b,64," %02d ",blu[i+page]));
   }
   v_char[y*80+x*4+170]='<'; v_char[y*80+x*4+173]='>';
-  for(i=0;i<16;i++) {
+  if(kind==1) for(i=0;i<16;i++) {
     v_font[2*i+1760]=v_font[2*i+1761]=v_font[2*i+1840]=v_font[2*i+1841]=VF_FRONT;
     v_color[2*i+1760]=v_color[2*i+1761]=i*16+y; v_color[2*i+1840]=v_color[2*i+1841]=y*16+i;
     v_char[2*i+1760]=v_char[2*i+1761]=v_char[2*i+1840]=v_char[2*i+1841]=pre;
@@ -1376,16 +1454,16 @@ static void edit_palette(const char*name) {
     case SDLK_ESCAPE: goto exit;
     case SDLK_F12: goto draw0;
     case SDLK_BACKSPACE:
-      if(x==0) red[y]/=10;
-      if(x==1) grn[y]/=10;
-      if(x==2) blu[y]/=10;
-      set_palette_vga(y,red[y],grn[y],blu[y]);
+      if(x==0) red[y+page]/=10;
+      if(x==1) grn[y+page]/=10;
+      if(x==2) blu[y+page]/=10;
+      set_palette_vga(y+page,red[y+page],grn[y+page],blu[y+page]);
       break;
     case SDLK_0 ... SDLK_9: numbers:
-      if(x==0) j=red[y]*10+event.key.keysym.sym-SDLK_0,red[y]=j>63?63:j;
-      if(x==1) j=grn[y]*10+event.key.keysym.sym-SDLK_0,grn[y]=j>63?63:j;
-      if(x==2) j=blu[y]*10+event.key.keysym.sym-SDLK_0,blu[y]=j>63?63:j;
-      set_palette_vga(y,red[y],grn[y],blu[y]);
+      if(x==0) j=red[y+page]*10+event.key.keysym.sym-SDLK_0,red[y+page]=j>63?63:j;
+      if(x==1) j=grn[y+page]*10+event.key.keysym.sym-SDLK_0,grn[y+page]=j>63?63:j;
+      if(x==2) j=blu[y+page]*10+event.key.keysym.sym-SDLK_0,blu[y+page]=j>63?63:j;
+      set_palette_vga(y+page,red[y+page],grn[y+page],blu[y+page]);
       break;
     case SDLK_TAB: x=(x+1)%3; break;
     case SDLK_LEFT: case SDLK_h: if(x>0) x--; break;
@@ -1393,30 +1471,34 @@ static void edit_palette(const char*name) {
     case SDLK_UP: case SDLK_k: y=(y-1)&15; break;
     case SDLK_DOWN: case SDLK_j: y=(y+1)&15; break;
     case SDLK_KP_PLUS: case SDLK_i:
-      if(x==0 && red[y]<63) ++red[y];
-      if(x==1 && grn[y]<63) ++grn[y];
-      if(x==2 && blu[y]<63) ++blu[y];
-      set_palette_vga(y,red[y],grn[y],blu[y]);
+      if(x==0 && red[y+page]<63) ++red[y+page];
+      if(x==1 && grn[y+page]<63) ++grn[y+page];
+      if(x==2 && blu[y+page]<63) ++blu[y+page];
+      set_palette_vga(y+page,red[y+page],grn[y+page],blu[y+page]);
       break;
     case SDLK_KP_MINUS: case SDLK_u:
-      if(x==0 && red[y]) --red[y];
-      if(x==1 && grn[y]) --grn[y];
-      if(x==2 && blu[y]) --blu[y];
-      set_palette_vga(y,red[y],grn[y],blu[y]);
+      if(x==0 && red[y+page]) --red[y+page];
+      if(x==1 && grn[y+page]) --grn[y+page];
+      if(x==2 && blu[y+page]) --blu[y+page];
+      set_palette_vga(y+page,red[y+page],grn[y+page],blu[y+page]);
       break;
     case SDLK_y:
-      if(red[y]<63) ++red[y];
-      if(grn[y]<63) ++grn[y];
-      if(blu[y]<63) ++blu[y];
-      set_palette_vga(y,red[y],grn[y],blu[y]);
+      if(red[y+page]<63) ++red[y+page];
+      if(grn[y+page]<63) ++grn[y+page];
+      if(blu[y+page]<63) ++blu[y+page];
+      set_palette_vga(y+page,red[y+page],grn[y+page],blu[y+page]);
       break;
     case SDLK_t:
-      if(red[y]) --red[y];
-      if(grn[y]) --grn[y];
-      if(blu[y]) --blu[y];
-      set_palette_vga(y,red[y],grn[y],blu[y]);
+      if(red[y+page]) --red[y+page];
+      if(grn[y+page]) --grn[y+page];
+      if(blu[y+page]) --blu[y+page];
+      set_palette_vga(y+page,red[y+page],grn[y+page],blu[y+page]);
       break;
-    case SDLK_p: pre=ask_color_char(1,pre); goto draw0;
+    case SDLK_p: if(kind==1) pre=ask_color_char(1,pre); goto draw0;
+    case SDLK_c: red[16]=red[y+page]; grn[16]=grn[y+page]; blu[16]=blu[y+page]; break;
+    case SDLK_v: set_palette_vga(y+page,red[y+page]=red[16],grn[y+page]=grn[16],blu[y+page]=blu[16]); break;
+    case SDLK_PAGEUP: if(kind==2) page=0x40|(page-16)&0x70; else if(kind==4) page=0x80|(page-16); goto draw0;
+    case SDLK_PAGEDOWN: if(kind==2) page=0x40|(page+16)&0x70; else if(kind==4) page=0x80|(page+16); goto draw0;
     default:
       if(event.key.keysym.unicode>='0' && event.key.keysym.unicode<='9') {
         event.key.keysym.sym=event.key.keysym.unicode;
@@ -1430,10 +1512,11 @@ static void edit_palette(const char*name) {
   memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
   v_ycur=127;
   v_status[1]=0;
+  v_mode=VIDEO_80COLUMNS;
   f=open_lump(name,"w");
   if(!f) errx(1,"Unexpected error when opening palette for writing");
-  for(i=j=0;i<16 && !j;i++) j=red[i]%0x15+grn[i]%0x15+blu[i]%0x15;
-  for(i=0;i<16;i++) {
+  for(i=lo,j=0;i<=hi && !j;i++) j=red[i]%0x15+grn[i]%0x15+blu[i]%0x15;
+  for(i=lo;i<=hi;i++) {
     if(j) fputc(red[i],f),fputc(grn[i],f),fputc(blu[i],f); else fputc(+(red[i]&1?040:0)+(grn[i]&1?020:0)+(blu[i]&1?010:0)+(red[i]&2?4:0)+(grn[i]&2?2:0)+(blu[i]&2?1:0),f);
   }
   fclose(f);

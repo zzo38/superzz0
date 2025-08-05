@@ -18,7 +18,15 @@ partial fonts, and are also not compressed.
 Not implemented yet.
 
 :pal;Palette
-Defines a palette.
+Defines a palette. There are three kind of palettes, which are according to
+the number of colours: 16, 64, or 128.
+
+The usual number of colours for a palette is sixteen, which is used in the
+usual text-only video mode; each character cell has one of these sixteen
+colours for the foreground and another for the background.
+
+Palettes with 64 or 128 colours are used for SMZX mode and graphical mode,
+and are not meaningful otherwise.
 
 :glo;Global options
 The graphics global options contains the following settings:

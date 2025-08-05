@@ -252,8 +252,6 @@ If either of the two high bits of any byte is set then it is not valid. (It
 might be used in future if necessary to make a DER format palette file, in
 case the existing functions are insufficient.)
 
-In the current implementation, more than 16 colours is not meaningful.
-
 The format for EGA is each colour has one byte, and the high two bits must
 be clear. The bits are made "00rgbRGB" where the 6-bit output value will
 be bits made "RrRrRr" red, "GgGgGg" green, "BbBbBb" blue.

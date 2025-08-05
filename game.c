@@ -4470,6 +4470,12 @@ static void debug_menu(void) {
       ask_text("Sound effect:",buf,70);
       if(*buf) audio_set_sfx(buf);
     }
+    win_command('i',"Video mode...") {
+      *buf=0;
+      ask_text("Video mode (hex):",buf,2);
+      if(*buf) v_mode=strtol(buf,0,16);
+      break;
+    }
     win_command_esc(0,"Cancel") break;
   }
   repeating=0;
