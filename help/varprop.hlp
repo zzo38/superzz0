@@ -11,6 +11,10 @@ coordinates of the view center. This is only meaningful in boards and not
 in screens, and if it is specified then it will override the default
 handling of centering at the player.
 
+þ Once: The previous variable property only applies once. This is only
+meaningful for boards, and only if it persists; if the board does not
+persist then it will not remember that it had already been done once.
+
 Normally, the variable property list for the screen is applied first, and
 then the variable property list for the board is applied and overrides the
 specifications for the screen. However, for screens used as a text window

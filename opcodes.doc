@@ -408,8 +408,20 @@ numbers are treated as unsigned.
   played; if it is negative then the text buffer is used instead. (See
   script.doc for the format of the music string.)
 
-[04F BGM]
-  (Currently unused.)
+[04F PROP]
+  Working with variable property lists. Some operations will use the
+  variable property register, which is a global state which is not saved
+  with the board or screen definition. Some use a one-based property index
+  of the board variable property list, and some use a zero-based index of
+  a byte of the value of a variable property.
+   A = Add variable property to board (0=append, 1=prepend; J=out index)
+   B = Set type of register, and set value bytes to zero
+   C = Set byte at index K
+   D = Delete variable properties of board (0=all, 1=property J only)
+   E = Execute variable properties (0=register, 1=board, 2=screen)
+   F = Find (low-high byte type range; J=in/out prop. index; K=out type)
+   G = Put text and advance type (-1=use TEXT buffer; K=out type)
+   H = Read from board (J=in prop. index; K=out type)
 
 [050 SEND]
   If the first operand is the stat XY list number (same as for LOCK, PSD),

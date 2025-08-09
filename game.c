@@ -44,6 +44,7 @@ Uint16 global_frameptr;
 DynaString*dynastr;
 Uint8 ndynastr;
 Uint16 start_mode=1;
+VarProperty pvarproperty;
 
 static uint64_t rseed;
 static char soundon;
@@ -3342,6 +3343,79 @@ static void do_spin(Sint32 x,Sint32 y,Uint8 fo,Uint32 so) {
   }
 }
 
+static void do_varproperty_op(Uint8 fo,Sint32 so) {
+  VarPropertyList vp={&pvarproperty,1};
+  Uint16 j=memory[MEM_ARG_J];
+  Uint16 k=memory[MEM_ARG_K];
+  switch(fo) {
+    case 0:
+      if(board_info.varprop.count++==255) errx(1,"Board has too many variable properties");
+      memset(pvarproperty.data+(pvarproperty.type&15),0,15&~pvarproperty.type);
+      board_info.varprop.item=realloc(board_info.varprop.item,board_info.varprop.count*sizeof(VarProperty));
+      if(!board_info.varprop.item) err(1,"Allocation failed");
+      if(so) {
+        memmove(board_info.varprop.item+1,board_info.varprop.item,(board_info.varprop.count-1)*sizeof(VarProperty));
+        board_info.varprop.item[0]=pvarproperty;
+        memory[MEM_ARG_J]=1;
+      } else {
+        board_info.varprop.item[board_info.varprop.count-1]=pvarproperty;
+        memory[MEM_ARG_J]=board_info.varprop.count;
+      }
+      break;
+    case 1: memset(pvarproperty.data,0,15); pvarproperty.type=so; break;
+    case 2: if((k&=15)!=15) pvarproperty.data[k]=so; break;
+    case 3:
+      if(so) {
+        if(!j || j>board_info.varprop.count) break;
+        if(j==1 && board_info.varprop.count==1) goto deleteall;
+        if(board_info.varprop.count!=j) memmove(board_info.varprop.item+j-1,board_info.varprop.item+j,(board_info.varprop.count-j)*sizeof(VarProperty));
+        board_info.varprop.item=realloc(board_info.varprop.item,--board_info.varprop.count*sizeof(VarProperty));
+        if(!board_info.varprop.item) err(1,"Allocation failed");
+      } else {
+        deleteall: board_info.varprop.count=0;
+      }
+      break;
+    case 4:
+      if(!so) {
+        memset(pvarproperty.data+(pvarproperty.type&15),0,15&~pvarproperty.type);
+        if(pvarproperty.type) work_varproperties(&vp);
+      } else if(so==1) {
+        work_varproperties(&board_info.varprop);
+      } else if(so==2) {
+        work_varproperties(&cur_screen.varprop);
+      }
+      break;
+    case 5:
+      for(condflag=0;j<board_info.varprop.count;j++) {
+        if(board_info.varprop.item[j].type>=(so&0xFF) && board_info.varprop.item[j].type<=((so>>8)&0xFF)) {
+          condflag=1;
+          memory[MEM_ARG_J]=j+1;
+          memory[MEM_ARG_K]=board_info.varprop.item[j].type;
+          break;
+        }
+      }
+      break;
+    case 6:
+      k=pvarproperty.type&15;
+      if(so>0 && so<ngtext) {
+        for(j=0;k<15 && gtext[so][j];) pvarproperty.data[k++]=gtext[so][j++];
+      } else if(so<0) {
+        for(j=0;k<15 && j<ntextbuf;) pvarproperty.data[k++]=textbuf[j++];
+      }
+      memory[MEM_ARG_K]=pvarproperty.type;
+      break;
+    case 7:
+      if(j && j<=board_info.varprop.count) {
+        condflag=1;
+        pvarproperty=board_info.varprop.item[j-1];
+        memory[MEM_ARG_K]=pvarproperty.type;
+      } else {
+        condflag=0;
+      }
+      break;
+  }
+}
+
 static void do_overlay_memory(Uint8 fo,Sint32 so) {
   char buf[32];
   FILE*f;
@@ -3836,6 +3910,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PM3: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc3=regs[fo];
       case OP_PMOD: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].mode=regs[fo];
       case OP_POKE: memory[so&0xFFFF]=regs[fo]; break;
+      case OP_PROP: do_varproperty_op(fo,so); break;
       case OP_PSD: if(rs=get_statxy(so)) rs->delay=regs[fo]; break;
       case OP_PSEN:
         if(rs=get_statxy(so)) {

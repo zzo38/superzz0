@@ -311,6 +311,7 @@ static void discard_unused_lumps(void) {
 }
 
 void save_state(void) {
+  Uint8 m[32];
   ASN1_Encoder*enc;
   FILE*fp;
   Uint32 u,v;
@@ -354,6 +355,8 @@ void save_state(void) {
       asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
     }
     save_fontpal_state(enc);
+    *m=pvarproperty.type; memcpy(m+1,pvarproperty.data,15);
+    asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,m,16);
   asn1_end(enc);
   asn1_finish_encoder(enc);
   fclose(fp);
@@ -435,6 +438,11 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
   // Further items might not be present in a older file, so do not error if they are missing.
   if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j) goto bad;
   load_fontpal_state(&v1);
+  if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j) goto bad;
+  if(v1.class || v1.type!=ASN1_NULL) {
+    if(v1.class || v1.type!=ASN1_OCTET_STRING || v1.length!=16) goto bad;
+    pvarproperty.type=v1.data[0]; memcpy(pvarproperty.data,v1.data+1,15);
+  }
   // End
   done: asn1_free(&v0);
 }

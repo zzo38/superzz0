@@ -919,10 +919,18 @@ const char*load_window(FILE*fp,WindowInfo*wind) {
   return 0;
 }
 
-void work_varproperties(const VarPropertyList*vp) {
+void work_varproperties(VarPropertyList*vp) {
   int i;
   VarProperty*p;
   for(i=0;i<vp->count;i++) switch((p=vp->item+i)->type) {
+    case 0x00:
+      if(i && !editor && vp->count>1) {
+        --i;
+        if(i+2<vp->count) memmove(vp->item+i,vp->item+i+2,(vp->count-i-2)*sizeof(VarProperty));
+        --i;
+        vp->count-=2;
+      }
+      break;
     case 0x04:
       if(!editor) {
         scroll_x=(p->data[0]|(p->data[1]<<8))-cur_screen.view_x;

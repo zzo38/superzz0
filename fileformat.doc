@@ -79,6 +79,8 @@ and then each variable property consists of one type byte and then the
 data; the length of the data is equal to the low nybble of the type byte.
 The possible types are:
 
+* 0x00 = The previous variable property only applies once.
+
 * 0x04 = Set scroll position; the data is two unsigned 16-bit numbers,
 first the X scroll and then the Y scroll, of the board coordinates that
 will be placed at the view center.

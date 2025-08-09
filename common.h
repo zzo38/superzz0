@@ -270,7 +270,7 @@ typedef struct VarPropertyList {
   Uint8 count;
 } VarPropertyList;
 
-void work_varproperties(const VarPropertyList*vp);
+void work_varproperties(VarPropertyList*vp);
 
 // === Board/stats ===
 
@@ -620,6 +620,7 @@ typedef struct {
 
 extern DynaString*dynastr;
 extern Uint8 ndynastr;
+extern VarProperty pvarproperty;
 
 // === File access (Hamster archives) ===
 
