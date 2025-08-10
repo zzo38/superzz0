@@ -854,6 +854,15 @@ void set_timer(Uint32 x) {
   if(x) SDL_SetTimer(x,timer_callback);
 }
 
+void stop_key_repeat(void) {
+  SDL_EnableKeyRepeat(config.key_repeat_delay,config.key_repeat_interval);
+  repeating=rscancode=0;
+}
+
+void set_input_codepage() {
+  
+}
+
 Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
   while(n-- && *t && x<80 && y<25) {
     v_color[y*80+x]=c;

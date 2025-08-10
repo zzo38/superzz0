@@ -873,6 +873,10 @@ numbers are treated as unsigned.
    bit19 = Do not move on nonzero elements.
   Sensors are always moved together with whatever is standing on it.
 
+[09F KEYB]
+  Functions relating to keyboard. Currently, this is only used to stop the
+  keyboard repeating; the first operand must be A and the second must be 0.
+
 [0A0 LETL]
   Like LET but saves the old value of the register; once this subroutine
   returns then the old value is restored. (Note that each use of LETL,

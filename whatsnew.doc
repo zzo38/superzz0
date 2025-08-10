@@ -39,6 +39,9 @@ ASSEMBLY
   +  Control flags to save/restore the board state in a separate lump.
   +  Deck of cards working, using instructions DPUT, DTAK, DEAL.
   +  PROP dealing with a variable property list.
+  +  You can cancel an existing key repeat by "KEYB A,0". (This might be
+     useful if you do not want movement or other commands to continue if
+     the screen changes to a different board or screen.)
   -  Remove EAP0 and EAP1.
 
 TEMPLATE

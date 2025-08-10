@@ -3749,6 +3749,10 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_JPOS: if(regs[fo]>=0) goto jump; break;
       case OP_JT: if(condflag) goto jump; break;
       case OP_JZ: if(!regs[fo]) goto jump; break;
+      case OP_KEYB:
+        if(fo || so) errx(1,"Improper KEYB instruction at $%X",pc-1);
+        stop_key_repeat();
+        break;
       case OP_KILM: if((t=convxy(so,x,y))!=-1) break_tile(t,2,0,0,fo&4); goto died;
       case OP_KILO: if((t=convxy(so,x,y))!=-1) break_tile(t,3,0,0,fo&4); goto died;
       case OP_KILU: if((t=convxy(so,x,y))!=-1) break_tile(t,1,0,0,fo&4); goto died;

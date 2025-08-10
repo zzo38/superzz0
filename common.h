@@ -66,6 +66,7 @@ void display_title(const char*);
 void set_timer(Uint32);
 Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n);
 int next_event(void);
+void stop_key_repeat(void);
 
 // === Fonts/palettes ===
 
