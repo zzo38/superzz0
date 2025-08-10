@@ -1957,6 +1957,18 @@ static char script_go(Uint16 m,Uint16 n,Stat*s,StatXY*xy,Uint8 dir) {
   return condflag;
 }
 
+static inline char check_blocked_at(Uint32 x,Uint32 y) {
+  if(x>=board_info.width || y>=board_info.height) return 1;
+  if(elem_def[b_main[y*board_info.width+x].kind].attrib&A_FLOOR) return 0;
+  return 1;
+}
+
+static inline char check_pushable_at(Uint32 x,Uint32 y,Uint32 a) {
+  if(x>=board_info.width || y>=board_info.height) return 0;
+  if(elem_def[b_main[y*board_info.width+x].kind].attrib&a) return 1;
+  return 0;
+}
+
 static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
   char buf[10];
   Uint8 adj=0;
@@ -2024,6 +2036,16 @@ static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
         return (condflag=1),((adj+dice(2))&3);
       } else if(n==1 || (n==5 && !memcmp(buf+4,"IGHT",4))) {
         return (condflag=1),((adj+xy->layer/4+3)&3);
+      } else if(n==4 && !memcmp(buf+1,"NDB",4)) {
+        blocked:
+        condflag=1; c=0; n-=4;
+        if(check_blocked_at(xy->x-1,xy->y)!=n) buf[c++]=DIR_W;
+        if(check_blocked_at(xy->x+1,xy->y)!=n) buf[c++]=DIR_E;
+        if(check_blocked_at(xy->x,xy->y-1)!=n) buf[c++]=DIR_N;
+        if(check_blocked_at(xy->x,xy->y+1)!=n) buf[c++]=DIR_S;
+        return c?(adj+buf[dice(c)])&3:-1;
+      } else if(n==5 && !memcmp(buf+1,"NDNB",4)) {
+        goto blocked;
       }
       goto bad;
     case 'S':
@@ -2375,18 +2397,6 @@ static Uint32 count_script_kind(Uint8 lay,const ScriptKind*sk) {
   Uint32 c=board_info.width*board_info.height;
   for(a=n=0;a<c;a++) n+=match_script_kind(a,lay,sk);
   return n;
-}
-
-static inline char check_blocked_at(Uint32 x,Uint32 y) {
-  if(x>=board_info.width || y>=board_info.height) return 1;
-  if(elem_def[b_main[y*board_info.width+x].kind].attrib&A_FLOOR) return 0;
-  return 1;
-}
-
-static inline char check_pushable_at(Uint32 x,Uint32 y,Uint32 a) {
-  if(x>=board_info.width || y>=board_info.height) return 0;
-  if(elem_def[b_main[y*board_info.width+x].kind].attrib&a) return 1;
-  return 0;
 }
 
 static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {

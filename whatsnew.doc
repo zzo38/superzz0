@@ -28,6 +28,7 @@ SCRIPTS
   +  The #NOSCROLL flag can be used to disable scrolling (this modifies a
      control flag).
   +  Load fonts/palettes by #LOADFONT and #LOADPAL command.
+  +  RNDB and RNDNB directions.
 
 ASSEMBLY
   +  The $C6 memory cell now stores the address of the next instruction if
