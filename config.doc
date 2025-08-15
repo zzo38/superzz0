@@ -156,6 +156,12 @@ message_scrollback
 message_timer
   Time limit for single-line text messages, in frames.
 
+override_option
+  Set to 1 to allow the options in the world file to override those in the
+  configuration file and command-line arguments, or 0 to ignore override
+  options in the world file. This only applies for world files that specify
+  the options to be overridden.
+
 overwrite_stats
   Set to 1 to allow overwriting stats by space or draw mode in the editor.
 

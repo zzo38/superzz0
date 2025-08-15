@@ -1,0 +1,27 @@
+@Default settings override
+This menu allows the world to override some of the settings specified in the
+user configuration file. The user configuration file can contain a option to
+prevent the default setting override from working, so it is not guaranteed
+to use the override settings specified in the world file.
+
+For each setting, you can specify whether or not the world can override the
+setting in the user configuration file.
+
+þ Speed: The normal game speed in milliseconds per frame. If the game is not
+paused, then this will be the normal frame duration for the game.
+
+þ Fast speed: The fast game speed in milliseconds per frame. This is only
+used if F12 is pushed during the game.
+
+þ Message timer: The number of frames during which the single-line text
+message is displayed.
+
+þ Menu position: The position of the F1 menu. The X position can be 0 to 39
+and the Y position can be 0 to 8. (The X position is not used if the video
+mode is forty columns.)
+
+þ Game key repeat: Defines the behaviour when holding down a key during the
+game play. If set to 0 then the normal key repeat delay and interval
+applies. If set to 1 then the normal delay applies but the repeat interval
+will use the game speed instead of the keyboard speed. If set to 2 then
+it will start repeating using the game speed immediately with no delay.

@@ -9,7 +9,7 @@ exit
 Uint8**screennames;
 Uint16 maxscreen;
 
-#define N_GENERAL_PARTS 2
+#define N_GENERAL_PARTS 3
 static ASN1_Value general_der;
 static ASN1_Value*general_parts;
 static Uint32 n_general_oids;
@@ -920,6 +920,55 @@ static void edit_joystick(void) {
   asn1_finish_encoder(enc);
 }
 
+static void edit_default_setting_override(void) {
+  Uint16 ov=0;
+  if(general_parts[2].class && general_parts[2].length) {
+    ASN1_Value v;
+    if(asn1_first_of(&v,general_parts+2)) goto done; if(v.type==ASN1_INTEGER) ov|=0x01,asn1_decode_number(&v,ASN1_INTEGER,&config.speed);
+    if(asn1_next_of(&v,general_parts+2)) goto done; if(v.type==ASN1_INTEGER) ov|=0x02,asn1_decode_number(&v,ASN1_INTEGER,&config.speed_fast);
+    if(asn1_next_of(&v,general_parts+2)) goto done; if(v.type==ASN1_INTEGER) ov|=0x04,asn1_decode_number(&v,ASN1_INTEGER,&config.message_timer);
+    if(asn1_next_of(&v,general_parts+2)) goto done; if(v.type==ASN1_INTEGER) ov|=0x08,asn1_decode_number(&v,ASN1_INTEGER,&config.menu_x);
+    if(asn1_next_of(&v,general_parts+2)) goto done; if(v.type==ASN1_INTEGER) ov|=0x08,asn1_decode_number(&v,ASN1_INTEGER,&config.menu_y);
+    if(asn1_next_of(&v,general_parts+2)) goto done; if(v.type==ASN1_ENUMERATED) ov|=0x10,asn1_decode_number(&v,ASN1_INTEGER,&config.game_key_repeat);
+  }
+  done:
+  win_form("Default setting override") {
+    win_help("override",0);
+    win_boolean('O',"Override speed",ov,0x01);
+    win_numeric('S',"Speed: ",config.speed,1,65535);
+    win_blank();
+    win_boolean('v',"Override fast speed",ov,0x02);
+    win_numeric('F',"Fast speed: ",config.speed_fast,1,65535);
+    win_blank();
+    win_boolean('i',"Override message timer",ov,0x04);
+    win_numeric('M',"Message timer: ",config.message_timer,1,65535);
+    win_blank();
+    win_boolean('p',"Override menu position",ov,0x08);
+    win_numeric('X',"Menu X: ",config.menu_x,0,39);
+    win_numeric('Y',"Menu Y: ",config.menu_y,0,8);
+    win_blank();
+    win_boolean('k',"Override game key repeat mode",ov,0x10);
+    win_option('0',"0 (Normal)",config.game_key_repeat,0);
+    win_option('1',"1 (Start repeating after delay)",config.game_key_repeat,1);
+    win_option('2',"2 (Start repeating immediately)",config.game_key_repeat,2);
+    win_blank();
+    win_command_esc(0,"Done") break;
+  }
+  asn1_free(general_parts+2);
+  general_parts[2].class=0;
+  if(ov) {
+    ASN1_Encoder*enc=asn1_start_encoding_constructed_value(general_parts+2,ASN1_CONTEXT_SPECIFIC,2,0);
+    if(!enc) err(1,"Allocation failed");
+    if(ov&0x01) asn1_encode_integer(enc,config.speed); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    if(ov&0x02) asn1_encode_integer(enc,config.speed_fast); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    if(ov&0x04) asn1_encode_integer(enc,config.message_timer); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    if(ov&0x08) asn1_encode_integer(enc,config.menu_x); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    if(ov&0x08) asn1_encode_integer(enc,config.menu_y); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    if(ov&0x10) asn1_implicit(enc,ASN1_UNIVERSAL,ASN1_ENUMERATED),asn1_encode_integer(enc,config.game_key_repeat); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    asn1_finish_encoder(enc);
+  }
+}
+
 static void oid_sets_callback(Uint16 n,int y,void*f) {
   char b[78];
   int c=general_oids[n].class;
@@ -1811,6 +1860,7 @@ int run_editor(void) {
         win_boolean('p',"Auto pause",start_mode,0x0001);
         win_boolean('4',"40 columns",start_mode,0x0002);
         win_command('J',"Joystick configuration...") edit_joystick();
+        win_command('D',"Default setting override...") edit_default_setting_override();
         win_command('.',"Advanced...") {
           win_form("Advanced editor") {
             win_help("editadv",0);

@@ -5,12 +5,26 @@ $บ  Super ZZ Zero  บ
 $บ                 บ
 $ศอออออออออออออออออผ
 
+!-editadv;Advanced editor
 !-anima;Animations
+!-appmap;Appearance mapping
+!-editbrd;Board editor
+!-binfo;Board info
 !-blist;Board list
 !-debug;Debugging
+!-override;Default settings override
 !-edit;Editor
+!-element;Elements
 !-game;Game play
+!-editgr;Graphics editing
+!-edithelp;Help lump editor
+!-editjoy;Joystick configuration editor
 !-numform;Numeric formats
+!-editscr;Screen editor
+!-screen;Screen elements
+!-sclib;Script library
 !-slist;Screen list
 !-stvar;Status variables
-
+!-edittext;Text editor
+!-varprop;Variable property lists
+!-editwin;Window editor

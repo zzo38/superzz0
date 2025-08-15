@@ -624,6 +624,13 @@ being the font name and the second being the palette name, in both cases
 without the suffix (.CHR, .FNT, or .PAL). Either one may be null to use
 the built-in font/palette.
 
+* 2 = Override option. This overrides some of the settings in the user
+configuration file if the user configuration file allows its settings to
+be overridden by the world file. Each item is a integer (to override it)
+or null (to not override it), and if there are not enough then the rest
+are assumed to be null. In order, they correspond to: speed, speed_fast,
+message_timer, menu_x, menu_y, game_key_repeat (enumerated).
+
 The octet strings in the joystick mappings are made as a sequence of the
 mappings for levels 0 to 15; there can be less than sixteen mappings in
 which case the rest are null. Each byte will be one of:

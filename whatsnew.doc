@@ -21,6 +21,8 @@ GAME
   +  An indicator type for if the board user data is nonzero.
   +  Can set initial font, palette, and/or scroll position per board and
      per screen.
+  +  Some of the settings in the user configuration file can be overridden
+     by the game world (unless disallowed by the user configuration file).
 
 SCRIPTS
   +  The #NOSAVE flag can be used to disable saving (this modifies a

@@ -46,6 +46,12 @@ columns then only the first 40 columns of the screen are used and the other
 commands within the game world.
 !-editjoy;Joystick configuration editor
 
+þ Default setting override: Allows overriding the settings specified in the
+user configuration file. The user configuration file can contain a option to
+prevent the default setting override from working, so it is not guaranteed
+to use the override settings specified in the world file.
+!-override;Default setting override editor
+
 þ Advanced: Advanced functions which you might not need, such as editing
 mandatory and optional OID sets directly.
 !-editadv;Advanced editor

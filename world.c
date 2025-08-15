@@ -72,6 +72,21 @@ static int do_joystick_config(const ASN1_Value*v) {
   return q!=ASN1_DONE;
 }
 
+#define X(aa) if(v1.constructed || v1.class || (v1.type!=ASN1_NULL && v1.type!=ASN1_INTEGER) || (v1.type==ASN1_INTEGER && asn1_decode_number(&v1,ASN1_INTEGER,&config.aa))) return 1;
+#define Y(aa) if(v1.constructed || v1.class || (v1.type!=ASN1_NULL && v1.type!=ASN1_ENUMERATED) || (v1.type==ASN1_ENUMERATED && asn1_decode_number(&v1,ASN1_INTEGER,&config.aa))) return 1;
+static int do_override_option(const ASN1_Value*v0) {
+  ASN1_Value v1;
+  if(asn1_first_of(&v1,v0)) return 0; X(speed)
+  if(asn1_next_of(&v1,v0)) return 0; X(speed_fast)
+  if(asn1_next_of(&v1,v0)) return 0; X(message_timer)
+  if(asn1_next_of(&v1,v0)) return 0; X(menu_x)
+  if(asn1_next_of(&v1,v0)) return 0; X(menu_y)
+  if(asn1_next_of(&v1,v0)) return 0; Y(game_key_repeat)
+  return 0;
+}
+#undef X
+#undef Y
+
 static int do_font_palette(const ASN1_Value*v) {
   char m[12];
   ASN1_Value a;
@@ -216,6 +231,9 @@ const char*init_world(void) {
         break;
       case 1: // Font/palette
         if(do_font_palette(&a2) && !editor) return "World specification of font/palette is incorrect";
+        break;
+      case 2: // Override option
+        if(!editor && config.override_option && do_override_option(&a2)) return "Override option is incorrect";
         break;
     }
     // Done
