@@ -33,6 +33,11 @@ to a S operand (causing returning from the subroutine). The address which
 is stored is of the instruction that would be executed next if the branch
 or return did not occur.
 
+$C7 = Address of the board creation info structure, which is used when
+warping to a non-existing board. See the below section for details of the
+format of this structure. If this address is zero, then it is an error to
+warp to a non-existing board.
+
 $C8 = Transport event (see below).
 
 $C9 = The default overlay, which is used when objects within the overlay
@@ -349,4 +354,54 @@ EV_SENSOR (4)
   the bit15-bit8 are the element number of the object being moved, and the
   bit0 is set if it is moving from one sensor to another sensor, and bit1
   is set if DROP is used, and bit2 is not currently meaningful.
+
+
+=== Board creation info structure ===
+
+The first cell of this structure has the low 8-bits indicating how many
+more cells follow and the high 8-bits are the following flags:
+
+* bit15 = Save the board after the subroutine returns if set. It will
+not save it (only saving it if later warping away from the board when
+it persists) if this bit is clear.
+
+* bit14 = Copy variable properties from previous board if set. Delete
+all variable properties if this bit is clear.
+
+* bit13 = Copy user data from previous board if set. (If clear, then it
+will be set to zero, instead.)
+
+* bit12 = Set this bit to preserve all instances of independent stats
+which are being copied from the previous board.
+
+The further fields are (the default value is zero for all of them):
+
+* 1 = The board width. If zero, then it is the same as the previous board.
+
+* 2 = The board height. If zero, then same as the previous board.
+
+* 3 = Number of stats to copy from the previous board.
+
+* 4 = Screen number for the new board.
+
+* 5 = Board flags for the new board.
+
+* 6 = Overlay fill: The low byte means character and high byte means
+colour. If this is zero then the overlay will be transparent, but if
+nonzero then it will be visible.
+
+* 7 = Main fill: The main layer fill, where the low byte is the kind
+and the high byte is the colour. The parameter will always be zero.
+
+After all of the fields of the structure, will be the beginning of a
+subroutine which will be executed, after entering the new board but
+before the warp subroutine is called, and also before handling the
+initial scroll position, variable properties, switching the screen,
+and loading the global script. Changes made during this subroutine
+may affect the handling of this (although it will not affect which
+warp subroutine is called, but it can affect its arguments).
+
+The subroutine call will have the registers set as follows: W is the
+previously selected board number, and X,Y,Z are zero. The return value
+should be zero (but is ignored in the current version).
 

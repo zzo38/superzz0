@@ -707,6 +707,10 @@ numbers are treated as unsigned.
   null then it is not skipped past but otherwise it is skipped past. The
   condition flag is true if it skipped past or false if it doesn't.
 
+[089 CHEX]
+  Changes a board exit. The low 2-bits second operand specifies the
+  direction, and the first operand has the target board number.
+
 [08A PMOD]
   Sets the mode bits of the stat specified by second operand, to the value
   of the first operand (only the low 8-bits are used). See GMOD for a list

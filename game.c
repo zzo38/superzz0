@@ -221,6 +221,49 @@ static void load_script_library(Stat*s,const Uint8*name) {
   fclose(fp);
 }
 
+static void init_new_board(void) {
+  Uint16 m=memory[MEM_CREATE_BOARD];
+  Uint16 n=memory[m]&0xFF;
+  Uint32 a,i;
+  if((m+n)&~0xFFFF) errx(1,"Create board memory has too many fields");
+  if(maxstat && stats->text==global_text) stats->text=0,stats->length=0;
+  board_info.width=(n<1?0:memory[m+1])?:board_info.width;
+  board_info.height=(n<2?0:memory[m+2])?:board_info.height;
+  if(!board_info.width || !board_info.height) errx(1,"Trying to create a board with improper dimensions");
+  board_info.screen=(n<4?0:memory[m+4]);
+  board_info.flag=(n<5?0:memory[m+5]);
+  for(i=0;i<4;i++) board_info.exits[i]=0;
+  if(!(memory[m]&0x2000)) board_info.userdata=0;
+  free(b_under);
+  b_under=calloc(3*sizeof(Tile),board_info.width*(uint32_t)board_info.height);
+  if(!b_under) err(1,"Allocation failed");
+  b_main=b_under+board_info.height*board_info.width;
+  b_over=b_main+board_info.height*board_info.width;
+  if(n>=6 && (i=memory[m+6])) {
+    for(a=0;a<board_info.width*board_info.height;a++) b_over[a]=(Tile){OVER_VISIBLE,i>>8,i,0};
+  }
+  if(n>=7 && (i=memory[m+7])) {
+    for(a=0;a<board_info.width*board_info.height;a++) b_main[a]=(Tile){i,i>>8,0,0};
+  }
+  a=(n<3?0:memory[m+3]);
+  if(a>maxstat) a=maxstat;
+  for(i=a;i<maxstat;i++) {
+    free(stats[i].text);
+    free(stats[i].xy);
+  }
+  maxstat=a;
+  for(i=0;i<a;i++) if(!((stats[i].mode&STAT_INDEPENDENT) && (memory[m]&0x1000))){
+    free(stats[i].xy);
+    stats[i].xy=0;
+    stats[i].count=0;
+  }
+  if(!(memory[m]&0x4000)) {
+    free(board_info.varprop.item);
+    board_info.varprop.item=0;
+    board_info.varprop.count=0;
+  }
+}
+
 static void warp_to_board(Uint16 b,char m) {
   FILE*fp;
   const char*e;
@@ -258,9 +301,24 @@ static void warp_to_board(Uint16 b,char m) {
     fclose(fp);
   }
   if(cur_board_id!=b || !board_info.width || (!m && !(board_info.flag&BF_PERSIST)) || (memory[MEM_CONTROL]&CONTROL_RESTORE_BOARD)) {
-    if(e=select_board(cur_board_id=b)) errx(1,"Error loading board #%d: %s",b,e);
+    x=cur_board_id;
+    if(e=select_board(cur_board_id=b)) {
+      if(memory[MEM_CREATE_BOARD]) {
+        init_new_board();
+        run_program(memory[MEM_CREATE_BOARD]+(memory[memory[MEM_CREATE_BOARD]]&0xFF),x,0,0,0);
+        if(memory[memory[MEM_CREATE_BOARD]]&0x8000) {
+          fp=open_lump_by_number(cur_board_id,"BRD","w");
+          if(!fp) err(1,"Cannot open %04X.BRD",cur_board_id);
+          if(e=save_board(fp,0)) errx(1,"Error saving board #%d: %s",cur_board_id,e);
+          fclose(fp);
+        }
+        goto created;
+      }
+      errx(1,"Error loading board #%d: %s",b,e);
+    }
   }
   for(x=0;x<maxstat;x++) if(stats[x].text && stats[x].text[0]=='@' && stats[x].text[1]=='!' && stats[x].text!=global_text) load_script_library(stats+x,stats[x].text+2);
+  created:
   if(global_text && maxstat && !stats->text && !(board_info.flag&BF_NO_GLOBAL)) {
     stats->text=global_text;
     stats->length=global_length;
@@ -3551,6 +3609,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_CBT: condflag=(memory[so&0xFFFF]&(1<<fo)?1:0); break;
       case OP_CHA: do_change(1,regs[fo],so); break;
       case OP_CHAX: do_change(2,regs[fo],so); break;
+      case OP_CHEX: board_info.exits[so&3]=regs[fo]; break;
       case OP_CLAM: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=elem_def[b_main[t].kind].attrib&15; else condflag=0; break;
       case OP_CLAU: if((t=convxy(so,x,y))!=-1) condflag=1,regs[fo]=elem_def[b_under[t].kind].attrib&15; else condflag=0; break;
       case OP_CORU:

@@ -541,6 +541,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_JOY_LEVEL 0xC4
 #define MEM_RETURN_EVENT 0xC5
 #define MEM_RETURNED_PC 0xC6
+#define MEM_CREATE_BOARD 0xC7
 #define MEM_TRANSPORT_EVENT 0xC8
 #define MEM_DEFAULT_OVERLAY 0xC9
 #define MEM_GLOBAL_INSTPTR 0xCA

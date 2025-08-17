@@ -390,9 +390,11 @@ void save_state(void) {
   save_game(fp);
   fclose(fp);
   discard_unused_lumps();
+  if(event.type==SDL_KEYDOWN) event.type=SDL_NOEVENT;
   return;
   error: v_status[1]='!'; if(errno) alert_text(strerror(errno)); else alert_text("Error saving game");
   discard_unused_lumps();
+  if(event.type==SDL_KEYDOWN) event.type=SDL_NOEVENT;
 }
 
 static void load_saveder(FILE*fp,char*useglobalscript) {
@@ -552,4 +554,5 @@ void load_state(void) {
   }
   // Finished
   discard_unused_lumps();
+  if(event.type==SDL_KEYDOWN) event.type=SDL_NOEVENT;
 }

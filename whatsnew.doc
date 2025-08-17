@@ -23,6 +23,7 @@ GAME
      per screen.
   +  Some of the settings in the user configuration file can be overridden
      by the game world (unless disallowed by the user configuration file).
+  +  New boards can be created at run time.
 
 SCRIPTS
   +  The #NOSAVE flag can be used to disable saving (this modifies a
@@ -35,12 +36,14 @@ SCRIPTS
 ASSEMBLY
   +  The $C6 memory cell now stores the address of the next instruction if
      a branch or return occurs, as though it did not occur.
+  +  The $C7 memory cell can be used to create new boards at run time.
   +  Control flag to make message line text last forever until overridden.
   +  Control flag to disallow saving the game by F3 and F5 keys.
   +  Some instructions can now use J and K as the first operand.
   +  Control flags to save/restore the board state in a separate lump.
   +  Deck of cards working, using instructions DPUT, DTAK, DEAL.
   +  PROP dealing with a variable property list.
+  +  CHEX to change board exits at run time.
   +  You can cancel an existing key repeat by "KEYB A,0". (This might be
      useful if you do not want movement or other commands to continue if
      the screen changes to a different board or screen.)
@@ -50,6 +53,8 @@ TEMPLATE
   +  "Time:" is no longer displayed unless the board has a time limit.
 
 OTHERS
+  =  Avoid processing the same key event multiple times after restoring
+     a save game file.
   *  The save game format has been changed (and is no longer compatible
      with older versions of Super ZZ Zero; if you have a save game file
      from an older version of Super ZZ Zero, it will not work with this

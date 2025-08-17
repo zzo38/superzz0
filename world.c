@@ -521,6 +521,7 @@ const char*load_board(FILE*fp) {
   StatXY*r;
   int i,j;
   if(ef&0x70C0) return "Unrecognized file format";
+  if(feof(fp)) return "Input past end of file";
   free(b_under);
   b_under=b_main=b_over=0;
   for(i=0;i<maxstat;i++) {
@@ -543,7 +544,7 @@ const char*load_board(FILE*fp) {
     board_info.height=read8(fp)+1;
   }
   if(ef&0x20) board_info.userdata=read16(fp);
-  maxstat=read8(fp)?:1;
+  maxstat=read8(fp);
   // Variable property list
   load_varproperties(fp,ef&0x800,&board_info.varprop);
   // Board grid
@@ -554,6 +555,7 @@ const char*load_board(FILE*fp) {
   b_over=b_main+tc;
   end=b_over+tc;
   // Stats
+  if(!maxstat) goto nostats;
   stats=calloc(maxstat,sizeof(Stat));
   if(!stats) err(1,"Allocation failed");
   for(i=0;i<maxstat;i++) {
@@ -604,6 +606,7 @@ const char*load_board(FILE*fp) {
       stats[i].xy=0;
     }
   }
+  nostats:
   // Stat grid
   if(ef&0x8000) {
     pt=b_under;
