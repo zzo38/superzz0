@@ -109,6 +109,66 @@ static int do_font_palette(const ASN1_Value*v) {
   return 0;
 }
 
+static const char*load_item_definitions(FILE*f) {
+  FILE*of;
+  size_t ofs=0;
+  FILE*nf;
+  size_t nfs=0;
+  Uint32 nfi=1;
+  ASN1_Value v={};
+  ASN1_Value vv={};
+  ASN1_Value v1;
+  ItemDef id;
+  const char*e=0;
+  if(asn1_read(f,&v.constructed,&v.class,&v.type,&v.length,0)) return "ASN.1 error in ITEM.DER";
+  if(!v.constructed || v.type!=ASN1_SEQUENCE || v.class!=ASN1_UNIVERSAL) return "Wrong ASN.1 type in ITEM.DER";
+  of=open_memstream((char**)&itemdefs,&ofs);
+  nf=open_memstream((char**)&itemnames,&nfs);
+  if(!of || !nf) err(1,"Allocation failed");
+  fputc(0,nf);
+  nitemdefs=0;
+  while(!e && !asn1_read_item(f,&vv,0)) {
+    nitemdefs++;
+    id=(ItemDef){.weight=0x7FFFFFFFL,.class=255};
+    if(vv.class==ASN1_UNIVERSAL && vv.type==ASN1_SEQUENCE) {
+      id.weight=0;
+      if(asn1_first_of(&v,&vv)) goto error;
+      if(v.class || (v.type!=ASN1_PC_STRING && v.type!=ASN1_OCTET_STRING) || v.length<1 || v.length>79) goto wrongtype;
+      id.name=nfi; fwrite(v.data,1,v.length,nf); fputc(0,nf); nfi+=v.length+1;
+      if(asn1_next_of(&v,&vv) || v.class || v.type!=ASN1_INTEGER || v.length!=1 || asn1_decode_number(&v,ASN1_INTEGER,&id.class) || (id.class&0x80)) goto error;
+      if(asn1_next_of(&v,&vv) || v.class || v.type!=ASN1_BIT_STRING || v.length<1 || v.length>5) goto error;
+      if(v.length>1) id.flag|=v.data[1]<<000;
+      if(v.length>2) id.flag|=v.data[1]<<010;
+      if(v.length>3) id.flag|=v.data[1]<<020;
+      if(v.length>4) id.flag|=v.data[1]<<030;
+      while(!asn1_next_of(&v,&vv)) if(v.class==ASN1_CONTEXT_SPECIFIC) switch(v.type) {
+        case 0: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id.weight)) goto error; break;
+        case 1:
+          if(asn1_first_of(&v1,&v) || v1.class || (v1.type!=ASN1_PC_STRING && v1.type!=ASN1_OCTET_STRING) || v1.constructed) goto error;
+          if(!v1.length) break;
+          id.script=nfi; fwrite(v1.data,1,v1.length,nf); fputc(0,nf); nfi+=v1.length+1;
+          break;
+        case 2: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id.maxheap)) goto error; break;
+        case 3: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id.element)) goto error; break;
+        case 4:
+          if(asn1_first_of(&v1,&v) || v1.class || (v1.type!=ASN1_PC_STRING && v1.type!=ASN1_OCTET_STRING) || v1.constructed) goto error;
+          if(!v1.length) break;
+          id.desc=nfi; fwrite(v1.data,1,v1.length,nf); fputc(0,nf); nfi+=v1.length+1;
+          break;
+        default: e="Unexpected field in ITEM.DER";
+      }
+    } else if(vv.class!=ASN1_UNIVERSAL || vv.type!=ASN1_NULL) {
+      wrongtype: e="Wrong ASN.1 type in ITEM.DER";
+    }
+    fwrite(&id,1,sizeof(ItemDef),of);
+    if(0) error: e="Error in ITEM.DER";
+    asn1_free(&vv);
+  }
+  fclose(of); fclose(nf);
+  if((nitemdefs && !itemdefs) || !itemnames || nfi!=nfs) err(1,"Allocation failed");
+  return e;
+}
+
 const char*init_world(void) {
   // Returns 0 if OK, error message if error
   int i,j;
@@ -365,6 +425,17 @@ const char*init_world(void) {
     fread(global_text,1,lump_size,fp);
     global_text[lump_size]=0;
     fclose(fp);
+  }
+  // "ITEM.DER"
+  free(itemdefs);
+  free(itemnames);
+  itemdefs=0;
+  nitemdefs=0;
+  itemnames=0;
+  if(!editor && (fp=open_lump("ITEM.DER","r"))) {
+    const char*e=load_item_definitions(fp);
+    fclose(fp);
+    if(e) return e;
   }
   // "DYNASTR"
   free(dynastr);

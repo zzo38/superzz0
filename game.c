@@ -45,6 +45,10 @@ DynaString*dynastr;
 Uint8 ndynastr;
 Uint16 start_mode=1;
 VarProperty pvarproperty;
+Uint8*itemnames;
+ItemDef*itemdefs;
+Uint16 nitemdefs;
+Inventory inventory[8];
 
 static uint64_t rseed;
 static char soundon;

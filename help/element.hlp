@@ -161,3 +161,6 @@ bit of the overlay tile). The appearance is never used.
 241-243: The stat event of these elements is used for independent stats.
 The other events and attributes are not used for this purpose.
 
+255: Some functions that use element numbers will use element 255 as the
+default if no other element is specified. For example, it might be used
+for "non-elemental" things, or whatever other use you have for it.

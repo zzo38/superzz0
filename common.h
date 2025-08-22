@@ -598,6 +598,41 @@ extern Uint8**gtext;
 extern Uint8*vgtext;
 extern Uint16 ngtext;
 
+// === Item/inventory ===
+
+typedef struct {
+  Uint32 flag,maxheap,name,script,desc;
+  Sint32 weight;
+  Uint8 element,class; // (class 255 means this item is not defined)
+} ItemDef;
+
+extern Uint8*itemnames;
+extern ItemDef*itemdefs;
+extern Uint16 nitemdefs;
+
+#define IDF_NO_DISCARD 0x0001
+#define IDF_SINGLE_HEAP 0x0002
+#define IDF_HIDE_QUANTITY 0x0004
+#define IDF_UNIDENTIFIED 0x0008
+
+typedef struct {
+  Uint32 quantity,ext32;
+  Uint16 item,ext16;
+} ItemSlot;
+
+typedef struct {
+  ItemSlot*item;
+  Uint32 maxheap,strength;
+  Uint16 count,flag;
+} Inventory;
+
+extern Inventory inventory[8];
+
+#define INV_IGNORE_MAXHEAP 0x0001
+#define INV_SINGLE_HEAP 0x0002
+#define INV_IGNORE_WEIGHT 0x0004
+#define INV_USERFLAG 0x8000
+
 // === Game state ===
 
 extern Sint32 status_vars[16];

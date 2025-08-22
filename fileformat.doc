@@ -6,6 +6,12 @@ relative to 2.25.196954517921581521497869385664052876310 (which is the
 base OID for Super ZZ Zero). (Some fields are relative to a different OID;
 these are noted explicitly where they occur.)
 
+Some of the lumps that use DER format may use overlong length encoding in
+some circumstances, even though that is not strictly valid DER format. It
+will only encode it that way; when decoding, it will work with either the
+overlong encoding or the correct encoding, so you can use an external
+program to alter the contents of that lump and it will still work.
+
 
 === !SZ0 ===
 
@@ -653,6 +659,53 @@ for a list of the possible command codes.)
 
 An uncompressed global script, which runs on all boards that it is not
 suppressed by. This is optional.
+
+
+=== ITEM.DER ===
+
+Contains item definitions. The format is a sequence of item definitions,
+with one-based indexing, each of which is itself a sequence. Any of them
+may be null instead of a sequence in case that number is not used. The
+fields of the item definition sequence are:
+
+* Item name, which is normally a PC string but may also be a octet string.
+(In future, TRON string and Graphic string might also be accepted.)
+
+* Item class, which is a unsigned 7-bit integer.
+
+* Item flags, which is a bit string. (Unlike as is usual for a ASN.1 bit
+string, this one has the low bit first.) The first 16-bits are for flags
+with a meaning defined by Super ZZ Zero, and the next 16-bits are for
+user-defined flags.
+
+The rest of the fields are optional; they must be in the specified order
+but any ones can be omitted. Each is a implicit typed sequence, with the
+context-specific class and with the specified type number:
+
+* 0 = A signed 32-bit integer which is the weight of the item. If not
+specified, then it will be zero.
+
+* 1 = A PC string or octet string being the script for this item. If not
+specified, then the script is empty.
+
+* 2 = A unsigned 32-bit integer which is the maximum heap size.
+
+* 3 = Element number, which is a unsigned 8-bit integer. If not specified,
+then the element number is 255.
+
+* 4 = Description, which is a PC string or octet string (in future, TRON
+string and Graphic string might also be accepted).
+
+The standard item flags are:
+
+* bit0 = Item cannot be discarded.
+
+* bit1 = Disallow multiple heaps of the same item.
+
+* bit2 = Do not display quantity.
+
+* bit3 = Item is unidentified. This has no inherent meaning, but it is
+possible to change this bit at run time, and it will be saved.
 
 
 === MEMORY ===
