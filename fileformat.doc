@@ -682,7 +682,7 @@ The rest of the fields are optional; they must be in the specified order
 but any ones can be omitted. Each is a implicit typed sequence, with the
 context-specific class and with the specified type number:
 
-* 0 = A signed 32-bit integer which is the weight of the item. If not
+* 0 = A unsigned 32-bit integer which is the weight of the item. If not
 specified, then it will be zero.
 
 * 1 = A PC string or octet string being the script for this item. If not

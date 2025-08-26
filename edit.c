@@ -1626,6 +1626,197 @@ static void graphics_global_options(void) {
   unload_general_der();
 }
 
+static void edit_itemdef(ASN1_Value*v0,int num) {
+  char title[16];
+  char text[16];
+  ASN1_Encoder*e;
+  ASN1_Value v,vv;
+  char name[70]={};
+  char*script=0;
+  char*desc=0;
+  ItemDef d={.element=255,.maxheap=0xFFFFFFFFL};
+  int i;
+  snprintf(title,16,"Item #%d",num);
+  if(v0->class) goto error;
+  if(v0->type==ASN1_NULL) goto empty;
+  if(asn1_first_of(&v,v0) || v.class || (v.type!=ASN1_PC_STRING && v.type!=ASN1_OCTET_STRING) || v.length<1 || v.length>69) goto error;
+  memcpy(name,v.data,v.length);
+  if(asn1_next_of(&v,v0) || v.class || v.type!=ASN1_INTEGER || v.length!=1 || asn1_decode_number(&v,ASN1_INTEGER,&d.class)) goto error;
+  if(asn1_next_of(&v,v0) || v.class || v.type!=ASN1_BIT_STRING || v.length<1 || v.length>5) goto error;
+  if(v.length>1) d.flag|=v.data[1]<<000;
+  if(v.length>2) d.flag|=v.data[2]<<010;
+  if(v.length>3) d.flag|=v.data[3]<<020;
+  if(v.length>4) d.flag|=v.data[4]<<030;
+  while(!asn1_next_of(&v,v0)) {
+    if(v.class!=ASN1_CONTEXT_SPECIFIC) goto error;
+    if(asn1_first_of(&vv,&v)) goto error;
+    switch(v.type) {
+      case 0: if(asn1_decode_number(&vv,ASN1_AUTO,&d.weight)) goto error; break;
+      case 1:
+        if(vv.type!=ASN1_PC_STRING && vv.type!=ASN1_OCTET_STRING) goto error;
+        if(!vv.length) break;
+        if(script || vv.length>0xFFFF) goto error;
+        if(!(script=malloc(vv.length+1))) err(1,"Allocation failed");
+        memcpy(script,vv.data,vv.length); script[vv.length]=0;
+        break;
+      case 2: if(asn1_decode_number(&vv,ASN1_AUTO,&d.maxheap)) goto error; break;
+      case 3: if(asn1_decode_number(&vv,ASN1_AUTO,&d.element)) goto error; break;
+      case 4:
+        if(vv.type!=ASN1_PC_STRING && vv.type!=ASN1_OCTET_STRING) goto error;
+        if(!vv.length) break;
+        if(desc || vv.length>0xFFFF) goto error;
+        if(!(desc=malloc(vv.length+1))) err(1,"Allocation failed");
+        memcpy(desc,vv.data,vv.length); desc[vv.length]=0;
+        break;
+      default: goto error;
+    }
+  }
+  if(0) {
+    error: alert_text("The loaded data is not valid, and will be reset.");
+    d.class=0;
+  }
+  empty: win_form("Item definition edit") {
+    win_help("items","de");
+    win_heading(title);
+    win_text(':',"Name: ",name);
+    win_numeric('C',"Class: ",d.class,0,127);
+    win_command('D',"Description") desc=text_editor(desc);
+    win_numeric('E',"Element: ",d.element,0,255);
+    win_numeric('W',"Weight: ",d.weight,0,0xFFFFFFFFL);
+    win_numeric('x',"Max heap: ",d.maxheap,0,0xFFFFFFFFL);
+    win_command('S',"Script") script=text_editor(script);
+    win_command('f',"Standard flags...") win_form("Item definition edit - Standard flags") {
+      win_help("items","df");
+      win_heading(title);
+      win_boolean('d',"Not discardable",d.flag,IDF_NO_DISCARD);
+      win_boolean('S',"Single heap",d.flag,IDF_SINGLE_HEAP);
+      win_boolean('q',"Hide quantity",d.flag,IDF_HIDE_QUANTITY);
+      win_boolean('i',"Unidentified",d.flag,IDF_UNIDENTIFIED);
+      //win_boolean('d',"",d.flag,);
+      win_blank(); win_command_esc(0,"Done") break;
+    }
+    win_command('u',"Custom flags...") win_form("Item definition edit - Custom flags") {
+      win_heading(title);
+      for(i=0;i<16;i++) {
+        snprintf(text,16,"%c ($%04X0000)",i>9?i+'A'-10:i+'0',1<<i);
+        win_boolean(*text,text,d.flag,0x10000UL<<i);
+      }
+      win_blank(); win_command_esc(0,"Done") break;
+    }
+    win_blank();
+    win_command_esc(0,"Done") {
+      if(!*name) {
+        if(ask_yn("Name is required. Save anyways?",0)) memcpy(name,title,16);
+      }
+      if(*name) break;
+    }
+    win_command('D',"Delete") {
+      if(ask_yn("Delete this item definition?",0)) {
+        v=(ASN1_Value){.type=ASN1_NULL};
+        goto end;
+      }
+    }
+  }
+  e=asn1_start_encoding_constructed_value(&v,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+  if(!e) errx(1,"Unexpected error");
+  asn1_encode_c_string(e,ASN1_PC_STRING,name);
+  asn1_encode_integer(e,d.class);
+  *name=0; name[1]=d.flag>>000; name[2]=d.flag>>010; name[3]=d.flag>>020; name[4]=d.flag>>030;
+  asn1_primitive(e,ASN1_UNIVERSAL,ASN1_BIT_STRING,name,name[4]?5:name[3]?4:name[2]?3:name[1]?2:1);
+  if(d.weight) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,0),asn1_encode_integer(e,d.weight);
+  if(script && *script) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,1),asn1_encode_c_string(e,ASN1_PC_STRING,script);
+  if(d.maxheap!=0xFFFFFFFFL) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,2),asn1_encode_integer(e,d.maxheap);
+  if(d.element!=255) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,3),asn1_encode_integer(e,d.element);
+  if(desc && *desc) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,4),asn1_encode_c_string(e,ASN1_PC_STRING,desc);
+  asn1_finish_encoder(e);
+  end: asn1_free(v0); *v0=v; free(script); free(desc);
+}
+
+static void itemdef_list_callback(Uint16 n,int y,void*uz) {
+  const ASN1_Value*v=uz;
+  ASN1_Value vv;
+  char buf[80];
+  draw_text(1,y,buf,7,snprintf(buf,80,"%5d:",n));
+  v_color[80*y+6]=8;
+  v+=n-1;
+  if(!n || v->type==ASN1_NULL && !v->class) {
+    draw_text(8,y,"<N/A>",6,-1);
+  } else if(v->type==ASN1_SEQUENCE && !v->class) {
+    if(asn1_first_of(&vv,v) || (vv.type!=ASN1_PC_STRING && vv.type!=ASN1_OCTET_STRING) || vv.class) goto bad;
+    draw_text(8,y,vv.data,15,vv.length);
+  } else {
+    bad: draw_text(8,y,"<Invalid record>",4,-1);
+  }
+}
+
+static void edit_items_inventory(void) {
+  win_form("Items/inventory edit") {
+    win_help("items",0);
+    win_command('d',"Item definitions") {
+      ASN1_Encoder*e;
+      ASN1_Value*items=0;
+      ASN1_Value root={};
+      ASN1_Value v={};
+      size_t s=0;
+      FILE*fp=open_lump("ITEM.DER","r");
+      int n;
+      int ni=0;
+      if(fp) {
+        if(lump_size && asn1_read_item(fp,&root,0)) {
+          alert_text("ITEM.DER may be corrupted");
+          asn1_free(&root);
+          root.type=0;
+        }
+        fclose(fp);
+        if(lump_size) {
+          fp=open_memstream((char**)&items,&s);
+          if(!fp) err(1,"Cannot open memstream");
+          if(!asn1_first_of(&v,&root)) do {
+            fwrite(&v,1,sizeof(ASN1_Value),fp);
+            ++ni;
+          } while(ni<0xFFFF && !asn1_next_of(&v,&root));
+          fclose(fp);
+          if(ni && !items) err(1,"Unexpected error");
+        }
+      }
+      win_form("Item definitions") {
+        win_help("items","dl");
+        win_list(ni+1,items,itemdef_list_callback,n) if(n) edit_itemdef(items+n-1,n);
+        win_blank();
+        if(ni<0xFFFF) win_command('A',"Add new item definition...") {
+          if(!(items=realloc(items,++ni*sizeof(ItemDef)))) err(1,"Allocation failed");
+          items[ni-1]=(ASN1_Value){.type=ASN1_NULL};
+          edit_itemdef(items+ni-1,ni);
+        }
+        win_blank();
+        win_command_esc(0,"Done") break;
+      }
+      while(ni && items[ni-1].type==ASN1_NULL) --ni;
+      fp=open_lump("ITEM.DER","w");
+      if(!fp) err(1,"Cannot open memstream");
+      if(ni) {
+        fwrite("\x30\x84\x00\x00\x00",1,6,fp);
+        if(!(e=asn1_create_encoder(fp))) err(1,"Unexpected error");
+        for(n=0;n<ni;n++) asn1_encode(e,items+n);
+        asn1_finish_encoder(e);
+        s=ftell(fp)-6;
+        fseek(fp,2,SEEK_SET);
+        fputc(s>>030,fp); fputc(s>>020,fp); fputc(s>>010,fp); fputc(s>>000,fp);
+        fseek(fp,s+6,SEEK_SET);
+      }
+      fclose(fp);
+      for(n=0;n<ni;n++) asn1_free(items+n);
+      asn1_free(&root);
+      free(items);
+    }
+    win_command('v',"Starting inventory") {
+      //TODO
+    }
+    win_blank();
+    win_command_esc(0,"Done") break;
+  }
+}
+
 int run_editor(void) {
   int i,n,lo,hi;
   char c,b;
@@ -1759,41 +1950,41 @@ int run_editor(void) {
             win_command_esc(0,"Cancel") break;
           }
         }
-        win_command_esc(0,"Done") break;
-      }
-      if(c) write_element_lump();
-    }
-    win_command('p',"Appearance mapping...") {
-      if(edit_appearance_mapping()) write_element_lump();
-      win_refresh();
-    }
-    win_command('i',"Animations...") {
-      n=i=c=0;
-      win_form("Animations") {
-        win_help("anima",0);
-        win_numeric('m',"Animation edit: ",n,0,3) win_refresh();
-        win_blank();
-        win_numeric('S',"Step I:   ",animation[n].step[0],0,127) win_refresh(),c=1;
-        win_numeric('t',"Step II:  ",animation[n].step[1],0,127) win_refresh(),c=1;
-        win_numeric('e',"Step III: ",animation[n].step[2],0,127) win_refresh(),c=1;
-        win_numeric('p',"Step IV:  ",animation[n].step[3],0,127) win_refresh(),c=1;
-        win_boolean('X',"X1",animation[n].mode,AM_X1) win_refresh(),c=1;
-        win_boolean('2',"X2",animation[n].mode,AM_X2) win_refresh(),c=1;
-        win_boolean('1',"Y1",animation[n].mode,AM_Y1) win_refresh(),c=1;
-        win_boolean('Y',"Y2",animation[n].mode,AM_Y2) win_refresh(),c=1;
-        win_boolean('W',"SLOW",animation[n].mode,AM_SLOW) c=1;
-        win_blank();
-        win_numeric('v',"Preview from: ",i,0,127) win_refresh();
-        win_picture(6) {
-          for(lo=1;lo<12;lo++) for(hi=0;hi<6;hi++) {
-            v_color[hi*80+lo]=v_color[hi*80+lo+20]=v_color[hi*80+lo+40]=v_color[hi*80+lo+60]=7;
-            v_char[hi*80+lo]=appearance_mapping[(animation[n].step[(lo*(animation[n].mode&3)+hi*((animation[n].mode>>2)&3))&3]+i)&127];
-            v_char[hi*80+lo+20]=appearance_mapping[(animation[n].step[(lo*(animation[n].mode&3)+hi*((animation[n].mode>>2)&3)+1)&3]+i)&127];
-            v_char[hi*80+lo+40]=appearance_mapping[(animation[n].step[(lo*(animation[n].mode&3)+hi*((animation[n].mode>>2)&3)+2)&3]+i)&127];
-            v_char[hi*80+lo+60]=appearance_mapping[(animation[n].step[(lo*(animation[n].mode&3)+hi*((animation[n].mode>>2)&3)+3)&3]+i)&127];
-          }
+        win_command('p',"Appearance mapping...") {
+          if(edit_appearance_mapping()) c=1;
+          win_refresh();
         }
-        win_blank();
+        win_command('i',"Animations...") {
+          n=i=c=0;
+          win_form("Animations") {
+            win_help("anima",0);
+            win_numeric('m',"Animation edit: ",n,0,3) win_refresh();
+            win_blank();
+            win_numeric('S',"Step I:   ",animation[n].step[0],0,127) win_refresh(),c=1;
+            win_numeric('t',"Step II:  ",animation[n].step[1],0,127) win_refresh(),c=1;
+            win_numeric('e',"Step III: ",animation[n].step[2],0,127) win_refresh(),c=1;
+            win_numeric('p',"Step IV:  ",animation[n].step[3],0,127) win_refresh(),c=1;
+            win_boolean('X',"X1",animation[n].mode,AM_X1) win_refresh(),c=1;
+            win_boolean('2',"X2",animation[n].mode,AM_X2) win_refresh(),c=1;
+            win_boolean('1',"Y1",animation[n].mode,AM_Y1) win_refresh(),c=1;
+            win_boolean('Y',"Y2",animation[n].mode,AM_Y2) win_refresh(),c=1;
+            win_boolean('W',"SLOW",animation[n].mode,AM_SLOW) c=1;
+            win_blank();
+            win_numeric('v',"Preview from: ",i,0,127) win_refresh();
+            win_picture(6) {
+              for(lo=1;lo<12;lo++) for(hi=0;hi<6;hi++) {
+                v_color[hi*80+lo]=v_color[hi*80+lo+20]=v_color[hi*80+lo+40]=v_color[hi*80+lo+60]=7;
+                v_char[hi*80+lo]=appearance_mapping[(animation[n].step[(lo*(animation[n].mode&3)+hi*((animation[n].mode>>2)&3))&3]+i)&127];
+                v_char[hi*80+lo+20]=appearance_mapping[(animation[n].step[(lo*(animation[n].mode&3)+hi*((animation[n].mode>>2)&3)+1)&3]+i)&127];
+                v_char[hi*80+lo+40]=appearance_mapping[(animation[n].step[(lo*(animation[n].mode&3)+hi*((animation[n].mode>>2)&3)+2)&3]+i)&127];
+                v_char[hi*80+lo+60]=appearance_mapping[(animation[n].step[(lo*(animation[n].mode&3)+hi*((animation[n].mode>>2)&3)+3)&3]+i)&127];
+              }
+            }
+            win_blank();
+            win_command_esc(0,"Done") break;
+          }
+          if(c) write_element_lump();
+        }
         win_command_esc(0,"Done") break;
       }
       if(c) write_element_lump();
@@ -1852,6 +2043,7 @@ int run_editor(void) {
         win_command_esc(0,"Go back") break;
       }
     }
+    win_command('I',"Items/inventory...") edit_items_inventory();
     win_command('.',"More...") {
       load_general_der();
       start_mode^=0x0001;

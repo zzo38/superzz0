@@ -1,0 +1,62 @@
+@Items/inventory
+The items/inventory editor menu allows editing two things, which are the
+item definitions and the inventory lists.
+
+:dl;Item definition list
+On this screen, you can select an item definition to edit. You can also add
+a new item definition. Item definition 0 cannot be edited, since 0 means the
+lack of an item.
+
+:de;Item definition editor
+You can edit the following parameters:
+
+þ Name: The visible name of the item. This name can be used for display
+during the game and can also be used to refer to this item in scripts. The
+name cannot be empty.
+
+þ Class: The class number of the item, from 0 to 127. You can define your
+own item classes and can use them to group items by classes.
+
+þ Description: A description of the item, which is only used for display,
+if you have defined a part of the item window to display descriptions or
+if descriptions are displayed separately. The description is not required.
+
+þ Element: The element number, which is not currently meaningful, but you
+can use it for your own uses.
+
+þ Weight: The weight of this item. The total weight of all items in an
+inventory (when each weight is multiplied by the corresponding quantity
+of that item) cannot exceed the inventory's strength.
+
+þ Max heap: The maximum number of this kind of item that is allowed in a
+single inventory slot. The inventory may also have a max heap setting which
+also limits it; the smaller limit is used. This does not prevent having
+multiple heaps of the same kind of items within an inventory list.
+
+þ Script: The script for the item. The program for the game world may load
+and execute the script of an item when the item is invoked, and may have
+labels (specific to the world) for various functions of the items. (The
+script is not required.)
+
+þ Flags: There are standard flags and custom flags. The custom flags have no
+inherent use and you can use them for your own use. See the below section
+for the working of standard flags.
+
+:df;Item definition flags
+The standard flags are as follows:
+
+þ Not discardable: Prevents the player from discarding this item when the
+item window is displayed. This should be set for a "key item".
+
+þ Single heap: Prevents multiple heaps of this kind of item from occuring
+within a single inventory list. If the max heap limit has been reached,
+then no more of that item can be added to that inventory.
+
+þ Hide quantity: Hides the quantity of the item in the item window. This
+flag should be set for a unique "key item".
+
+þ Unidentified: This flag does nothing by itself, but may be useful in
+combination with your own codes in order to change the display of an item
+which has not yet been identified by the player. The value of this flag
+can be modified at run time, and will be saved in the save game file.
+

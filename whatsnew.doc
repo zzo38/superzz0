@@ -24,6 +24,7 @@ GAME
   +  Some of the settings in the user configuration file can be overridden
      by the game world (unless disallowed by the user configuration file).
   +  New boards can be created at run time.
+  +  Item definitions.
 
 SCRIPTS
   +  The #NOSAVE flag can be used to disable saving (this modifies a
@@ -48,6 +49,10 @@ ASSEMBLY
      useful if you do not want movement or other commands to continue if
      the screen changes to a different board or screen.)
   -  Remove EAP0 and EAP1.
+
+EDITOR
+  *  The "appearance mapping" and "animation" menus are now submenus of
+     the "element" menu, since their use is related.
 
 TEMPLATE
   +  "Time:" is no longer displayed unless the board has a time limit.

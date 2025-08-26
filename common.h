@@ -601,8 +601,7 @@ extern Uint16 ngtext;
 // === Item/inventory ===
 
 typedef struct {
-  Uint32 flag,maxheap,name,script,desc;
-  Sint32 weight;
+  Uint32 flag,maxheap,name,script,desc,weight;
   Uint8 element,class; // (class 255 means this item is not defined)
 } ItemDef;
 
@@ -616,8 +615,8 @@ extern Uint16 nitemdefs;
 #define IDF_UNIDENTIFIED 0x0008
 
 typedef struct {
-  Uint32 quantity,ext32;
-  Uint16 item,ext16;
+  Uint32 quantity,ext0;
+  Uint16 item,flag,ext1,ext2;
 } ItemSlot;
 
 typedef struct {
@@ -632,6 +631,10 @@ extern Inventory inventory[8];
 #define INV_SINGLE_HEAP 0x0002
 #define INV_IGNORE_WEIGHT 0x0004
 #define INV_USERFLAG 0x8000
+
+#define ISF_IN_USE 0x8000
+#define ISF_FIXED 0x4000
+#define ISF_HIDDEN 0x2000
 
 // === Game state ===
 

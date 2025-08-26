@@ -22,6 +22,7 @@ The main screen of the editor contains the following submenus:
 !global;Global script
 !-sclib;Script library
 !-editgr;Graphics
+!-items;Items/inventory
 !more;More
 
 :global
