@@ -1,4 +1,5 @@
-All numbers are small-endian (except lump sizes, which are PDP-endian).
+All numbers are small-endian; except lump sizes, which are PDP-endian; and
+fields in the DER format, which are big-endian.
 
 Some lumps use DER format. Except where otherwise specified, object
 identifiers may be absolute or relative, and if they are relative, are
@@ -233,6 +234,54 @@ Line breaks are LF only. The text is not compressed.
 
 (Support for # commands in help file is not currently implemented; if it
 is implemented in future, only a few commands are likely to work.)
+
+
+=== *.INV ===
+
+Stores inventory lists. Active inventory lists are named as "X" followed
+by a digit 0 to 7 (e.g. "X0.INV"). Inactive inventory lists are named as
+hexadecimal (like some other lumps do, such as BRD, OVM, SCR, etc).
+
+It starts with the header:
+
+* Size of header, not including this byte (8-bits).
+
+* Number of item slots (16-bits).
+
+* Max heap (32-bits).
+
+* Strength (32-bits).
+
+* Flags (16-bits).
+
+After the header will be the item slots; each one starts with a control
+byte indicating the type of the record.
+
+Type 0x00 to 0x3F: There is no additional data for this type of record.
+It represents 1 to 64 empty item slots.
+
+Type 0x80 to 0xBF: One item slot, which has the fields:
+
+* Item number (16-bits).
+
+* Quantity: Depends on bit1-bit0 of the control byte, where 0 means the
+value is implied (zero if the item number is zero, one otherwise), 1
+means 8-bits, 2 means 16-bits, and 3 means 32-bits.
+
+* Flags: If bit2 of the control byte is set, then 16-bits, otherwise the
+implied value is zero (no flags are set). The high 8-bits have standard
+uses and the low 8-bits are for your own use.
+
+* Ext0: If bit3 of the control byte is set, then 32-bits, otherwise the
+implied value is zero.
+
+* Ext1: If bit4 of the control byte is set, then 16-bits, otherwise the
+implied value is zero.
+
+* Ext2: If bit5 of the control byte is set, then 16-bits, otherwise the
+implied value is zero.
+
+Other types are not currently defined.
 
 
 === *.LIB ===

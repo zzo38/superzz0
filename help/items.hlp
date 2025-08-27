@@ -2,6 +2,12 @@
 The items/inventory editor menu allows editing two things, which are the
 item definitions and the inventory lists.
 
+!dl;Item definition list
+!de;Item definition editor
+!inv;Inventory
+!ip;Inventory properties
+!is;Item slot
+
 :dl;Item definition list
 On this screen, you can select an item definition to edit. You can also add
 a new item definition. Item definition 0 cannot be edited, since 0 means the
@@ -60,3 +66,58 @@ combination with your own codes in order to change the display of an item
 which has not yet been identified by the player. The value of this flag
 can be modified at run time, and will be saved in the save game file.
 
+:inv;Inventory
+You can define any number of inventory lists. The name must be four hex
+digits for a inactive inventory, or X followed by one digit 0 to 7 for a
+active inventory. Only active inventories are used directly at run time,
+but it is possible to copy between active and inactive at run time.
+!is;Item slot
+
+Each inventory list has a number of slots, as well as properties.
+!ip;Inventory properties
+
+:is;Item slot
+An item slot has the following attributes:
+
+þ Item: The item number. Specify zero if this slot is vacant.
+
+þ Quantity: How many of this item is in this slot. This should be set to
+at least one, if there is any of this item.
+
+þ Ext0, Ext1, Ext2: These have no inherent use, and can be used for your
+own use. Ext0 is 32-bits and the others are 16-bits.
+
+þ In use: 
+
+þ Fixed: 
+
+þ Hidden: 
+
+þ Custom flags: Flags that you can define for your own use.
+
+A slot is considered to be "vacant" if the item number is zero and none
+of the boolean flags are set. Slots that are not vacant are "occupied".
+
+:ip;Inventory properties
+The properties of each inventory list are:
+
+þ Max heap: The maximum quantity per slot. If more items of the same
+kind would be added and they do not fit in one slot, another vacant
+slot will be used instead.
+
+þ Strength: The maximum total weight of all items. Items cannot be added
+if it would cause the sum of the product of the quantity times the weight
+of an object in each slot to exceed the strength.
+
+þ Ignore max heap: If selected, then the max heap for the item definition
+will be ignored, although the max heap of the inventory is still used. If
+not selected, then whichever max heap value is lower will be used.
+
+þ Single heap per item: Disallows adding more of one item into this
+inventory list if there is already a slot with this item that has already
+reached the max heap for that item.
+
+þ Ignore weight: Causes the weight and strength to be ignored when adding
+items to this inventory list.
+
+þ User0, User1, User2, User3: No inherent meaning.

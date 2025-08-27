@@ -1045,3 +1045,68 @@ void work_varproperties(VarPropertyList*vp) {
   }
 }
 
+const char*load_inventory(FILE*fp,Inventory*inv) {
+  int c,m,n;
+  free(inv->item);
+  *inv=(Inventory){};
+  if(!fp) return 0;
+  m=read8(fp);
+  if(m<2 || m>12 || ((1UL<<m)&0b0101110111011UL)) return "Improper header size in .INV lump";
+  inv->count=read16(fp);
+  inv->maxheap=(m>2?read32(fp):0xFFFFFFFFL);
+  inv->strength=(m>6?read32(fp):0xFFFFFFFFL);
+  inv->flag=(m>10?read16(fp):0x0000);
+  inv->item=calloc(inv->count,sizeof(ItemSlot));
+  if(inv->count && !inv->item) err(1,"Allocation failed");
+  for(n=0;n<inv->count;) switch(c=read8(fp)) {
+    case 0x00 ... 0x3F: n+=c+1; break;
+    case 0x80 ... 0xBF:
+      inv->item[n].item=read16(fp);
+      inv->item[n].quantity=((c&3)==0?(inv->item[n].item?1:0):(c&3)==1?read8(fp):(c&3)==2?read16(fp):read32(fp));
+      if(c&4) inv->item[n].flag=read16(fp);
+      if(c&8) inv->item[n].ext0=read32(fp);
+      if(c&16) inv->item[n].ext1=read16(fp);
+      if(c&32) inv->item[n].ext2=read16(fp);
+      n++; break;
+    default: return "Improper command in .INV lump";
+  }
+  return 0;
+}
+
+const char*save_inventory(FILE*fp,Inventory*inv) {
+  int m,n;
+  if(!fp) return 0;
+  write8(fp,12);
+  write16(fp,inv->count);
+  write32(fp,inv->maxheap);
+  write32(fp,inv->strength);
+  write16(fp,inv->flag);
+  for(m=n=0;n<inv->count;n++) {
+    if(inv->item[n].item|inv->item[n].quantity|inv->item[n].flag|inv->item[n].ext0|inv->item[n].ext1|inv->item[n].ext2) {
+      if(m) write8(fp,m-1);
+      m=128;
+      m|=(inv->item[n].quantity==(inv->item[n].item?1:0)?0:inv->item[n].quantity&~0xFFFF?3:inv->item[n].quantity&~0xFF?2:1);
+      if(inv->item[n].flag) m|=4;
+      if(inv->item[n].ext0) m|=8;
+      if(inv->item[n].ext1) m|=16;
+      if(inv->item[n].ext2) m|=32;
+      write8(fp,m);
+      write16(fp,inv->item[n].item);
+      switch(m&3) {
+        case 1: write8(fp,inv->item[n].quantity); break;
+        case 2: write16(fp,inv->item[n].quantity); break;
+        case 3: write32(fp,inv->item[n].quantity); break;
+      }
+      if(m&4) write16(fp,inv->item[n].flag);
+      if(m&8) write32(fp,inv->item[n].ext0);
+      if(m&16) write16(fp,inv->item[n].ext1);
+      if(m&32) write16(fp,inv->item[n].ext2);
+      m=0;
+    } else {
+      if(m==64) write8(fp,m-1),m=0;
+      m++;
+    }
+  }
+  if(m) write8(fp,m-1);
+  return 0;
+}

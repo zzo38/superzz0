@@ -1749,6 +1749,170 @@ static void itemdef_list_callback(Uint16 n,int y,void*uz) {
   }
 }
 
+static void inventory_list_callback(Uint16 n,int y,void*uz) {
+  const ItemSlot*s=inventory->item+n;
+  const ASN1_Value*v=uz;
+  ASN1_Value vv;
+  char buf[80];
+  draw_text(1,y,buf,7,snprintf(buf,80,"%5d:",n));
+  v_color[80*y+6]=8;
+  if(!s->item) {
+    draw_text(8,y,"------",8,6);
+  } else if(s->item<=nitemdefs) {
+    v+=s->item-1;
+    if(v->type!=ASN1_SEQUENCE || v->class!=ASN1_UNIVERSAL) goto undef;
+    if(asn1_first_of(&vv,v) || (vv.type!=ASN1_PC_STRING && vv.type!=ASN1_OCTET_STRING) || vv.class) goto undef;
+    draw_text(8,y,buf,2,snprintf(buf,8,"#%05d",s->item));
+    draw_text(45,y,vv.data,15,vv.length>33?33:vv.length);
+  } else {
+    undef:
+    draw_text(8,y,buf,4,snprintf(buf,8,"#%05d",s->item));
+    draw_text(45,y,"<undef>",15,-1);
+  }
+  draw_text(34,y,buf,6,snprintf(buf,8,"%10dx",s->quantity));
+  memset(v_color+80*y+15,8,15); memset(v_char+80*y+15,250,15);
+  if(s->flag&ISF_IN_USE) v_color[80*y+15]=14,v_char[80*y+15]='I';
+  if(s->flag&ISF_FIXED) v_color[80*y+16]=14,v_char[80*y+16]='F';
+  if(s->flag&ISF_HIDDEN) v_color[80*y+17]=14,v_char[80*y+75]='H';
+  for(n=0;n<8;n+=2) if(s->flag&(3<<n)) v_color[80*y+n+23]=9,v_char[80*y+n+23]="\xC4\xDC\xDF\xDB"[(s->flag>>n)&3];
+  if(s->ext0) v_color[80*y+27]=13,v_char[80*y+27]='0';
+  if(s->ext1) v_color[80*y+28]=13,v_char[80*y+28]='1';
+  if(s->ext2) v_color[80*y+29]=13,v_char[80*y+29]='2';
+}
+
+static void load_inventory_items(ASN1_Value**items,ASN1_Value*root,int*ni) {
+  ASN1_Value v={};
+  size_t s=0;
+  FILE*fp=open_lump("ITEM.DER","r");
+  int n;
+  if(fp) {
+    if(lump_size && asn1_read_item(fp,root,0)) {
+      alert_text("ITEM.DER may be corrupted");
+      asn1_free(root);
+      root->type=0;
+    }
+    fclose(fp);
+    if(lump_size) {
+      fp=open_memstream((char**)items,&s);
+      if(!fp) err(1,"Cannot open memstream");
+      if(!asn1_first_of(&v,root)) do {
+        fwrite(&v,1,sizeof(ASN1_Value),fp);
+        ++*ni;
+      } while(*ni<0xFFFF && !asn1_next_of(&v,root));
+      fclose(fp);
+      if(*ni && !*items) err(1,"Unexpected error");
+    }
+  }
+  nitemdefs=*ni;
+}
+
+static void edit_invslot(Uint16 n) {
+  ItemSlot*s=inventory->item+n;
+  win_form("Edit item slot") {
+    win_help("items","is");
+    win_numeric('t',"Item: ",s->item,0,0xFFFF);
+    win_numeric('Q',"Quantity: ",s->quantity,0,0xFFFFFFFFUL);
+    win_numeric('0',"Ext0: ",s->ext0,0,0xFFFFFFFFUL);
+    win_numeric('1',"Ext1: ",s->ext1,0,0xFFFF);
+    win_numeric('2',"Ext2: ",s->ext2,0,0xFFFF);
+    win_boolean('I',"In use",s->flag,ISF_IN_USE);
+    win_boolean('F',"Fixed",s->flag,ISF_FIXED);
+    win_boolean('H',"Hidden",s->flag,ISF_HIDDEN);
+    win_command('u',"Custom flags...") win_form("Edit item slot") {
+      win_heading("Custom flags:");
+      win_boolean('0',"0 ($01)",s->flag,0x01);
+      win_boolean('1',"1 ($02)",s->flag,0x02);
+      win_boolean('2',"2 ($04)",s->flag,0x04);
+      win_boolean('3',"3 ($08)",s->flag,0x08);
+      win_boolean('4',"4 ($10)",s->flag,0x10);
+      win_boolean('5',"5 ($20)",s->flag,0x20);
+      win_boolean('6',"6 ($40)",s->flag,0x40);
+      win_boolean('7',"7 ($80)",s->flag,0x80);
+      win_blank();
+      win_command_esc(0,"Done") break;
+    }
+    win_blank();
+    win_command('C',"Clear") if(ask_yn("Clear this item slot?",0)) *s=(ItemSlot){};
+    win_command_esc(0,"Done") break;
+  }
+}
+
+static void edit_inventory(const char*name) {
+  ASN1_Value*items=0;
+  ASN1_Value root={};
+  char buf[60];
+  FILE*f;
+  int i,n;
+  int ni=0;
+  if(*name=='X') {
+    if(name[1]<'0' || name[1]>'7' || name[2]!='.') goto wrongname;
+  } else {
+    for(n=0;n<4;n++) if((name[n]<'0' || name[n]>'9') && (name[n]<'A' || name[n]>'F')) goto wrongname;
+    if(name[4]!='.') goto wrongname;
+  }
+  load_inventory(f=open_lump(name,"r"),inventory);
+  if(f) {
+    fclose(f);
+  } else {
+    *buf=0;
+    ask_text("Number of slots?",buf,6);
+    if(!*buf) return;
+    n=strtol(buf,0,10);
+    if(n&~0xFFFF) {
+      alert_text("Number of slots is out of range (valid range is 0-65535)");
+      return;
+    }
+    inventory->item=calloc(inventory->count=n,sizeof(ItemSlot));
+    if(n && !inventory->item) err(1,"Allocation failed");
+  }
+  load_inventory_items(&items,&root,&ni);
+  if(!ni) alert_text("Warning: No items are defined");
+  win_form("Edit inventory list") {
+    win_help("items","inv");
+    win_list(inventory->count,items,inventory_list_callback,n) edit_invslot(n);
+    win_blank();
+    win_command('R',"Resize...") {
+      n=inventory->count; i=0;
+      win_form("Resize inventory list") {
+        win_numeric('s',"New size: ",n,0,0xFFFF);
+        win_blank();
+        win_command('x',"Execute") {
+          inventory->item=realloc(inventory->item,n*sizeof(ItemSlot));
+          if(n && !inventory->item) err(1,"Allocation failed");
+          while(inventory->count<n) inventory->item[inventory->count++]=(ItemSlot){};
+          inventory->count=n;
+          break;
+        }
+        win_command_esc(0,"Cancel") break;
+      }
+    }
+    win_command('P',"Properties...") win_form("Inventory properties") {
+      win_help("items","ip");
+      win_numeric('M',"Max heap: ",inventory->maxheap,0,0xFFFFFFFFL);
+      win_numeric('S',"Strength: ",inventory->strength,0,0xFFFFFFFFL);
+      win_boolean('I',"Ignore max heap",inventory->flag,INV_IGNORE_MAXHEAP);
+      win_boolean('g',"Single heap per item",inventory->flag,INV_SINGLE_HEAP);
+      win_boolean('w',"Ignore weight",inventory->flag,INV_IGNORE_WEIGHT);
+      win_boolean('0',"User0",inventory->flag,INV_USER0);
+      win_boolean('1',"User1",inventory->flag,INV_USER1);
+      win_boolean('2',"User2",inventory->flag,INV_USER2);
+      win_boolean('3',"User3",inventory->flag,INV_USER3);
+      win_blank();
+      win_command_esc(0,"Done") break;
+    }
+    win_blank();
+    win_command_esc(0,"Done") break;
+  }
+  end:
+  for(n=0;n<ni;n++) asn1_free(items+n);
+  asn1_free(&root);
+  free(items);
+  save_inventory(f=open_lump(name,"w"),inventory);
+  if(f) fclose(f); else errx(1,"Unexpected error");
+  return;
+  wrongname: alert_text("Name must be four hex digits, or X followed by one digit 0 to 7");
+}
+
 static void edit_items_inventory(void) {
   win_form("Items/inventory edit") {
     win_help("items",0);
@@ -1758,27 +1922,10 @@ static void edit_items_inventory(void) {
       ASN1_Value root={};
       ASN1_Value v={};
       size_t s=0;
-      FILE*fp=open_lump("ITEM.DER","r");
+      FILE*fp; // =open_lump("ITEM.DER","r");
       int n;
       int ni=0;
-      if(fp) {
-        if(lump_size && asn1_read_item(fp,&root,0)) {
-          alert_text("ITEM.DER may be corrupted");
-          asn1_free(&root);
-          root.type=0;
-        }
-        fclose(fp);
-        if(lump_size) {
-          fp=open_memstream((char**)&items,&s);
-          if(!fp) err(1,"Cannot open memstream");
-          if(!asn1_first_of(&v,&root)) do {
-            fwrite(&v,1,sizeof(ASN1_Value),fp);
-            ++ni;
-          } while(ni<0xFFFF && !asn1_next_of(&v,&root));
-          fclose(fp);
-          if(ni && !items) err(1,"Unexpected error");
-        }
-      }
+      load_inventory_items(&items,&root,&ni);
       win_form("Item definitions") {
         win_help("items","dl");
         win_list(ni+1,items,itemdef_list_callback,n) if(n) edit_itemdef(items+n-1,n);
@@ -1809,9 +1956,7 @@ static void edit_items_inventory(void) {
       asn1_free(&root);
       free(items);
     }
-    win_command('v',"Starting inventory") {
-      //TODO
-    }
+    win_command('v',"Starting inventory") lump_listing_menu("*.INV","Inventory",edit_inventory,"items","inv");
     win_blank();
     win_command_esc(0,"Done") break;
   }

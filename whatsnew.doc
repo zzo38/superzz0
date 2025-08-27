@@ -24,7 +24,7 @@ GAME
   +  Some of the settings in the user configuration file can be overridden
      by the game world (unless disallowed by the user configuration file).
   +  New boards can be created at run time.
-  +  Item definitions.
+  +  Item definitions and inventory.
 
 SCRIPTS
   +  The #NOSAVE flag can be used to disable saving (this modifies a

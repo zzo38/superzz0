@@ -627,14 +627,20 @@ typedef struct {
 
 extern Inventory inventory[8];
 
-#define INV_IGNORE_MAXHEAP 0x0001
-#define INV_SINGLE_HEAP 0x0002
-#define INV_IGNORE_WEIGHT 0x0004
-#define INV_USERFLAG 0x8000
+#define INV_USER0 0x0001
+#define INV_USER1 0x0002
+#define INV_USER2 0x0004
+#define INV_USER3 0x0008
+#define INV_IGNORE_MAXHEAP 0x0100
+#define INV_SINGLE_HEAP 0x0200
+#define INV_IGNORE_WEIGHT 0x0400
 
 #define ISF_IN_USE 0x8000
 #define ISF_FIXED 0x4000
 #define ISF_HIDDEN 0x2000
+
+const char*load_inventory(FILE*fp,Inventory*inv);
+const char*save_inventory(FILE*fp,Inventory*inv);
 
 // === Game state ===
 
