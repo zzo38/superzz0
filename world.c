@@ -447,6 +447,17 @@ const char*init_world(void) {
     fclose(fp);
     if(fp=open_lump("DYNASTR","w")) fclose(fp);
   }
+  // "X?.INV"
+  if(!editor) {
+    const char*e;
+    char buf[]="X0.INV";
+    for(i=0;i<8;i++) {
+      buf[1]=i+'0';
+      e=load_inventory(fp=open_lump(buf,"r"),inventory+i);
+      if(fp) fclose(fp);
+      if(e) return e;
+    }
+  }
   // done
   return 0;
 }
@@ -1051,6 +1062,7 @@ const char*load_inventory(FILE*fp,Inventory*inv) {
   *inv=(Inventory){};
   if(!fp) return 0;
   m=read8(fp);
+  if(m<=0) return 0;
   if(m<2 || m>12 || ((1UL<<m)&0b0101110111011UL)) return "Improper header size in .INV lump";
   inv->count=read16(fp);
   inv->maxheap=(m>2?read32(fp):0xFFFFFFFFL);
@@ -1076,6 +1088,7 @@ const char*load_inventory(FILE*fp,Inventory*inv) {
 const char*save_inventory(FILE*fp,Inventory*inv) {
   int m,n;
   if(!fp) return 0;
+  if(!inv->count && !inv->flag && !inv->maxheap && !inv->strength) return 0;
   write8(fp,12);
   write16(fp,inv->count);
   write32(fp,inv->maxheap);

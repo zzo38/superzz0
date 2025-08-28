@@ -205,7 +205,7 @@ int ask_save_file(char issave) {
     case SDLK_PAGEDOWN: ys+=20; yc+=20; goto moved;
     default:
       i=event.key.keysym.unicode;
-      if(i>32 && i<127 && xc<76) {
+      if(i>32 && i<256 && i!=127 && xc<76) {
         entry[xc++]=i;
         entry[xc]=0;
       } else if(i==8 && xc) {
@@ -308,6 +308,27 @@ static void discard_unused_lumps(void) {
   revert_lump("MEMORY");
   revert_lump("GLOBAL");
   revert_lump("DYNASTR");
+  revert_lump("X0.INV");
+  revert_lump("X1.INV");
+  revert_lump("X2.INV");
+  revert_lump("X3.INV");
+  revert_lump("X4.INV");
+  revert_lump("X5.INV");
+  revert_lump("X6.INV");
+  revert_lump("X7.INV");
+}
+
+static void save_itemdef_flags(ASN1_Encoder*enc,Uint32 m) {
+  FILE*fp=asn1_primitive_stream(enc,ASN1_UNIVERSAL,ASN1_BIT_STRING);
+  int i,c;
+  if(!fp) err(1,"Allocation failed");
+  fputc(7&-nitemdefs,fp);
+  for(c=i=0;i<nitemdefs;i++) {
+    if(itemdefs[i].flag&m) c|=128>>(i&7);
+    if((i&7)==7) fputc(c,fp),c=0;
+  }
+  if(nitemdefs&7) fputc(c,fp);
+  asn1_end(enc);
 }
 
 void save_state(void) {
@@ -357,6 +378,7 @@ void save_state(void) {
     save_fontpal_state(enc);
     *m=pvarproperty.type; memcpy(m+1,pvarproperty.data,15);
     asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,m,16);
+    if(nitemdefs) save_itemdef_flags(enc,IDF_UNIDENTIFIED); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
   asn1_end(enc);
   asn1_finish_encoder(enc);
   fclose(fp);
@@ -384,6 +406,13 @@ void save_state(void) {
     }
     fclose(fp);
   }
+  //  X?.INV
+  strcpy(m,"X0.INV");
+  for(i=0;i<8;i++) {
+    m[1]=i+'0';
+    save_inventory(fp=open_lump(m,"w"),inventory+i);
+    if(fp) fclose(fp);
+  }
   //
   fp=fopen(savename,"w");
   if(!fp) goto error;
@@ -395,6 +424,14 @@ void save_state(void) {
   error: v_status[1]='!'; if(errno) alert_text(strerror(errno)); else alert_text("Error saving game");
   discard_unused_lumps();
   if(event.type==SDL_KEYDOWN) event.type=SDL_NOEVENT;
+}
+
+static void load_itemdef_flags(ASN1_Value*v,Uint32 m) {
+  int i;
+  if(v->class || v->type!=ASN1_BIT_STRING || v->length!=(nitemdefs+15)/8) errx(1,"Invalid data in save game file: Error in SAVE.DER lump");
+  for(i=0;i<nitemdefs;i++) {
+    if((128>>(i&7))&v->data[i/8+1]) itemdefs[i].flag|=m; else itemdefs[i].flag&=~m;
+  }
 }
 
 static void load_saveder(FILE*fp,char*useglobalscript) {
@@ -445,6 +482,8 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
     if(v1.class || v1.type!=ASN1_OCTET_STRING || v1.length!=16) goto bad;
     pvarproperty.type=v1.data[0]; memcpy(pvarproperty.data,v1.data+1,15);
   }
+  if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j) goto bad;
+  if(v1.class || v1.type!=ASN1_NULL) load_itemdef_flags(&v1,IDF_UNIDENTIFIED);
   // End
   done: asn1_free(&v0);
 }
@@ -551,6 +590,13 @@ void load_state(void) {
     free(dynastr);
     dynastr=0;
     ndynastr=0;
+  }
+  //  X?.INV
+  strcpy(buf,"X0.INV");
+  for(i=0;i<8;i++) {
+    buf[1]=i+'0';
+    if(load_inventory(fp=open_lump(buf,"r"),inventory+i)) errx(1,"Invalid data in save game file");
+    if(fp) fclose(fp);
   }
   // Finished
   discard_unused_lumps();
