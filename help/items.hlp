@@ -87,11 +87,23 @@ at least one, if there is any of this item.
 þ Ext0, Ext1, Ext2: These have no inherent use, and can be used for your
 own use. Ext0 is 32-bits and the others are 16-bits.
 
-þ In use: 
+þ In use: Prevents this item from being discarded, and prevents this slot
+from being used when giving or taking items, unless it is deliberately
+tring to give/take items that are in use.
 
-þ Fixed: 
+þ Fixed: Prevents this item from being moved to a different slot or from
+being discarded. If the quantity is reduced to zero, this slot will still
+remain here instead of being cleared.
 
-þ Hidden: 
+þ Hidden: Causes this item slot to not be displayed in a item menu. (This
+does not prevent it from being displayed in the editor.) If this item or
+inventory does not have "single heap" flag, then giving a item will not
+cause it to add to this heap unless deliberately giving hidden items.
+
+þ Ignore: Many operations such as give, take, find, and count, will ignore
+this item. It is also ignored for calculating total weight. This does not
+prevent the item from being displayed, discarded, moved, and activated;
+you can use other flags to control that.
 
 þ Custom flags: Flags that you can define for your own use.
 

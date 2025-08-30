@@ -750,7 +750,7 @@ numbers are treated as unsigned.
   the stat is on.
 
 [08D PTSP]
-  Like PTSP but sets the parameter instead of the colour.
+  Like PTSC but sets the parameter instead of the colour.
 
 [08E ICG]
   Increment first operand and compare if new value greater than second.
@@ -899,16 +899,16 @@ numbers are treated as unsigned.
   Like PEEK but saves the old value of the register; once this subroutine
   returns then the old value is restored.
 
-[0A4 EXT4]
+[0A4 EXT0]
   (Reserved)
 
-[0A5 EXT5]
+[0A5 EXT2]
   (Reserved)
 
-[0A6 EXT6]
+[0A6 EXT4]
   (Reserved)
 
-[0A7 EXT7]
+[0A7 EXT6]
   (Reserved)
 
 [0A8 M1L]
@@ -958,6 +958,67 @@ numbers are treated as unsigned.
   that with the top card, before taking the new top card (it is possible
   that no change will be made, if the selected card is the same as the
   original top card).
+
+[0B0 INVE]
+  Deal with inventory lists. The second operand is the inventory operation
+  to be performed, which is one of the following:
+   0 = Read number of slots
+   1 = Write number of slots
+   2 = Read flags
+   3 = Write flags
+   4 = Read strength
+   5 = Write strength
+   6 = Read max heap
+   7 = Write max heap
+   8 = Clear slots (A=all, B=normal, C=compact, F=fixed, H=hidden)
+   9 = Test user flag (A=0, B=1, C=2, D=3)
+   10 = Clear user flag
+   11 = Set user flag
+   12 = Read .INV lump
+   13 = Write .INV lump
+  Add $800 plus $100 times the active inventory number to use that one
+  instead of the current one.
+
+[0B1 IMNU]
+  (TODO)
+
+[0B2 IFND]
+  (TODO)
+
+[0B3 ICNT]
+  (TODO)
+
+[0B4 IGET]
+  Read a value from a slot in a inventory list. The J register specifies
+  which slot number (zero-based), and the second operand specifies what
+  to be read. The value read is written to the first operand.
+   0 = Item and flags; reset other fields
+   1 = Item
+   2 = Quantity
+   3 = Flags
+   4 = Ext0
+   5 = Ext1
+   6 = Ext2
+  The condition flag is set if this slot is in range or clear if not (in
+  which case the first operand is unchanged). You can add $800 plus $100
+  times the active inventory number like with INVE.
+
+[0B5 IPUT]
+  Write a value into a slot in a inventory list. The J and second operand
+  have the same meaning as IGET, and the value to be written is read from
+  the first operand.
+
+[0B6 ITAK]
+  (TODO)
+
+[0B7 IGIV]
+  (TODO)
+
+[0B8 IROB]
+  (TODO)
+
+[0B9 IMOV]
+  (TODO)
 
 [100 LET]
   Copy second operand to first.
@@ -1044,6 +1105,25 @@ numbers are treated as unsigned.
   with the stat number given by the second operand, and set the condition
   flag to true. If there isn't any, then the first operand is unchanged and
   the condition flag is false.
+
+[115 ITEM]
+  Work with item definitions. The second operand has bits:
+   bit3-bit0 = Source of item number (A to H, J, K, slot J, slot K, W to Z)
+   bit7-bit4 = Reserved; should be clear
+   bit16-bit8 = Operation code (usually reading a field)
+  The operation codes are:
+   $00 = Class
+   $01 = Element
+   $02 = Flag
+   $03 = Max heap
+   $04 = Weight
+   $05 = Length of name
+   $06 = Append name to text buffer
+   $07 = Has script (1 if it does have, 0 if not)
+   $10 = Clear unidentified flag
+   $11 = Set unidentified flag
+  The result is written to the first operand, if the item number is valid
+  and the operation has a result.
 
 [116 GMOD]
   Sets the first operand to the mode bits of the stat specified by the
@@ -1148,16 +1228,16 @@ numbers are treated as unsigned.
 [133 CORV]
   Like CORU but sets the V coroutine instead of the U coroutine.
 
-[134 EXT0]
+[134 EXT1]
   (Reserved)
 
-[135 EXT1]
+[135 EXT3]
   (Reserved)
 
-[136 EXT2]
+[136 EXT5]
   (Reserved)
 
-[137 EXT3]
+[137 EXT7]
   (Reserved)
 
 [140 SWPA]

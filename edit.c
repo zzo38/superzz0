@@ -1773,7 +1773,8 @@ static void inventory_list_callback(Uint16 n,int y,void*uz) {
   memset(v_color+80*y+15,8,15); memset(v_char+80*y+15,250,15);
   if(s->flag&ISF_IN_USE) v_color[80*y+15]=14,v_char[80*y+15]='I';
   if(s->flag&ISF_FIXED) v_color[80*y+16]=14,v_char[80*y+16]='F';
-  if(s->flag&ISF_HIDDEN) v_color[80*y+17]=14,v_char[80*y+75]='H';
+  if(s->flag&ISF_HIDDEN) v_color[80*y+17]=14,v_char[80*y+17]='H';
+  if(s->flag&ISF_IGNORE) v_color[80*y+18]=14,v_char[80*y+18]='g';
   for(n=0;n<8;n+=2) if(s->flag&(3<<n)) v_color[80*y+n+23]=9,v_char[80*y+n+23]="\xC4\xDC\xDF\xDB"[(s->flag>>n)&3];
   if(s->ext0) v_color[80*y+27]=13,v_char[80*y+27]='0';
   if(s->ext1) v_color[80*y+28]=13,v_char[80*y+28]='1';
@@ -1818,6 +1819,7 @@ static void edit_invslot(Uint16 n) {
     win_boolean('I',"In use",s->flag,ISF_IN_USE);
     win_boolean('F',"Fixed",s->flag,ISF_FIXED);
     win_boolean('H',"Hidden",s->flag,ISF_HIDDEN);
+    win_boolean('g',"Ignore",s->flag,ISF_IGNORE);
     win_command('u',"Custom flags...") win_form("Edit item slot") {
       win_heading("Custom flags:");
       win_boolean('0',"0 ($01)",s->flag,0x01);

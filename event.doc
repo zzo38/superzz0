@@ -6,6 +6,13 @@ addresses with a currently defined meaning are listed here. The initial
 values can be set using the assembler, and they can also be changed at
 run time.
 
+$A0 = The low 3-bits selects which active inventory is the current one. The
+other bits are not currently meaningful.
+
+$A1 = Mask for item slot flags to match for IGIV, ITAK, and some other
+inventory-oriented instructions. Some flags are always handled in a special
+way regardless of this mask.
+
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
 save the delay, bit9 means to save the walk/face/user flags, and bit13
@@ -23,8 +30,8 @@ be used when saving an overlay memory at run time, so you can change it if
 you want to save it with a different size than it was loaded with.
 
 $C4 = Joystick input levels. The low nybble is for normal game mode, the
-next nybble is for text windows, and the higher two nybbles are not
-meaningful in the current version of Super ZZ Zero.
+next nybble is for text windows, the next nybble is for item windows, and
+the high nybble is for custom windows.
 
 $C5 = Script return event (see below).
 

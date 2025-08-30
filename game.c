@@ -3522,6 +3522,56 @@ static void do_overlay_memory(Uint8 fo,Sint32 so) {
   }
 }
 
+static void do_inventory_op(Uint8 fo,Sint32 so) {
+  FILE*f;
+  Inventory*inv=inventory+((so&0x800?so>>8:memory[MEM_INVENTORY])&7);
+  int i;
+  switch(so&0xFF) {
+    case 0: regs[fo]=inv->count; break;
+    case 1:
+      regs[fo]&=0xFFFF;
+      inv->item=realloc(inv->item,regs[fo]*sizeof(ItemSlot));
+      if(regs[fo] && !inv->item) err(1,"Allocation failed");
+      while(inv->count<regs[fo]) inv->item[inv->count++]=(ItemSlot){};
+      inv->count=regs[fo];
+      break;
+    case 2: regs[fo]=inv->flag; break;
+    case 3: inv->flag=regs[fo]; break;
+    case 4: regs[fo]=inv->strength; break;
+    case 5: inv->strength=regs[fo]; break;
+    case 6: regs[fo]=inv->maxheap; break;
+    case 7: inv->maxheap=regs[fo]; break;
+    case 8:
+      if(fo==0) {
+        for(i=0;i<inv->count;i++) inv->item[i]=(ItemSlot){};
+      } else if(fo==1) {
+        for(i=0;i<inv->count;i++) if(!(inv->item[i].flag&(ISF_IN_USE|ISF_FIXED))) inv->item[i]=(ItemSlot){};
+      } else if(fo==2) {
+        for(i=0;i<inv->count-1;i++) if((inv->item[i+1].item|inv->item[i+1].flag) && !(inv->item[i].item|inv->item[i].flag)) {
+          inv->item[i]=inv->item[i+1];
+          inv->item[i+1]=(ItemSlot){};
+        }
+      } else if(fo==5) {
+        for(i=0;i<inv->count;i++) if(inv->item[i].flag&ISF_FIXED) inv->item[i]=(ItemSlot){};
+      } else if(fo==7) {
+        for(i=0;i<inv->count;i++) if(inv->item[i].flag&ISF_HIDDEN) inv->item[i]=(ItemSlot){};
+      }
+      break;
+    case 9: condflag=(inv->flag&(1<<(fo&3)))?1:0; break;
+    case 10: inv->flag&=~(1<<(fo&3)); break;
+    case 11: inv->flag|=(1<<(fo&3)); break;
+    case 12:
+      if(load_inventory(f=open_lump_by_number(regs[fo]&0xFFFF,"INV","r"),inv)) errx(1,"Error with loading .INV lump");
+      if(f) fclose(f);
+      break;
+    case 13:
+      if(save_inventory(f=open_lump_by_number(regs[fo]&0xFFFF,"INV","w"),inv)) errx(1,"Error with saving .INV lump");
+      if(f) fclose(f);
+      break;
+    default: errx(1,"Unimplemented inventory op: %d",so&0xFF);
+  }
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   StatXY*rs;
   Uint16 op;
@@ -3792,6 +3842,23 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         }
         break;
       case OP_ICG: condflag=(++regs[fo]>so?1:0); break;
+      case OP_IGET:
+        if((t=memory[MEM_ARG_J])<inventory[u=((so>>8)&15?:memory[MEM_INVENTORY])&7].count) {
+          condflag=1;
+          switch(so&0xFF) {
+            case 0: regs[fo]=inventory[u].item[t].item|(inventory[u].item[t].flag<<16); break;
+            case 1: regs[fo]=inventory[u].item[t].item; break;
+            case 2: regs[fo]=inventory[u].item[t].quantity; break;
+            case 3: regs[fo]=inventory[u].item[t].flag; break;
+            case 4: regs[fo]=inventory[u].item[t].ext0; break;
+            case 5: regs[fo]=inventory[u].item[t].ext1; break;
+            case 6: regs[fo]=inventory[u].item[t].ext2; break;
+            default: errx(1,"Improper IGET");
+          }
+        } else {
+          condflag=0;
+        }
+        break;
       case OP_INC: ++so; goto store;
       case OP_INCL: ++so; goto lstore;
       case OP_INEW:
@@ -3804,6 +3871,52 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         so=((rs-stats[t-1].xy)<<16)|t;
         goto store;
       case OP_INFO: so=request_info(so); goto store;
+      case OP_INVE: do_inventory_op(fo,so); break;
+      case OP_IPUT:
+        if((t=memory[MEM_ARG_J])<inventory[u=((so>>8)&15?:memory[MEM_INVENTORY])&7].count) {
+          condflag=1;
+          switch(so&0xFF) {
+            case 0: inventory[u].item[t]=(ItemSlot){.item=regs[fo]&0xFFFF,.flag=regs[fo]>>16,.quantity=(regs[fo]&0xFFFF?1:0)}; break;
+            case 1: inventory[u].item[t].item=regs[fo]; break;
+            case 2: inventory[u].item[t].quantity=regs[fo]; break;
+            case 3: inventory[u].item[t].flag=regs[fo]; break;
+            case 4: inventory[u].item[t].ext0=regs[fo]; break;
+            case 5: inventory[u].item[t].ext1=regs[fo]; break;
+            case 6: inventory[u].item[t].ext2=regs[fo]; break;
+            default: errx(1,"Improper IGET");
+          }
+        } else {
+          condflag=0;
+        }
+        break;
+      case OP_ITEM:
+        switch(so&15) {
+          case 0 ... 7: t=regs[so&7]; break;
+          case 8: case 10: t=memory[MEM_ARG_J]; break;
+          case 9: case 11: t=memory[MEM_ARG_K]; break;
+          case 12: t=w; break; case 13: t=x; break; case 14: t=y; break; case 15: t=z; break;
+        }
+        t&=0xFFFF;
+        if((so&14)==10) {
+          if(t>=inventory[u=memory[MEM_INVENTORY]&7].count) break;
+          t=inventory[u].item[t].item;
+        }
+        if(!t || t>nitemdefs) break;
+        t--;
+        switch((so>>8)&255) {
+          case 0x00: so=itemdefs[t].class; goto store;
+          case 0x01: so=itemdefs[t].element; goto store;
+          case 0x02: so=itemdefs[t].flag; goto store;
+          case 0x03: so=itemdefs[t].maxheap; goto store;
+          case 0x04: so=itemdefs[t].weight; goto store;
+          case 0x05: so=strlen(itemnames+itemdefs[t].name); goto store;
+          case 0x06: u=(ntextbuf<80?snprintf(textbuf+ntextbuf,81-ntextbuf,"%s",itemnames+itemdefs[t].name):0); if(u+ntextbuf<80) ntextbuf+=u; else ntextbuf=80; break;
+          case 0x07: so=(itemdefs[t].script?1:0); goto store;
+          case 0x10: itemdefs[t].flag&=~IDF_UNIDENTIFIED; break;
+          case 0x11: itemdefs[t].flag|=IDF_UNIDENTIFIED; break;
+          default: errx(1,"Improper use of ITEM instruction");
+        }
+        break;
       case OP_JEV: if(!(regs[fo]&1)) goto jump; break;
       case OP_JF: if(!condflag) goto jump; break;
       case OP_JNEG: if(regs[fo]<0) goto jump; break;

@@ -534,6 +534,10 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define XOP_S_IF_TRUE 0x0DC0 // (source) if true, (value) if false (-3 to +4, A to H)
 #define XOP_S_IF_FALSE 0x0DD0 // (source) if false, (value) if true (-3 to +4, A to H)
 
+#define MEM_INVENTORY 0xA0
+#define MEM_ITEM_MASK 0xA1
+#define MEM_GIVE_ITEM_EVENT 0xA2
+#define MEM_TAKE_ITEM_EVENT 0xA3
 #define MEM_GLOBAL_DELAY 0xC0
 #define MEM_NEW_DYNAMIC_STAT_EVENT 0xC1
 #define MEM_OVERLAYMEM_ADDRESS 0xC2
@@ -638,6 +642,7 @@ extern Inventory inventory[8];
 #define ISF_IN_USE 0x8000
 #define ISF_FIXED 0x4000
 #define ISF_HIDDEN 0x2000
+#define ISF_IGNORE 0x1000
 
 const char*load_inventory(FILE*fp,Inventory*inv);
 const char*save_inventory(FILE*fp,Inventory*inv);
