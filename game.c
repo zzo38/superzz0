@@ -3568,6 +3568,7 @@ static void do_inventory_op(Uint8 fo,Sint32 so) {
       if(save_inventory(f=open_lump_by_number(regs[fo]&0xFFFF,"INV","w"),inv)) errx(1,"Error with saving .INV lump");
       if(f) fclose(f);
       break;
+    case 14: revert_lump_by_number(regs[fo]&0xFFFF,"INV"); break;
     default: errx(1,"Unimplemented inventory op: %d",so&0xFF);
   }
 }
@@ -3910,10 +3911,21 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           case 0x03: so=itemdefs[t].maxheap; goto store;
           case 0x04: so=itemdefs[t].weight; goto store;
           case 0x05: so=strlen(itemnames+itemdefs[t].name); goto store;
-          case 0x06: u=(ntextbuf<80?snprintf(textbuf+ntextbuf,81-ntextbuf,"%s",itemnames+itemdefs[t].name):0); if(u+ntextbuf<80) ntextbuf+=u; else ntextbuf=80; break;
+          case 0x06: item06: u=(ntextbuf<80?snprintf(textbuf+ntextbuf,81-ntextbuf,"%s",itemnames+itemdefs[t].name):0); if(u+ntextbuf<80) ntextbuf+=u; else ntextbuf=80; break;
           case 0x07: so=(itemdefs[t].script?1:0); goto store;
-          case 0x10: itemdefs[t].flag&=~IDF_UNIDENTIFIED; break;
-          case 0x11: itemdefs[t].flag|=IDF_UNIDENTIFIED; break;
+          case 0x08: so=strlen(itemnames+itemdefs[t].appearance); goto store;
+          case 0x09: u=(ntextbuf<80?snprintf(textbuf+ntextbuf,81-ntextbuf,"%s",itemnames+itemdefs[t].appearance):0); if(u+ntextbuf<80) ntextbuf+=u; else ntextbuf=80; break;
+          case 0x0A: so=itemdefs[t].price; goto store;
+          case 0x0B: so=itemdefs[t].ext3; goto store;
+          case 0x0C: so=itemdefs[t].ext4; goto store;
+          case 0x0D: so=itemdefs[t].ext5; goto store;
+          case 0x0E: so=itemdefs[t].parameter; goto store;
+          case 0x0F: so=itemdefs[t].color; goto store;
+          case 0x10: so=itemdefs[t].element|(itemdefs[t].color<<8)|(itemdefs[t].parameter<<16); goto store;
+          case 0x11: item11: u=(ntextbuf<80?snprintf(textbuf+ntextbuf,81-ntextbuf,"%s",itemnames+(itemdefs[t].appearance?:itemdefs[t].name)):0); if(u+ntextbuf<80) ntextbuf+=u; else ntextbuf=80; break;
+          case 0x12: if(itemdefs[t].flag&IDF_UNIDENTIFIED) goto item11; else goto item06;
+          case 0x80: itemdefs[t].flag&=~IDF_UNIDENTIFIED; break;
+          case 0x81: itemdefs[t].flag|=IDF_UNIDENTIFIED; break;
           default: errx(1,"Improper use of ITEM instruction");
         }
         break;
@@ -4290,6 +4302,17 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
             else if(so<0 && so>=-ndynastr) stats[t-1].text=strdup((char*)dynastr[~so].text);
             else if(so<-255 && so>=-271) stats[t-1].text=strdup((char*)namedflag[-255-so].name);
             if(stats[t-1].text) stats[t-1].length=strlen(stats[t-1].text);
+            break;
+          case 4:
+            if(so>0 && so<=nitemdefs && itemdefs[so].script) {
+              if(itemnames[itemdefs[so].script]=='@' && itemnames[itemdefs[so].script+1]=='!') {
+                load_script_library(stats+t-1,itemnames+itemdefs[so].script+2);
+              } else {
+                stats[t-1].text=strdup((char*)itemnames+itemdefs[so].script);
+                if(!stats[t-1].text) err(1,"Allocation failed");
+              }
+              if(stats[t-1].text) stats[t-1].length=strlen(stats[t-1].text);
+            }
             break;
         }
         if(stats[t-1].text && !stats[t-1].text[0]) free(stats[t-1].text),stats[t-1].text=0;

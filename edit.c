@@ -1632,6 +1632,7 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
   ASN1_Encoder*e;
   ASN1_Value v,vv;
   char name[70]={};
+  char apname[60]={};
   char*script=0;
   char*desc=0;
   ItemDef d={.element=255,.maxheap=0xFFFFFFFFL};
@@ -1668,6 +1669,18 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
         if(!(desc=malloc(vv.length+1))) err(1,"Allocation failed");
         memcpy(desc,vv.data,vv.length); desc[vv.length]=0;
         break;
+      case 5:
+        if(vv.type!=ASN1_PC_STRING && vv.type!=ASN1_OCTET_STRING || vv.length>59) goto error;
+        memcpy(apname,vv.data,vv.length); apname[vv.length]=0;
+        break;
+      case 6: if(asn1_decode_number(&vv,ASN1_AUTO,&d.price)) goto error; break;
+      case 7: if(asn1_decode_number(&vv,ASN1_AUTO,&d.ext3)) goto error; break;
+      case 8: if(asn1_decode_number(&vv,ASN1_AUTO,&d.ext4)) goto error; break;
+      case 9: if(asn1_decode_number(&vv,ASN1_AUTO,&d.ext5)) goto error; break;
+      case 10:
+        if(vv.class || vv.type!=ASN1_OCTET_STRING || vv.length<1 || vv.length>2) goto error;
+        d.color=vv.data[0]; if(vv.length==2) d.parameter=vv.data[1];
+        break;
       default: goto error;
     }
   }
@@ -1682,9 +1695,17 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
     win_numeric('C',"Class: ",d.class,0,127);
     win_command('D',"Description") desc=text_editor(desc);
     win_numeric('E',"Element: ",d.element,0,255);
+    win_color('o',"Color: ",d.color);
+    win_char('h',"Character: ",d.parameter) win_refresh();
+    win_numeric('m',"Parameter: ",d.parameter,0,255) win_refresh();
     win_numeric('W',"Weight: ",d.weight,0,0xFFFFFFFFL);
     win_numeric('x',"Max heap: ",d.maxheap,0,0xFFFFFFFFL);
+    win_text('A',"Appearance name: ",apname);
     win_command('S',"Script") script=text_editor(script);
+    win_numeric('P',"Price: ",d.price,0,0xFFFFFFFFL);
+    win_numeric('3',"Ext3: ",d.ext3,0,0xFFFFFFFFL);
+    win_numeric('4',"Ext4: ",d.ext4,0,0xFFFF);
+    win_numeric('5',"Ext5: ",d.ext5,0,0xFFFF);
     win_command('f',"Standard flags...") win_form("Item definition edit - Standard flags") {
       win_help("items","df");
       win_heading(title);
@@ -1692,7 +1713,7 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
       win_boolean('S',"Single heap",d.flag,IDF_SINGLE_HEAP);
       win_boolean('q',"Hide quantity",d.flag,IDF_HIDE_QUANTITY);
       win_boolean('i',"Unidentified",d.flag,IDF_UNIDENTIFIED);
-      //win_boolean('d',"",d.flag,);
+      win_boolean('o',"Do not randomize",d.flag,IDF_NO_RANDOMIZE);
       win_blank(); win_command_esc(0,"Done") break;
     }
     win_command('u',"Custom flags...") win_form("Item definition edit - Custom flags") {
@@ -1728,6 +1749,15 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
   if(d.maxheap!=0xFFFFFFFFL) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,2),asn1_encode_integer(e,d.maxheap);
   if(d.element!=255) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,3),asn1_encode_integer(e,d.element);
   if(desc && *desc) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,4),asn1_encode_c_string(e,ASN1_PC_STRING,desc);
+  if(*apname) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,5),asn1_encode_c_string(e,ASN1_PC_STRING,apname);
+  if(d.price) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,6),asn1_encode_integer(e,d.price);
+  if(d.ext3) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,7),asn1_encode_integer(e,d.ext3);
+  if(d.ext4) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,8),asn1_encode_integer(e,d.ext4);
+  if(d.ext5) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,9),asn1_encode_integer(e,d.ext5);
+  if(d.color || d.parameter) {
+    name[0]=d.color; name[1]=d.parameter;
+    asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,10); asn1_primitive(e,ASN1_UNIVERSAL,ASN1_OCTET_STRING,name,name[1]?2:1);
+  }
   asn1_finish_encoder(e);
   end: asn1_free(v0); *v0=v; free(script); free(desc);
 }

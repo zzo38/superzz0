@@ -473,6 +473,7 @@ typedef struct {
 // WindowInfo:flag
 #define WF_SINGLE_ENDS 0x01
 #define WF_ZERO_BASED 0x02
+#define WF_HORIZ_SCROLL 0x04
 
 const char*load_window(FILE*fp,WindowInfo*wind);
 
@@ -538,6 +539,8 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_ITEM_MASK 0xA1
 #define MEM_GIVE_ITEM_EVENT 0xA2
 #define MEM_TAKE_ITEM_EVENT 0xA3
+#define MEM_NAME_ITEM_EVENT 0xA4
+#define MEM_ITEM_SCREEN 0xA5
 #define MEM_GLOBAL_DELAY 0xC0
 #define MEM_NEW_DYNAMIC_STAT_EVENT 0xC1
 #define MEM_OVERLAYMEM_ADDRESS 0xC2
@@ -605,8 +608,10 @@ extern Uint16 ngtext;
 // === Item/inventory ===
 
 typedef struct {
-  Uint32 flag,maxheap,name,script,desc,weight;
-  Uint8 element,class; // (class 255 means this item is not defined)
+  Uint32 flag,maxheap,name,script,desc,weight,price,ext3,appearance;
+  Uint16 ext4,ext5;
+  Uint8 element,class,color,parameter;
+  // (class 255 means this item is not defined)
 } ItemDef;
 
 extern Uint8*itemnames;
@@ -617,6 +622,7 @@ extern Uint16 nitemdefs;
 #define IDF_SINGLE_HEAP 0x0002
 #define IDF_HIDE_QUANTITY 0x0004
 #define IDF_UNIDENTIFIED 0x0008
+#define IDF_NO_RANDOMIZE 0x0010
 
 typedef struct {
   Uint32 quantity,ext0;

@@ -27,8 +27,19 @@ own item classes and can use them to group items by classes.
 if you have defined a part of the item window to display descriptions or
 if descriptions are displayed separately. The description is not required.
 
-þ Element: The element number, which is not currently meaningful, but you
-can use it for your own uses.
+þ Element: The element number, which is one of the element numbers from
+the element definition menu. The default is 255.
+
+þ Color: The colour to use with the element. Set this to zero if you are
+not using the colour.
+
+þ Character: This is actually the same as the "parameter" field, but it
+is a different representation in the editor. Editing either field will
+affect both of them.
+
+þ Parameter: The parameter to use with the element. Set this to zero if you
+are not using the parameter. (You can also use this for your own use if you
+just want a extra 8-bit number, if the specified element doesn't need it.)
 
 þ Weight: The weight of this item. The total weight of all items in an
 inventory (when each weight is multiplied by the corresponding quantity
@@ -39,10 +50,17 @@ single inventory slot. The inventory may also have a max heap setting which
 also limits it; the smaller limit is used. This does not prevent having
 multiple heaps of the same kind of items within an inventory list.
 
+þ Appearance name: An appearance name, e.g. "red potion" or "blue ring",
+that does not describe what the item does but only what it appears to be.
+You can leave this blank if it is not used in your game world.
+
 þ Script: The script for the item. The program for the game world may load
 and execute the script of an item when the item is invoked, and may have
-labels (specific to the world) for various functions of the items. (The
-script is not required.)
+labels (specific to the world) for various functions of the items. You may
+start with @! to use a script library. (The script is not required.)
+
+þ Price, ext3, ext4, ext5: These fields do not have any inherent meaning;
+you can use them for your own use.
 
 þ Flags: There are standard flags and custom flags. The custom flags have no
 inherent use and you can use them for your own use. See the below section
@@ -65,6 +83,11 @@ flag should be set for a unique "key item".
 combination with your own codes in order to change the display of an item
 which has not yet been identified by the player. The value of this flag
 can be modified at run time, and will be saved in the save game file.
+
+þ Do not randomize: Prevents randomization from being applied to this
+item definition, even if the other criteria are met. If you do not define
+any criteria for randomization of item definitions, then this flag is not
+necessary and has no effect.
 
 :inv;Inventory
 You can define any number of inventory lists. The name must be four hex
@@ -132,4 +155,4 @@ reached the max heap for that item.
 þ Ignore weight: Causes the weight and strength to be ignored when adding
 items to this inventory list.
 
-þ User0, User1, User2, User3: No inherent meaning.
+þ User0, User1, User2, User3: Boolean flags with no inherent meaning.

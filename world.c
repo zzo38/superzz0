@@ -129,9 +129,9 @@ static const char*load_item_definitions(FILE*f) {
   nitemdefs=0;
   while(!e && !asn1_read_item(f,&vv,0)) {
     nitemdefs++;
-    id=(ItemDef){.weight=0x7FFFFFFFL,.class=255};
+    id=(ItemDef){.weight=0xFFFFFFFFUL,.class=255};
     if(vv.class==ASN1_UNIVERSAL && vv.type==ASN1_SEQUENCE) {
-      id.weight=0;
+      id.weight=0; id.maxheap=0xFFFFFFFFUL;
       if(asn1_first_of(&v,&vv)) goto error;
       if(v.class || (v.type!=ASN1_PC_STRING && v.type!=ASN1_OCTET_STRING) || v.length<1 || v.length>79) goto wrongtype;
       id.name=nfi; fwrite(v.data,1,v.length,nf); fputc(0,nf); nfi+=v.length+1;
@@ -143,17 +143,21 @@ static const char*load_item_definitions(FILE*f) {
       if(v.length>4) id.flag|=v.data[1]<<030;
       while(!asn1_next_of(&v,&vv)) if(v.class==ASN1_CONTEXT_SPECIFIC) switch(v.type) {
         case 0: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id.weight)) goto error; break;
-        case 1:
+        case 1: case 4: case 5:
           if(asn1_first_of(&v1,&v) || v1.class || (v1.type!=ASN1_PC_STRING && v1.type!=ASN1_OCTET_STRING) || v1.constructed) goto error;
           if(!v1.length) break;
-          id.script=nfi; fwrite(v1.data,1,v1.length,nf); fputc(0,nf); nfi+=v1.length+1;
+          if(v.type==1) id.script=nfi; else if(v.type==4) id.desc=nfi; else if(v.type==5) id.appearance=nfi;
+          fwrite(v1.data,1,v1.length,nf); fputc(0,nf); nfi+=v1.length+1;
           break;
         case 2: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id.maxheap)) goto error; break;
         case 3: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id.element)) goto error; break;
-        case 4:
-          if(asn1_first_of(&v1,&v) || v1.class || (v1.type!=ASN1_PC_STRING && v1.type!=ASN1_OCTET_STRING) || v1.constructed) goto error;
-          if(!v1.length) break;
-          id.desc=nfi; fwrite(v1.data,1,v1.length,nf); fputc(0,nf); nfi+=v1.length+1;
+        case 6: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id.price)) goto error; break;
+        case 7: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id.ext3)) goto error; break;
+        case 8: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id.ext4)) goto error; break;
+        case 9: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id.ext5)) goto error; break;
+        case 10:
+          if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_OCTET_STRING || v1.length<1 || v1.length>2) goto error;
+          id.color=v1.data[0]; if(v1.length==2) id.parameter=v1.data[1];
           break;
         default: e="Unexpected field in ITEM.DER";
       }

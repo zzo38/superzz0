@@ -737,7 +737,8 @@ specified, then it will be zero.
 * 1 = A PC string or octet string being the script for this item. If not
 specified, then the script is empty.
 
-* 2 = A unsigned 32-bit integer which is the maximum heap size.
+* 2 = A unsigned 32-bit integer which is the maximum heap size. The default
+value is 0xFFFFFFFF.
 
 * 3 = Element number, which is a unsigned 8-bit integer. If not specified,
 then the element number is 255.
@@ -745,16 +746,26 @@ then the element number is 255.
 * 4 = Description, which is a PC string or octet string (in future, TRON
 string and Graphic string might also be accepted).
 
-The standard item flags are:
+* 5 = Appearance (same constraints as the name).
 
-* bit0 = Item cannot be discarded.
+* 6 = Price (unsigned 32-bit integer).
 
-* bit1 = Disallow multiple heaps of the same item.
+* 7 = Ext3 (unsigned 32-bit integer).
 
-* bit2 = Do not display quantity.
+* 8 = Ext4 (unsigned 16-bit integer).
 
-* bit3 = Item is unidentified. This has no inherent meaning, but it is
-possible to change this bit at run time, and it will be saved.
+* 9 = Ext5 (unsigned 16-bit integer).
+
+* 10 = Octet string with one or two bytes, the first being color and the
+second being parameter (both have a default value of zero).
+
+
+=== ITEMEXT.DER ===
+
+This lump is used for data which has to do with item definitions but which
+is not itself a part of the item definitions.
+
+(It is not defined yet)
 
 
 === MEMORY ===

@@ -742,6 +742,7 @@ numbers are treated as unsigned.
    B = Script library
    C = Copy text of an existing stat
    D = Direct contents of string
+   E = Script of item definition
 
 [08C PTSC]
   Sets the colour of the tile corresponding to the stat XY index of the
@@ -976,6 +977,7 @@ numbers are treated as unsigned.
    11 = Set user flag
    12 = Read .INV lump
    13 = Write .INV lump
+   14 = Revert .INV lump
   Add $800 plus $100 times the active inventory number to use that one
   instead of the current one.
 
@@ -1120,8 +1122,19 @@ numbers are treated as unsigned.
    $05 = Length of name
    $06 = Append name to text buffer
    $07 = Has script (1 if it does have, 0 if not)
-   $10 = Clear unidentified flag
-   $11 = Set unidentified flag
+   $08 = Length of appearance name
+   $09 = Append appearance name to text buffer
+   $0A = Price
+   $0B = Ext3
+   $0C = Ext4
+   $0D = Ext5
+   $0E = Parameter
+   $0F = Color
+   $10 = Element and color and parameter together
+   $11 = Append appearance name to text buffer if not empty, else name
+   $12 = Append appearance name if unidentified and not empty, else name
+   $80 = Clear unidentified flag
+   $81 = Set unidentified flag
   The result is written to the first operand, if the item number is valid
   and the operation has a result.
 

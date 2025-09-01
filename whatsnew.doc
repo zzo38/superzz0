@@ -48,6 +48,7 @@ ASSEMBLY
   +  You can cancel an existing key repeat by "KEYB A,0". (This might be
      useful if you do not want movement or other commands to continue if
      the screen changes to a different board or screen.)
+  +  STEX is now able to load item scripts.
   -  Remove EAP0 and EAP1.
 
 EDITOR

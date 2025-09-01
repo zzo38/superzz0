@@ -161,6 +161,9 @@ bit of the overlay tile). The appearance is never used.
 241-243: The stat event of these elements is used for independent stats.
 The other events and attributes are not used for this purpose.
 
+244: Used when an element number is required for an item definition, but
+no item is present in the slot that is being checked. This does not apply
+to the use of the ITEM opcode.
+
 255: Some functions that use element numbers will use element 255 as the
-default if no other element is specified. For example, it might be used
-for "non-elemental" things, or whatever other use you have for it.
+default if no other element is specified.
