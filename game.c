@@ -1790,7 +1790,7 @@ static void update_text_window(const WindowInfo*wind) {
                 break;
               default:
                 if(x>=cur_screen.soft_edge[DIR_W] && x<=cur_screen.soft_edge[DIR_E] && x<cur_screen.soft_edge[DIR_W]+v-linktext) {
-                  v_color[i]=(col&0xF0)|(cmd&0x0F);
+                  v_color[i]=wind->wcolor[WC_LINK_TEXT]?:((col&0xF0)|(cmd&0x0F));
                   v_char[i]=textfile_text[y*TEXTREC+linktext+1+x-cur_screen.soft_edge[DIR_W]];
                 }
                 break;
@@ -1804,6 +1804,8 @@ static void update_text_window(const WindowInfo*wind) {
                 if(wind->color[x]!=0x22) v_color[i]=(wind->color[x]==0x11?col:wind->color[x]);
               }
               break;
+            } else if(wind->wcolor[WC_CENTER_TEXT]) {
+              v_color[i]=wind->wcolor[WC_CENTER_TEXT];
             }
             v_char[i]=textfile_text[y*TEXTREC+x+2-j];
           } else if(j==':' && v>1) {
@@ -1815,7 +1817,7 @@ static void update_text_window(const WindowInfo*wind) {
                 break;
               }
             }
-            v_color[i]=(col&0xF0)|(cmd&0x0F);
+            v_color[i]=wind->wcolor[WC_LABEL_TEXT]?:((col&0xF0)|(cmd&0x0F));
             x-=cur_screen.hard_edge[DIR_W];
             if(x<0 || x>=v-linktext) goto outer;
             v_char[i]=textfile_text[y*TEXTREC+x+1+linktext];
@@ -1828,6 +1830,8 @@ static void update_text_window(const WindowInfo*wind) {
                 if(wind->color[x]!=0x11) v_color[i]=(wind->color[x]==0x22?(col&0xF0)|(cmd&0x0F):wind->color[x]);
               }
               break;
+            } else if(wind->wcolor[WC_NORMAL_TEXT]) {
+              v_color[i]=wind->wcolor[WC_NORMAL_TEXT];
             }
             v_char[i]=textfile_text[y*TEXTREC+x+1];
           }

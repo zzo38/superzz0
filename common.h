@@ -468,12 +468,26 @@ typedef struct {
   Uint8 color[80];
   Uint8 parameter[80];
   Uint8 flag;
+  Uint8 wcolor[16];
 } WindowInfo;
 
 // WindowInfo:flag
 #define WF_SINGLE_ENDS 0x01
 #define WF_ZERO_BASED 0x02
 #define WF_HORIZ_SCROLL 0x04
+
+// Window colour index
+#define WC_NORMAL_TEXT 0
+#define WC_LINK_TEXT 1
+#define WC_CENTER_TEXT 2
+#define WC_LABEL_TEXT 3
+#define WC_NORMAL_ITEM 8
+#define WC_KEY_ITEM 9
+#define WC_FIXED_ITEM 10
+#define WC_SELECTED_NORMAL_ITEM 12
+#define WC_SELECTED_KEY_ITEM 13
+#define WC_SELECTED_FIXED_ITEM 14
+#define WC_LEADER 15
 
 const char*load_window(FILE*fp,WindowInfo*wind);
 
@@ -618,6 +632,7 @@ extern Uint8*itemnames;
 extern ItemDef*itemdefs;
 extern Uint16 nitemdefs;
 
+// ItemDef:flag
 #define IDF_NO_DISCARD 0x0001
 #define IDF_SINGLE_HEAP 0x0002
 #define IDF_HIDE_QUANTITY 0x0004
@@ -637,6 +652,7 @@ typedef struct {
 
 extern Inventory inventory[8];
 
+// Inventory:flag
 #define INV_USER0 0x0001
 #define INV_USER1 0x0002
 #define INV_USER2 0x0004
@@ -645,6 +661,7 @@ extern Inventory inventory[8];
 #define INV_SINGLE_HEAP 0x0200
 #define INV_IGNORE_WEIGHT 0x0400
 
+// ItemSlot:flag
 #define ISF_IN_USE 0x8000
 #define ISF_FIXED 0x4000
 #define ISF_HIDDEN 0x2000

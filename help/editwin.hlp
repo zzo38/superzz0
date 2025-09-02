@@ -62,3 +62,6 @@ outside of the text will show the default characters.
 "Zero-based line numbers" will make line number displays zero-based. If not
 selected then they are one-based.
 
+You can also define some colours in the flags menu. Any of these colours
+which is not zero will be used in place of the colour defined in the screen
+in some circumstances.

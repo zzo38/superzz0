@@ -551,7 +551,11 @@ After that is the commands. If the high bit is set, then:
 * bit6 = Set if new colour follows
 
 If the high bit is clear, then it specifies how many cells will copy the
-previous cell. Values higher than eighty are reserved.
+previous cell. Values higher than eighty are used for special commands,
+which are as follows:
+
+* 0x7F = Window colours follows. There is a 16-bit number, where each bit
+which is set means one colour byte follows.
 
 See help/editwin.hlp for an explanation of the command codes.
 

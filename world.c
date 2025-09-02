@@ -996,7 +996,8 @@ const char*save_screen(FILE*fp) {
 }
 
 const char*load_window(FILE*fp,WindowInfo*wind) {
-  int a,c;
+  int a,b,c;
+  memset(wind->wcolor,0,16);
   wind->flag=c=fgetc(fp);
   if(c==EOF) {
     wind->flag=0;
@@ -1013,6 +1014,10 @@ const char*load_window(FILE*fp,WindowInfo*wind) {
       wind->command[a]=(c&0x1F)+0x40;
       if(c&0x20) wind->parameter[a]=fgetc(fp); else if(a) wind->parameter[a]=wind->parameter[a-1];
       if(c&0x40) wind->color[a]=fgetc(fp); else if(a) wind->color[a]=wind->color[a-1];
+    } else if(c==0x7F) {
+      c=read16(fp);
+      for(b=0;b<16;b++) if(c&(1<<b)) wind->wcolor[b]=fgetc(fp);
+      a--;
     } else {
       if(c>80 || !a || !c) return "Unrecognized command in window lump";
       while(c-- && a<80) {

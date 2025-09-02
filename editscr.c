@@ -67,6 +67,7 @@ static void edit_window(void) {
     memset(wind.command,'X',80);
     memset(wind.color,0,80);
     memset(wind.parameter,0,80);
+    memset(wind.wcolor,0,16);
   }
   show:
   memset(v_color,7,80*25);
@@ -131,19 +132,37 @@ static void edit_window(void) {
           win_help("editwin","flag");
           win_boolean('S',"Single ends",wind.flag,WF_SINGLE_ENDS);
           win_boolean('Z',"Zero-based line numbers",wind.flag,WF_ZERO_BASED);
+          win_boolean('H',"Horizontal scrolling",wind.flag,WF_HORIZ_SCROLL);
+          win_blank();
+          win_color('N',"Normal text:",wind.wcolor[WC_NORMAL_TEXT]);
+          win_color('L',"Link text:",wind.wcolor[WC_LINK_TEXT]);
+          win_color('C',"Center text:",wind.wcolor[WC_CENTER_TEXT]);
+          win_color('a',"Label text:",wind.wcolor[WC_LABEL_TEXT]);
+          win_color('i',"Normal item:",wind.wcolor[WC_NORMAL_ITEM]);
+          win_color('K',"Key item:",wind.wcolor[WC_KEY_ITEM]);
+          win_color('F',"Fixed item:",wind.wcolor[WC_FIXED_ITEM]);
+          win_color('m',"Selected normal item:",wind.wcolor[WC_SELECTED_NORMAL_ITEM]);
+          win_color('y',"Selected key item:",wind.wcolor[WC_SELECTED_KEY_ITEM]);
+          win_color('x',"Selected fixed item:",wind.wcolor[WC_SELECTED_FIXED_ITEM]);
           win_blank();
           win_command_esc(0,"Done") break;
         }
         goto show;
       case SDLK_F5: goto save;
       case SDLK_F6: goto delete;
-      case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editwin",0); break;
+      case SDLK_SLASH: case SDLK_QUESTION: online_help("editwin",0); break;
     }
   }
   save:
   if(fp=open_lump_by_number(scr_id,"WIN","w")) {
     fputc(wind.flag,fp);
     fputc(0,fp);
+    for(i=xc=0;xc<16;xc++) if(wind.wcolor[xc]) i|=1<<xc;
+    if(i) {
+      fputc(0x7F,fp);
+      write16(fp,i);
+      for(i=0;i<16;i++) if(wind.wcolor[i]) fputc(wind.wcolor[i],fp);
+    }
     fputc(wind.command[0]|0xE0,fp);
     fputc(wind.parameter[0],fp);
     fputc(wind.color[0],fp);

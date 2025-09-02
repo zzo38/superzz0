@@ -25,6 +25,7 @@ GAME
      by the game world (unless disallowed by the user configuration file).
   +  New boards can be created at run time.
   +  Item definitions and inventory.
+  +  Colours can now be defined for states of different parts of windows.
 
 SCRIPTS
   +  The #NOSAVE flag can be used to disable saving (this modifies a
@@ -49,6 +50,8 @@ ASSEMBLY
      useful if you do not want movement or other commands to continue if
      the screen changes to a different board or screen.)
   +  STEX is now able to load item scripts.
+  +  New instructions and zero page memory cells for working with items
+     and inventory lists.
   -  Remove EAP0 and EAP1.
 
 EDITOR
