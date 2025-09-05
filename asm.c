@@ -47,6 +47,7 @@ static const Opcodes opcodes[]={
 //PSEUDO!"TA",0x8008
 //PSEUDO!"????",0x8009
 //PSEUDO!"ASS",0x800A
+//PSEUDO!"STR",0x800B
 //PSEUDO!"ED",0x802F
 //PSEUDO!"ED0",0x8030
 //PSEUDO!"ED1",0x8031
@@ -70,6 +71,10 @@ static Uint16 mhlabel[10];
 static Sint8 chlabel;
 static FILE*flabel[10];
 static size_t flabels[10];
+static Sint32*vlabel;
+static Uint16 mvlabel;
+static FILE*fvlabel;
+static size_t fvlabels;
 static FILE*infile;
 static char*outname;
 static FILE*outfile;
@@ -105,9 +110,9 @@ static Name*add_name(const char*name,Sint32 value,char kind) {
   return names+nnames-1;
 }
 
-static int find_string(const char*t) {
+static int find_string(const char*t,int y) {
   int i;
-  for(i=0;i<nstrings;i++) if(!strcmp(t,strings[i])) return i;
+  if(y) for(i=0;i<nstrings;i++) if(!strcmp(t,strings[i])) return i;
   t=strdup(t);
   if(!t) err(1,"Allocation failed");
   strings=realloc(strings,++nstrings*sizeof(char*));
@@ -270,7 +275,7 @@ static Sint32 parse_numeric(char e) {
       break;
     case '"':
       read_string();
-      num=find_string(strbuf);
+      num=find_string(strbuf,1);
       break;
     case 'A' ... 'Z': case '_':
       read_name();
@@ -639,6 +644,25 @@ static void do_pass(void) {
             v=u;
           }
           break;
+        case 11: // STR
+          if(pass) {
+            wflabel=vlabel[mvlabel++];
+            if(wlabel) *wlabel=wflabel;
+            goto skip;
+          }
+          if(!fvlabel) {
+            fvlabel=open_memstream((char**)(&vlabel),&fvlabels);
+            if(!fvlabel) err(1,"Error with open_memstream");
+          }
+          wflabel=nstrings;
+          fwrite(&wflabel,1,sizeof(Sint32),fvlabel);
+          if(wlabel) *wlabel=nstrings;
+          do {
+            if(*linept!='"') errx(1,"String expected on line %d",linenum);
+            read_string();
+            find_string(strbuf,0);
+          } while(*linept==',' && ++linept);
+          break;
         case 0x2F: // ED
           do ed_put_data(parse_numeric(0)); while(*linept==',' && ++linept);
           break;
@@ -665,7 +689,7 @@ static void do_pass(void) {
             break;
           }
           ed_put_data(v);
-          ed_put_data(find_string(strbuf));
+          ed_put_data(find_string(strbuf,1));
           if(*linept==',') {
             ++linept;
             do ed_put_data(parse_numeric(0)); while(*linept==',' && ++linept);
@@ -864,10 +888,10 @@ int main(int argc,char**argv) {
     default: return 1;
   }
   if(optind+2!=argc) errx(1,"Wrong number of arguments");
-  find_string("");
+  find_string("",1);
   if(option&0x0004) {
     exchange_strings();
-    find_string("");
+    find_string("",1);
   }
   infile=fopen(argv[optind],"r");
   if(!infile) err(1,"Cannot open input file");
@@ -880,6 +904,11 @@ int main(int argc,char**argv) {
     fclose(flabel[i]);
     if(!hlabel[i]) err(1,"Allocation failed");
     nhlabel[i]=0;
+  }
+  if(fvlabel) {
+    fclose(fvlabel);
+    if(!vlabel) err(1,"Allocation failed");
+    mvlabel=0;
   }
   pass=1;
   mem[0xC2]=addr_end;

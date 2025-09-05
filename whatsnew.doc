@@ -54,6 +54,7 @@ ASSEMBLY
   +  STEX is now able to load item scripts.
   +  New instructions and zero page memory cells for working with items
      and inventory lists.
+  +  STR pseudo for forcing strings to be given new consecutive numbers.
   -  Remove EAP0 and EAP1.
 
 EDITOR

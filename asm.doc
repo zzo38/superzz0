@@ -204,6 +204,16 @@ ISNT number
 PT string
   Null-terminated packed text; packs two characters in one byte.
 
+STR string[,string...]
+  This works like IS but only for strings, and it forces the string to be
+  given a new number, even if there is already a duplicate string (which
+  will keep its existing number). Multiple strings given on the same line
+  or on consecutive STR lines will be given consecutive numbers. If the
+  string defined by STR is mentioned by its text later in the program
+  without using STR, then it will use the number defined by STR, but if
+  the string text is mentioned before STR then that string has a separate
+  (lesser) number than the one defined by STR.
+
 TA addr[,value]
   Write the current address (or the specified value, if it is present) at
   the specified address.
