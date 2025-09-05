@@ -669,6 +669,7 @@ void update_screen(void) {
           case SC_SPEC_PLAYER_Y: v=stats->count?stats->xy->y:0; break;
           case SC_SPEC_CAMERA_X: v=scroll_x-cur_screen.view_x; break;
           case SC_SPEC_CAMERA_Y: v=scroll_y-cur_screen.view_y; break;
+          case SC_SPEC_CURRENT_BOARD: v=cur_board_id; break;
           case SC_SPEC_EXIT_E: v=board_info.exits[DIR_E]; break;
           case SC_SPEC_EXIT_N: v=board_info.exits[DIR_N]; break;
           case SC_SPEC_EXIT_W: v=board_info.exits[DIR_W]; break;
@@ -1725,6 +1726,7 @@ static void update_text_window(const WindowInfo*wind) {
           case SC_SPEC_TEXT_SCROLL_PERCENT: v=(100L*(tcursor+(wind->flag&WF_ZERO_BASED?0:1)))/tnlines; break;
           case SC_SPEC_TEXT_LINE_NUMBER: v=tcursor+(wind->flag&WF_ZERO_BASED?0:1); break;
           case SC_SPEC_TEXT_LINE_COUNT: v=tnlines; break;
+          case SC_SPEC_CURRENT_BOARD: v=cur_board_id; break;
           case SC_SPEC_EXIT_E: v=board_info.exits[DIR_E]; break;
           case SC_SPEC_EXIT_N: v=board_info.exits[DIR_N]; break;
           case SC_SPEC_EXIT_W: v=board_info.exits[DIR_W]; break;

@@ -482,9 +482,10 @@ static void f_menu(Uint8 mnu) {
     {'7',SC_BOARD|6,0,"Light+Border"},
     {'8',SC_BOARD|7,1,"Light+Border+Background"},
     {0,0,0,""},
-    {0,0,0,"Windows:"},
+    {0,0,0,"Miscellaneous:"},
     {'X',SC_TEXT,3,"Text window"},
     {'I',SC_ITEM,4,"Item window"},
+    {'M',SC_MEMORY,6,"Memory"},
     {0,2,0,"Indicators:"},
     {'T',SC_IND_USERDATA,1,"Board user data"},
     {'U',SC_IND_CURSOR,1,"Cursor"},
@@ -538,9 +539,6 @@ static void f_menu(Uint8 mnu) {
     {'H',SC_SPEC_HEIGHT,2,"Board height"},
     {'Z',SC_SPEC_USERDATA,2,"Board user data"},
     {'C',SC_SPEC_CONTEXT_SPECIFIC,2,"Context-specific"},
-    {0,0,0,""},
-    {0,0,0,"Others:"},
-    {'M',SC_MEMORY,6,"Memory"},
     {0,255,0,0},
   };
   char buf[8]={};
@@ -1053,7 +1051,7 @@ static void estatus(void) {
 static int shifted_arrows(void) {
   Uint16 m=event.key.keysym.mod;
   Uint16 k=event.key.keysym.sym;
-  m=(m&KMOD_ALT?config.alt_arrows:m&KMOD_CTRL?config.ctrl_arrows:m&KMOD_SHIFT?config.shift_arrows:0);
+  m=(m&KMOD_ALT?config.alt_arrows:m&KMOD_CTRL?config.ctrl_arrows:0);
   if(!m) return 0;
   numprefix=(numprefix?:1)*(m&255);
   switch(m>>8) {
@@ -1078,7 +1076,7 @@ Uint16 edit_screen(Uint16 id) {
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
     k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
-    if((event.key.keysym.mod&(KMOD_ALT|KMOD_CTRL|KMOD_SHIFT)) && (k==-SDLK_UP || k==-SDLK_DOWN || k==-SDLK_LEFT || k==-SDLK_RIGHT) && shifted_arrows()) continue;
+    if((event.key.keysym.mod&(KMOD_ALT|KMOD_CTRL)) && (k==-SDLK_UP || k==-SDLK_DOWN || k==-SDLK_LEFT || k==-SDLK_RIGHT) && shifted_arrows()) continue;
     switch(emode) {
       case 0: case 15: no_mode: switch(k) {
         case 0x08: numprefix/=10; break;

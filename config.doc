@@ -209,7 +209,8 @@ scr_edit_status
   Set to 1 (default) to display the editor status line, or 0 to suppress.
 
 shift_arrows
-  See alt_arrows.
+  See alt_arrows. (Shift with arrows already has a meaning in the screen
+  editor, so this only affects the board editor.)
 
 show_status
   Set to 1 (default) to display the global status line, or 0 to hide it.

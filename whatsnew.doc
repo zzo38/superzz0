@@ -26,6 +26,8 @@ GAME
   +  New boards can be created at run time.
   +  Item definitions and inventory.
   +  Colours can now be defined for states of different parts of windows.
+  =  The current board number display now works correctly. (Previously this
+     was documented but the implementation was missing.)
 
 SCRIPTS
   +  The #NOSAVE flag can be used to disable saving (this modifies a
@@ -55,8 +57,12 @@ ASSEMBLY
   -  Remove EAP0 and EAP1.
 
 EDITOR
+  =  The config.shift_arrows no longer affects the screen editor (now it
+     only affects the board editor), since shift+arrows already has a
+     meaning in the screen editor (for numeric extension).
   *  The "appearance mapping" and "animation" menus are now submenus of
      the "element" menu, since their use is related.
+  *  The "memory" screen element has been moved from F4 to F1.
 
 TEMPLATE
   +  "Time:" is no longer displayed unless the board has a time limit.
