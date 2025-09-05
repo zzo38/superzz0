@@ -17,7 +17,7 @@ F1 is used for editing window-specific flags.
 F5 will save the window info, and F6 will delete it (even if it was already
 present, it will be deleted).
 
-Command codes:
+Command codes for text windows:
 
 þ A = Always use the window character, in a link line, or outside of the
 hard edge of a normal line, or outside of the text of a $ line.
@@ -54,14 +54,34 @@ Meaningful commands by line types in text windows:
 
 :flag;Flags
 
-"Single ends" is used in text windows and means that the default characters
-will be used only for the lines immediately before the first line and
-immediately after the last line. If not selected, then all of the lines
-outside of the text will show the default characters.
+þ Single ends: This is used in text windows and means that the default
+characters will be used only for the lines immediately before the first
+line and immediately after the last line. If not selected, then all of
+the lines outside of the text will show the default characters.
 
-"Zero-based line numbers" will make line number displays zero-based. If not
-selected then they are one-based.
+þ Zero-based line numbers: Line number displays are zero-based if this is
+selected, otherwise they are one-based.
+
+þ Horizontal scrolling: Not currently implemented.
+
+þ XOR color: In a item window, when multiple colour overrides are applied,
+this defines how to combine them. If this is selected then XOR is used,
+otherwise OR is used.
 
 You can also define some colours in the flags menu. Any of these colours
 which is not zero will be used in place of the colour defined in the screen
 in some circumstances.
+
+Colours for text windows are:
+
+þ Normal text: Overrides the colour of normal text (which is not a link,
+centered text, or label).
+
+þ Link text: Overrides the colour of link text (a line with ! at the
+beginning). This is overridden by the A, C, K, L, P, and T commands.
+
+þ Center text: Overrides the colour text with $ at the beginning.
+
+þ Label text: Overrides the colour of the heading text of a label (a line
+with : at the beginning), and of the entire row that contains it.
+

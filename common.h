@@ -427,6 +427,7 @@ typedef struct {
 #define SC_SPEC_WIDTH 0x3C
 #define SC_SPEC_HEIGHT 0x3D
 #define SC_SPEC_USERDATA 0x3E
+#define SC_SPEC_CONTEXT_SPECIFIC 0x3F
 
 #define SC_IND_USERDATA 0x50
 #define SC_IND_CURSOR 0x51
@@ -440,6 +441,12 @@ typedef struct {
 #define SC_IND_USER1 0x5D
 #define SC_IND_USER2 0x5E
 #define SC_IND_USER3 0x5F
+
+#define SC_ITEM_PLACEHOLDER 0x70 // parameter=default character
+#define SC_ITEM_ELEMENT 0x71 // bit7-bit5=inventory, bit4-bit0=slot
+#define SC_ITEM_SELECT_FIELD 0x72
+#define SC_ITEM_SHOW_FIELD 0x73
+#define SC_ITEM_FLAGS 0x78 // to 0x7F; parameter=character if flag is set
 
 // Screen:flag
 #define SF_LEFT_ALIGN_MESSAGE 0x01
@@ -475,6 +482,7 @@ typedef struct {
 #define WF_SINGLE_ENDS 0x01
 #define WF_ZERO_BASED 0x02
 #define WF_HORIZ_SCROLL 0x04
+#define WF_XOR_COLOR 0x08
 
 // Window colour index
 #define WC_NORMAL_TEXT 0
@@ -484,10 +492,10 @@ typedef struct {
 #define WC_NORMAL_ITEM 8
 #define WC_KEY_ITEM 9
 #define WC_FIXED_ITEM 10
-#define WC_SELECTED_NORMAL_ITEM 12
-#define WC_SELECTED_KEY_ITEM 13
-#define WC_SELECTED_FIXED_ITEM 14
-#define WC_LEADER 15
+#define WC_HILIGHT_ITEM 11
+#define WC_VACANT_ITEM 12
+#define WC_MOVE_ITEM 14
+#define WC_SELECTED_ITEM 15
 
 const char*load_window(FILE*fp,WindowInfo*wind);
 
@@ -638,6 +646,7 @@ extern Uint16 nitemdefs;
 #define IDF_HIDE_QUANTITY 0x0004
 #define IDF_UNIDENTIFIED 0x0008
 #define IDF_NO_RANDOMIZE 0x0010
+#define IDF_HILIGHT 0x0020
 
 typedef struct {
   Uint32 quantity,ext0;
@@ -666,6 +675,7 @@ extern Inventory inventory[8];
 #define ISF_FIXED 0x4000
 #define ISF_HIDDEN 0x2000
 #define ISF_IGNORE 0x1000
+#define ISF_HILIGHT 0x0800
 
 const char*load_inventory(FILE*fp,Inventory*inv);
 const char*save_inventory(FILE*fp,Inventory*inv);

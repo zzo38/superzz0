@@ -36,8 +36,7 @@ In the F1 menu, "Light" suppresses the overlay and "Dark" displays it (if
 there is an overlay).
 
 :w;Windows
-There are two kind of windows, being text windows and item windows (item
-windows are not implemented yet).
+There are two kind of windows, being text windows and item windows.
 
 A text window tile is specified by the default character, and the primary
 and secondary colours.
@@ -47,8 +46,25 @@ beyond the ends of the text; the window flags can be used to specify if
 they appear only once at each end or everywhere with no text.
 
 The primary colour is used for normal text, while the secondary colour is
-used for centered text. The window definition can override these in some
-cases for centered text and for links.
+used for centered text and links. The window definition can override these.
+
+Item window tiles have multiple kinds, as follows:
+
+þ Placeholder: Used to display individual item slots in a item menu. The
+details are defined by the window definition.
+
+þ Element: Displays the element associated with the item in a specified
+slot in a specified inventory list. If this tile is inside of a item slot
+in a item menu, then the parameter is ignored and it will use that slot
+in the current inventory list instead.
+
+þ Select field: (not implemented yet)
+
+þ Show field: (not implemented yet)
+
+þ Flags: Displays the character if one of the eight custom flags is set for
+the current item slot (either the one that the cursor is on, or the one
+that corresponds to that position on the screen), or blank otherwise.
 
 :i;Indicators
 An indicator has a character code to display if it is "set"; if the
@@ -106,6 +122,9 @@ which is defined to display the name of the board.)
 þ Width/Height - The size of the current board.
 
 þ User - The user data of the current board.
+
+þ Context-specific - The number to be displayed depends on the context.
+This is mainly used for inventory menus.
 
 In addition to which variable to display, the position (also 0 to 15)
 must also be selected; the meaning of the positions depends on the

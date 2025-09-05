@@ -133,17 +133,21 @@ static void edit_window(void) {
           win_boolean('S',"Single ends",wind.flag,WF_SINGLE_ENDS);
           win_boolean('Z',"Zero-based line numbers",wind.flag,WF_ZERO_BASED);
           win_boolean('H',"Horizontal scrolling",wind.flag,WF_HORIZ_SCROLL);
+          win_boolean('X',"XOR color",wind.flag,WF_XOR_COLOR);
           win_blank();
-          win_color('N',"Normal text:",wind.wcolor[WC_NORMAL_TEXT]);
-          win_color('L',"Link text:",wind.wcolor[WC_LINK_TEXT]);
-          win_color('C',"Center text:",wind.wcolor[WC_CENTER_TEXT]);
-          win_color('a',"Label text:",wind.wcolor[WC_LABEL_TEXT]);
-          win_color('i',"Normal item:",wind.wcolor[WC_NORMAL_ITEM]);
-          win_color('K',"Key item:",wind.wcolor[WC_KEY_ITEM]);
-          win_color('F',"Fixed item:",wind.wcolor[WC_FIXED_ITEM]);
-          win_color('m',"Selected normal item:",wind.wcolor[WC_SELECTED_NORMAL_ITEM]);
-          win_color('y',"Selected key item:",wind.wcolor[WC_SELECTED_KEY_ITEM]);
-          win_color('x',"Selected fixed item:",wind.wcolor[WC_SELECTED_FIXED_ITEM]);
+          win_color('N',"Normal text:   ",wind.wcolor[WC_NORMAL_TEXT]);
+          win_color('L',"Link text:     ",wind.wcolor[WC_LINK_TEXT]);
+          win_color('C',"Center text:   ",wind.wcolor[WC_CENTER_TEXT]);
+          win_color('a',"Label text:    ",wind.wcolor[WC_LABEL_TEXT]);
+          win_blank();
+          win_color('i',"Normal item:   ",wind.wcolor[WC_NORMAL_ITEM]);
+          win_color('K',"Key item:      ",wind.wcolor[WC_KEY_ITEM]);
+          win_color('F',"Fixed item:    ",wind.wcolor[WC_FIXED_ITEM]);
+          win_color('g',"Hilight item:  ",wind.wcolor[WC_HILIGHT_ITEM]);
+          win_color('V',"Vacant item:   ",wind.wcolor[WC_VACANT_ITEM]);
+          win_blank();
+          win_color('M',"Move item:     ",wind.wcolor[WC_MOVE_ITEM]);
+          win_color('e',"Selected item: ",wind.wcolor[WC_SELECTED_ITEM]);
           win_blank();
           win_command_esc(0,"Done") break;
         }
@@ -277,7 +281,7 @@ static void edit_tile(void) {
   char buf[8];
   static const char*const indic[16]={"Board user data","Cursor","Scroll Y","Scroll X",0,0,0,0,"Exit East","Exit North","Exit West","Exit South","User 0","User 1","User 2","User 3"};
   static const char*const valu[32]={"(A)","(B)","(C)","(D)","(E)","(F)","(G)","(H)","(S)","(T)","(U)","(V)","(W)","(X)","(Y)","(Z)",
-   "Player X","Player Y","Camera X","Camera Y","Scroll %","Line number","Line count","Cur. board","Exit East","Exit North","Exit West","Exit South","Width","Height","User",0};
+   "Player X","Player Y","Camera X","Camera Y","Scroll %","Line number","Line count","Cur. board","Exit East","Exit North","Exit West","Exit South","Width","Height","User","Context-specific"};
   Uint8 x=xcur;
   Uint8 y=ycur;
   Uint8 done=0;
@@ -296,6 +300,7 @@ static void edit_tile(void) {
           case SC_MEMORY: c=a>>8; break;
           case SC_INDICATOR: h|=b; break;
           case SC_TEXT: h|=b&15; break;
+          case SC_ITEM: h|=b&15; if(b==1) a|=d<<5; break;
           case SC_BITS_0_LO: h|=b; break;
         }
         cur_screen.command[ycur*80+xcur]=h;
@@ -326,6 +331,7 @@ static void edit_tile(void) {
     win_option('M',"Memory",h,SC_MEMORY) win_refresh();
     win_option('I',"Indicator",h,SC_INDICATOR) win_refresh();
     win_option('w',"Text window",h,SC_TEXT) win_refresh();
+    win_option('t',"Item window",h,SC_ITEM) win_refresh();
     win_option('o',"Bit of variable",h,SC_BITS_0_LO) win_refresh();
     win_blank();
     if(h!=SC_MEMORY) a&=0xFF;
@@ -355,7 +361,7 @@ static void edit_tile(void) {
         win_command('v',"Select variable...") {
           b|=h&0x10;
           win_form("Select variable") {
-            for(i=h&16;i<16+(h&16);i++) if(valu[i]) win_option("ABCDEFGHSTUVWXYZXYmaoLcbENWSitU."[i],valu[i],b,i);
+            for(i=h&16;i<16+(h&16);i++) if(valu[i]) win_option("ABCDEFGHSTUVWXYZXYmaoLcbENWSitUp"[i],valu[i],b,i);
             win_blank();
             win_command_esc(0,"OK") break;
           }
@@ -385,10 +391,25 @@ static void edit_tile(void) {
         win_color('c',"Primary color: ",c) b=(b&0x0F)|(c&0xF0);
         win_color('d',"Secondary color: ",b) c=(c&0x0F)|(b&0xF0);
         break;
+      case SC_ITEM:
+        win_option('P',"Placeholder",b,0) win_refresh();
+        win_option('E',"Element",b,1) win_refresh();
+        win_option('f',"Select field",b,2) win_refresh();
+        win_option('d',"Show field",b,3) win_refresh();
+        snprintf(buf,7,"Flag 0");
+        for(i=0;i<8;i++) win_option(buf[5]=i+'0',buf,b,i+8) win_refresh();
+        win_blank();
+        win_color('C',"Color: ",c);
+        if(b==0 || b>=8) win_char('h',"Character: ",a);
+        if(b==1) {
+          win_numeric('v',"Inventory: ",d,0,7);
+          a&=31; win_numeric('l',"Slot: ",a,0,31);
+        }
+        break;
       case SC_BITS_0_LO:
         win_char('h',"Character: ",a);
         win_color('C',"Color: ",c);
-        win_numeric('t',"Bit position: ",b,0,127);
+        win_numeric('p',"Bit position: ",b,0,127);
         break;
     }
     win_blank();
@@ -516,6 +537,7 @@ static void f_menu(Uint8 mnu) {
     {'I',SC_SPEC_WIDTH,2,"Board width"},
     {'H',SC_SPEC_HEIGHT,2,"Board height"},
     {'Z',SC_SPEC_USERDATA,2,"Board user data"},
+    {'C',SC_SPEC_CONTEXT_SPECIFIC,2,"Context-specific"},
     {0,0,0,""},
     {0,0,0,"Others:"},
     {'M',SC_MEMORY,6,"Memory"},

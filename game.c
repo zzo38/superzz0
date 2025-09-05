@@ -624,6 +624,24 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
   }
 }
 
+static void display_item_element_cell(Uint16 i,Uint8 col,Uint8 inv,Uint16 sl) {
+  ItemSlot s;
+  ItemDef d;
+  if(inventory[inv].count<=sl) s=(ItemSlot){}; else s=inventory[inv].item[sl];
+  if(s.item && s.item<=nitemdefs) d=itemdefs[s.item-1]; else d=(ItemDef){.element=244,.color=col};
+  switch(elem_def[d.element].app[0]&0x3F) {
+    case AP_FIXED: v_char[i]=elem_def[d.element].app[1]; break;
+    case AP_PARAM: v_char[i]=d.parameter; break;
+    case AP_UNDER: v_char[i]=elem_def[d.element].app[1]; break;
+    case AP_MISC1: v_char[i]=s.ext1?:elem_def[d.element].app[1]; break;
+    case AP_MISC2: v_char[i]=s.ext2?:elem_def[d.element].app[1]; break;
+    case AP_MISC3: v_char[i]=d.ext3?:elem_def[d.element].app[1]; break;
+    case 0x20 ... 0x3F: v_char[i]=appearance_mapping[((elem_def[d.element].app[1]&0x7E)+((d.parameter>>(elem_def[d.element].app[0]&7))&((2<<((elem_def[d.element].app[0]>>3)&3))-1)))&0x7F]; break;
+  }
+  v_color[i]=elem_def[d.element].attrib&(A_OVER_COLOR|A_UNDER_COLOR)?col:d.color;
+  if(elem_def[d.element].attrib&A_UNDER_BGCOLOR) v_color[i]=(v_color[i]&0x0F)|(col&0xF0);
+}
+
 void update_screen(void) {
   int i;
   Uint32 v,x,y;
@@ -687,6 +705,9 @@ void update_screen(void) {
         break;
       case SC_TEXT:
         // Used only for text windows
+        break;
+      case SC_ITEM:
+        if(cmd==SC_ITEM_ELEMENT) display_item_element_cell(i,col,chr>>5,chr&0x1F);
         break;
       case SC_BITS_0_LO ... SC_BITS_3_HI:
         v_color[i]=col;
@@ -1836,6 +1857,9 @@ static void update_text_window(const WindowInfo*wind) {
             v_char[i]=textfile_text[y*TEXTREC+x+1];
           }
         }
+        break;
+      case SC_ITEM:
+        if(cmd==SC_ITEM_ELEMENT) display_item_element_cell(i,col,chr>>5,chr&0x1F);
         break;
       case SC_BITS_0_LO ... SC_BITS_3_HI:
         v_color[i]=col;

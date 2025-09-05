@@ -89,6 +89,12 @@ item definition, even if the other criteria are met. If you do not define
 any criteria for randomization of item definitions, then this flag is not
 necessary and has no effect.
 
+þ Hilight: Causes the hilight flag of the item slot to automatically become
+set if #GIVEITEM or IGIV is used to give this item into a vacant slot.
+(This does not affect slots that are already occupied, nor does it affect
+IPUT, IMOV, etc.) See the explanation in the below section about attributes
+of item slots for more details about the use of this flag.
+
 :inv;Inventory
 You can define any number of inventory lists. The name must be four hex
 digits for a inactive inventory, or X followed by one digit 0 to 7 for a
@@ -127,6 +133,10 @@ cause it to add to this heap unless deliberately giving hidden items.
 this item. It is also ignored for calculating total weight. This does not
 prevent the item from being displayed, discarded, moved, and activated;
 you can use other flags to control that.
+
+þ Hilight: This flag affects the display of the item slot in a item menu,
+if the hilight colour has been defined for that item menu. It has no other
+inherent meaning, so you can use it for your own use as well.
 
 þ Custom flags: Flags that you can define for your own use.
 
