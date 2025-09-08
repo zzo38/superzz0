@@ -1072,11 +1072,12 @@ const char*load_inventory(FILE*fp,Inventory*inv) {
   if(!fp) return 0;
   m=read8(fp);
   if(m<=0) return 0;
-  if(m<2 || m>12 || ((1UL<<m)&0b0101110111011UL)) return "Improper header size in .INV lump";
+  if(m<2 || m>14 || ((1UL<<m)&0b010101110111011UL)) return "Improper header size in .INV lump";
   inv->count=read16(fp);
   inv->maxheap=(m>2?read32(fp):0xFFFFFFFFL);
   inv->strength=(m>6?read32(fp):0xFFFFFFFFL);
   inv->flag=(m>10?read16(fp):0x0000);
+  inv->cursor=(m>12?read16(fp):0x0000);
   inv->item=calloc(inv->count,sizeof(ItemSlot));
   if(inv->count && !inv->item) err(1,"Allocation failed");
   for(n=0;n<inv->count;) switch(c=read8(fp)) {
@@ -1098,11 +1099,12 @@ const char*save_inventory(FILE*fp,Inventory*inv) {
   int m,n;
   if(!fp) return 0;
   if(!inv->count && !inv->flag && !inv->maxheap && !inv->strength) return 0;
-  write8(fp,12);
+  write8(fp,14);
   write16(fp,inv->count);
   write32(fp,inv->maxheap);
   write32(fp,inv->strength);
   write16(fp,inv->flag);
+  write16(fp,inv->cursor);
   for(m=n=0;n<inv->count;n++) {
     if(inv->item[n].item|inv->item[n].quantity|inv->item[n].flag|inv->item[n].ext0|inv->item[n].ext1|inv->item[n].ext2) {
       if(m) write8(fp,m-1);

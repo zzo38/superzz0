@@ -1900,6 +1900,7 @@ static char show_text_window(Uint32 xyn,char help) {
     nvtextbuf=*textfile_text;
     if(vtexttime=(nvtextbuf?config.message_timer:0)) add_message_text();
   } else if(tnlines>1) {
+    if(v_status[1] && v_status[1]!=32) errx(1,"Cannot display multiple non-main screens");
     set_timer(0);
     if((a=xyn&0xFFFF) && a<=maxstat && stats[a-1].length && stats[a-1].text[0]=='@') {
       for(b=0;b<80 && b<stats[a-1].length;b++) {
@@ -2030,6 +2031,187 @@ static char show_text_window(Uint32 xyn,char help) {
   textfile_size=0;
   repeating=0;
   return r;
+}
+
+typedef struct {
+  Uint32 name;
+  Uint16 slot,ext;
+} ItemMenuSlot;
+
+typedef struct {
+  WindowInfo*wi;
+  ItemMenuSlot*list;
+  char*nam;
+} ItemMenuInfo;
+
+static inline void update_item_window(const ItemMenuInfo*inf) {
+  int i;
+  Uint32 v,x,y;
+  Uint8 cmd,col,chr;
+  memset(v_font,0,80*25);
+  for(i=0;i<80*25;i++) {
+    cmd=cur_screen.command[i];
+    col=cur_screen.color[i];
+    chr=cur_screen.parameter[i];
+    switch(cmd&0xF0) {
+      case SC_BACKGROUND:
+        if(cmd&1) v_char[i]=chr;
+        if(cmd&2) v_color[i]=col;
+        break;
+      case SC_NUMERIC:
+        v_char[i]=digit_of(status_vars[cmd&15],chr);
+        v_color[i]=col;
+        break;
+      case SC_NUMERIC_SPECIAL:
+        switch(cmd) {
+          case SC_SPEC_PLAYER_X: v=stats->count?stats->xy->x:0; break;
+          case SC_SPEC_PLAYER_Y: v=stats->count?stats->xy->y:0; break;
+          case SC_SPEC_CAMERA_X: v=scroll_x-cur_screen.view_x; break;
+          case SC_SPEC_CAMERA_Y: v=scroll_y-cur_screen.view_y; break;
+          case SC_SPEC_TEXT_SCROLL_PERCENT: v=(100L*(tscroll+(inf->wi->flag&WF_ZERO_BASED?0:1)))/tnlines; break;
+          case SC_SPEC_TEXT_LINE_NUMBER: v=tcursor+(inf->wi->flag&WF_ZERO_BASED?0:1); break;
+          case SC_SPEC_TEXT_LINE_COUNT: v=tnlines; break;
+          case SC_SPEC_CURRENT_BOARD: v=cur_board_id; break;
+          case SC_SPEC_EXIT_E: v=board_info.exits[DIR_E]; break;
+          case SC_SPEC_EXIT_N: v=board_info.exits[DIR_N]; break;
+          case SC_SPEC_EXIT_W: v=board_info.exits[DIR_W]; break;
+          case SC_SPEC_EXIT_S: v=board_info.exits[DIR_S]; break;
+          case SC_SPEC_WIDTH: v=board_info.width; break;
+          case SC_SPEC_HEIGHT: v=board_info.height; break;
+          case SC_SPEC_USERDATA: v=board_info.userdata; break;
+          default: continue; // TODO: context-specific
+        }
+        v_char[i]=digit_of(v,chr);
+        v_color[i]=col;
+        break;
+      case SC_INDICATOR:
+        v_color[i]=col;
+        x=i%80; y=i/80;
+        switch(cmd) {
+          case SC_IND_USERDATA: v_char[i]=board_info.userdata?chr:0; break;
+          case SC_IND_CURSOR: /* TODO */ break;
+          case SC_IND_SCROLL_Y: /* TODO */ break;
+          case SC_IND_SCROLL_X: /* TODO: horizontal scrolling */ break;
+          case SC_IND_EXIT_E: v_char[i]=board_info.exits[DIR_E]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_E]:0; break;
+          case SC_IND_EXIT_N: v_char[i]=board_info.exits[DIR_N]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_N]:0; break;
+          case SC_IND_EXIT_W: v_char[i]=board_info.exits[DIR_W]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_W]:0; break;
+          case SC_IND_EXIT_S: v_char[i]=board_info.exits[DIR_S]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_S]:0; break;
+          case SC_IND_USER0: v_char[i]=board_info.flag&BF_USER0?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[0]:0; break;
+          case SC_IND_USER1: v_char[i]=board_info.flag&BF_USER1?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[1]:0; break;
+          case SC_IND_USER2: v_char[i]=board_info.flag&BF_USER2?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[2]:0; break;
+          case SC_IND_USER3: v_char[i]=board_info.flag&BF_USER3?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[3]:0; break;
+        }
+        break;
+      case SC_TEXT:
+        // Show item name or description
+        if(tcursor>=tnlines || (inf->list[tcursor].ext&0x8000)) {
+          plain: v_char[i]=chr; v_color[i]=col;
+        } else {
+          
+        }
+        break;
+      case SC_ITEM:
+        
+        break;
+      case SC_BITS_0_LO ... SC_BITS_3_HI:
+        v_color[i]=col;
+        v=status_vars[(cmd-SC_BITS_0_LO)>>5];
+        v_char[i]=(v&(1UL<<(cmd&0x1F))?chr:32);
+        break;
+    }
+  }
+}
+
+static Uint16 show_item_window(Uint32 opt) {
+  Sint32 rs[4]={regs[0],regs[1],regs[2],regs[3]};
+  ItemMenuInfo inf;
+  WindowInfo wind={};
+  FILE*fp;
+  FILE*nfp;
+  char*names=0;
+  size_t snames=0;
+  Uint32 iname=1;
+  const char*e;
+  Inventory*inv=inventory+(memory[MEM_INVENTORY]&7);
+  ItemDef*d;
+  ItemMenuSlot c;
+  ItemMenuSlot*list=0;
+  size_t slist=0;
+  int i,j;
+  Sint32 k;
+  set_timer(0);
+  // Load screen
+  if(v_status[1] && v_status[1]!=32) errx(1,"Cannot display multiple non-main screens");
+  fp=open_lump_by_number(cur_screen_id=memory[MEM_ITEM_SCREEN],"SCR","r");
+  if(!fp) err(1,"Cannot open %04X.SCR",cur_screen_id);
+  if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
+  fclose(fp);
+  if(fp=open_lump_by_number(cur_screen_id,"WIN","r")) {
+    if(e=load_window(fp,&wind)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
+    fclose(fp);
+  }
+  work_varproperties(&cur_screen.varprop);
+  v_status[1]='I';
+  // Load names and slots
+  tcursor=0;
+  fp=open_memstream((char**)&list,&slist);
+  nfp=open_memstream(&names,&snames);
+  if(!fp || !nfp) err(1,"Allocation failed");
+  fputc(0,nfp);
+  for(i=0;i<inv->count;i++) {
+    if(inv->item[i].flag&ISF_HIDDEN) continue;
+    if(!(inv->item[i].flag|inv->item[i].item)) {
+      if(opt&4) continue;
+      c.name=0; c.slot=0; c.ext=0x8000;
+      fwrite(&c,1,sizeof(ItemMenuSlot),fp);
+      tnlines++;
+      continue;
+    }
+    if(inv->item[i].item>nitemdefs) continue;
+    d=itemdefs+inv->item[i].item-1;
+    condflag=(d->flag&IDF_UNIDENTIFIED?1:0);
+    *textbuf=ntextbuf=0;
+    k=run_program(memory[MEM_NAME_ITEM_EVENT],inv->item[i].item|(inv->item[i].flag<<16),i,d->flag,0);
+    if(k<0) continue;
+    c.slot=i; c.ext=k&0xBFFF;
+    fwrite(&c,1,sizeof(ItemMenuSlot),fp);
+    if(ntextbuf) {
+      fwrite(textbuf,1,ntextbuf,nfp); fputc(0,nfp);
+      c.name=iname; iname+=ntextbuf+1;
+    } else {
+      c.name=d->name; c.ext|=0x4000;
+    }
+    fputc(0,nfp);
+    iname+=ntextbuf+1;
+    if(!(opt&1) && i==inv->cursor) tcursor=tnlines;
+    tnlines++;
+  }
+  fclose(fp); fclose(nfp);
+  if(!names || !list) err(1,"Allocation failed");
+  // Display
+  inf.wi=&wind; inf.list=list; inf.nam=names;
+  for(;;) {
+    update_item_window(&inf);
+    redisplay();
+    if(!next_event()) errx(0,"No events available.");
+    if(event.type!=SDL_KEYDOWN) continue;
+    switch(event.key.keysym.sym) {
+      case SDLK_ESCAPE: condflag=0; goto end;
+    }
+  }
+  // End
+  end:
+  memcpy(regs,rs,4*sizeof(Sint32));
+  if(condflag && tcursor<tnlines) k=list[tcursor].slot; else condflag=0;
+  free(names); free(list);
+  v_status[1]=32;
+  set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:playstate==PLAYSTATE_NORMAL?config.speed:0);
+  fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
+  if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
+  fclose(fp);
+  work_varproperties(&cur_screen.varprop);
+  work_varproperties(&board_info.varprop);
+  return k;
 }
 
 static char script_go(Uint16 m,Uint16 n,Stat*s,StatXY*xy,Uint8 dir) {
@@ -3580,6 +3762,7 @@ static void do_inventory_op(Uint8 fo,Sint32 so) {
         for(i=0;i<inv->count-1;i++) if((inv->item[i+1].item|inv->item[i+1].flag) && !(inv->item[i].item|inv->item[i].flag)) {
           inv->item[i]=inv->item[i+1];
           inv->item[i+1]=(ItemSlot){};
+          if(inv->cursor==i+1) --inv->cursor;
         }
       } else if(fo==5) {
         for(i=0;i<inv->count;i++) if(inv->item[i].flag&ISF_FIXED) inv->item[i]=(ItemSlot){};
@@ -3599,6 +3782,9 @@ static void do_inventory_op(Uint8 fo,Sint32 so) {
       if(f) fclose(f);
       break;
     case 14: revert_lump_by_number(regs[fo]&0xFFFF,"INV"); break;
+    case 15: inv->cursor=0; break;
+    case 16: regs[fo]=inv->cursor; break;
+    case 17: inv->cursor=regs[fo]; break;
     default: errx(1,"Unimplemented inventory op: %d",so&0xFF);
   }
 }
@@ -3890,6 +4076,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           condflag=0;
         }
         break;
+      case OP_IMNU: t=show_item_window(so); if(condflag) regs[fo]=t; break;
       case OP_INC: ++so; goto store;
       case OP_INCL: ++so; goto lstore;
       case OP_INEW:

@@ -978,11 +978,25 @@ numbers are treated as unsigned.
    12 = Read .INV lump
    13 = Write .INV lump
    14 = Revert .INV lump
+   15 = Zero cursor
+   16 = Read cursor
+   17 = Write cursor
   Add $800 plus $100 times the active inventory number to use that one
   instead of the current one.
 
 [0B1 IMNU]
-  (TODO)
+  Display a item menu. If a valid item is selected, then the condition
+  flag is true and the item slot number is written into the first operand;
+  otherwise the condition flag is false and the first operand is unchanged.
+  The second operand has bits controlling the working of the item menu:
+   bit0 = Set initial cursor position to zero
+   bit1 = Do not save cursor position
+   bit2 = Hide vacant slots
+   bit3 = Disallow selecting items
+   bit4 = Disallow moving items
+   bit5 = Disallow discarding items
+   bit6 = Show only category J
+   bit7 = Call subroutine K when a selection is made
 
 [0B2 IFND]
   (TODO)

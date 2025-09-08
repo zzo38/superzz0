@@ -13,6 +13,10 @@ $A1 = Mask for item slot flags to match for IGIV, ITAK, and some other
 inventory-oriented instructions. Some flags are always handled in a special
 way regardless of this mask.
 
+$A4 = Name item event (see below).
+
+$A5 = Screen number to use for item windows.
+
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
 save the delay, bit9 means to save the walk/face/user flags, and bit13
@@ -201,6 +205,31 @@ deleted by DIE, KILM, etc, it will mark it for deletion in this way.)
 
 
 === Global events ===
+
+The events marked (#) will save the A,B,C,D registers before being called,
+and then restored afterward; if they are called several times in sequence,
+then they are restored only after all calls are completed.
+
+$00A4 (#)
+  This event is called when displaying the inventory menu, and is used for
+  deciding how the item's name should be displayed. The text buffer is
+  initially empty when this is called; the final value when it returns is
+  used as the displayed name. If the text buffer is still empty when it
+  returns, then the item's name is used.
+
+  W = Item ID number and slot flags
+  X = Slot number
+  Y = Item definition flags
+  Z = Usage: 0(item menu)
+  Condition flag = True if item is unidentified, or false if identified.
+
+  Return = If negative then this item is not displayed, but if zero or
+  positive then it is displayed. The bits are as follows:
+
+  bit8 = If set then the low 8-bits override the colour of the text.
+  bit9 = Prevents selecting this slot.
+  bit14 = Used internally; setting this by yourself has no effect.
+  bit15 = Displays it as a vacant slot (which cannot be selected).
 
 $00C1
   This event is called during each frame, before $00E1, but also creates a

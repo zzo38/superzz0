@@ -154,6 +154,8 @@ slot will be used instead.
 if it would cause the sum of the product of the quantity times the weight
 of an object in each slot to exceed the strength.
 
+þ Cursor: The zero-based cursor position.
+
 þ Ignore max heap: If selected, then the max heap for the item definition
 will be ignored, although the max heap of the inventory is still used. If
 not selected, then whichever max heap value is lower will be used.

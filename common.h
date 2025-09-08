@@ -656,7 +656,7 @@ typedef struct {
 typedef struct {
   ItemSlot*item;
   Uint32 maxheap,strength;
-  Uint16 count,flag;
+  Uint16 count,flag,cursor;
 } Inventory;
 
 extern Inventory inventory[8];

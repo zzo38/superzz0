@@ -1925,6 +1925,7 @@ static void edit_inventory(const char*name) {
       win_help("items","ip");
       win_numeric('M',"Max heap: ",inventory->maxheap,0,0xFFFFFFFFL);
       win_numeric('S',"Strength: ",inventory->strength,0,0xFFFFFFFFL);
+      win_numeric('C',"Cursor: ",inventory->cursor,0,0xFFFF);
       win_boolean('I',"Ignore max heap",inventory->flag,INV_IGNORE_MAXHEAP);
       win_boolean('g',"Single heap per item",inventory->flag,INV_SINGLE_HEAP);
       win_boolean('w',"Ignore weight",inventory->flag,INV_IGNORE_WEIGHT);

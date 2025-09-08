@@ -254,6 +254,8 @@ It starts with the header:
 
 * Flags (16-bits).
 
+* Cursor (16-bits).
+
 After the header will be the item slots; each one starts with a control
 byte indicating the type of the record.
 
