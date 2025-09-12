@@ -24,7 +24,7 @@ GAME
   +  Some of the settings in the user configuration file can be overridden
      by the game world (unless disallowed by the user configuration file).
   +  New boards can be created at run time.
-  +  Item definitions and inventory.
+  +  Item definitions and inventory (including item windows).
   +  Colours can now be defined for states of different parts of windows.
   =  The current board number display now works correctly. (Previously this
      was documented but the implementation was missing.)

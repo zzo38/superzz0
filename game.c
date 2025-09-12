@@ -2041,15 +2041,38 @@ typedef struct {
 typedef struct {
   WindowInfo*wi;
   ItemMenuSlot*list;
-  char*nam;
+  Uint8*nam;
+  Uint8 ncol;
 } ItemMenuInfo;
 
 static inline void update_item_window(const ItemMenuInfo*inf) {
-  int i;
-  Uint32 v,x,y;
-  Uint8 cmd,col,chr;
+  Inventory*inv=inventory+(memory[MEM_INVENTORY]&7);
+  const Uint8*p;
+  const Uint8*tp=0;
+  const Uint8*desc=0;
+  Uint8 descy=0;
+  Uint8 top=cur_screen.hard_edge[DIR_N];
+  Sint32 n=tscroll*inf->ncol-1;
+  Sint32 m;
+  Uint8 inn=0;
+  int i,j;
+  Uint32 v,x,y,z;
+  Uint8 cmd,col,chr,col1;
+  Uint8 rf=0;
+  Uint8 rn=0;
   memset(v_font,0,80*25);
-  for(i=0;i<80*25;i++) {
+  if(!cur_screen.hard_edge[DIR_N]) n++,inn=1;
+  if(tcursor<tnlines && !(inf->list[tcursor].ext&0x8000)) {
+    if(m=inv->item[inf->list[tcursor].slot].item) desc=itemnames+itemdefs[m-1].desc;
+  }
+  for(i=x=y=0;i<80*25;i++,x++) {
+    if(x==80) {
+      y++; x=rf=rn=0; tp=0;
+      if(y>=cur_screen.hard_edge[DIR_N] && y<=cur_screen.hard_edge[DIR_S]) n++,inn=1; else inn=0;
+    } else if(x) {
+      if((cur_screen.command[i]^cur_screen.command[i-1])&0xF0) tp=0;
+    }
+    if(inn && inf->wi->command[x]=='Z') rf=rn=0,n++,tp=0;
     cmd=cur_screen.command[i];
     col=cur_screen.color[i];
     chr=cur_screen.parameter[i];
@@ -2086,10 +2109,9 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
         break;
       case SC_INDICATOR:
         v_color[i]=col;
-        x=i%80; y=i/80;
         switch(cmd) {
           case SC_IND_USERDATA: v_char[i]=board_info.userdata?chr:0; break;
-          case SC_IND_CURSOR: /* TODO */ break;
+          case SC_IND_CURSOR: v_char[i]=(n==tcursor?chr:0); break;
           case SC_IND_SCROLL_Y: /* TODO */ break;
           case SC_IND_SCROLL_X: /* TODO: horizontal scrolling */ break;
           case SC_IND_EXIT_E: v_char[i]=board_info.exits[DIR_E]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_E]:0; break;
@@ -2106,12 +2128,70 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
         // Show item name or description
         if(tcursor>=tnlines || (inf->list[tcursor].ext&0x8000)) {
           plain: v_char[i]=chr; v_color[i]=col;
+        } else if(y==cur_screen.message_y) {
+          if(!tp) { if(inf->list[tcursor].ext&0x4000) tp=inf->nam+inf->list[tcursor].name; else tp=itemnames+inf->list[tcursor].name; }
+          if(!*tp) goto plain;
+          v_char[i]=*tp++; v_color[i]=inf->wi->wcolor[WC_LINK_TEXT]?:col;
         } else {
-          
+          if(!desc || !*desc) goto plain;
+          if(*desc=='\n') {
+            if(descy!=y) descy=y,++desc;
+            goto plain;
+          } else if(*desc!='\n') {
+            v_char[i]=*desc++; v_color[i]=inf->wi->wcolor[WC_NORMAL_TEXT]?:col;
+          }
         }
         break;
       case SC_ITEM:
-        
+        m=(inn?n:tcursor);
+        if(inn && (n<0 || n>=tnlines)) {
+          hide: v_color[i]=(col>>4)*0x11; v_char[i]=32; break;
+        }
+        j=1; z=m<tnlines?inf->list[m].slot:0; col1=col;
+        if(cmd==SC_ITEM_PLACEHOLDER) {
+          if(!inn) goto plain; // This is not supposed to happen, but check in case it does anyways
+          if(m>=tnlines || (inf->list[m].ext&0x8000)) {
+            if(v=inf->wi->wcolor[WC_VACANT_ITEM]) col=v,j=0;
+          } else if(
+              ((inf->list[m].ext&0x0100) && (v=inf->list[m].ext))
+           || ((inv->item[z].flag&ISF_HILIGHT) && (v=inf->wi->wcolor[WC_HILIGHT_ITEM]))
+           || ((inv->item[z].flag&ISF_FIXED) && (v=inf->wi->wcolor[WC_FIXED_ITEM]))
+           || (inv->item[z].item && inv->item[z].item<=nitemdefs && (itemdefs[inv->item[z].item-1].flag&(IDF_NO_DISCARD|IDF_HIDE_QUANTITY)) && (v=inf->wi->wcolor[WC_KEY_ITEM]))
+           || (v=inf->wi->wcolor[WC_NORMAL_ITEM])
+          ) {
+            col=v,j=0;
+          }
+        }
+        if(n==tcursor && (v=inf->wi->wcolor[WC_SELECTED_ITEM])) {
+          if(v==0xFF) col=(col<<4)|(col>>4); else if(j) col=v; else if(inf->wi->flag&WF_XOR_COLOR) col^=v; else col|=v;
+          if(v==0xFF) col1=(col1<<4)|(col1>>4); else if(j) col1=v; else if(inf->wi->flag&WF_XOR_COLOR) col1^=v; else col1|=v;
+        }
+        if(cmd==SC_ITEM_PLACEHOLDER) {
+          if(m>=tnlines || (inf->list[m].ext&0x8000)) goto plain;
+          if(j && inf->wi->color[x]!=0x22) {
+            col=(inf->wi->color[x]==0x11?cur_screen.color[i]:inf->wi->color[x]);
+            if(n==tcursor && (v=inf->wi->wcolor[WC_SELECTED_ITEM])) {
+              if(v==0xFF) col=(col<<4)|(col>>4); else if(col==cur_screen.color[i]) col=v; else if(inf->wi->flag&WF_XOR_COLOR) col^=v; else col|=v;
+            }
+          }
+          switch(inf->wi->command[x]) {
+            default: name:
+              p=(inf->list[m].ext&0x4000?itemnames:inf->nam)+inf->list[m].name+rn;
+              if(v_char[i]=*p) {
+                rn++;
+                v_color[i]=col;
+              } else {
+                v_color[i]=col1;
+                v_char[i]=inf->wi->parameter[x]?:chr;
+              }
+          }
+        } else if(cmd==SC_ITEM_ELEMENT) {
+          if(inn && (n>=tnlines || (inf->list[n].ext&0x8000))) goto hide;
+          display_item_element_cell(i,col,inn?memory[MEM_INVENTORY]&7:chr>>5,inn?inf->list[n].slot:chr&0x1F);
+        } else if((cmd&SC_ITEM_FLAGS)==SC_ITEM_FLAGS) {
+          if(m>=tnlines || (inf->list[m].ext&0x8000)) goto hide;
+          if(inv->item[inf->list[m].slot].flag&(1<<(cmd&7))) goto plain; else goto hide;
+        }
         break;
       case SC_BITS_0_LO ... SC_BITS_3_HI:
         v_color[i]=col;
@@ -2153,28 +2233,26 @@ static Uint16 show_item_window(Uint32 opt) {
   work_varproperties(&cur_screen.varprop);
   v_status[1]='I';
   // Load names and slots
-  tcursor=0;
+  tcursor=tnlines=0;
   fp=open_memstream((char**)&list,&slist);
   nfp=open_memstream(&names,&snames);
   if(!fp || !nfp) err(1,"Allocation failed");
   fputc(0,nfp);
   for(i=0;i<inv->count;i++) {
-    if(inv->item[i].flag&ISF_HIDDEN) continue;
-    if(!(inv->item[i].flag|inv->item[i].item)) {
+    if((inv->item[i].flag&ISF_HIDDEN) || inv->item[i].item>nitemdefs) continue;
+    if(!inv->item[i].item) {
       if(opt&4) continue;
-      c.name=0; c.slot=0; c.ext=0x8000;
+      c.name=0; c.slot=i; c.ext=0x8000;
       fwrite(&c,1,sizeof(ItemMenuSlot),fp);
       tnlines++;
       continue;
     }
-    if(inv->item[i].item>nitemdefs) continue;
     d=itemdefs+inv->item[i].item-1;
     condflag=(d->flag&IDF_UNIDENTIFIED?1:0);
     *textbuf=ntextbuf=0;
     k=run_program(memory[MEM_NAME_ITEM_EVENT],inv->item[i].item|(inv->item[i].flag<<16),i,d->flag,0);
     if(k<0) continue;
     c.slot=i; c.ext=k&0xBFFF;
-    fwrite(&c,1,sizeof(ItemMenuSlot),fp);
     if(ntextbuf) {
       fwrite(textbuf,1,ntextbuf,nfp); fputc(0,nfp);
       c.name=iname; iname+=ntextbuf+1;
@@ -2182,26 +2260,56 @@ static Uint16 show_item_window(Uint32 opt) {
       c.name=d->name; c.ext|=0x4000;
     }
     fputc(0,nfp);
+    fwrite(&c,1,sizeof(ItemMenuSlot),fp);
     iname+=ntextbuf+1;
     if(!(opt&1) && i==inv->cursor) tcursor=tnlines;
     tnlines++;
   }
+  *textbuf=ntextbuf=0;
   fclose(fp); fclose(nfp);
   if(!names || !list) err(1,"Allocation failed");
-  // Display
+  // Init display
+  for(inf.ncol=i=1;i<79;i++) if(wind.command[i]=='Z') ++inf.ncol;
   inf.wi=&wind; inf.list=list; inf.nam=names;
-  for(;;) {
+  // Display
+  for(tscroll=0;;) {
+    if(!(cur_screen.flag&SF_NO_SCROLL)) {
+      i=tcursor/inf.ncol; // row that should be visible
+      j=tscroll; // current scroll position
+      
+    }
     update_item_window(&inf);
     redisplay();
     if(!next_event()) errx(0,"No events available.");
     if(event.type!=SDL_KEYDOWN) continue;
     switch(event.key.keysym.sym) {
-      case SDLK_ESCAPE: condflag=0; goto end;
+      case SDLK_ESCAPE: escape: condflag=0; goto end;
+      case SDLK_F2: i=audio_get_volume(); audio_set_volume(i&0xFFFF,(i>>16)^1); soundon=(audio_get_volume()<0x10000?1:0); audio_set_sfx("@0ZCX"); break;
+      case SDLK_UP: i=(event.key.keysym.mod&KMOD_SHIFT)?30:24; goto ascii;
+      case SDLK_DOWN: i=(event.key.keysym.mod&KMOD_SHIFT)?31:25; goto ascii;
+      case SDLK_LEFT: i=(event.key.keysym.mod&KMOD_SHIFT)?17:27; goto ascii;
+      case SDLK_RIGHT: i=(event.key.keysym.mod&KMOD_SHIFT)?16:26; goto ascii;
+      default:
+        i=event.key.keysym.unicode;
+        if(i==27) goto escape;
+        if((i<32 || i>126) && !(i==8 || i==9 || i==13)) break;
+        ascii:
+        switch(i) {
+          case 13: case 32:
+            if(tcursor>=tnlines || (list[tcursor].ext&0x8200)) break;
+            condflag=1; goto end;
+          case 'h': case 'H': case 27: if(tcursor) --tcursor; break;
+          case 'l': case 'L': case 26: if(tnlines && tcursor<tnlines-1) ++tcursor; break;
+          case 'j': case 'J': case 25: tcursor+=inf.ncol; if(tcursor>=tnlines) tcursor=tnlines?tnlines-1:0; break;
+          case 'k': case 'K': case 24: if(tcursor>inf.ncol) tcursor-=inf.ncol; else tcursor=0; break;
+          case 'q': case 'Q': goto escape;
+        }
     }
   }
   // End
   end:
   memcpy(regs,rs,4*sizeof(Sint32));
+  if(tcursor<tnlines && !(opt&2)) inv->cursor=list[tcursor].slot;
   if(condflag && tcursor<tnlines) k=list[tcursor].slot; else condflag=0;
   free(names); free(list);
   v_status[1]=32;
@@ -3741,6 +3849,7 @@ static void do_inventory_op(Uint8 fo,Sint32 so) {
   switch(so&0xFF) {
     case 0: regs[fo]=inv->count; break;
     case 1:
+      if(v_status[1]=='I') errx(1,"Cannot use INVE 1 inside of a item menu");
       regs[fo]&=0xFFFF;
       inv->item=realloc(inv->item,regs[fo]*sizeof(ItemSlot));
       if(regs[fo] && !inv->item) err(1,"Allocation failed");
@@ -3774,6 +3883,7 @@ static void do_inventory_op(Uint8 fo,Sint32 so) {
     case 10: inv->flag&=~(1<<(fo&3)); break;
     case 11: inv->flag|=(1<<(fo&3)); break;
     case 12:
+      if(v_status[1]=='I') errx(1,"Cannot use INVE 12 inside of a item menu");
       if(load_inventory(f=open_lump_by_number(regs[fo]&0xFFFF,"INV","r"),inv)) errx(1,"Error with loading .INV lump");
       if(f) fclose(f);
       break;

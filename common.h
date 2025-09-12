@@ -94,6 +94,8 @@ void save_fontpal_state(ASN1_Encoder*);
 
 #define JL_NORMAL 16
 #define JL_TEXT_WINDOW 17
+#define JL_ITEM_WINDOW 18
+#define JL_CUSTOM_WINDOW 19
 #define JL_LEVEL0 16
 #define JL_LEVEL1 20
 #define JL_LEVEL2 21

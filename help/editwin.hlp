@@ -17,7 +17,15 @@ F1 is used for editing window-specific flags.
 F5 will save the window info, and F6 will delete it (even if it was already
 present, it will be deleted).
 
-Command codes for text windows:
+The possible commands and their uses depends on the window type:
+!t;Text windows
+!i;Item windows
+
+If the parameter is character code 0 then it will use the default character
+in the screen. Character code 255 also has some special meanings for some
+commands; see the descriptions above.
+
+:t;Command codes for text windows
 
 þ A = Always use the window character, in a link line, or outside of the
 hard edge of a normal line, or outside of the text of a $ line.
@@ -43,14 +51,20 @@ at the soft edge.
 only meaningful in some contexts; if used in a context where it is not
 appropriate then it is treated as X.
 
-If the parameter is character code 0 then it will use the default character
-in the screen. Character code 255 also has some special meanings for some
-commands; see the descriptions above.
-
 Meaningful commands by line types in text windows:
   Normal   - - - - - - - X
   Center   A - - - - S - X
   Link     A C K L P - T X
+
+:i;Command codes for item windows
+These command codes are used if the item tile subtype is "placeholder".
+
+þ X = Use the default behaviour. Normally, this means that the item name is
+displayed, or a continuation of the previous field.
+
+þ Z = Separator between columns of items. Do not use this before the first
+column and after the last column; it is only used between columns (so this
+command should not occur if there is supposed to be only one column).
 
 :flag;Flags
 
@@ -75,7 +89,8 @@ in some circumstances.
 Colours for text windows are:
 
 þ Normal text: Overrides the colour of normal text (which is not a link,
-centered text, or label).
+centered text, or label). For item menus, this is used for a text window
+cell which displays the description of the selected item.
 
 þ Link text: Overrides the colour of link text (a line with ! at the
 beginning). This is overridden by the A, C, K, L, P, and T commands.
@@ -83,5 +98,31 @@ beginning). This is overridden by the A, C, K, L, P, and T commands.
 þ Center text: Overrides the colour text with $ at the beginning.
 
 þ Label text: Overrides the colour of the heading text of a label (a line
-with : at the beginning), and of the entire row that contains it.
+with : at the beginning), and of the entire row that contains it. For item
+menus, this is used for a text window cell which displays the name of the
+selected item.
 
+For item windows, the following are used to indicate something about the
+item slots. These are listed from lowest to highest priority; the highest
+priority one that applies is used if it is nonzero; if none of the ones
+that are nonzero apply to this slot, then the default colour is used.
+
+þ Normal item: Any non-vacant slot.
+
+þ Key item: Any item with the "cannot be discarded" and/or "hide quantity"
+flags set.
+
+þ Fixed item: Any item in a fixed slot.
+
+þ Hilight item: Any item slot with the hilight flag set.
+
+þ Vacant item: Any vacant slot (the others never apply to vacant slots).
+
+Item windows also use the following; either or both can be combined with
+any of the above, according to either OR or XOR. If the colour code is
+set to $FF then it means to use reverse video.
+
+þ Selected item: The item slot that the cursor is at.
+
+þ Moving item: When an item is being moved from one slot to another slot,
+this colour is used for the slot being moved from.

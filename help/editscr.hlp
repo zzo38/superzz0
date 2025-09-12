@@ -151,6 +151,10 @@ For text windows, the east/west hard edges are where the text is aligned
 and the north/south hard edges are the extents of the view, and the soft
 edges are used for aligning the text of links.
 
+For item windows, the hard edges do affect where item slots are displayed;
+none can be displayed outside of the north/south hard edges. Both soft and
+hard edges affect scrolling like they do for boards.
+
 :colon;Colon commands
 These colon commands can be used for various batch operations.
 
