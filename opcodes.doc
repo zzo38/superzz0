@@ -995,8 +995,6 @@ numbers are treated as unsigned.
    bit3 = Disallow selecting items
    bit4 = Disallow moving items
    bit5 = Disallow discarding items
-   bit6 = Show only category J
-   bit7 = Call subroutine K when a selection is made
 
 [0B2 IFND]
   (TODO)

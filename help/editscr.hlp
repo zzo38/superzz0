@@ -153,7 +153,8 @@ edges are used for aligning the text of links.
 
 For item windows, the hard edges do affect where item slots are displayed;
 none can be displayed outside of the north/south hard edges. Both soft and
-hard edges affect scrolling like they do for boards.
+hard edges affect scrolling like they do for boards, and the view center
+is always one of the item slot positions if possible.
 
 :colon;Colon commands
 These colon commands can be used for various batch operations.

@@ -82,6 +82,14 @@ selected, otherwise they are one-based.
 this defines how to combine them. If this is selected then XOR is used,
 otherwise OR is used.
 
+þ Alternate scrolling: Changes the scrolling behaviour for text windows
+and item windows (currently it is only implemented for item windows), to
+work in a way similar to board scrolling.
+
+þ Use window key event: If selected, causes windows (currently only item
+windows, but later may affect text windows as well) to use the "window key
+event" to allow the world to override the behaviour of the keyboard
+
 You can also define some colours in the flags menu. Any of these colours
 which is not zero will be used in place of the colour defined in the screen
 in some circumstances.

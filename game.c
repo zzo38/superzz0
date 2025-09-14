@@ -1721,8 +1721,6 @@ static void update_text_window(const WindowInfo*wind) {
         switch(cmd) {
           case SC_SPEC_PLAYER_X: v=stats->count?stats->xy->x:0; break;
           case SC_SPEC_PLAYER_Y: v=stats->count?stats->xy->y:0; break;
-          case SC_SPEC_CAMERA_X: v=scroll_x-cur_screen.view_x; break;
-          case SC_SPEC_CAMERA_Y: v=scroll_y-cur_screen.view_y; break;
           case SC_SPEC_TEXT_SCROLL_PERCENT: v=(100L*(tcursor+(wind->flag&WF_ZERO_BASED?0:1)))/tnlines; break;
           case SC_SPEC_TEXT_LINE_NUMBER: v=tcursor+(wind->flag&WF_ZERO_BASED?0:1); break;
           case SC_SPEC_TEXT_LINE_COUNT: v=tnlines; break;
@@ -1987,6 +1985,7 @@ static char show_text_window(Uint32 xyn,char help) {
             break;
           }
           goto close;
+        case SDLK_F2: a=audio_get_volume(); audio_set_volume(a&0xFFFF,(a>>16)^1); soundon=(audio_get_volume()<0x10000?1:0); audio_set_sfx("@0ZCX"); break;
         case SDLK_F11:
           lpt_document() {
             if(ntextbuf) lpt_title(textbuf,ntextbuf);
@@ -2042,6 +2041,7 @@ typedef struct {
   WindowInfo*wi;
   ItemMenuSlot*list;
   Uint8*nam;
+  Sint32 move;
   Uint8 ncol;
 } ItemMenuInfo;
 
@@ -2052,7 +2052,7 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
   const Uint8*desc=0;
   Uint8 descy=0;
   Uint8 top=cur_screen.hard_edge[DIR_N];
-  Sint32 n=tscroll*inf->ncol-1;
+  Sint32 n=(tscroll-cur_screen.view_y)*(Sint32)inf->ncol;
   Sint32 m;
   Uint8 inn=0;
   int i,j;
@@ -2061,18 +2061,18 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
   Uint8 rf=0;
   Uint8 rn=0;
   memset(v_font,0,80*25);
-  if(!cur_screen.hard_edge[DIR_N]) n++,inn=1;
+  if(!cur_screen.hard_edge[DIR_N]) inn=1;
   if(tcursor<tnlines && !(inf->list[tcursor].ext&0x8000)) {
     if(m=inv->item[inf->list[tcursor].slot].item) desc=itemnames+itemdefs[m-1].desc;
   }
   for(i=x=y=0;i<80*25;i++,x++) {
     if(x==80) {
-      y++; x=rf=rn=0; tp=0;
-      if(y>=cur_screen.hard_edge[DIR_N] && y<=cur_screen.hard_edge[DIR_S]) n++,inn=1; else inn=0;
+      y++; n++; x=rf=rn=0; tp=0;
+      if(y>=cur_screen.hard_edge[DIR_N] && y<=cur_screen.hard_edge[DIR_S]) inn=1; else inn=0;
     } else if(x) {
       if((cur_screen.command[i]^cur_screen.command[i-1])&0xF0) tp=0;
     }
-    if(inn && inf->wi->command[x]=='Z') rf=rn=0,n++,tp=0;
+    if(inf->wi->command[x]=='Z') rf=rn=0,n++,tp=0;
     cmd=cur_screen.command[i];
     col=cur_screen.color[i];
     chr=cur_screen.parameter[i];
@@ -2089,8 +2089,6 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
         switch(cmd) {
           case SC_SPEC_PLAYER_X: v=stats->count?stats->xy->x:0; break;
           case SC_SPEC_PLAYER_Y: v=stats->count?stats->xy->y:0; break;
-          case SC_SPEC_CAMERA_X: v=scroll_x-cur_screen.view_x; break;
-          case SC_SPEC_CAMERA_Y: v=scroll_y-cur_screen.view_y; break;
           case SC_SPEC_TEXT_SCROLL_PERCENT: v=(100L*(tscroll+(inf->wi->flag&WF_ZERO_BASED?0:1)))/tnlines; break;
           case SC_SPEC_TEXT_LINE_NUMBER: v=tcursor+(inf->wi->flag&WF_ZERO_BASED?0:1); break;
           case SC_SPEC_TEXT_LINE_COUNT: v=tnlines; break;
@@ -2147,10 +2145,10 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
         if(inn && (n<0 || n>=tnlines)) {
           hide: v_color[i]=(col>>4)*0x11; v_char[i]=32; break;
         }
-        j=1; z=m<tnlines?inf->list[m].slot:0; col1=col;
+        j=1; z=m<0?0:m<tnlines?inf->list[m].slot:0; col1=col;
         if(cmd==SC_ITEM_PLACEHOLDER) {
           if(!inn) goto plain; // This is not supposed to happen, but check in case it does anyways
-          if(m>=tnlines || (inf->list[m].ext&0x8000)) {
+          if(m<0 || m>=tnlines || (inf->list[m].ext&0x8000)) {
             if(v=inf->wi->wcolor[WC_VACANT_ITEM]) col=v,j=0;
           } else if(
               ((inf->list[m].ext&0x0100) && (v=inf->list[m].ext))
@@ -2166,11 +2164,18 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
           if(v==0xFF) col=(col<<4)|(col>>4); else if(j) col=v; else if(inf->wi->flag&WF_XOR_COLOR) col^=v; else col|=v;
           if(v==0xFF) col1=(col1<<4)|(col1>>4); else if(j) col1=v; else if(inf->wi->flag&WF_XOR_COLOR) col1^=v; else col1|=v;
         }
+        if(n==inf->move && (v=inf->wi->wcolor[WC_MOVE_ITEM])) {
+          if(v==0xFF) col=(col<<4)|(col>>4); else if(j && col==cur_screen.color[i]) col=v; else if(inf->wi->flag&WF_XOR_COLOR) col^=v; else col|=v;
+          if(v==0xFF) col1=(col1<<4)|(col1>>4); else if(j) col1=v; else if(inf->wi->flag&WF_XOR_COLOR) col1^=v; else col1|=v;
+        }
         if(cmd==SC_ITEM_PLACEHOLDER) {
-          if(m>=tnlines || (inf->list[m].ext&0x8000)) goto plain;
+          if(m<0 || m>=tnlines || (inf->list[m].ext&0x8000)) goto plain;
           if(j && inf->wi->color[x]!=0x22) {
             col=(inf->wi->color[x]==0x11?cur_screen.color[i]:inf->wi->color[x]);
             if(n==tcursor && (v=inf->wi->wcolor[WC_SELECTED_ITEM])) {
+              if(v==0xFF) col=(col<<4)|(col>>4); else if(col==cur_screen.color[i]) col=v; else if(inf->wi->flag&WF_XOR_COLOR) col^=v; else col|=v;
+            }
+            if(n==inf->move && (v=inf->wi->wcolor[WC_MOVE_ITEM])) {
               if(v==0xFF) col=(col<<4)|(col>>4); else if(col==cur_screen.color[i]) col=v; else if(inf->wi->flag&WF_XOR_COLOR) col^=v; else col|=v;
             }
           }
@@ -2186,10 +2191,10 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
               }
           }
         } else if(cmd==SC_ITEM_ELEMENT) {
-          if(inn && (n>=tnlines || (inf->list[n].ext&0x8000))) goto hide;
+          if(inn && (n<0 || n>=tnlines || (inf->list[n].ext&0x8000))) goto hide;
           display_item_element_cell(i,col,inn?memory[MEM_INVENTORY]&7:chr>>5,inn?inf->list[n].slot:chr&0x1F);
         } else if((cmd&SC_ITEM_FLAGS)==SC_ITEM_FLAGS) {
-          if(m>=tnlines || (inf->list[m].ext&0x8000)) goto hide;
+          if(m<0 || m>=tnlines || (inf->list[m].ext&0x8000)) goto hide;
           if(inv->item[inf->list[m].slot].flag&(1<<(cmd&7))) goto plain; else goto hide;
         }
         break;
@@ -2270,13 +2275,24 @@ static Uint16 show_item_window(Uint32 opt) {
   if(!names || !list) err(1,"Allocation failed");
   // Init display
   for(inf.ncol=i=1;i<79;i++) if(wind.command[i]=='Z') ++inf.ncol;
-  inf.wi=&wind; inf.list=list; inf.nam=names;
+  inf.wi=&wind; inf.list=list; inf.nam=names; inf.move=-1;
   // Display
-  for(tscroll=0;;) {
+  tscroll=(cur_screen.flag&SF_NO_SCROLL?cur_screen.view_y-cur_screen.hard_edge[DIR_N]:tcursor/inf.ncol);
+  for(;;) {
     if(!(cur_screen.flag&SF_NO_SCROLL)) {
-      i=tcursor/inf.ncol; // row that should be visible
-      j=tscroll; // current scroll position
-      
+      if(wind.flag&WF_ALT_SCROLL) {
+        i=tcursor/inf.ncol; // row that should be visible
+        j=tscroll-cur_screen.view_y; // current top of screen position
+        if(j>i-(Sint32)cur_screen.soft_edge[DIR_N]) j=i-(Sint32)cur_screen.soft_edge[DIR_N];
+        if(j<i-(Sint32)cur_screen.soft_edge[DIR_S]) j=i-(Sint32)cur_screen.soft_edge[DIR_S];
+        i=(tnlines-1)/inf.ncol;
+        if(j>i-(Sint32)cur_screen.hard_edge[DIR_S]) j=i-(Sint32)cur_screen.hard_edge[DIR_S];
+        if(j<0-(Sint32)cur_screen.hard_edge[DIR_N]) j=0-(Sint32)cur_screen.hard_edge[DIR_N];
+        j+=cur_screen.view_y;
+        tscroll=(j<0?0:j);
+      } else {
+        tscroll=tcursor/inf.ncol;
+      }
     }
     update_item_window(&inf);
     redisplay();
@@ -2285,24 +2301,61 @@ static Uint16 show_item_window(Uint32 opt) {
     switch(event.key.keysym.sym) {
       case SDLK_ESCAPE: escape: condflag=0; goto end;
       case SDLK_F2: i=audio_get_volume(); audio_set_volume(i&0xFFFF,(i>>16)^1); soundon=(audio_get_volume()<0x10000?1:0); audio_set_sfx("@0ZCX"); break;
+      case SDLK_KP8: if(wind.flag&WF_KEY_EVENT) goto defa; // else fall through
       case SDLK_UP: i=(event.key.keysym.mod&KMOD_SHIFT)?30:24; goto ascii;
+      case SDLK_KP2: if(wind.flag&WF_KEY_EVENT) goto defa; // else fall through
       case SDLK_DOWN: i=(event.key.keysym.mod&KMOD_SHIFT)?31:25; goto ascii;
+      case SDLK_KP4: if(wind.flag&WF_KEY_EVENT) goto defa; // else fall through
       case SDLK_LEFT: i=(event.key.keysym.mod&KMOD_SHIFT)?17:27; goto ascii;
+      case SDLK_KP6: if(wind.flag&WF_KEY_EVENT) goto defa; // else fall through
       case SDLK_RIGHT: i=(event.key.keysym.mod&KMOD_SHIFT)?16:26; goto ascii;
-      default:
+      default: defa:
         i=event.key.keysym.unicode;
         if(i==27) goto escape;
         if((i<32 || i>126) && !(i==8 || i==9 || i==13)) break;
         ascii:
         switch(i) {
-          case 13: case 32:
-            if(tcursor>=tnlines || (list[tcursor].ext&0x8200)) break;
+          case 13: case 32: sel:
+            if(inf.move>=0) goto mov;
+            if(tcursor>=tnlines || (opt&8) || (list[tcursor].ext&0x8200)) break;
             condflag=1; goto end;
           case 'h': case 'H': case 27: if(tcursor) --tcursor; break;
           case 'l': case 'L': case 26: if(tnlines && tcursor<tnlines-1) ++tcursor; break;
           case 'j': case 'J': case 25: tcursor+=inf.ncol; if(tcursor>=tnlines) tcursor=tnlines?tnlines-1:0; break;
           case 'k': case 'K': case 24: if(tcursor>inf.ncol) tcursor-=inf.ncol; else tcursor=0; break;
           case 'q': case 'Q': goto escape;
+          case 'd': case 'D':
+            if(tcursor>=tnlines || (opt&0x20) || (list[tcursor].ext&0x8000)) break;
+            inf.move=-1;
+            i=list[tcursor].slot;
+            if(i>inv->count || !inv->item[i].item || inv->item[i].item>nitemdefs) break;
+            if(inv->item[i].flag&(ISF_FIXED|ISF_IN_USE)) break;
+            if(itemdefs[inv->item[i].item-1].flag&IDF_NO_DISCARD) break;
+            inv->item[i]=(ItemSlot){};
+            list[tcursor].name=0;
+            list[tcursor].ext=0x8000;
+            if(opt&4) {
+              if(tcursor!=--tnlines) memmove(list+tcursor,list+tcursor+1,(tnlines-tcursor)*sizeof(ItemMenuSlot));
+              if(tcursor && tcursor==tnlines) --tcursor;
+            }
+            break;
+          case 'm': case 'M': mov:
+            if(tcursor>=tnlines || (opt&0x10)) break;
+            i=list[tcursor].slot;
+            if(i>inv->count || (inv->item[i].flag&ISF_FIXED)) break;
+            if(inf.move>=0 && inf.move<tnlines && list[inf.move].slot<inv->count) {
+              ItemMenuSlot s=list[tcursor];
+              ItemSlot ss=inv->item[i];
+              inv->item[i]=inv->item[list[inf.move].slot];
+              inv->item[list[inf.move].slot]=ss;
+              list[tcursor]=list[inf.move];
+              list[inf.move]=s;
+              list[inf.move].slot=list[tcursor].slot;
+              list[tcursor].slot=i;
+              inf.move=-1;
+            } else {
+              inf.move=i;
+            }
         }
     }
   }
@@ -2310,7 +2363,7 @@ static Uint16 show_item_window(Uint32 opt) {
   end:
   memcpy(regs,rs,4*sizeof(Sint32));
   if(tcursor<tnlines && !(opt&2)) inv->cursor=list[tcursor].slot;
-  if(condflag && tcursor<tnlines) k=list[tcursor].slot; else condflag=0;
+  if(condflag && tcursor<tnlines) k=list[tcursor].slot; else k=condflag=0;
   free(names); free(list);
   v_status[1]=32;
   set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:playstate==PLAYSTATE_NORMAL?config.speed:0);

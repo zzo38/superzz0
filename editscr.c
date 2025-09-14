@@ -134,6 +134,8 @@ static void edit_window(void) {
           win_boolean('Z',"Zero-based line numbers",wind.flag,WF_ZERO_BASED);
           win_boolean('H',"Horizontal scrolling",wind.flag,WF_HORIZ_SCROLL);
           win_boolean('X',"XOR color",wind.flag,WF_XOR_COLOR);
+          win_boolean('t',"Alternate scrolling",wind.flag,WF_ALT_SCROLL);
+          win_boolean('y',"Use window key event",wind.flag,WF_KEY_EVENT);
           win_blank();
           win_color('N',"Normal text:   ",wind.wcolor[WC_NORMAL_TEXT]);
           win_color('L',"Link text:     ",wind.wcolor[WC_LINK_TEXT]);

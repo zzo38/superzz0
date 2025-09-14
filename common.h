@@ -485,6 +485,8 @@ typedef struct {
 #define WF_ZERO_BASED 0x02
 #define WF_HORIZ_SCROLL 0x04
 #define WF_XOR_COLOR 0x08
+#define WF_ALT_SCROLL 0x40
+#define WF_KEY_EVENT 0x80
 
 // Window colour index
 #define WC_NORMAL_TEXT 0
