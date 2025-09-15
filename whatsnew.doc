@@ -57,6 +57,8 @@ ASSEMBLY
   +  New instructions and zero page memory cells for working with items
      and inventory lists.
   +  STR pseudo for forcing strings to be given new consecutive numbers.
+  +  Add the window keyboard event. This is usable in text windows and
+     in item windows, if enabled by the window definition.
   -  Remove EAP0 and EAP1.
 
 EDITOR

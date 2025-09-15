@@ -17,6 +17,8 @@ $A4 = Name item event (see below).
 
 $A5 = Screen number to use for item windows.
 
+$B0 = Window keyboard event (see below).
+
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
 save the delay, bit9 means to save the walk/face/user flags, and bit13
@@ -208,7 +210,8 @@ deleted by DIE, KILM, etc, it will mark it for deletion in this way.)
 
 The events marked (#) will save the A,B,C,D registers before being called,
 and then restored afterward; if they are called several times in sequence,
-then they are restored only after all calls are completed.
+then they are restored only after all calls are completed. (In some cases,
+they may be preserved from other events that are also marked with (#).)
 
 $00A4 (#)
   This event is called when displaying the inventory menu, and is used for
@@ -230,6 +233,47 @@ $00A4 (#)
   bit9 = Prevents selecting this slot.
   bit14 = Used internally; setting this by yourself has no effect.
   bit15 = Displays it as a vacant slot (which cannot be selected).
+
+$00B0 (#)
+  This event is used for overriding the behaviour of windows if the "use
+  window key event" flag is set for that window definition.
+
+  W = ASCII code of key pushed (same as for $00E0 event)
+  Y = Cursor position (zero-based)
+  J = Number of items
+  K = Scroll position
+
+  Text windows also use:
+  X = Key code for current line (zero if not applicable)
+  Z = Type of current line ('!', '$', ':', or zero)
+
+  Item windows also use:
+  X = Item slot number; the high 16-bits are the bits like the $00A4 event
+  Z = Cursor position for moving from (-1 if not moving)
+
+  Return = If 0 then causes nothing to happen, 1 to 127 will replace the
+  effect by the normal effect of the specified key code (so "LET S,W" will
+  have the normal behaviour if W is not changed), and negative numbers have
+  the special meanings explained below:
+
+  -1 = Cancel menu
+  -2 = Set cursor position (zero-based) to J (*)
+  -3 = Set scroll position (zero-based) to K (*)
+  -4 = Modify window colours; J=code 0-15, K=new value (*)
+
+  Text windows also use:
+  -50 = Find next line with first byte equal to J (*)
+  -51 = Close and use text buffer as target label name
+
+  Item windows also use:
+  -50 = Reload items
+  -51 = Set cursor position to item slot J (*)
+  -52 = Change to screen J (*)
+
+  The ones marked with (*) can add an additional -100 to continue the
+  execution (from the address which is automatically stored in memory cell
+  $00C6) after doing the operation. The W,X,Y,Z,J,K registers will be set
+  again before it is called.
 
 $00C1
   This event is called during each frame, before $00E1, but also creates a

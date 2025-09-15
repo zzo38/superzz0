@@ -86,9 +86,9 @@ otherwise OR is used.
 and item windows (currently it is only implemented for item windows), to
 work in a way similar to board scrolling.
 
-þ Use window key event: If selected, causes windows (currently only item
-windows, but later may affect text windows as well) to use the "window key
-event" to allow the world to override the behaviour of the keyboard
+þ Use window key event: If selected, causes windows to use the "window key
+event" to allow the world to override the keyboard behaviour when it is
+displayed as a text window or item window.
 
 You can also define some colours in the flags menu. Any of these colours
 which is not zero will be used in place of the colour defined in the screen

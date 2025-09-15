@@ -1880,6 +1880,7 @@ static void update_text_window(const WindowInfo*wind) {
 }
 
 static char show_text_window(Uint32 xyn,char help) {
+  Sint32 rs[4]={regs[0],regs[1],regs[2],regs[3]};
   WindowInfo wind={};
   FILE*fp;
   const char*e;
@@ -1948,7 +1949,54 @@ static char show_text_window(Uint32 xyn,char help) {
         }
       }
       if(event.type!=SDL_KEYDOWN) continue;
-      switch(event.key.keysym.sym) {
+      if(wind.flag&WF_KEY_EVENT) {
+        switch(event.key.keysym.sym) {
+          case SDLK_ESCAPE: case SDLK_F2: case SDLK_F11: goto key;
+          case SDLK_UP: c=(event.key.keysym.mod&KMOD_SHIFT)?30:24; break;
+          case SDLK_DOWN: c=(event.key.keysym.mod&KMOD_SHIFT)?31:25; break;
+          case SDLK_LEFT: c=(event.key.keysym.mod&KMOD_SHIFT)?17:27; break;
+          case SDLK_RIGHT: c=(event.key.keysym.mod&KMOD_SHIFT)?16:26; break;
+          default:
+            c=event.key.keysym.unicode;
+            if(c==27) goto close;
+            if((c<32 || c>126) && !(c==8 || c==9 || c==13)) goto key;
+        }
+        memory[MEM_RETURNED_PC]=memory[MEM_WINDOW_KEY_EVENT];
+        rekey:
+        memory[MEM_ARG_J]=tnlines; memory[MEM_ARG_K]=tscroll;
+        a=tcursor*TEXTREC;
+        if(textfile_text[a]) {
+          if((b=textfile_text[a+1])=='!') {
+            if(textfile_text[a+2]=='<' && textfile_text[a+4]=='>') a=textfile_text[a+3]; else a=0;
+          } else {
+            a=0; if(b!='$' && b!=':') b=0;
+          }
+        }
+        c=run_program(memory[MEM_RETURNED_PC],c,a,tcursor,b);
+        if(c<0) {
+          switch((-c)%100) {
+            case 1: goto close;
+            case 2: tcursor=memory[MEM_ARG_J]; if(tcursor>=tnlines) tcursor=tnlines?tnlines-1:0; break;
+            case 3: tscroll=memory[MEM_ARG_K]; if(tscroll>=tnlines) tscroll=tnlines?tnlines-1:0; break;
+            case 4: wind.wcolor[memory[MEM_ARG_J]&15]=memory[MEM_ARG_K]; break;
+            case 50:
+              for(a=tcursor+1;a<tnlines;a++) if(textfile_text[a*TEXTREC] && textfile_text[a*TEXTREC+1]==memory[MEM_ARG_J]) break;
+              if(a!=tnlines) tcursor=a,condflag=1; else condflag=0;
+              break;
+            case 51: r=1; goto close;
+          }
+          if(c<-99) goto rekey;
+        } else {
+          switch(c) {
+            case 9: goto tab;
+            case 13: goto select;
+            case 24: goto up;
+            case 25: goto down;
+          }
+        }
+        goto asciikey;
+      }
+      key: switch(event.key.keysym.sym) {
         case SDLK_ESCAPE: goto close;
         case SDLK_END: case SDLK_KP1: bottom: tcursor=tnlines-1; break;
         case SDLK_DOWN: case SDLK_KP2: down: if(tcursor!=tnlines-1) ++tcursor; break;
@@ -2007,6 +2055,7 @@ static char show_text_window(Uint32 xyn,char help) {
       if(!(cur_screen.flag&SF_NO_SCROLL)) tscroll=tcursor;
     }
     close:
+    memcpy(regs,rs,4*sizeof(Sint32));
     if(r && ntextbuf && *textbuf=='-') {
       if(load_help_file(textbuf+1)) {
         tcursor=0;
@@ -2238,6 +2287,7 @@ static Uint16 show_item_window(Uint32 opt) {
   work_varproperties(&cur_screen.varprop);
   v_status[1]='I';
   // Load names and slots
+  load:
   tcursor=tnlines=0;
   fp=open_memstream((char**)&list,&slist);
   nfp=open_memstream(&names,&snames);
@@ -2314,6 +2364,34 @@ static Uint16 show_item_window(Uint32 opt) {
         if(i==27) goto escape;
         if((i<32 || i>126) && !(i==8 || i==9 || i==13)) break;
         ascii:
+        if(wind.flag&WF_KEY_EVENT) {
+          memory[MEM_RETURNED_PC]=memory[MEM_WINDOW_KEY_EVENT];
+          rekey:
+          memory[MEM_ARG_J]=tnlines; memory[MEM_ARG_K]=tscroll;
+          i=run_program(memory[MEM_RETURNED_PC],i,tcursor<tnlines?list[tcursor].slot+(list[tcursor].ext<<16):-1,tcursor,inf.move);
+          if(i<0) {
+            switch((-i)%100) {
+              case 1: goto escape;
+              case 2: tcursor=memory[MEM_ARG_J]; if(tcursor>=tnlines) tcursor=tnlines?tnlines-1:0; break;
+              case 3: tscroll=memory[MEM_ARG_K]; if(tscroll>=tnlines/inf.ncol) tscroll=tnlines/inf.ncol; break;
+              case 4: wind.wcolor[memory[MEM_ARG_J]&15]=memory[MEM_ARG_K]; break;
+              case 50: free(names); free(list); names=0; list=0; snames=0; slist=0; iname=1; goto load;
+              case 51: for(j=0;j<tnlines;j++) if(list[j].slot==memory[MEM_ARG_J] && !(list[j].ext&0x8000)) tcursor=j; break;
+              case 52:
+                if(!(fp=open_lump_by_number(cur_screen_id=memory[MEM_ARG_J],"SCR","r"))) err(1,"Cannot open %04X.SCR",cur_screen_id);
+                if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
+                fclose(fp);
+                if(fp=open_lump_by_number(cur_screen_id,"WIN","r")) {
+                  if(e=load_window(fp,&wind)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
+                  fclose(fp);
+                }
+                for(inf.ncol=j=1;j<79;j++) if(wind.command[j]=='Z') ++inf.ncol;
+                work_varproperties(&cur_screen.varprop);
+                break;
+            }
+            if(i<-99) goto rekey; else continue;
+          }
+        }
         switch(i) {
           case 13: case 32: sel:
             if(inf.move>=0) goto mov;
@@ -2356,6 +2434,8 @@ static Uint16 show_item_window(Uint32 opt) {
             } else {
               inf.move=i;
             }
+            break;
+          case 'n': case 'N': inf.move=-1; break;
         }
     }
   }
