@@ -27,6 +27,7 @@ P superzz0-release/help/
 ./blist.hlp blist.hlp
 ./edit.hlp edit.hlp
 ./editbrd.hlp editbrd.hlp
+./editgr.hlp editgr.hlp
 ./edithelp.hlp edithelp.hlp
 ./editscr.hlp editscr.hlp
 ./edittext.hlp edittext.hlp
@@ -34,10 +35,14 @@ P superzz0-release/help/
 ./element.hlp element.hlp
 ./gradient.hlp gradient.hlp
 ./index.hlp index.hlp
+./items.hlp items.hlp
 ./numform.hlp numform.hlp
+./override.hlp override.hlp
+./sclib.hlp sclib.hlp
 ./screen.hlp screen.hlp
 ./slist.hlp slist.hlp
 ./stvar.hlp stvar.hlp
+./varprop.hlp varprop.hlp
 C /home/user/superzz0
 # Man pages
 P superzz0-release/man6/
