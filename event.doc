@@ -13,6 +13,8 @@ $A1 = Mask for item slot flags to match for IGIV, ITAK, and some other
 inventory-oriented instructions. Some flags are always handled in a special
 way regardless of this mask.
 
+$A3 = Take item event (see below).
+
 $A4 = Name item event (see below).
 
 $A5 = Screen number to use for item windows.
@@ -212,6 +214,64 @@ The events marked (#) will save the A,B,C,D registers before being called,
 and then restored afterward; if they are called several times in sequence,
 then they are restored only after all calls are completed. (In some cases,
 they may be preserved from other events that are also marked with (#).)
+
+$00A3 (#)
+  This event is called when taking a item with ITAK or #TAKEITEM. It is
+  only called after making all other checks that it can be taken; if it
+  returns zero then it will proceed. This event is called for every slot
+  where the item might be taken from. This will save the A,B,C,D registers
+  and will set those registers to zero before calling this event the first
+  time for one use of ITAK; they will be preserved between calls for one
+  use of ITAK, though.
+
+  W = Item number and flags (same as second operand of ITAK)
+  X = Quantity (actual or requested, whichever is less)
+  Y = Slot number
+  Z = Current state; OR of return values so far, starts at zero
+  J = Normally same as J was when ITAK is used but might be different
+  K = Number of slots required
+
+  The return value is a bit field with the bits:
+
+  bit0 = Immediately fail.
+
+  bit1 = Avoid using this slot. It might be able to use other slots if they
+  contain a sufficient amount of the requested item; it will immediately
+  look if there is a suitable one.
+
+  bit2 = Do not call this event for any further slots during this pass;
+  assume they are acceptable and no further processing is required. (If
+  another pass is added afterward, then it will use this event again.)
+
+  bit3 = If this attempt fails (although not if bit11 is set), then add
+  another pass after this one instead of abandoning the attempt. [*]
+
+  bit4 = Do not affect any slots. Everything else is still done and it
+  might be successful or not, but the inventory is unchanged. [*]
+
+  bit5 = The quantity is changed to the value of the A register. No other
+  changes are made; this does not change which slots are used.
+
+  bit6 = Unconditionally claim to be successful when finished, even if it
+  actually failed to do anything. (If combined with bit0, then it will do
+  nothing and not recalculate the quantity but will claim success.) [*]
+
+  bit7 = This bit is set during the second and subsequent passes which are
+  added due to bit3. This does not apply for passes added due to bit9.
+
+  bit8 = This bit is set if the total quantity that it is able to take is
+  at least as much as was requested. [*]
+
+  bit9 = If this attempt is successful, add another pass after this one,
+  before making changes to the inventory list. This additional pass does
+  not retry checking which items are suitable; it will always use the same
+  items as before. Additionally, the bits marked [*] will remain set during
+  the additional pass if they are set during this pass (bit9 is cleared).
+
+  bit10 = This bit is set for passes added due to bit9. [*]
+
+  bit11 = Immediately fail and abort the attempt regardless of which other
+  bits are set.
 
 $00A4 (#)
   This event is called when displaying the inventory menu, and is used for

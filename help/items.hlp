@@ -143,6 +143,12 @@ inherent meaning, so you can use it for your own use as well.
 A slot is considered to be "vacant" if the item number is zero and none
 of the boolean flags are set. Slots that are not vacant are "occupied".
 
+There is also the ISF_MARK flag, which is not set in this menu, and is
+automatically set or clear at run time (although you can also set and
+clear it by yourself at run time), when using IGIV and ITAK, in order to
+mark which slots are used for giving and taking items. (Normally, you do
+not need to use this, but sometimes you might have a use for it.)
+
 :ip;Inventory properties
 The properties of each inventory list are:
 

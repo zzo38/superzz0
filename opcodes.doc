@@ -707,6 +707,10 @@ numbers are treated as unsigned.
   null then it is not skipped past but otherwise it is skipped past. The
   condition flag is true if it skipped past or false if it doesn't.
 
+[086 PARI]
+  (Not implemented yet. This is intended for parsing the name or number of
+  a item definition from a script, possibly together with optional flags.)
+
 [089 CHEX]
   Changes a board exit. The low 2-bits second operand specifies the
   direction, and the first operand has the target board number.
@@ -1023,12 +1027,17 @@ numbers are treated as unsigned.
   the first operand.
 
 [0B6 ITAK]
-  (TODO)
+  Try to take items from the current inventory. This first clears the
+  ISF_MARK flag for all item slots, and then will check if it can be taken,
+  and do so if possible. The condition flag is true if successful or false
+  if not, and the first operand will be the quantity that has been taken.
+  The second operand is the item number in the low 16-bits and the intended
+  item slot flags in the high 16-bits. The J register is a bit field:
+   bit0 = Take all matching items if there are not enough
+   bit1 = Only check; do not take any items
+   bit2 = Don't add a first pass which ignores the item mask
 
 [0B7 IGIV]
-  (TODO)
-
-[0B8 IROB]
   (TODO)
 
 [0B9 IMOV]

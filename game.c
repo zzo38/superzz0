@@ -4032,6 +4032,114 @@ static void do_inventory_op(Uint8 fo,Sint32 so) {
   }
 }
 
+static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
+  
+}
+
+static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
+  Sint32 rs[4]={regs[0],regs[1],regs[2],regs[3]};
+  Inventory*inv=inventory+(memory[MEM_INVENTORY]&7);
+  ItemSlot*slot;
+  Uint16 re=0;
+  Uint32 tot=0;
+  Uint16 nsl=0;
+  int i=item&0xFFFF;
+  int j;
+  if(!i || i>nitemdefs || itemdefs[i-1].class==255) return condflag=0;
+  if(!qty && !((item>>16)&ISF_FIXED)) return condflag=1,0;
+  regs[0]=regs[1]=regs[2]=regs[3]=0;
+  retry:
+  nsl=0; tot=0;
+  for(i=0;i<inv->count;i++) inv->item[i].flag&=~ISF_MARK;
+  for(i=0;i<inv->count;i++) {
+    slot=inv->item+i;
+    if(slot->flag&ISF_IGNORE) continue;
+    if(!(how&4) && slot->flag!=(item>>16)) continue;
+    if(slot->item==(item&0xFFFF) && !((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE))) {
+      if((slot->quantity && tot<qty) || ((slot->flag&(item>>16)&ISF_FIXED) && !nsl)) nsl++,slot->flag|=ISF_MARK;
+      tot+=slot->quantity;
+      if(tot && tot>=slot->quantity) break;
+    }
+  }
+  if(tot<qty) {
+    if(!(how&4)) { how|=4; goto retry; }
+    if(!(how&1)) goto fail;
+  } else {
+    re|=0x0100;
+  }
+  reloop:
+  for(i=0;i<inv->count;i++) {
+    slot=inv->item+i;
+    if(slot->flag&ISF_MARK) {
+      memory[MEM_ARG_J]=how; memory[MEM_ARG_K]=nsl;
+      re|=run_program(memory[MEM_TAKE_ITEM_EVENT],item,tot<qty?tot:qty,i,re);
+      if(i>=inv->count) errx(1,"Improper use of item events");
+      slot=inv->item+i;
+      if(re&0x0001) goto fail;
+      if(re&0x0800) { condflag=0; goto done; }
+      if(re&0x0020) qty=regs[0],re&=~0x0020;
+      if(re&0x0002) {
+        re&=~0x0102;
+        slot->flag&=~ISF_MARK; tot-=slot->quantity; nsl--;
+        for(j=i+1;j<inv->count;j++) {
+          slot=inv->item+j;
+          if(slot->flag&(ISF_IGNORE|ISF_MARK)) continue;
+          if(!(how&4) && slot->flag!=(item>>16)) continue;
+          if(slot->item==(item&0xFFFF) && !((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE))) {
+            if((slot->quantity && tot<qty) || ((slot->flag&(item>>16)&ISF_FIXED) && !nsl)) nsl++,slot->flag|=ISF_MARK;
+            tot+=slot->quantity;
+            if(tot && tot>=slot->quantity) break;
+          }
+        }
+        if(tot<qty) {
+          if(!(how&4)) { how|=4; goto retry; }
+          if(!(how&1)) goto fail;
+        } else {
+          re|=0x0100;
+        }
+      }
+      if(re&0x0004) break;
+    }
+  }
+  if(re&0x0001) {
+    fail:
+    condflag=(re&0x0400?1:0);
+    if((re&0x0008) && !condflag) {
+      re=0x0080;
+      goto retry;
+    }
+    goto done;
+  } else {
+    success:
+    condflag=1;
+    if(re&0x0200) {
+      re&=0x0558; re|=0x0400;
+      goto reloop;
+    }
+    if(!(re&0x0010)) {
+      tot=0;
+      for(i=0;i<inv->count;i++) {
+        slot=inv->item+i;
+        if(slot->flag&ISF_MARK) {
+          j=(slot->quantity<qty?slot->quantity:qty);
+          tot+=j;
+          if(!(how&2)) {
+            slot->quantity-=j;
+            slot->flag&=~ISF_MARK;
+            if(!slot->quantity && !(slot->flag&ISF_FIXED)) *slot=(ItemSlot){};
+          }
+          if(tot>=qty) break;
+        }
+      }
+      qty=tot;
+    }
+  }
+  done:
+  memcpy(regs,rs,4*sizeof(Sint32));
+  memory[MEM_ARG_J]=how;
+  return condflag?qty:0;
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   StatXY*rs;
   Uint16 op;
@@ -4319,6 +4427,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           condflag=0;
         }
         break;
+      case OP_IGIV: regs[fo]=give_item(so,regs[fo],memory[MEM_ARG_J]); break;
       case OP_IMNU: t=show_item_window(so); if(condflag) regs[fo]=t; break;
       case OP_INC: ++so; goto store;
       case OP_INCL: ++so; goto lstore;
@@ -4350,6 +4459,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           condflag=0;
         }
         break;
+      case OP_ITAK: regs[fo]=take_item(so,regs[fo],memory[MEM_ARG_J]); break;
       case OP_ITEM:
         switch(so&15) {
           case 0 ... 7: t=regs[so&7]; break;

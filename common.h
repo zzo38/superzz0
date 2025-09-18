@@ -681,6 +681,7 @@ extern Inventory inventory[8];
 #define ISF_HIDDEN 0x2000
 #define ISF_IGNORE 0x1000
 #define ISF_HILIGHT 0x0800
+#define ISF_MARK 0x0100
 
 const char*load_inventory(FILE*fp,Inventory*inv);
 const char*save_inventory(FILE*fp,Inventory*inv);
