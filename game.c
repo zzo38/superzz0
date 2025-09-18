@@ -4028,6 +4028,17 @@ static void do_inventory_op(Uint8 fo,Sint32 so) {
     case 15: inv->cursor=0; break;
     case 16: regs[fo]=inv->cursor; break;
     case 17: inv->cursor=regs[fo]; break;
+    case 18: case 19:
+      i=memory[MEM_INVENTORY]&7;
+      if(inv->cursor>=inv->count || inventory[i].cursor>=inventory[i].count) break;
+      if(so&1) inventory[i].item[inventory[i].cursor]=inv->item[inv->cursor]; else inv->item[inv->cursor]=inventory[i].item[inventory[i].cursor];
+      break;
+    case 20: case 21:
+      i=memory[MEM_INVENTORY]&7;
+      if((regs[fo]&0xFFFF)>=inv->count || inventory[i].cursor>=inventory[i].count) break;
+      if(so&1) inventory[i].item[inventory[i].cursor]=inv->item[regs[fo]&0xFFFF]; else inv->item[regs[fo]&0xFFFF]=inventory[i].item[inventory[i].cursor];
+      break;
+    case 22: for(i=0;i<inv->count;i++) inv->item[i].flag&=regs[fo]; break;
     default: errx(1,"Unimplemented inventory op: %d",so&0xFF);
   }
 }

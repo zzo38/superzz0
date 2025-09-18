@@ -985,6 +985,11 @@ numbers are treated as unsigned.
    15 = Zero cursor
    16 = Read cursor
    17 = Write cursor
+   18 = Copy slot from current to specified inventory, using cursor
+   19 = Copy slot from specified to current inventory, using cursor
+   20 = Copy slot from current(cursor) to specified(register)
+   21 = Copy slot from specified(register) to current(cursor)
+   22 = Modify flags of all slots by AND mask
   Add $800 plus $100 times the active inventory number to use that one
   instead of the current one.
 
