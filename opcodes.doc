@@ -178,6 +178,7 @@ numbers are treated as unsigned.
   D = Status variables
   E = Memory management
   F = Stats
+  G = Inventory
 
 [02C REGS]
   Save registers. The second operand is the memory address, and the first
@@ -1009,7 +1010,51 @@ numbers are treated as unsigned.
   (TODO)
 
 [0B3 ICNT]
-  (TODO)
+  Counts items and makes total based on values of item slots. The first
+  operand will store the result when completed, and the second operand
+  is a bit field with bits:
+   bit7-bit0 = First criteria
+   bit15-bit8 = Second criteria
+   bit17-bit16 = Extra criteria: 0(none), 1(J,K), 2(unmarked), 3(marked)
+   bit19-bit18 = 0(skip vacant slots), 1(all=1), 2(vacant=0), 3(vacant=1)
+   bit20 = Combine criteria by OR instead of AND
+   bit21 = Ignore slots with ISF_IGNORE flag
+   bit22 = Unconditionally clear all ISF_MARK flags of all slots
+   bit23 = Toggle ISF_MARK flag of matching slots
+   bit27-bit24 = Source of values
+   bit30-bit28 = Operation on values
+   bit31 = Set if existing value of register (1st operand) should be used
+  The sources of values can be:
+   $0 to $5 = Ext0 to Ext5
+   $6 = Price
+   $7 = Weight
+   $8 = Item slot flags
+   $9 = Item definition flags
+   $A to $F = (Reserved)
+  The operations on values can be:
+   $0 = Add
+   $1 = Subtract
+   $2 = Add (multiply by quantity)
+   $3 = Subtract (multiply by quantity)
+   $4 = Minimum
+   $5 = Maximum
+   $6 = Bitwise AND
+   $7 = Bitwise OR
+  The criteria can be:
+   $00 to $7F = Item class equals this number
+   $80 to $9F = Item definition flag is clear
+   $A0 to $BF = Item definition flag is set
+   $C0 to $CF = Item slot flag is clear
+   $D0 to $DF = Item slot flag is set
+   $E0 to $E7 = Item number is equal to value of register (A to H)
+   $E8 = Vacant
+   $E9 = Occupied
+   $EA = Slots other than the slot that the cursor is at
+   $EB = The slot that the cursor is at
+   $EC = Quantity is nonzero
+   $ED to $FF = (Reserved)
+  The extra criteria 1 means that the J register is a AND mask of the item
+  slot flags, and it will check that it equals the value of the K register.
 
 [0B4 IGET]
   Read a value from a slot in a inventory list. The J register specifies

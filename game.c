@@ -138,6 +138,11 @@ static void debug_log(Uint8 fo,Sint32 so,Sint32 w,Sint32 x,Sint32 y,Sint32 z,Uin
     case 5: // Stats
       for(i=0;i<maxstat;i++) fprintf(f,"\n %d: count=%d xy=%p length=%d text=%p speed=%d",i+1,stats[i].count,stats[i].xy,stats[i].length,stats[i].text,stats[i].speed);
       break;
+    case 6: // Inventory
+      for(i=0;i<inventory[so&7].count;i++)
+       fprintf(f,"\n q=%lu ext=%lu,%u,%u i=%u f=(%lX)",(long)inventory[so&7].item[i].quantity,(long)inventory[so&7].item[i].ext0,inventory[so&7].item[i].ext1,inventory[so&7].item[i].ext2,
+       inventory[so&7].item[i].item,(long)inventory[so&7].item[i].flag);
+      break;
   }
   fputc('\n',f);
 }
@@ -4151,6 +4156,81 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
   return condflag?qty:0;
 }
 
+static Sint32 count_items(Sint32 t,Uint32 m) {
+  Inventory*inv=inventory+(memory[MEM_INVENTORY]&7);
+  ItemDef*d;
+  ItemSlot*slot;
+  Uint32 v;
+  int i,k;
+  char j;
+  switch((m>>28)&15) {
+    case 0 ... 3: case 5: case 7: t=0; break;
+    case 4: case 6: t=0x7FFFFFFFLL; break;
+  }
+  for(i=0;i<inv->count;i++) {
+    slot=inv->item+i;
+    if(!slot->item || slot->item>nitemdefs || itemdefs[slot->item-1].class==255) d=0; else d=itemdefs+slot->item-1;
+    switch((m>>16)&3) {
+      case 1:
+        if((slot->flag&memory[MEM_ARG_J])!=memory[MEM_ARG_K]) {
+          skip1: if(m&0x400000) slot->flag&=~ISF_MARK; continue;
+        }
+        break;
+      case 2: if(slot->flag&ISF_MARK) goto skip1; break;
+      case 3: if(!(slot->flag&ISF_MARK)) continue; break;
+    }
+    if(m&0x400000) slot->flag&=~ISF_MARK;
+    if((m&0x200000) && (slot->flag&ISF_IGNORE)) continue;
+    for(j=0;j<2;j++) switch(k=(m>>(j?8:0))&0xFF) {
+      case 0x00 ... 0x7F: if(d && d->class!=k) goto skip; break;
+      case 0x80 ... 0x9F: if(d && (d->flag&(1L<<(m&31)))) goto skip; break;
+      case 0xA0 ... 0xBF: if(d && !(d->flag&(1L<<(m&31)))) goto skip; break;
+      case 0xC0 ... 0xCF: if(slot->flag&(1L<<(m&15))) goto skip; break;
+      case 0xD0 ... 0xDF: if(!(slot->flag&(1L<<(m&15)))) goto skip; break;
+      case 0xE0 ... 0xE7: if(slot->item!=regs[m&7]) goto skip; break;
+      case 0xE8: if(slot->item || slot->flag) goto skip; break;
+      case 0xE9: if(!slot->item && !slot->flag) goto skip; break;
+      case 0xEA: if(i==inv->cursor) goto skip; break;
+      case 0xEB: if(i!=inv->cursor) goto skip; break;
+      case 0xEC: if(!slot->quantity) goto skip; break;
+      default: errx(1,"Improper use of ICNT");
+    }
+    switch((m>>18)&3) {
+      case 0: normal:
+        if(!d) continue;
+        switch((m>>24)&15) {
+          case 0: v=slot->ext0; break;
+          case 1: v=slot->ext1; break;
+          case 2: v=slot->ext2; break;
+          case 3: v=itemdefs[slot->item-1].ext3; break;
+          case 4: v=itemdefs[slot->item-1].ext4; break;
+          case 5: v=itemdefs[slot->item-1].ext5; break;
+          case 6: v=itemdefs[slot->item-1].price; break;
+          case 7: v=itemdefs[slot->item-1].weight; break;
+          case 8: v=slot->flag; break;
+          case 9: v=itemdefs[slot->item-1].flag; break;
+          default: errx(1,"Improper use of ICNT");
+        }
+        break;
+      case 1: v=1; break;
+      default: if(slot->item || slot->flag) goto normal; v=(m>>18)&1; break;
+    }
+    switch((m>>28)&7) {
+      case 0: t+=v; break;
+      case 1: t-=v; break;
+      case 2: t+=v*slot->quantity; break;
+      case 3: t-=v*slot->quantity; break;
+      case 4: if(v<t) t=v; break;
+      case 5: if(v>t) t=v; break;
+      case 6: t&=v; break;
+      case 7: t|=v; break;
+    }
+    if((m&0x800000) && (slot->item || slot->flag)) slot->flag^=ISF_MARK;
+    skip: ;
+  }
+  return t;
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   StatXY*rs;
   Uint16 op;
@@ -4421,6 +4501,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         }
         break;
       case OP_ICG: condflag=(++regs[fo]>so?1:0); break;
+      case OP_ICNT: regs[fo]=count_items(regs[fo],so); break;
       case OP_IGET:
         if((t=memory[MEM_ARG_J])<inventory[u=((so>>8)&15?:memory[MEM_INVENTORY])&7].count) {
           condflag=1;
