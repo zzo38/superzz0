@@ -1800,14 +1800,15 @@ static void inventory_list_callback(Uint16 n,int y,void*uz) {
     draw_text(8,y,buf,4,snprintf(buf,8,"#%05d",s->item));
     draw_text(45,y,"<undef>",15,-1);
   }
-  draw_text(34,y,buf,6,snprintf(buf,8,"%10dx",s->quantity));
+  draw_text(32,y,buf,6,snprintf(buf,12,"%10dx",s->quantity));
   memset(v_color+80*y+15,8,15); memset(v_char+80*y+15,250,15);
   if(s->flag&ISF_IN_USE) v_color[80*y+15]=14,v_char[80*y+15]='I';
   if(s->flag&ISF_FIXED) v_color[80*y+16]=14,v_char[80*y+16]='F';
   if(s->flag&ISF_HIDDEN) v_color[80*y+17]=14,v_char[80*y+17]='H';
   if(s->flag&ISF_IGNORE) v_color[80*y+18]=14,v_char[80*y+18]='g';
-  if(s->flag&ISF_HILIGHT) v_color[80*y+18]=14,v_char[80*y+18]='!';
-  for(n=0;n<8;n+=2) if(s->flag&(3<<n)) v_color[80*y+n+23]=9,v_char[80*y+n+23]="\xC4\xDC\xDF\xDB"[(s->flag>>n)&3];
+  if(s->flag&ISF_HILIGHT) v_color[80*y+19]=14,v_char[80*y+19]='!';
+  if(s->flag&ISF_MARK) v_color[80*y+22]=14,v_char[80*y+22]=7;
+  for(n=0;n<8;n+=2) if(s->flag&(3<<n)) v_color[80*y+n/2+23]=9,v_char[80*y+n/2+23]="\xC4\xDC\xDF\xDB"[(s->flag>>n)&3];
   if(s->ext0) v_color[80*y+27]=13,v_char[80*y+27]='0';
   if(s->ext1) v_color[80*y+28]=13,v_char[80*y+28]='1';
   if(s->ext2) v_color[80*y+29]=13,v_char[80*y+29]='2';
@@ -1853,6 +1854,7 @@ static void edit_invslot(Uint16 n) {
     win_boolean('H',"Hidden",s->flag,ISF_HIDDEN);
     win_boolean('g',"Ignore",s->flag,ISF_IGNORE);
     win_boolean('t',"Hilight",s->flag,ISF_HILIGHT);
+    win_boolean('k',"Mark",s->flag,ISF_MARK);
     win_command('u',"Custom flags...") win_form("Edit item slot") {
       win_heading("Custom flags:");
       win_boolean('0',"0 ($01)",s->flag,0x01);

@@ -138,16 +138,15 @@ you can use other flags to control that.
 if the hilight colour has been defined for that item menu. It has no other
 inherent meaning, so you can use it for your own use as well.
 
+þ Mark: IGIV and ITAK internally use this flag and will modify it, and the
+ICNT and IFND may also use and modify this flag. The give item and take
+item events can be used to read and/or change this flag at run time in
+order to affect which item slots are affected by giving and taking items.
+
 þ Custom flags: Flags that you can define for your own use.
 
 A slot is considered to be "vacant" if the item number is zero and none
 of the boolean flags are set. Slots that are not vacant are "occupied".
-
-There is also the ISF_MARK flag, which is not set in this menu, and is
-automatically set or clear at run time (although you can also set and
-clear it by yourself at run time), when using IGIV and ITAK, in order to
-mark which slots are used for giving and taking items. (Normally, you do
-not need to use this, but sometimes you might have a use for it.)
 
 :ip;Inventory properties
 The properties of each inventory list are:

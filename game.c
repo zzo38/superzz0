@@ -2304,6 +2304,7 @@ static Uint16 show_item_window(Uint32 opt) {
       if(opt&4) continue;
       c.name=0; c.slot=i; c.ext=0x8000;
       fwrite(&c,1,sizeof(ItemMenuSlot),fp);
+      if(!(opt&1) && i==inv->cursor) tcursor=tnlines;
       tnlines++;
       continue;
     }
