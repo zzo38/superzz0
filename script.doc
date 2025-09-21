@@ -154,6 +154,9 @@ are not allowed in this case.
   Increase the specified status variable (a letter A to H or S to Z) by the
   specified number.
 
+#GIVEITEM item number [command]
+  
+
 #GO dir
   Attempt to move in the specified direction. If it cannot move, then it
   will wait until it is able to move, and then move.
@@ -166,6 +169,14 @@ are not allowed in this case.
 
 #IF condition command
   Execute the command only if the condition is true.
+
+#IFITEM item number command
+  Execute the command only if the current inventory has at least the
+  specified number of the specified item.
+
+#IFNOTITEM item number command
+  Execute the command only if the current inventory does not have at least
+  the specified number of the specified item.
 
 #LOADFONT name
   Loads a font, given the lump name (excluding the .CHR or .FNT suffix).
@@ -238,6 +249,14 @@ are not allowed in this case.
   Decrease the specified status variable (a letter A to H or S to Z) by the
   specified number. If the current value is less than the number, then it
   will leave it unchanged and will instead execute the specified command.
+
+#TAKEITEM item [number [command]]
+  Try to take the specified number of the specified item from the current
+  inventory. If it cannot be taken, then the specified command is executed.
+  If the number is omitted, all are taken; if the number is specified but
+  the command is omitted then it will take all of that item if there isn't
+  enough, but if the command is specified then it will not take any items
+  if there isn't at least as much as you requested.
 
 #TRY dir [command]
   Try to move in the direction; if it cannot go, then it will execute the
@@ -480,6 +499,21 @@ FLOW (facing direction if walk flag is set, or idle otherwise)
 
 Any of the directions above that requires a parameter can use either
 a space or a underscore to delimit the parameter.
+
+
+=== Items ===
+
+Some commands such as #GIVEITEM and #TAKEITEM accept a item ID. This
+can be a number (constant or expression), or a item name with [] or ""
+around it; the item name is case-sensitive. Either of these may be
+optionally preceded by any number of flag designations.
+
+A flag designation is <> with the flag name in between; the flag name
+is one of: 0 1 2 3 4 5 6 7 USE FIX HID IGN LIT
+
+Note that the presence of flag designations does not necessarily imply
+that that the items whose presence is being detected has those flags
+(see $A1 in event.doc for some more details).
 
 
 === Escaped text ===

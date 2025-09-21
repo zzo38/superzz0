@@ -77,6 +77,9 @@ static Uint16 tnlines,tcursor,tscroll;
 static const char*end_of_label;
 
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z);
+static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how);
+static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how);
+static Sint32 count_items(Sint32 t,Uint32 m);
 
 static Uint32 do_joystick(Uint8 mode) {
   Uint8 b=event.jbutton.button;
@@ -2713,6 +2716,39 @@ static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
   }
 }
 
+static Sint32 parse_item(Stat*s,StatXY*xy,Uint16*ip) {
+  Uint32 f=0;
+  char op='+';
+  int c,i,j;
+  while(s->text[*ip]==' ') ++*ip;
+  again:
+  c=s->text[*ip];
+  if(c=='<') {
+    switch(c=s->text[++*ip]) {
+      case '0' ... '7': f|=0x10000L<<(c-'0'); break;
+      case 'F': case 'f': if((s->text[1+*ip]&~32)=='I' && (s->text[2+*ip]&~32)=='X') f|=ISF_FIXED<<16,*ip+=2; else goto bad; break;
+      case 'H': case 'h': if((s->text[1+*ip]&~32)=='I' && (s->text[2+*ip]&~32)=='D') f|=ISF_HIDDEN<<16,*ip+=2; else goto bad; break;
+      case 'I': case 'i': if((s->text[1+*ip]&~32)=='G' && (s->text[2+*ip]&~32)=='N') f|=ISF_IGNORE<<16,*ip+=2; else goto bad; break;
+      case 'L': case 'l': if((s->text[1+*ip]&~32)=='I' && (s->text[2+*ip]&~32)=='T') f|=ISF_HILIGHT<<16,*ip+=2; else goto bad; break;
+      case 'U': case 'u': if((s->text[1+*ip]&~32)=='S' && (s->text[2+*ip]&~32)=='E') f|=ISF_IN_USE<<16,*ip+=2; else goto bad; break;
+      default: goto bad;
+    }
+    if(s->text[++*ip]!='>') goto bad;
+    ++*ip;
+    goto again;
+  } else if(c==91 || c=='"') {
+    if(c==91) c=93;
+    for(++*ip,i=0;i<nitemdefs;i++) if(itemdefs[i].class!=255 && itemdefs[i].name && itemnames[itemdefs[i].name]==s->text[*ip]) {
+      for(j=1;s->text[j+*ip]!=c && itemnames[j+itemdefs[i].name] && itemnames[j+itemdefs[i].name]==s->text[j+*ip];j++);
+      if(s->text[j+*ip]==c && !itemnames[j+itemdefs[i].name]) return *ip+=j+1,condflag=1,(f|(i+1));
+    }
+    bad: script_error(s+1-stats,xy,"Improper item specification");
+    return condflag=0;
+  } else {
+    return f|parse_number(s,xy,ip);
+  }
+}
+
 static Sint32 parse_letter(Stat*s,StatXY*xy,Uint16*ip) {
   int c;
   while(s->text[*ip]==' ') ++*ip;
@@ -3276,6 +3312,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   Uint8 esc=0;
   Uint8 stop=0;
   Uint16 w;
+  Sint32 y;
   int i,j;
   ScriptKind sk,sk1;
   if(!u) xy->instptr=ip=0;
@@ -3444,6 +3481,12 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
                 u=parse_number(s,xy,&ip);
                 if(0<=(Sint32)(status_vars[i]+u)) status_vars[i]+=u;
               }
+            } else if(!strcmp(buf,"GIVEITEM")) {
+              if(u=parse_item(s,xy,&ip)) {
+                y=parse_number(s,xy,&ip);
+                if(!condflag) goto badcommand;
+                if(give_item(u,y,0),!condflag) goto same;
+              }
             } else if(!strcmp(buf,"GO")) {
               i=parse_direction(s,xy,&ip);
               if(i!=-1 && condflag) {
@@ -3465,7 +3508,19 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               stop=1;
             } else if(!strcmp(buf,"IF")) {
               if(parse_condition(s,xy,&ip)) {
-                u=-1; goto begin;
+                same: u=-1; goto begin;
+              }
+            } else if(!strcmp(buf,"IFITEM")) {
+              if(u=parse_item(s,xy,&ip)) {
+                y=parse_number(s,xy,&ip);
+                if(!condflag) goto badcommand;
+                if(take_item(u,y,6),condflag) goto same;
+              }
+            } else if(!strcmp(buf,"IFNOTITEM")) {
+              if(u=parse_item(s,xy,&ip)) {
+                y=parse_number(s,xy,&ip);
+                if(!condflag) goto badcommand;
+                if(take_item(u,y,6),!condflag) goto same;
               }
             } else goto badcommand; break;
           case 'L':
@@ -3562,6 +3617,22 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
                   status_vars[i]-=u;
                 } else {
                   u=-1; goto begin;
+                }
+              }
+            } else if(!strcmp(buf,"TAKEITEM")) {
+              if(u=parse_item(s,xy,&ip)) {
+                while(s->text[ip]==' ') ip++;
+                if(s->text[ip]&~31) {
+                  y=parse_number(s,xy,&ip);
+                  if(!condflag) goto badcommand;
+                  while(s->text[ip]==' ') ip++;
+                  if(s->text[ip]&~31) {
+                    if(take_item(u,y,0),!condflag) goto same;
+                  } else {
+                    take_item(u,y,1);
+                  }
+                } else {
+                  take_item(u,0xFFFFFFFFULL,5);
                 }
               }
             } else if(!strcmp(buf,"TRY")) {
@@ -4735,6 +4806,13 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         condflag=0;
         if((rs=get_statxy(so)) && stats[(so&0xFFFF)-1].text && rs->instptr<stats[(so&0xFFFF)-1].length) {
           so=parse_letter(stats+(so&0xFFFF)-1,rs,&rs->instptr);
+          if(condflag) regs[fo]=so;
+        }
+        break;
+      case OP_PARI:
+        condflag=0;
+        if((rs=get_statxy(so)) && stats[(so&0xFFFF)-1].text && rs->instptr<stats[(so&0xFFFF)-1].length) {
+          so=parse_item(stats+(so&0xFFFF)-1,rs,&rs->instptr);
           if(condflag) regs[fo]=so;
         }
         break;

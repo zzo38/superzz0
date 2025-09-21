@@ -709,8 +709,8 @@ numbers are treated as unsigned.
   condition flag is true if it skipped past or false if it doesn't.
 
 [086 PARI]
-  (Not implemented yet. This is intended for parsing the name or number of
-  a item definition from a script, possibly together with optional flags.)
+  This works like PARN but can also parse a item name and optional flags;
+  see the "Items" section of script.doc for details of the expected format.
 
 [089 CHEX]
   Changes a board exit. The low 2-bits second operand specifies the
@@ -1085,7 +1085,7 @@ numbers are treated as unsigned.
   item slot flags in the high 16-bits. The J register is a bit field:
    bit0 = Take all matching items if there are not enough
    bit1 = Only check; do not take any items
-   bit2 = Don't add a first pass which ignores the item mask
+   bit2 = Don't add a first pass which always matches flags
 
 [0B7 IGIV]
   (TODO)

@@ -38,6 +38,8 @@ SCRIPTS
      control flag).
   +  Load fonts/palettes by #LOADFONT and #LOADPAL command.
   +  RNDB and RNDNB directions.
+  +  Script commands for dealing with items/inventory: #IFITEM, #IFNOTITEM,
+     #GIVEITEM, #TAKEITEM.
 
 ASSEMBLY
   +  The $C6 memory cell now stores the address of the next instruction if
