@@ -1074,7 +1074,7 @@ const char*load_inventory(FILE*fp,Inventory*inv) {
   if(m<=0) return 0;
   if(m<2 || m>14 || ((1UL<<m)&0b010101110111011UL)) return "Improper header size in .INV lump";
   inv->count=read16(fp);
-  inv->maxheap=(m>2?read32(fp):0xFFFFFFFFL);
+  inv->maxheap=(m>2?read32(fp):0x7FFFFFFFL);
   inv->strength=(m>6?read32(fp):0xFFFFFFFFL);
   inv->flag=(m>10?read16(fp):0x0000);
   inv->cursor=(m>12?read16(fp):0x0000);

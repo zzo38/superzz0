@@ -13,6 +13,8 @@ $A1 = Mask for item slot flags to match for IGIV, ITAK, and some other
 inventory-oriented instructions. Some flags are always handled in a special
 way regardless of this mask.
 
+$A2 = Give item event (see below).
+
 $A3 = Take item event (see below).
 
 $A4 = Name item event (see below).
@@ -214,6 +216,49 @@ The events marked (#) will save the A,B,C,D registers before being called,
 and then restored afterward; if they are called several times in sequence,
 then they are restored only after all calls are completed. (In some cases,
 they may be preserved from other events that are also marked with (#).)
+
+$00A2 (#)
+  This event is called when giving items with IGIV or #GIVEITEM. It is
+  called after checking weight (if applicable) and after clearing all
+  marks in all item slots, for each slot that might be usable (it is
+  possible that it will fail even if it returns zero for all slots, since
+  (unlike ITAK) it does not know yet if there is enough space). This will
+  also save and zero the A,B,C,D registers like the $00A3 event does.
+
+  W = Item number and flags (same as second operand of IGIV)
+  X = Quantity (actual or requested, or remaining in fourth phase)
+  Y = Slot number
+  Z = Current state; OR of return values so far, starts at $10
+  J = Normally same as J was when IGIV is used but might be different
+  K = Number of slots required
+  Cond. flag = False during first three phases, true during fourth phase
+
+  The return value is a bit field with the bits:
+
+  bit0 = Skip this slot. During the first three phases, it will cause it
+  to avoid marking this slot and avoid adding to the running total which
+  it internally uses to decide when to stop; during the fourth phase, it
+  will prevent the slot from being affected automatically.
+
+  bit1 = Immediately fail.
+
+  bit2 = Try again afterward if it fails (including due to bit1). This has
+  no effect during the fourth phase.
+
+  bit3 = If set during the fourth phase (no meaning in other phases), the
+  remaining quantity is decreased by the value of the A register. If this
+  would reduce it to less than zero, it is reduced to zero instead.
+
+  bit4 = This bit is automatically set during the first phase involving
+  checking for fully matching slots (both the item and flags).
+
+  bit5 = This bit is automatically set during the second phase involving
+  checking for matching slots, that do not necessarily fully match (the
+  item matches; the flags will only match those set in the mask and those
+  that it always checks).
+
+  bit6 = This bit is automatically set during the third phase involving
+  checking for vacant slots.
 
 $00A3 (#)
   This event is called when taking a item with ITAK or #TAKEITEM. It is

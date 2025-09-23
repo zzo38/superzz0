@@ -1085,10 +1085,20 @@ numbers are treated as unsigned.
   item slot flags in the high 16-bits. The J register is a bit field:
    bit0 = Take all matching items if there are not enough
    bit1 = Only check; do not take any items
-   bit2 = Don't add a first pass which always matches flags
+   bit2 = Don't add a first pass to check for fully matching slots
+   bit4 = Move cursor to last affected (or affectable) slot
 
 [0B7 IGIV]
-  (TODO)
+  This is like ITAK but gives instead of takes items. This does more than
+  ITAK does, since it also checks weight and some flags, and other stuff.
+  If successful, the condition flag is true and the first operand is the
+  quantity that has been given, otherwise the condition flag is false and
+  the first operand is zero. The J register is a bit field:
+   bit0 = Give as much as possible if not enough space
+   bit1 = Only check available space; do not give any items
+   bit2 = Don't check for fully matching slots first
+   bit3 = Ignore weight/strength
+   bit4 = Move cursor to last affected (or affectable) slot
 
 [0B9 IMOV]
   (TODO)

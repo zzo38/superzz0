@@ -4121,7 +4121,103 @@ static void do_inventory_op(Uint8 fo,Sint32 so) {
 }
 
 static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
-  
+  Sint32 rs[4]={regs[0],regs[1],regs[2],regs[3]};
+  ItemDef*idef;
+  Inventory*inv=inventory+(memory[MEM_INVENTORY]&7);
+  ItemSlot*slot;
+  Uint16 nsl,re;
+  Uint32 tot,tw,heap;
+  int i=item&0xFFFF;
+  int j;
+  Uint8 step;
+  if(!i || i>nitemdefs || itemdefs[i-1].class==255) return condflag=0;
+  idef=itemdefs+i-1;
+  if((inv->flag&INV_IGNORE_WEIGHT) || !idef->weight) how|=8;
+  heap=inv->maxheap;
+  if(heap>idef->maxheap && !(inv->flag&INV_IGNORE_MAXHEAP)) heap=idef->maxheap;
+  regs[0]=regs[1]=regs[2]=regs[3]=0;
+  retry:
+  nsl=tot=re=tw=0;
+  for(i=0;i<inv->count;i++) {
+    slot=inv->item+i;
+    j=slot->item;
+    slot->flag&=~ISF_MARK;
+    if(!(how&8) && !(slot->flag&ISF_IGNORE) && j && j<=nitemdefs) tw+=itemdefs[j-1].weight*slot->quantity;
+  }
+  if(!(how&8) && tw+qty*idef->weight>inv->strength) {
+    if(how&1) qty=(inv->strength-tw)/idef->weight; else { condflag=0; goto done; }
+  }
+  for(step=(how&4)?1:0;step<3 && tot<qty;step++) {
+    re|=0x10<<step;
+    for(i=0;i<inv->count && tot<qty;i++) {
+      slot=inv->item+i;
+      if(slot->flag&(ISF_IGNORE|ISF_MARK)) continue;
+      if(step==2) {
+        if(slot->item || slot->flag) continue;
+      } else {
+        if(slot->item!=(item&0xFFFF)) continue;
+        if(slot->quantity>=heap) goto un;
+        if(!step && slot->flag!=(item>>16)) goto un;
+        if((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE)) goto un;
+      }
+      memory[MEM_ARG_J]=how; memory[MEM_ARG_K]=nsl; condflag=0;
+      re|=run_program(memory[MEM_GIVE_ITEM_EVENT],item,qty,i,re);
+      if(re&2) goto fail;
+      if(!(re&1)) {
+        slot->flag|=ISF_MARK;
+        if(step==2) slot->quantity=slot->ext0=slot->ext1=slot->ext2=0;
+        if(heap-slot->quantity<qty-tot) tot+=heap-slot->quantity; else tot=qty;
+        nsl++;
+      } else {
+        if(step==2) goto end;
+        un: if((inv->flag&INV_SINGLE_HEAP) || (idef->flag&IDF_SINGLE_HEAP)) goto fail;
+      }
+      re&=~0x71;
+    }
+  }
+  end:
+  if(tot<qty) {
+    if(how&1) {
+      qty=tot;
+    } else {
+      fail:
+      if(re&4) goto retry;
+      condflag=0; goto done;
+    }
+  } else {
+    how&=~1;
+  }
+  if((how&18)==18) for(i=0;i<inv->count;i++) if(inv->item[i].flag&ISF_MARK) inv->cursor=i;
+  if(!(how&2)) for(tot=qty,i=0;i<inv->count && tot;i++) {
+    slot=inv->item+i;
+    if(slot->flag&ISF_MARK) {
+      if(slot->item && slot->item!=(item&0xFFFF)) continue;
+      memory[MEM_ARG_J]=how; memory[MEM_ARG_K]=nsl; condflag=1;
+      re=run_program(memory[MEM_GIVE_ITEM_EVENT],item,qty-tot,i,0);
+      if(re&2) { condflag=0; goto done; }
+      if((re&8) && regs[0]>0) tot=(tot>regs[0]?tot-regs[0]:0);
+      if(!(re&1)) {
+        if(slot->item) {
+          tw=tot;
+          if(slot->quantity>heap) tw=0; else if(tw>heap-slot->quantity) tw=heap-slot->quantity;
+          slot->quantity+=tw;
+          tot-=tw;
+        } else {
+          slot->item=item&0xFFFF;
+          slot->flag=item>>16;
+          slot->quantity=(tot<heap?tot:heap);
+          tot-=slot->quantity;
+        }
+      }
+      if(how&16) inv->cursor=i;
+    }
+  }
+  condflag=1;
+  done:
+  for(i=0;i<inv->count;i++) if(!inv->item[i].item && inv->item[i].flag==ISF_MARK) inv->item[i].flag=0;
+  memcpy(regs,rs,4*sizeof(Sint32));
+  memory[MEM_ARG_J]=how;
+  return condflag?qty:0;
 }
 
 static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
@@ -4146,7 +4242,7 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
     if(slot->item==(item&0xFFFF) && !((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE))) {
       if((slot->quantity && tot<qty) || ((slot->flag&(item>>16)&ISF_FIXED) && !nsl)) nsl++,slot->flag|=ISF_MARK;
       tot+=slot->quantity;
-      if(tot && tot>=slot->quantity) break;
+      if(tot && tot>=qty) break;
     }
   }
   if(tot<qty) {
@@ -4176,7 +4272,7 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
           if(slot->item==(item&0xFFFF) && !((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE))) {
             if((slot->quantity && tot<qty) || ((slot->flag&(item>>16)&ISF_FIXED) && !nsl)) nsl++,slot->flag|=ISF_MARK;
             tot+=slot->quantity;
-            if(tot && tot>=slot->quantity) break;
+            if(tot && tot>=qty) break;
           }
         }
         if(tot<qty) {
@@ -4216,6 +4312,7 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
             slot->flag&=~ISF_MARK;
             if(!slot->quantity && !(slot->flag&ISF_FIXED)) *slot=(ItemSlot){};
           }
+          if(how&16) inv->cursor=i;
           if(tot>=qty) break;
         }
       }
@@ -5504,6 +5601,16 @@ static void debug_menu(void) {
       ask_text("Video mode (hex):",buf,2);
       if(*buf) v_mode=strtol(buf,0,16);
       break;
+    }
+    win_command('d',"Make debug log...") {
+      Uint8 a=0;
+      Uint32 b=0;
+      win_form("Debug log") {
+        win_numeric('F',"First operand: ",a,0,7);
+        win_numeric('S',"Second operand: ",b,0,0xFFFF);
+        win_command_esc(0,"Done") break;
+      }
+      debug_log(a,b,0,0,0,0,0);
     }
     win_command_esc(0,"Cancel") break;
   }

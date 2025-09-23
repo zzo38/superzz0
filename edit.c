@@ -1900,6 +1900,8 @@ static void edit_inventory(const char*name) {
       return;
     }
     inventory->item=calloc(inventory->count=n,sizeof(ItemSlot));
+    inventory->maxheap=0x7FFFFFFFL;
+    inventory->strength=0xFFFFFFFFL;
     if(n && !inventory->item) err(1,"Allocation failed");
   }
   load_inventory_items(&items,&root,&ni);
