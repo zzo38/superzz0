@@ -173,7 +173,7 @@ static int convertaudio(WaveSound*wav,Uint16 rate,Uint8 ratemode,Uint16 form,Res
       // Convert audio from U8 to S16
       Uint32 i=wav->len;
       Uint8 __attribute__((__may_alias__))*d=(void*)wav->data;
-      while(i--) wav->data[i]=d[i]*0x101-0x8080;
+      while(i--) wav->data[i]=d[i]*0x101-0x8000;
       form=AUDIO_S16SYS;
     }
     if(form==AUDIO_S16SYS) {
