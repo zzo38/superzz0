@@ -75,6 +75,7 @@ TEMPLATE
   +  "Time:" is no longer displayed unless the board has a time limit.
 
 OTHERS
+  +  Improved audio resampling.
   =  Avoid processing the same key event multiple times after restoring
      a save game file.
   *  The save game format has been changed (and is no longer compatible

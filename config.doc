@@ -285,10 +285,32 @@ video_gamma
   Can be three numbers with semicolons in between; affects the gamma
   setting of red, green, blue.
 
+wave_resample
+  Resampling mode for wave sounds. If it is "0" or undefined then it
+  will use the SDL functions, which do not actually do any resampling.
+  See the below section about resampling configuration.
+
 wave_sound
   Set to 1 to enable wave sounds (the audio also must be configured).
   If set to 0 then wave sounds are disabled. (Note that this feature is
   not fully implemented yet.)
+
+
+=== Resampling configuration ===
+
+The resampling configuration consists of the following parameters with
+spaces in between:
+
+* Number of taps, from 4 to 1024; must be a multiple of four.
+
+* Number of filters, from 1 to 1024.
+
+* Optionally, L followed by a floating point number which is the low pass
+filter ratio, which should be greater than 0.0 and less than 1.0.
+
+* The letter B to use a Blackman Harris window, or H to use a Hann window.
+
+* Optionally, I to enable subsample interpolation.
 
 
 === [Joystick] ===

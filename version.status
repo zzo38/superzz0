@@ -1,5 +1,5 @@
 0.6.0
-01060CE8FEDB9D73A412377BFC9B54C954437424EA90F55BD4ADED680F7A1F7A
+01066477783FD6FAF36562A452F38B99622E136D2932D5A42BB42EA69107A4AF
 asn1.c
 asn1.h
 audio.c
@@ -17,6 +17,8 @@ main.mak
 opcodes.h
 opcodes.inc
 printer.c
+resample.c
+resample.h
 savegame.c
 window.c
 world.c

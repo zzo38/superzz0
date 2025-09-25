@@ -4,6 +4,7 @@ exit
 #endif
 
 #include "common.h"
+#include "resample.h"
 #include <math.h>
 
 #define DRUM_NOTE 0x7F00
@@ -66,6 +67,29 @@ static const Uint16 drum_const_table[256]={
   [0xF0]= /* ? */ 1500,1450,1400,1350,1300,1250,1300,1400,1600,1801,2111,2511,2811,3111,
 };
 
+static char init_resampler(Resample*resam,const char*text) {
+  Uint16 t,f;
+  Uint8 g=0;
+  double p=1.0;
+  if(!text || !*text || (*text=='0' && !text[1])) return 0;
+  t=strtol(text,(char**)&text,10);
+  f=strtol(text,(char**)&text,10);
+  if(!t || !f) errx(1,"Syntax error in resampler configuration");
+  while(*text==' ') ++text;
+  if(*text=='L') {
+    p=strtod(text+1,(char**)&text);
+    g|=RESAMPLE_LOWPASS;
+  }
+  while(*text==' ') ++text;
+  if(*text=='B') g|=RESAMPLE_BLACKMAN_HARRIS; else if(*text!='H') errx(1,"Syntax error in resampler configuration");
+  ++text; while(*text==' ') ++text;
+  if(*text=='I') g|=RESAMPLE_SUBSAMPLE_INTERPOLATE,++text;
+  while(*text==' ') ++text;
+  if(*text) errx(1,"Syntax error in resampler configuration");
+  if(resample_init(resam,t,f,p,g)) errx(1,"Error in resampler configuration");
+  return 1;
+}
+
 static void audiocb(void*userdata,Uint8*stream,int len) {
   static float prf=0.0;
   static float pha=0.0;
@@ -127,26 +151,65 @@ static void audiocb(void*userdata,Uint8*stream,int len) {
   }
 }
 
-static int convertaudio(WaveSound*wav,Uint16 rate,Uint8 ratemode,Uint16 form) {
-  // Use SDL audio conversion functions. Unfortunately, from examining the
-  // source code, it does not seem to do resampling properly. However, this
-  // may be replaced with a different implementation in future. (Even SDL2
-  // does not seem to support non-integer sample rates, although a modified
-  // version of the code from SDL2 or SDL3 might be usable.)
-  SDL_AudioCVT cvt={};
-  Uint32 r1=rate;
-  Uint32 r2=spec.freq;
-  if(!ratemode) {
-    r1=2560000000L/(65536-rate);
-    r2*=10;
+static int convertaudio(WaveSound*wav,Uint16 rate,Uint8 ratemode,Uint16 form,Resample*resam) {
+  if(config.test_mode) printf("convertaudio(%p,%d,%d,%d,%p)\n",wav,rate,ratemode,form,resam);
+  if(resam && (rate!=spec.freq || !ratemode)) {
+    Sint16 buf[512];
+    char*out=0;
+    size_t outsize=0;
+    FILE*f=open_memstream(&out,&outsize);
+    double r=((double)spec.freq)/(ratemode?1.0*rate:256000000.0/(65536-rate));
+    if(!f) err(1,"Allocation failed");
+    resample_reset(resam);
+    resam->pin=0;
+#if AUDIO_S16SYS!=AUDIO_S16LSB
+    if(form==AUDIO_S16LSB && AUDIO_S16SYS!=AUDIO_S16LSB) {
+      Uint32 i;
+      for(i=0;i<wav->len;i++) wav->data[i]=((wav->data[i]&0xFF)<<8)|((wav->data[i]>>8)&0xFF);
+      form=AUDIO_S16SYS;
+    }
+#endif
+    if(form==AUDIO_U8) {
+      // Convert audio from U8 to S16
+      Uint32 i=wav->len;
+      Uint8 __attribute__((__may_alias__))*d=(void*)wav->data;
+      while(i--) wav->data[i]=d[i]*0x101-0x8080;
+      form=AUDIO_S16SYS;
+    }
+    if(form==AUDIO_S16SYS) {
+      for(;;) {
+        resam->pout=0;
+        resample_process_int16(resam,wav->data+resam->pin,wav->len-resam->pin,buf,512,r);
+        if(resam->pin==wav->len && !resam->pout) break;
+        fwrite(buf,sizeof(Sint16),resam->pout,f);
+      }
+    } else {
+      fclose(f);
+      free(out);
+      return 1;
+    }
+    fclose(f);
+    if(!out) err(1,"Allocation failed");
+    free(wav->data);
+    wav->data=(void*)out;
+    wav->len=outsize/sizeof(Sint16);
+    return 0;
+  } else {
+    SDL_AudioCVT cvt={};
+    Uint32 r1=rate;
+    Uint32 r2=spec.freq;
+    if(!ratemode) {
+      r1=2560000000L/(65536-rate);
+      r2*=10;
+    }
+    if(SDL_BuildAudioCVT(&cvt,form,1,r1,AUDIO_S16SYS,1,r2)<0) return 1;
+    wav->data=realloc(wav->data,2L*wav->len*(Uint32)cvt.len_mult);
+    if(!wav->data) err(1,"Allocation failed");
+    cvt.buf=(void*)wav->data;
+    cvt.len=2L*wav->len;
+    wav->len=(cvt.len*(Uint32)cvt.len_mult)>>(form&8?2:1);
+    return SDL_ConvertAudio(&cvt);
   }
-  if(SDL_BuildAudioCVT(&cvt,form,1,r1,AUDIO_S16SYS,1,r2)<0) return 1;
-  wav->data=realloc(wav->data,2L*wav->len*(Uint32)cvt.len_mult);
-  if(!wav->data) err(1,"Allocation failed");
-  cvt.buf=(void*)wav->data;
-  cvt.len=2L*wav->len;
-  wav->len=(cvt.len*(Uint32)cvt.len_mult)>>(form&8?2:1);
-  return SDL_ConvertAudio(&cvt);
 }
 
 static inline Uint8 adpcm4bits(Uint8 v,Uint8 p,Uint8*m) {
@@ -216,7 +279,7 @@ static const Sint16 mulaw[128]={
       56,    48,    40,    32,    24,    16,     8,     0,
 };
 
-static int convertwave(FILE*f,Uint32 size,WaveSound*wav,Uint16 rate,Uint8 flag1,Uint8 flag2) {
+static int convertwave(FILE*f,Uint32 size,WaveSound*wav,Uint16 rate,Uint8 flag1,Uint8 flag2,Resample*resam) {
   // For the ADPCM formats, also see the files:
   //   https://github.com/TerrySoba/VocTool/raw/master/src/decode_creative_adpcm.h
   //   https://github.com/jacksonh/sox/raw/master/src/adpcms.c
@@ -230,7 +293,7 @@ static int convertwave(FILE*f,Uint32 size,WaveSound*wav,Uint16 rate,Uint8 flag1,
       wav->data=(void*)(d=calloc(wav->len=size,2));
       if(!wav->data) err(1,"Memory error in wave sound conversion");
       fread(wav->data,1,wav->len,f);
-      if(convertaudio(wav,rate,flag1&1,AUDIO_U8)) return 1;
+      if(convertaudio(wav,rate,flag1&1,AUDIO_U8,resam)) return 1;
       break;
     case 1: // ADPCM 4-bits
       wav->data=(void*)(d=calloc((wav->len=size*2)+1,2));
@@ -241,7 +304,7 @@ static int convertwave(FILE*f,Uint32 size,WaveSound*wav,Uint16 rate,Uint8 flag1,
         d[a++]=p=adpcm4bits(c>>4,p,&m);
         d[a++]=p=adpcm4bits(c&15,p,&m);
       }
-      if(convertaudio(wav,rate,flag1&1,AUDIO_U8)) return 1;
+      if(convertaudio(wav,rate,flag1&1,AUDIO_U8,resam)) return 1;
       break;
     case 2: // ADPCM 3-bits
       wav->data=(void*)(d=calloc((wav->len=size*3)+1,2));
@@ -253,7 +316,7 @@ static int convertwave(FILE*f,Uint32 size,WaveSound*wav,Uint16 rate,Uint8 flag1,
         d[a++]=p=adpcm3bits((c>>2)&7,p,&m);
         d[a++]=p=adpcm3bits((c<<1)&7,p,&m);
       }
-      if(convertaudio(wav,rate,flag1&1,AUDIO_U8)) return 1;
+      if(convertaudio(wav,rate,flag1&1,AUDIO_U8,resam)) return 1;
       break;
     case 3: // ADPCM 2-bits
       wav->data=(void*)(d=calloc((wav->len=size*4)+1,2));
@@ -266,25 +329,25 @@ static int convertwave(FILE*f,Uint32 size,WaveSound*wav,Uint16 rate,Uint8 flag1,
         d[a++]=p=adpcm2bits((c>>2)&3,p,&m);
         d[a++]=p=adpcm2bits((c>>0)&3,p,&m);
       }
-      if(convertaudio(wav,rate,flag1&1,AUDIO_U8)) return 1;
+      if(convertaudio(wav,rate,flag1&1,AUDIO_U8,resam)) return 1;
       break;
     case 4: // Signed 16-bits
       wav->data=calloc(wav->len=size>>1,2);
       if(!wav->data) err(1,"Memory error in wave sound conversion");
       fread(wav->data,2,wav->len,f);
-      if(rate!=spec.freq || !(flag1&1) || AUDIO_S16SYS!=AUDIO_S16LSB) if(convertaudio(wav,rate,flag1&1,AUDIO_S16LSB)) return 1;
+      if(rate!=spec.freq || !(flag1&1) || AUDIO_S16SYS!=AUDIO_S16LSB) if(convertaudio(wav,rate,flag1&1,AUDIO_S16LSB,resam)) return 1;
       break;
     case 6: // A-law
       wav->data=calloc(wav->len=size,2);
       if(!wav->data) err(1,"Memory error in wave sound conversion");
       for(a=0;a<wav->len;a++) p=fgetc(f),wav->data[a]=p&128?-alaw[p&127]:alaw[p&127];
-      if(rate!=spec.freq || !(flag1&1)) if(convertaudio(wav,rate,flag1&1,AUDIO_S16SYS)) return 1;
+      if(rate!=spec.freq || !(flag1&1)) if(convertaudio(wav,rate,flag1&1,AUDIO_S16SYS,resam)) return 1;
       break;
     case 7: // mu-law
       wav->data=calloc(wav->len=size,2);
       if(!wav->data) err(1,"Memory error in wave sound conversion");
       for(a=0;a<wav->len;a++) p=fgetc(f),wav->data[a]=p&128?mulaw[p&127]:(-mulaw[p&127]-(p==127));
-      if(rate!=spec.freq || !(flag1&1)) if(convertaudio(wav,rate,flag1&1,AUDIO_S16SYS)) return 1;
+      if(rate!=spec.freq || !(flag1&1)) if(convertaudio(wav,rate,flag1&1,AUDIO_S16SYS,resam)) return 1;
       break;
     default: fprintf(stderr,"Unknown audio codec %d\n",flag2&15); return 1;
   }
@@ -298,12 +361,19 @@ static int convertwave(FILE*f,Uint32 size,WaveSound*wav,Uint16 rate,Uint8 flag1,
 }
 
 static void loadwaves(void) {
+  Resample resam;
   FILE*f;
   const char**list=0;
   int count=0;
   int i,j,k,r;
+  char useresam=0;
   list_lumps("*.SND",&list,&count);
   if(count) {
+    if(config.wave_resample) {
+      useresam=init_resampler(&resam,config.wave_resample);
+      free(config.wave_resample);
+      config.wave_resample=0;
+    }
     if(count>0xFFFE) errx(1,"Too many .SND lumps");
     wavesound=calloc(nwavesound=count,sizeof(WaveSound));
     if(!wavesound) err(1,"Memory error in wave sound conversion");
@@ -321,7 +391,7 @@ static void loadwaves(void) {
           goto end;
         }
         r=fgetc(f); r|=fgetc(f)<<8;
-        if(convertwave(f,lump_size-5,wavesound+i,r,j,k) || !wavesound[i].data || !wavesound[i].len) {
+        if(convertwave(f,lump_size-5,wavesound+i,r,j,k,useresam?&resam:0) || !wavesound[i].data || !wavesound[i].len) {
           warnx("Sound \"%s\" cannot be converted",list[i]);
           free(wavesound[i].data);
           wavesound[i].data=0;
@@ -330,6 +400,7 @@ static void loadwaves(void) {
         end: fclose(f);
       }
     }
+    if(useresam) resample_uninit(&resam);
   }
   free(list);
 }

@@ -2,7 +2,7 @@
 cflags common.h config.inc -> *c : *
 main.c asn1.o audio.o display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o printer.o savegame.o window.o world.o *c version.inc -> $ : bash main.c
 asn1.c asn1.h -> asn1.o : bash asn1.c
-audio.c *c -> audio.o : bash audio.c
+audio.c resample.o *c -> audio.o : bash audio.c
 display.c *c -> display.o : bash display.c
 edit.c *c asn1.h -> edit.o : bash edit.c
 editbrd.c *c -> editbrd.o : bash editbrd.c
@@ -11,6 +11,7 @@ edittext.c *c -> edittext.o : bash edittext.c
 game.c opcodes.h *c -> game.o : bash game.c
 lumped.c *c -> lumped.o : bash lumped.c
 printer.c *c -> printer.o : bash printer.c
+resample.c resample.h -> resample.o : bash resample.c
 window.c *c -> window.o : bash window.c
 world.c *c asn1.h -> world.o : bash world.c
 savegame.c *c -> savegame.o : bash savegame.c
