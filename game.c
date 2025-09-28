@@ -2113,7 +2113,7 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
   Sint32 m;
   Uint8 inn=0;
   int i,j;
-  Uint32 v,x,y,z;
+  Uint32 v,x,y,z,zz;
   Uint8 cmd,col,chr,col1;
   Uint8 rf=0;
   Uint8 rn=0;
@@ -2227,6 +2227,14 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
         }
         if(cmd==SC_ITEM_PLACEHOLDER) {
           if(m<0 || m>=tnlines || (inf->list[m].ext&0x8000)) goto plain;
+          switch(inf->wi->command[x]) {
+            case 'Q':
+              zz=inv->item[z].item;
+              if(zz>0 && zz<=nitemdefs && (itemdefs[zz-1].flag&IDF_HIDE_QUANTITY)) j=0; else j=1;
+              break;
+            case 'X': break;
+            default: j=0;
+          }
           if(j && inf->wi->color[x]!=0x22) {
             col=(inf->wi->color[x]==0x11?cur_screen.color[i]:inf->wi->color[x]);
             if(n==tcursor && (v=inf->wi->wcolor[WC_SELECTED_ITEM])) {
@@ -2237,6 +2245,20 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
             }
           }
           switch(inf->wi->command[x]) {
+            case 'Q':
+              if(zz>0 && zz<=nitemdefs && (itemdefs[zz-1].flag&IDF_HIDE_QUANTITY)) goto name;
+              zz=inv->item[z].quantity;
+              if(x && inf->wi->command[x-1]=='Q' && inf->wi->parameter[x-1]==255 && inf->wi->parameter[x]!=255) {
+                v_char[i]=inf->wi->parameter[x]?:chr;
+              } else if(!zz && (x==79 || inf->wi->command[x+1]!='Q')) {
+                v_char[i]='0';
+              } else {
+                for(j=1,v=x+1;v<80 && inf->wi->command[v]=='Q' && (inf->wi->parameter[v]==255 || inf->wi->parameter[x]!=255);v++) j=(zz?1:0),zz/=10;
+                v_char[i]=(zz?zz%10+'0':(j && inf->wi->parameter[x]!=255)?(inf->wi->parameter[x]?:chr):' ');
+              }
+              v_color[i]=col;
+              break;
+            case 'X': chr=inf->wi->parameter[x]?:chr; goto name;
             default: name:
               p=(inf->list[m].ext&0x4000?itemnames:inf->nam)+inf->list[m].name+rn;
               if(v_char[i]=*p) {
@@ -2244,7 +2266,7 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
                 v_color[i]=col;
               } else {
                 v_color[i]=col1;
-                v_char[i]=inf->wi->parameter[x]?:chr;
+                v_char[i]=chr;
               }
           }
         } else if(cmd==SC_ITEM_ELEMENT) {

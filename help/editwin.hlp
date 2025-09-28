@@ -59,8 +59,14 @@ Meaningful commands by line types in text windows:
 :i;Command codes for item windows
 These command codes are used if the item tile subtype is "placeholder".
 
-þ X = Use the default behaviour. Normally, this means that the item name is
-displayed, or a continuation of the previous field.
+þ Q = Show quantity to the right of the item name. If this item is one that
+the quantity is not to be displayed, then it continues to display the item
+name instead. The parameter is the character to separate the quantity from
+the item name. If the parameter is 255 then it is used for quantity to the
+left of the item name, in which case only one cell of the window definition
+uses the separator character, but if it is the right then all of them do.
+
+þ X = Display the name of the item.
 
 þ Z = Separator between columns of items. Do not use this before the first
 column and after the last column; it is only used between columns (so this

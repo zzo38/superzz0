@@ -98,7 +98,7 @@ or .FNT suffix.
 * 0x1F = Replace a single character from the loaded font. The first byte of
 the data is the character code, and the rest is the raster data.
 
-* 0x21 to 0x28 = Load a peltte; the data is the lump name excluding the
+* 0x21 to 0x28 = Load a palette; the data is the lump name excluding the
 .PAL suffix.
 
 Each stat (the first stat number is stat 1) is as follows:
@@ -534,15 +534,8 @@ The flags are:
 Window info; this is optionally present for each screen, and is only used
 if the screen is used for a text window or item window.
 
-This starts with a header. The first byte is a flag byte, and the second
-byte is currently unused and must be zero.
-
-The flags are:
-
-* bit0 = Set if the text window has single ends, clear if the ends are
-extended to the entire size of the window.
-
-* bit1 = Set for zero-based line numbers.
+This starts with a header. The first byte is a flag byte (the WF_ flags),
+and the second byte is currently unused and must be zero.
 
 After that is the commands. If the high bit is set, then:
 
