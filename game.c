@@ -2113,8 +2113,9 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
   Sint32 m;
   Uint8 inn=0;
   int i,j;
-  Uint32 v,x,y,z,zz;
+  Uint32 v,x,y,z,zz,fv;
   Uint8 cmd,col,chr,col1;
+  Uint8 rv=0;
   Uint8 rf=0;
   Uint8 rn=0;
   memset(v_font,0,80*25);
@@ -2124,12 +2125,12 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
   }
   for(i=x=y=0;i<80*25;i++,x++) {
     if(x==80) {
-      y++; n++; x=rf=rn=0; tp=0;
+      y++; n++; x=rf=rn=rv=0; tp=0;
       if(y>=cur_screen.hard_edge[DIR_N] && y<=cur_screen.hard_edge[DIR_S]) inn=1; else inn=0;
     } else if(x) {
       if((cur_screen.command[i]^cur_screen.command[i-1])&0xF0) tp=0;
     }
-    if(inf->wi->command[x]=='Z') rf=rn=0,n++,tp=0;
+    if(inf->wi->command[x]=='Z') rf=rn=rv=0,n++,tp=0;
     cmd=cur_screen.command[i];
     col=cur_screen.color[i];
     chr=cur_screen.parameter[i];
@@ -2228,6 +2229,7 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
         if(cmd==SC_ITEM_PLACEHOLDER) {
           if(m<0 || m>=tnlines || (inf->list[m].ext&0x8000)) goto plain;
           switch(inf->wi->command[x]) {
+            case 'F': case 'G': if(inf->wi->color[x]!=0x11) j=1; break;
             case 'Q':
               zz=inv->item[z].item;
               if(zz>0 && zz<=nitemdefs && (itemdefs[zz-1].flag&IDF_HIDE_QUANTITY)) j=0; else j=1;
@@ -2245,6 +2247,42 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
             }
           }
           switch(inf->wi->command[x]) {
+            case 'F':
+              rf=1;
+              do ++rv; while(rv<=cur_screen.varprop.count && (cur_screen.varprop.item[rv-1].type<0x32 || cur_screen.varprop.item[rv-1].type>0x3F));
+              if(rv>cur_screen.varprop.count) break;
+              zz=inv->item[z].item;
+              if(zz<1 || zz>nitemdefs) goto hideq;
+              if((cur_screen.varprop.item[rv-1].data[0]&0x80) && (itemdefs[zz-1].flag&IDF_HIDE_QUANTITY)) {
+                rf=128; fv=0; goto hideq;
+              }
+              switch(cur_screen.varprop.item[rv-1].data[0]&0x1F) {
+                case 0: fv=inv->item[z].ext0; break;
+                case 1: fv=inv->item[z].ext1; break;
+                case 2: fv=inv->item[z].ext2; break;
+                case 3: fv=itemdefs[zz-1].ext3; break;
+                case 4: fv=itemdefs[zz-1].ext4; break;
+                case 5: fv=itemdefs[zz-1].ext5; break;
+                case 6: fv=inf->list[m].ext&0xFF; break;
+                case 7: fv=itemdefs[zz-1].price; break;
+                case 8: fv=itemdefs[zz-1].parameter; break;
+                case 9: fv=itemdefs[zz-1].weight; break;
+                case 10: fv=1; break;
+                case 11: fv=inv->strength; break;
+                case 12: fv=itemdefs[zz-1].maxheap; break;
+              }
+              if(cur_screen.varprop.item[rv-1].data[0]&0x40) fv*=inv->item[z].quantity;
+              /* fall through */
+            case 'G':
+              if(rv>cur_screen.varprop.count || !rv) break;
+              zz=inv->item[z].item;
+              if(zz<1 || zz>nitemdefs || rf>15 || rv>cur_screen.varprop.count) {
+                hideq: v_color[i]=col1; v_char[i]=inf->wi->parameter[x]?:chr;
+              } else {
+                v_color[i]=col;
+                v_char[i]=digit_of(fv,cur_screen.varprop.item[rv-1].data[rf++])?:inf->wi->parameter[x]?:chr;
+              }
+              break;
             case 'Q':
               if(zz>0 && zz<=nitemdefs && (itemdefs[zz-1].flag&IDF_HIDE_QUANTITY)) goto name;
               zz=inv->item[z].quantity;

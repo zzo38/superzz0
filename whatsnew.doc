@@ -67,6 +67,7 @@ EDITOR
   =  The config.shift_arrows no longer affects the screen editor (now it
      only affects the board editor), since shift+arrows already has a
      meaning in the screen editor (for numeric extension).
+  =  Restore window editor screen properly after displaying a help file.
   *  The "appearance mapping" and "animation" menus are now submenus of
      the "element" menu, since their use is related.
   *  The "memory" screen element has been moved from F4 to F1.

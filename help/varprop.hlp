@@ -11,6 +11,11 @@ coordinates of the view center. This is only meaningful in boards and not
 in screens, and if it is specified then it will override the default
 handling of centering at the player.
 
+þ Window field specification: The specification of a field in a window;
+this can be refered by the window definition. This is only meaningful for
+screens, and is ignored if it appears in a board. A field specification can
+have up to fourteen character cells.
+
 þ Once: The previous variable property only applies once. This is only
 meaningful for boards, and only if it persists; if the board does not
 persist then it will not remember that it had already been done once.

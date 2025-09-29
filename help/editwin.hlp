@@ -59,6 +59,12 @@ Meaningful commands by line types in text windows:
 :i;Command codes for item windows
 These command codes are used if the item tile subtype is "placeholder".
 
+þ F = Beginning of a field. This must be a window field specification which
+is defined in a variable property list. The parameter is used if the field
+is hidden or if the character code of the field is zero.
+
+þ G = Continuation of a field. Otherwise works like F.
+
 þ Q = Show quantity to the right of the item name. If this item is one that
 the quantity is not to be displayed, then it continues to display the item
 name instead. The parameter is the character to separate the quantity from

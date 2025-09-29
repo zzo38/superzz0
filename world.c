@@ -1060,6 +1060,9 @@ void work_varproperties(VarPropertyList*vp) {
       p->data[p->type&15]=0;
       load_palette(p->data,LOADPAL_BASE);
       break;
+    case 0x32 ... 0x3F:
+      /* Do nothing; this case is handled by a separate function */
+      break;
     default:
       if(!editor) errx(1,"Improper variable property list");
   }

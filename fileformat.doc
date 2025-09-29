@@ -101,6 +101,8 @@ the data is the character code, and the rest is the raster data.
 * 0x21 to 0x28 = Load a palette; the data is the lump name excluding the
 .PAL suffix.
 
+* 0x32 to 0x3F = Window field specification.
+
 Each stat (the first stat number is stat 1) is as follows:
 
 * Flag (8-bits; only present if bit9 of encoding flags is set)

@@ -18,6 +18,67 @@ static ASN1_Value*general_oids; // the "class" is used for one of the below cons
 #define OPTIONAL 17
 #define REMOVED 18
 
+static int edit_field_cells(int nc,Uint8*data) {
+  char buf[6];
+  int i;
+  int x=1;
+  int y=0;
+  if(nc<1) nc=1; else if(nc>14) nc=14;
+  start:
+  memset(v_char,32,80*25);
+  memset(v_color+80,0x07,80*24);
+  memset(v_color,0x30,80);
+  strcpy(v_char,"Window field specification");
+  strcpy(v_char+10*80+1,"<Z/X> Move cursor     <R> Select row        <Q> Done");
+  strcpy(v_char+11*80+1,"<0-9> Entry           <D> Clear entry       <C/V> Resize");
+  strcpy(v_char+12*80+1,"<T/Y> Copy            <U/I> Copy+           <O/P> Copy-");
+  draw:
+  memset(v_char+80,32,80*8);
+  v_char[2*80+2]=0xDA; v_char[3*80+2]=v_char[5*80+2]=0xB3; v_char[4*80+2]=0xC3; v_char[6*80+2]=0xC0;
+  for(i=0;i<nc;i++) {
+    memcpy(v_char+2*80+3+i*5,"\xC4\xC4\xC4\xC4\xC2",5);
+    memcpy(v_char+4*80+3+i*5,"\xC4\xC4\xC4\xC4\xC5",5);
+    memcpy(v_char+6*80+3+i*5,"\xC4\xC4\xC4\xC4\xC1",5);
+    v_char[3*80+7+i*5]=v_char[5*80+7+i*5]=0xB3;
+    draw_text(5+i*5,3,buf,0x03,snprintf(buf,4,"%2u",data[i+1]>>4));
+    draw_text(5+i*5,5,buf,0x03,snprintf(buf,4,"%2u",data[i+1]&15));
+  }
+  v_char[2*80+2+i*5]=0xBF; v_char[4*80+2+i*5]=0xB4; v_char[6*80+2+i*5]=0xD9;
+  if(y) v_char[7*80-1+x*5]=0x1E,v_color[7*80-1+x*5]=0x0E; else v_char[1*80-1+x*5]=0x1F,v_color[1*80-1+x*5]=0x0E;
+  memcpy(v_char+3*80+74,"Format",6);
+  memcpy(v_char+5*80+74,"D. Pos",6);
+  redisplay();
+  for(;;) {
+    if(!next_event()) return nc;
+    i=y?(data[x]&15):(data[x]>>4);
+    if(event.type==SDL_KEYDOWN) switch(event.key.keysym.sym) {
+      case SDLK_ESCAPE: case SDLK_q: return nc;
+      case SDLK_BACKSPACE: if(y) data[x]=i/10+(data[x]&0xF0); else data[x]=((i/10)<<4)+(data[x]&0x0F); goto draw;
+      case SDLK_DELETE: case SDLK_d: data[x]&=y?0xF0:0x0F; goto draw;
+      case SDLK_TAB: case SDLK_r: y^=1; goto draw;
+      case SDLK_0 ... SDLK_9:
+        i=10*i+event.key.keysym.sym-SDLK_0;
+        if(i>15) break;
+        data[x]=y?((data[x]&0xF0)+i):((data[x]&0x0F)+(i<<4));
+        goto draw;
+      case SDLK_LEFT: case SDLK_h: case SDLK_z: if(x>1) --x; goto draw;
+      case SDLK_RIGHT: case SDLK_l: case SDLK_x: if(x<nc) ++x; goto draw;
+      case SDLK_UP: case SDLK_k: y=0; goto draw;
+      case SDLK_DOWN: case SDLK_j: y=1; goto draw;
+      case SDLK_HOME: x=1; goto draw;
+      case SDLK_END: x=nc; goto draw;
+      case SDLK_c: if(nc>1) --nc; if(x>nc) --nc; goto draw;
+      case SDLK_v: if(nc<14) ++nc; goto draw;
+      case SDLK_t: if(x>1) data[x-1]=data[x],--x; goto draw;
+      case SDLK_y: if(x<nc) data[x+1]=data[x],++x; goto draw;
+      case SDLK_u: if(x>1 && i!=15) data[x-1]=data[x]+(y?1:16),--x; goto draw;
+      case SDLK_i: if(x<nc && i!=15) data[x+1]=data[x]+(y?1:16),++x; goto draw;
+      case SDLK_o: if(x>1 && i) data[x-1]=data[x]-(y?1:16),--x; goto draw;
+      case SDLK_p: if(x<nc && i) data[x+1]=data[x]-(y?1:16),++x; goto draw;
+    }
+  }
+}
+
 void edit_varprop(VarPropertyList*vp) {
   char text[81];
   char name[9];
@@ -45,6 +106,7 @@ void edit_varprop(VarPropertyList*vp) {
         case 0x11 ... 0x18: draw_text(1,i+2,text,7,snprintf(text,80,"Font: %*.*s",j&15,j&15,vp->item[k].data)); break;
         case 0x1F: draw_text(1,i+2,text,7,snprintf(text,80,"Edit font character %d",vp->item[k].data[0])); break;
         case 0x21 ... 0x28: draw_text(1,i+2,text,7,snprintf(text,80,"Palette: %*.*s",j&15,j&15,vp->item[k].data)); break;
+        case 0x32 ... 0x3F: draw_text(1,i+2,"Window field specification",7,-1); break;
         default: draw_text(1,i+2,"???",12,3);
       }
     } else if(k==vp->count) {
@@ -86,18 +148,50 @@ void edit_varprop(VarPropertyList*vp) {
           case 0x04: i=3; x=vp->item[cur].data[0]|(vp->item[cur].data[1]<<8); y=vp->item[cur].data[2]|(vp->item[cur].data[3]<<8); break;
           case 0x11 ... 0x18: i=1; snprintf(name,9,"%s",vp->item[cur].data); break;
           case 0x21 ... 0x28: i=2; snprintf(name,9,"%s",vp->item[cur].data); break;
+          case 0x32 ... 0x3F: i=5; x=vp->item[cur].type-0x31; break;
           default: i=0;
         }
         win_form("Variable Property Edit") {
           win_option('F',"Font",i,1) win_refresh();
           win_option('P',"Palette",i,2) win_refresh();
           win_option('S',"Scroll",i,3) win_refresh();
+          win_option('W',"Window field specification",i,5) win_refresh();
           win_option('O',"Once",i,4) win_refresh();
           win_blank();
           if(i==1 || i==2) win_text_restrict('u',"Lump name: ",name);
           if(i==3) {
             win_numeric('X',"X: ",x,0,0xFFFF);
             win_numeric('Y',"Y: ",y,0,0xFFFF);
+          }
+          if(i==5) {
+            win_boolean('H',"Hide if hiding quantity",vp->item[cur].data[0],0x80);
+            win_boolean('M',"Multiply by quantity",vp->item[cur].data[0],0x40);
+            win_command('u',"Choose value...") {
+              y=vp->item[cur].data[0]&0x1F;
+              win_form("Window field specification") {
+                win_option('0',"Ext0",y,0);
+                win_option('1',"Ext1",y,1);
+                win_option('2',"Ext2",y,2);
+                win_option('3',"Ext3",y,3);
+                win_option('4',"Ext4",y,4);
+                win_option('5',"Ext5",y,5);
+                win_option('8',"Menu value (8-bits)",y,6);
+                win_option('c',"Price",y,7);
+                win_option('P',"Parameter",y,8);
+                win_option('W',"Weight",y,9);
+                win_option('o',"Constant",y,10);
+                win_option('S',"Strength",y,11);
+                win_option('h',"Max heap",y,12);
+                win_blank();
+                win_command_esc(0,"OK") break;
+              }
+              vp->item[cur].data[0]&=0xE0;
+              vp->item[cur].data[0]|=y;
+            }
+            win_command('E',"Edit cells...") {
+              x=edit_field_cells(x,vp->item[cur].data);
+              win_refresh();
+            }
           }
           win_blank();
           win_command_esc(0,"Done") break;
@@ -112,6 +206,7 @@ void edit_varprop(VarPropertyList*vp) {
             vp->item[cur].data[2]=y; vp->item[cur].data[3]=y>>8;
             break;
           case 4: vp->item[cur].type=0x00; break;
+          case 5: vp->item[cur].type=x+0x31; break;
         }
         goto draw0;
       case SDLK_ESCAPE: return;

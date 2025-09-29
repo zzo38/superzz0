@@ -156,7 +156,7 @@ static void edit_window(void) {
         goto show;
       case SDLK_F5: goto save;
       case SDLK_F6: goto delete;
-      case SDLK_SLASH: case SDLK_QUESTION: online_help("editwin",0); break;
+      case SDLK_SLASH: case SDLK_QUESTION: online_help("editwin",0); goto show;
     }
   }
   save:
