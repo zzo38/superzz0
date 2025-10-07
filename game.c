@@ -2118,6 +2118,7 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
   Uint8 rv=0;
   Uint8 rf=0;
   Uint8 rn=0;
+  Uint8 on=0;
   memset(v_font,0,80*25);
   if(!cur_screen.hard_edge[DIR_N]) inn=1;
   if(tcursor<tnlines && !(inf->list[tcursor].ext&0x8000)) {
@@ -2158,7 +2159,7 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
           case SC_SPEC_WIDTH: v=board_info.width; break;
           case SC_SPEC_HEIGHT: v=board_info.height; break;
           case SC_SPEC_USERDATA: v=board_info.userdata; break;
-          default: continue; // TODO: context-specific
+          case SC_SPEC_CONTEXT_SPECIFIC: if(on) v=fv; else {chr=0; goto plain;} break;
         }
         v_char[i]=digit_of(v,chr);
         v_color[i]=col;
@@ -2256,7 +2257,7 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
               if((cur_screen.varprop.item[rv-1].data[0]&0x80) && (itemdefs[zz-1].flag&IDF_HIDE_QUANTITY)) {
                 rf=128; fv=0; goto hideq;
               }
-              switch(cur_screen.varprop.item[rv-1].data[0]&0x1F) {
+              switch(cur_screen.varprop.item[rv-1].data[0]&0x0F) {
                 case 0: fv=inv->item[z].ext0; break;
                 case 1: fv=inv->item[z].ext1; break;
                 case 2: fv=inv->item[z].ext2; break;
@@ -2313,6 +2314,31 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
         } else if((cmd&SC_ITEM_FLAGS)==SC_ITEM_FLAGS) {
           if(m<0 || m>=tnlines || (inf->list[m].ext&0x8000)) goto hide;
           if(inv->item[inf->list[m].slot].flag&(1<<(cmd&7))) goto plain; else goto hide;
+        } else if(cmd==SC_ITEM_SELECT_FIELD) {
+          v_color[i]=col;
+          v_char[i]=cur_screen.border[(chr>>4)&3];
+          on=0;
+          if(z>=inv->count) break;
+          zz=inv->item[z].item;
+          if(!zz || zz>nitemdefs) break;
+          if((chr&0x80) && (itemdefs[zz-1].flag&IDF_HIDE_QUANTITY)) break;
+          switch(chr&0x0F) {
+            case 0: fv=inv->item[z].ext0; break;
+            case 1: fv=inv->item[z].ext1; break;
+            case 2: fv=inv->item[z].ext2; break;
+            case 3: fv=itemdefs[zz-1].ext3; break;
+            case 4: fv=itemdefs[zz-1].ext4; break;
+            case 5: fv=itemdefs[zz-1].ext5; break;
+            case 6: fv=inf->list[m].ext&0xFF; break;
+            case 7: fv=itemdefs[zz-1].price; break;
+            case 8: fv=itemdefs[zz-1].parameter; break;
+            case 9: fv=itemdefs[zz-1].weight; break;
+            case 10: fv=1; break;
+            case 11: fv=inv->strength; break;
+            case 12: fv=itemdefs[zz-1].maxheap; break;
+          }
+          if(chr&0x40) fv*=inv->item[z].quantity;
+          on=1;
         }
         break;
       case SC_BITS_0_LO ... SC_BITS_3_HI:

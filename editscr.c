@@ -302,7 +302,7 @@ static void edit_tile(void) {
           case SC_MEMORY: c=a>>8; break;
           case SC_INDICATOR: h|=b; break;
           case SC_TEXT: h|=b&15; break;
-          case SC_ITEM: h|=b&15; if(b==1) a|=d<<5; break;
+          case SC_ITEM: h|=b&15; if(b==1) a|=d<<5; if(b==2) a|=d&15; break;
           case SC_BITS_0_LO: h|=b; break;
         }
         cur_screen.command[ycur*80+xcur]=h;
@@ -321,6 +321,7 @@ static void edit_tile(void) {
         case SC_NUMERIC: case SC_NUMERIC_SPECIAL: d=a&15; a>>=4; break;
         case SC_MEMORY: a|=c<<8; break;
         case SC_TEXT: b|=c&0xF0; break;
+        case SC_ITEM: if(b==1) d=a>>5; if(b==2) d=a&15; break;
         case SC_BITS_0_LO: b=cur_screen.command[y*80+x]&0x7F; break;
       }
       win_refresh();
@@ -406,6 +407,34 @@ static void edit_tile(void) {
         if(b==1) {
           win_numeric('v',"Inventory: ",d,0,7);
           a&=31; win_numeric('l',"Slot: ",a,0,31);
+        }
+        if(b==2) {
+          win_command('.',"Field detail...") {
+            d&=15;
+            win_form("Window field specification") {
+              win_boolean('H',"Hide if hiding quantity",a,0x80);
+              win_boolean('M',"Multiply by quantity",a,0x40);
+              win_blank();
+              win_option('0',"Ext0",d,0);
+              win_option('1',"Ext1",d,1);
+              win_option('2',"Ext2",d,2);
+              win_option('3',"Ext3",d,3);
+              win_option('4',"Ext4",d,4);
+              win_option('5',"Ext5",d,5);
+              win_option('8',"Menu value (8-bits)",d,6);
+              win_option('c',"Price",d,7);
+              win_option('P',"Parameter",d,8);
+              win_option('W',"Weight",d,9);
+              win_option('o',"Constant",d,10);
+              win_option('S',"Strength",d,11);
+              win_option('h',"Max heap",d,12);
+              win_blank();
+              win_boolean('B',"Border N/S",a,0x20);
+              win_boolean('d',"Border W/S",a,0x10);
+              win_blank();
+              win_command_esc(0,"OK") break;
+            }
+          }
         }
         break;
       case SC_BITS_0_LO:

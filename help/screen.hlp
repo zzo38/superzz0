@@ -58,7 +58,11 @@ slot in a specified inventory list. If this tile is inside of a item slot
 in a item menu, then the parameter is ignored and it will use that slot
 in the current inventory list instead.
 
-þ Select field: (not implemented yet)
+þ Select field: Define a field to be displayed by the following "Numbers"
+commands which are defined as context-specific; they will be displayed
+for the currently selected item. They are defined in the same way as in
+variable property lists, except that you can also specify which of the
+four border characters of the screen to use.
 
 þ Show field: (not implemented yet)
 

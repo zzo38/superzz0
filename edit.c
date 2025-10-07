@@ -167,7 +167,7 @@ void edit_varprop(VarPropertyList*vp) {
             win_boolean('H',"Hide if hiding quantity",vp->item[cur].data[0],0x80);
             win_boolean('M',"Multiply by quantity",vp->item[cur].data[0],0x40);
             win_command('u',"Choose value...") {
-              y=vp->item[cur].data[0]&0x1F;
+              y=vp->item[cur].data[0]&0x0F;
               win_form("Window field specification") {
                 win_option('0',"Ext0",y,0);
                 win_option('1',"Ext1",y,1);
@@ -185,7 +185,7 @@ void edit_varprop(VarPropertyList*vp) {
                 win_blank();
                 win_command_esc(0,"OK") break;
               }
-              vp->item[cur].data[0]&=0xE0;
+              vp->item[cur].data[0]&=0xF0;
               vp->item[cur].data[0]|=y;
             }
             win_command('E',"Edit cells...") {
