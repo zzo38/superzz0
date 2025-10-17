@@ -34,6 +34,11 @@ check if a save game file does not match the world file. In a save game
 file, these six bytes match those in the world file.
 
 
+=== *.BGM ===
+
+Music files; see music.doc for details.
+
+
 === *.BRD ===
 
 The definition of a board. The parts are:
@@ -102,6 +107,17 @@ the data is the character code, and the rest is the raster data.
 .PAL suffix.
 
 * 0x32 to 0x3F = Window field specification.
+
+* 0x40 = Unload music.
+
+* 0x42 to 0x4B = Load music. The first byte has the low 6-bits specifying
+the song number (if all of them are set, then the next two bytes are a
+16-bit song number), and the high 2-bits specify the criteria for loading
+the music: 0=if no music is already loaded, 1=if the specified .BGM lump
+isn't already loaded, 2=if the specified .BGM lump isn't already loaded or
+if the current song number is different from the specified song number,
+3=always. After the first byte (and the next two for the 16-bit song number
+if applicable), will be the lump name excluding the .BGM suffix.
 
 Each stat (the first stat number is stat 1) is as follows:
 

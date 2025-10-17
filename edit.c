@@ -107,6 +107,12 @@ void edit_varprop(VarPropertyList*vp) {
         case 0x1F: draw_text(1,i+2,text,7,snprintf(text,80,"Edit font character %d",vp->item[k].data[0])); break;
         case 0x21 ... 0x28: draw_text(1,i+2,text,7,snprintf(text,80,"Palette: %*.*s",j&15,j&15,vp->item[k].data)); break;
         case 0x32 ... 0x3F: draw_text(1,i+2,"Window field specification",7,-1); break;
+        case 0x40: draw_text(1,i+2,"Cancel music",7,-1); break;
+        case 0x42 ... 0x4B:
+          x=vp->item[k].data[0]&0x3F; y=1;
+          if(x==0x3F) y=3,x=vp->item[k].data[1]|(vp->item[k].data[2]<<8);
+          draw_text(1,i+2,text,7,snprintf(text,80,"Music: %*.*s #%d",(j-y)&15,(j-y)&15,vp->item[k].data+y,x));
+          break;
         default: draw_text(1,i+2,"???",12,3);
       }
     } else if(k==vp->count) {
@@ -149,6 +155,13 @@ void edit_varprop(VarPropertyList*vp) {
           case 0x11 ... 0x18: i=1; snprintf(name,9,"%s",vp->item[cur].data); break;
           case 0x21 ... 0x28: i=2; snprintf(name,9,"%s",vp->item[cur].data); break;
           case 0x32 ... 0x3F: i=5; x=vp->item[cur].type-0x31; break;
+          case 0x40: i=6; break;
+          case 0x42 ... 0x4B:
+            i=7; x=vp->item[cur].data[0]&0x3F; y=1;
+            if(x==0x3F) y=3,x=vp->item[cur].data[1]|(vp->item[cur].data[2]<<8);
+            snprintf(name,9,"%s",vp->item[cur].data+y);
+            y=vp->item[cur].data[0]>>6;
+            break;
           default: i=0;
         }
         win_form("Variable Property Edit") {
@@ -156,9 +169,11 @@ void edit_varprop(VarPropertyList*vp) {
           win_option('P',"Palette",i,2) win_refresh();
           win_option('S',"Scroll",i,3) win_refresh();
           win_option('W',"Window field specification",i,5) win_refresh();
+          win_option('i',"Music",i,7) win_refresh();
+          win_option('a',"Cancel music",i,6) win_refresh();
           win_option('O',"Once",i,4) win_refresh();
           win_blank();
-          if(i==1 || i==2) win_text_restrict('u',"Lump name: ",name);
+          if(i==1 || i==2 || i==7) win_text_restrict('u',"Lump name: ",name);
           if(i==3) {
             win_numeric('X',"X: ",x,0,0xFFFF);
             win_numeric('Y',"Y: ",y,0,0xFFFF);
@@ -193,6 +208,14 @@ void edit_varprop(VarPropertyList*vp) {
               win_refresh();
             }
           }
+          if(i==7) {
+            win_numeric('e',"Song number: ",x,0,0xFFFF);
+            win_heading("Criteria:");
+            win_option('m',"Only if no music is already playing",y,0);
+            win_option('h',"If this is not the current music lump",y,1);
+            win_option('x',"If this is not the current/next song",y,2);
+            win_option('y',"Always",y,3);
+          }
           win_blank();
           win_command_esc(0,"Done") break;
         }
@@ -207,6 +230,18 @@ void edit_varprop(VarPropertyList*vp) {
             break;
           case 4: vp->item[cur].type=0x00; break;
           case 5: vp->item[cur].type=x+0x31; break;
+          case 6: vp->item[cur].type=0x40; break;
+          case 7:
+            if(x<0x3F) {
+              vp->item[cur].type=snprintf(vp->item[cur].data+1,9,"%s",name)+0x41;
+              vp->item[cur].data[0]=x+(y<<6);
+            } else {
+              vp->item[cur].type=snprintf(vp->item[cur].data+3,9,"%s",name)+0x43;
+              vp->item[cur].data[0]=0x3F+(y<<6);
+              vp->item[cur].data[1]=x&0xFF;
+              vp->item[cur].data[2]=x>>8;
+            }
+            break;
         }
         goto draw0;
       case SDLK_ESCAPE: return;

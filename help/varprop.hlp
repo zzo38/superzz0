@@ -16,6 +16,13 @@ this can be refered by the window definition. This is only meaningful for
 screens, and is ignored if it appears in a board. A field specification can
 have up to fourteen character cells.
 
+þ Music: Load and play background music when this board or screen is
+entered. You can specify the criteria for doing so.
+
+þ Cancel music: Causes the background music to be stopped when this board
+or screen is entered. (This does not affect sound effects, and does not
+affect any sounds played by SFX and #PLAY.)
+
 þ Once: The previous variable property only applies once. This is only
 meaningful for boards, and only if it persists; if the board does not
 persist then it will not remember that it had already been done once.

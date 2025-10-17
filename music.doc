@@ -1,0 +1,275 @@
+
+=== Binary file format ===
+
+If it is a wrapped file format, then it is universal type 75 and contains
+two or three items as follows:
+
+* A set, which must include the OID which identifies this file format,
+which is: 2.25.196954517921581521497869385664052876310.6.1. It may also
+include other things, such as a object descriptor which says "Super ZZ
+Zero BG Music".
+
+* The same as the unwrapped format.
+
+* An optional key/value list for storing general-purpose metadata which
+is not directly related to the music format (e.g. author's name).
+
+The first and third field of the wrapped format use absolute OIDs, and do
+not use OIDs relative to the Super ZZ Zero base OID like the other stuff
+in Super ZZ Zero uses.
+
+The unwrapped format is a sequence with fields:
+
+* The sequence of songs (with zero-based numbering).
+
+* The tempo ratio, which is a rational number, measured in hertz. When the
+tempo is set, it is interpreted as a multiple of this number.
+
+* The sequence of instruments (with one-based numbering).
+
+* The sequence of channels (with one-based numbering). You cannot have more
+than sixty-four channels.
+
+* The short call addresses, which is a sequence with up to four unsigned
+16-bit integers. If there is only one, it is used for all of 0x00 to 0x7F;
+if two, the first for 0x00 to 0x3F and second for 0x40 to 0x7F; if three,
+the first for 0x00 to 0x1F, second for 0x20 to 0x3F, and third for 0x40 to
+to 0x7F; if four, then like with three but the third is 0x40 to 0x5F and
+the fourth is for 0x60 to 0x7F. If this sequence is empty then all of the
+short call addresses are zero.
+
+* The sequence of real constants (the first one is numbered 16).
+
+* The program, which is a octet string. The maximum length is 0xFFFE bytes.
+
+More fields might be added in future; if so, the new ones are optional,
+and if one is omitted but later ones are present, then null should be
+present in place of the omitted fields.
+
+Each song is specified as either null (if that song number is not used), or
+a sequence with fields:
+
+* Optional Graphic string or TRON string with the name of the song.
+
+* Unsigned 16-bit integer being the initial tempo.
+
+* Optional integer indicating the next song number; if omitted, then the
+next song number is the same as this song number.
+
+* One or more thread definitions, each of which is a type 0 implicit
+sequence; the first field of that sequence is a integer telling the
+starting instruction address, and optionally there can be a second field
+which is a signed or unsigned 16-bit integer which is the initial value
+of the A register (if not specified, then the default value is zero). The
+channel number of the thread is one plus the (zero-based) thread number;
+if that channel is not valid then the channel number is zero.
+
+A instrument is null (if that number is not used) or a implicit typed
+sequence according to the kind of instrument:
+
+* Type 1 = Sampled instrument.
+
+(Currently, sampled instrument is the only kind of instruments; later,
+there might be added others, such as FM synthesis.)
+
+The fields of a sampled instrument are:
+
+* Optional Graphic string or TRON string with the name of the instrument.
+
+* Base sample rate, which is a real number.
+
+* Codec, which is enumerated. The values are the same as the codec numbers
+of the .SND lump.
+
+* Wave data, which is a octet string, according to the codec. This is not
+allowed to be empty; it must have at least one byte.
+
+* An optional bit string, which must be empty if it is present. It has no
+meaning, but in future might be used for flags.
+
+* An optional integer specifying the starting loop point, in samples from
+the beginning (zero means the beginning). Null or omitted disables looping.
+
+* If the starting loop point is present, an optional ending loop point; if
+it is present, then releasing the note will cause the sound to continue to
+play until it reaches the end, without looping. (If the starting loop point
+is omitted, then this one is also omitted and cannot be null instead.)
+
+Each channel is a implicit typed sequence according to the kind of channel:
+
+* Type 0 = A ordinary mono channel; has no fields.
+
+* Type 1 = A channel with stereo panning, if stereo is enabled, or
+otherwise it acts the same like type 0. There are two fields, being real
+numbers to multiply the amplitude for left and right output.
+
+* Type 2 = Like type 1 but disabled if the audio output is mono.
+
+A real constant can be a real number, or it can be a implicit typed
+sequence for one of the following operations; the number in parentheses
+tells how many parameters it has, and + means it can optionally have more
+than that many parameters.
+
+  0(0): Sample rate (Hz)
+  1(1+): Addition
+  2(1+): Multiplication
+  3(2): Subtraction
+  4(2): Division
+  5(1): Square root
+  6(1): Sine
+  7(1): Cosine
+  8(2): Power
+  9(0): Sequence number (zero-based)
+  10: Sequence; see below
+  11(0): pi
+  12(0): tau
+
+The "sequence" real constant is only allowed as the last item in the
+sequence of real constants, and contains two things, first being a
+integer with how many further real constants to specify, and the second
+being in the same format as the real constants but implicit type 9 can
+be used to represent the sequence number, from zero up to one less than
+how many are being specified in this way.
+
+
+=== VM code ===
+
+Each thread has registers:
+  A (16-bits)
+  B (16-bits)
+  C (8-bits) (Channel)
+  L (16-bits) (Repeat start address)
+  M (16-bits) (Repeat end address)
+  N (8-bits) (Repeat counter)
+  P (16-bits) (Program address)
+  R (16-bits) (Return address)
+  T (3-bits) (Stack pointer)
+  W (8-bits) (Wait)
+  X (real)
+  Y (real)
+
+Each thread also has a stack with eight 16-bit integers.
+
+There are also global registers shared by all threads:
+  G (16-bits)
+  Z (real)
+
+The VM code instructions are:
+
+[00-7F] A short call operator. The next instruction address is stored in
+the R register, and the opcode is pushed to the stack.
+
+[80-8F] Binary operations. These take two operands from the stack (the
+second operand is on top), and pushes the result to the stack.
+
+[90-97] Push registers: A B C G L M N R
+
+[98-9F] Pop registers: A B C G L M N R
+
+[A0-A7] Jump to relative signed 8-bits by conditions
+
+[A8-AF] Jump to absolute 16-bits by conditions
+
+[B0-B3] Push constant 0 to 3
+
+[B4] Push immediate 8-bits
+
+[B5] Push immediate 16-bits
+
+[B6] Increment value at top of stack
+
+[B7] Decrement value at top of stack
+
+[B8] Read special integer register; the next byte specifies which one to
+read, and the result is pushed to the stack.
+
+[B9] Write special integer register; the next byte specified which one to
+write, and the value to write is popped from the stack.
+
+[BA] Like 0xB9 but adds the value to the register.
+
+[BB] Like 0xB9 but subtracts the value from the register.
+
+[BC] Read a special real register. The next byte has the low 7-bits to
+specify which register to read and the high bit is clear to copy the value
+to the X register or set for the Y register.
+
+[BD] Write a special real register, like 0xBC but copies the other way.
+
+[BE] Check a feature. The next byte tells the feature to check. The result
+is pushed to the stack.
+
+[BF] Like 0xBE but also pops a value from the stack to use as the parameter
+for the feature to check; this is a separate set than the 0xBE instruction.
+
+[E0-EF] Same as 0xF0 to 0xFF but before doing that, also pop a number to
+set the wait time.
+
+[F0] Return to R
+
+[F1] Pop return address from stack and return
+
+[F2] Set L to address of next instruction, and then pop from stack and
+store the popped number in N register.
+
+[F3] If N is nonzero, jump to M.
+
+[F4] Set M to address of next instruction. If N is nonzero, decrement N and
+jump to L.
+
+[F5] (note on)
+
+[F6] (note release)
+
+[F7] (note cut)
+
+[FF] No operation
+
+If a 16-bit number is required as an operand, it is in small-endian format.
+
+The binary operations are:
+  0  +
+  1  -
+  2  *
+  3  / (unsigned)
+  4  / (signed)
+  5  % (unsigned)
+  6  <<
+  7  >> (unsigned)
+  8  >> (signed)
+  9  &
+  A  |
+  B  ^
+  C  Min (unsigned)
+  D  Max (unsigned)
+  E  Peek 8-bits
+  F  Peek 16-bits
+
+Conditions:
+  0  Always
+  1  Pop value; jump if zero
+  2  Pop value; jump if nonzero
+  3  Pop two values; jump if first is less than second (unsigned)
+  4  Pop two values; jump if equal
+  5  Pop two values; jump if unequal
+  6  Call subroutine; store return address in R register
+  7  Call subroutine; push return address to stack
+
+No feature testing is currently defined. The result will always be zero
+for all possible features.
+
+The special integer registers are (*read-only):
+  (Global)
+  00  Current thread (zero-based) *
+  01  Tempo
+  (Channel)
+  80  Instrument
+  81  Offset
+
+The special real registers are (*read-only):
+  (Channel)
+  40  Frequency multiplier
+  41  Amplitude
+  42  Direct frequency
+  43  Resample offset
+

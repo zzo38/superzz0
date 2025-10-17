@@ -138,7 +138,7 @@ void resample_process_int16(Resample*obj,int16_t*in,uint32_t nin,int16_t*out,uin
   obj->offset+=o;
 }
 
-void resample_process_int16_to_float_mix(Resample*obj,int16_t*in,uint32_t nin,float*out,uint32_t nout,float vol,double ratio) {
+void resample_process_int16_to_float_mix(Resample*obj,int16_t*in,uint32_t nin,float*out,uint32_t nout,float vol,double rate) {
   double o=0.0;
   uint32_t g=0;
   int h=obj->ntap/2;
@@ -154,7 +154,7 @@ void resample_process_int16_to_float_mix(Resample*obj,int16_t*in,uint32_t nin,fl
       obj->pin++;
     } else {
       *out++ +=vol*subsample(obj,obj->offset+o);
-      o=++g/ratio;
+      o=++g*rate;
       obj->pout++;
       nout--;
     }

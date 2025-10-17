@@ -18,6 +18,7 @@ class=base.2 % Classifications in catalog services
 catalog=base.3 % Catalog extensions
 feature=base.4 % Features specified in GENERAL.DER
 x509ext=base.5 % X.509 extension
+file=base.6 % File format
 
 % Hash algorithms
 nist=2.16.840.1.101.3.4.2 % OID for SHA-2 and SHA-3 hashes; this OID is for NIST
@@ -53,3 +54,5 @@ C_worldversion=catalog.8
 % Features specified in GENERAL.DER
 G_font=feature.0 % G_font.<height>
 
+% File formats
+F_music=file.1

@@ -126,6 +126,10 @@ void audio_init(void);
 void audio_set_volume(Uint16 vol,Uint8 mut);
 Sint32 audio_get_volume(void); // volume + (0x000000=on, 0x010000=mute, 0xFF0000=disabled)
 void audio_set_sfx(const char*m);
+void audio_set_music(const char*name,Uint16 song); // name=0 to cancel music, name="" for same lump
+
+extern char music_name[9];
+extern Uint16 music_song;
 
 // === Miscellaneous ===
 

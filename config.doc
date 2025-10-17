@@ -156,6 +156,18 @@ message_scrollback
 message_timer
   Time limit for single-line text messages, in frames.
 
+music_amp
+  Music global amplitude, which is floating point.
+
+music_debug
+  Debug level for music, from 0 to 255. Zero (which is the default setting)
+  disables the debug output for music.
+
+music_resample
+  Resampling mode for music. This must be defined in order for "BGM" music
+  to work at all, and "0" is not valid. See the below section about the
+  resampling configuration.
+
 override_option
   Set to 1 to allow the options in the world file to override those in the
   configuration file and command-line arguments, or 0 to ignore override
@@ -292,8 +304,7 @@ wave_resample
 
 wave_sound
   Set to 1 to enable wave sounds (the audio also must be configured).
-  If set to 0 then wave sounds are disabled. (Note that this feature is
-  not fully implemented yet.)
+  If set to 0 then wave sounds are disabled.
 
 
 === Resampling configuration ===

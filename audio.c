@@ -28,6 +28,54 @@ typedef struct {
   char name[12];
 } WaveSound;
 
+#define INST_WAVE 1
+
+#define CHAN_USE 0x01
+#define CHAN_SOUND 0x02
+#define CHAN_LOOP 0x04
+
+typedef struct {
+  Uint8 t;
+  union {
+    struct {
+      union {
+        Sint16*d16;
+        Uint8*d8;
+      };
+      double rate;
+      Uint32 len,ls,le;
+      Uint8 is8;
+    } wave;
+  };
+} Instrument;
+
+typedef struct {
+  Resample resam;
+  double freq;
+  float amp;
+  Uint8 instrument,flag;
+} Channel;
+
+typedef struct {
+  double x,y;
+  Uint16 s[8];
+  Uint16 a,b,l,m,p,r;
+  Uint8 c,n,t,w;
+} Thread;
+
+typedef struct {
+  Uint8*rom;
+  Instrument*in;
+  Channel*ch;
+  Thread*th;
+  double*rc;
+  double z;
+  Uint32 tcur,tmax;
+  Uint16 sc[4];
+  Uint16 g,size,tempo;
+  Uint8 nin,nch,nth,nrc;
+} Music;
+
 static SDL_AudioSpec spec;
 
 static Uint16 volume=12288;
@@ -47,6 +95,11 @@ static Uint16 nwavesound;
 
 static float note_table[NOTE_MASK+1];
 static float drum_table[256];
+
+static Music*music;
+char music_name[9];
+Uint16 music_song;
+char music_on;
 
 static const Uint16 drum_const_table[256]={
   [0x00]= /* ` */ 3200,800,0,
@@ -569,6 +622,391 @@ void audio_set_sfx(const char*m) {
     cpos=0;
     cmax=queue[qfirst].len;
     qfirst=(qfirst+1)&MAXQUEUE_MASK;
+  }
+  SDL_UnlockAudio();
+}
+
+static void unload_bgm(void) {
+  int i;
+  *music_name=0;
+  if(!music) return;
+  for(i=1;i<music->nch;i++) if(music->ch[i].flag) resample_uninit(&music->ch[i].resam);
+  music->ch=realloc(music->ch,sizeof(Channel))?:music->ch;
+  free(music->rom);
+  free(music->in);
+  free(music->th);
+  free(music->rc);
+  music->rom=0;
+  music->in=0;
+  music->th=0;
+  music->rc=0;
+  music->nch=1;
+  music->nin=music->nth=music->nrc=0;
+  music->size=0;
+}
+
+static void load_instrument(Instrument*o,const ASN1_Value*v0) {
+  int i;
+  ASN1_Value v1;
+  Uint32 a;
+  Uint8 c,m,p;
+  const Uint8*d;
+  if(v0->class==ASN1_UNIVERSAL && v0->type==ASN1_NULL) return;
+  if(v0->class!=ASN1_CONTEXT_SPECIFIC || !v0->constructed) error: errx(1,"Invalid instrument in %s.BGM",music_name);
+  if(asn1_first_of(&v1,v0)) goto error;
+  if(v1.class==ASN1_UNIVERSAL && (v1.type==ASN1_GRAPHIC_STRING || v1.type==ASN1_TRON_STRING) && asn1_next_of(&v1,v0)) goto error;
+  switch(o->t=v0->type) {
+    case INST_WAVE:
+      if(v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_double(&v1,ASN1_REAL,&o->wave.rate)) goto error;
+      o->wave.rate/=(double)spec.freq;
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_ENUMERATED || asn1_decode_number(&v1,ASN1_INTEGER,&c)) goto error;
+      if(c<0 || c>7 || c==5) goto error_c;
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_OCTET_STRING || v1.constructed || !v1.length || v1.length>0x7FFFFFULL) goto error;
+      if(c==4 && (v1.length&1)) goto error;
+      o->wave.len=(v1.length*"\x01\x02\x03\x04\x01\x00\x01\x01"[c])>>(c==4);
+      if(o->wave.is8=1&(0x000F>>c)) o->wave.d8=malloc(o->wave.len); else o->wave.d16=malloc(o->wave.len*sizeof(Sint16));
+      if(!(o->wave.is8?(void*)o->wave.d8:(void*)o->wave.d16)) err(1,"Allocation failed");
+      d=v1.data;
+      switch(c) {
+        case 0: // Unsigned 8-bits
+          memcpy(o->wave.d8,v1.data,v1.length); break;
+        case 1: // ADPCM 4-bits
+          for(a=0,m=1,p=128;a<o->wave.len;) {
+            c=*d++;
+            o->wave.d8[a++]=adpcm4bits(c>>4,p,&m);
+            o->wave.d8[a++]=adpcm4bits(c&15,p,&m);
+          }
+          break;
+        case 2: // ADPCM 3-bits
+          for(a=0,m=0,p=128;a<o->wave.len;) {
+            c=*d++;
+            o->wave.d8[a++]=adpcm3bits((c>>5)&7,p,&m);
+            o->wave.d8[a++]=adpcm3bits((c>>2)&7,p,&m);
+            o->wave.d8[a++]=adpcm3bits((c<<1)&7,p,&m);
+          }
+          break;
+        case 3: // ADPCM 2-bits
+          for(a=0,m=0,p=128;a<o->wave.len;) {
+            c=*d++;
+            o->wave.d8[a++]=adpcm2bits((c>>6)&3,p,&m);
+            o->wave.d8[a++]=adpcm2bits((c>>4)&3,p,&m);
+            o->wave.d8[a++]=adpcm2bits((c>>2)&3,p,&m);
+            o->wave.d8[a++]=adpcm2bits((c>>0)&3,p,&m);
+          }
+          break;
+        case 4: // Signed 16-bits
+          for(a=0;a<o->wave.len;a++,d+=2) o->wave.d16[a]=d[0]|(d[1]<<8);
+          break;
+        case 6: // A-law
+          for(a=0;a<o->wave.len;a++) o->wave.d16[a]=d[a]&128?-alaw[d[a]&127]:alaw[d[a]&127];
+          break;
+        case 7: // mu-law
+          for(a=0;a<o->wave.len;a++) o->wave.d16[a]=d[a]&128?mulaw[d[a]&127]:(-mulaw[d[a]&127]-(d[a]==127));
+          break;
+        default: error_c: errx(1,"Unknown codec (%d) in %s.BGM",c,music_name);
+      }
+      o->wave.ls=o->wave.le=0;
+      if(asn1_next_of(&v1,v0)) break;
+      if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_BIT_STRING && v1.length==1 && asn1_next_of(&v1,v0)) break;
+      if(v1.class!=ASN1_UNIVERSAL) goto error;
+      if(v1.type==ASN1_INTEGER) {
+        if(asn1_decode_number(&v1,ASN1_INTEGER,&o->wave.ls)) goto error;
+        if(asn1_next_of(&v1,v0)) {
+          o->wave.le=o->wave.len;
+        } else {
+          if(asn1_decode_number(&v1,ASN1_INTEGER,&o->wave.le)) goto error;
+        }
+      } else if(v1.type!=ASN1_NULL) {
+        goto error;
+      }
+      break;
+    default: goto error;
+  }
+}
+
+static double load_realvalue(const ASN1_Value*v,Uint16 n) {
+  ASN1_Value u;
+  double r;
+  if(v->class==ASN1_UNIVERSAL && v->type==ASN1_REAL && !v->constructed) {
+    if(asn1_decode_number(v,ASN1_REAL,&r)) goto error; else return r;
+  } else if(v->class!=ASN1_CONTEXT_SPECIFIC) {
+    error: errx(1,"Improper real value in %s.BGM",music_name);
+  } else {
+    switch(v->type) {
+      case 0: return spec.freq;
+      case 1:
+        r=0.0;
+        if(asn1_first_of(&u,v)) goto error;
+        do r+=load_realvalue(&u,n); while(!asn1_next_of(&u,v));
+        return r;
+      case 2:
+        r=1.0;
+        if(asn1_first_of(&u,v)) goto error;
+        do r*=load_realvalue(&u,n); while(!asn1_next_of(&u,v));
+        return r;
+      case 3:
+        if(asn1_first_of(&u,v)) goto error;
+        r=load_realvalue(&u,n);
+        if(asn1_next_of(&u,v)) goto error;
+        return r-load_realvalue(&u,n);
+      case 4:
+        if(asn1_first_of(&u,v)) goto error;
+        r=load_realvalue(&u,n);
+        if(asn1_next_of(&u,v)) goto error;
+        return r/load_realvalue(&u,n);
+      case 5:
+        if(asn1_first_of(&u,v)) goto error;
+        return sqrt(load_realvalue(&u,n));
+      case 6:
+        if(asn1_first_of(&u,v)) goto error;
+        return sin(load_realvalue(&u,n));
+      case 7:
+        if(asn1_first_of(&u,v)) goto error;
+        return cos(load_realvalue(&u,n));
+      case 8:
+        if(asn1_first_of(&u,v)) goto error;
+        r=load_realvalue(&u,n);
+        if(asn1_next_of(&u,v)) goto error;
+        return pow(r,load_realvalue(&u,n));
+      case 9: return n;
+      case 11: return M_PI;
+      case 12: return 2.0*M_PI;
+      default: goto error;
+    }
+  }
+}
+
+static void load_bgm(const char*name,Uint16 song) {
+  ASN1_Value v0={};
+  ASN1_Value v1,v2,v3;
+  char same=0;
+  FILE*f;
+  char nam[13];
+  int i;
+  uint8_t cons,clas;
+  uint32_t typ,a,b;
+  size_t len;
+  uint64_t remain;
+  music_song=song;
+  music->tcur=0;
+  if(*name) {
+    for(i=0;i<8;i++) {
+      if(name[i]>='a' && name[i]<='z') nam[i]=name[i]+'A'-'a';
+      else if(name[i]>47 && name[i]<96) nam[i]=name[i];
+      else break;
+    }
+    nam[i]=0;
+    if(*music_name && !strcmp(nam,music_name)) same=1;
+    nam[i++]='.'; nam[i++]='B'; nam[i++]='G'; nam[i++]='M'; nam[i]=0;
+  } else {
+    same=1;
+    snprintf(nam,13,"%s.BGM",music_name);
+  }
+  f=open_lump(nam,"r");
+  if(!f) {
+    if(config.music_debug>0) fprintf(stderr,"Cannot open music lump \"%s\"\n",nam);
+    stop:
+    unload_bgm();
+    if(f) fclose(f);
+    return;
+  }
+  if(asn1_read(f,&cons,&clas,&typ,&len,0)) {
+    asn1err:
+    if(config.music_debug>0) fprintf(stderr,"ASN.1 error in music lump \"%s\"\n",nam);
+    goto stop;
+  }
+  if(clas!=ASN1_UNIVERSAL) goto asn1err;
+  if(typ==ASN1_IDENTIFIED_DATA) {
+    //if(same) {
+    if(asn1_read(f,&cons,&clas,&typ,&len,0)) goto asn1err;
+    fseek(f,len,SEEK_CUR);
+    if(asn1_read(f,&cons,&clas,&typ,&len,0) || !cons || clas!=ASN1_UNIVERSAL || typ!=ASN1_SEQUENCE || !len) goto asn1err;
+    //} else {
+    //  if(asn1_read_item(f,&v1,0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_SET) goto asn1err;
+    //  if(!asn1_first_of(&v0,&v1)) do {
+    //    if(v0.class==ASN1_UNIVERSAL && v0.type==ASN1_OBJECT_IDENTIFIER && !v0.constructed && v0.length==22
+    //     && !memcmp(v0.data,"\x69\x82\xA8\xAC\x87\xDD\x97\x84\xA0\xC7\xDF\x96\xE9\x80\x84\xE1\xC3\xD1\xA8\x16\x06\x01",22)) goto set_ok;
+    //  } while(!asn1_next_of(&v0,&v1));
+    //  asn1_free(&v1);
+    //  if(config.music_debug>0) fprintf(stderr,"The lump \"%s\" is not identified as a music file\n",nam);
+    //  goto stop;
+    //  set_ok:
+    //  asn1_free(&v1);
+    //}
+  } else if(typ!=ASN1_SEQUENCE) {
+    goto asn1err;
+  }
+  remain=len;
+  if(!same) unload_bgm();
+  for(i=0;i<8;i++) {
+    if(name[i]>='a' && name[i]<='z') music_name[i]=name[i]+'A'-'a';
+    else if(name[i]>47 && name[i]<96) music_name[i]=name[i];
+    else break;
+  }
+  music_name[i]=0;
+  // Song list
+  if(asn1_read_item(f,&v0,&remain)) err1: errx(1,"Error in music lump \"%s\"",nam);
+  if(asn1_first_of(&v1,&v0)) errx(1,"Cannot find song %d in %s",song,nam);
+  for(i=0;i<song;i++) if(asn1_next_of(&v1,&v0)) errx(1,"Cannot find song %d in %s",song,nam);
+  if(v1.class!=ASN1_UNIVERSAL) goto err1;
+  if(v1.type==ASN1_NULL) errx(1,"Cannot find song %d in %s",song,nam);
+  if(asn1_first_of(&v2,&v1)) goto err1;
+  if(v2.class==ASN1_UNIVERSAL && (v2.type==ASN1_GRAPHIC_STRING || v2.type==ASN1_TRON_STRING) && asn1_next_of(&v2,&v1)) goto err1;
+  if(v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&music->tempo) || !music->tempo) goto err1;
+  if(asn1_next_of(&v2,&v1)) goto err1;
+  if(v2.class==ASN1_UNIVERSAL && v2.type==ASN1_INTEGER && (asn1_decode_number(&v2,ASN1_INTEGER,&music_song) || asn1_next_of(&v2,&v1))) goto err1;
+  for(;;) {
+    Thread th={};
+    if(v2.class!=ASN1_CONTEXT_SPECIFIC || v2.type!=0 || !v2.constructed || !v2.length) goto err1;
+    if(asn1_first_of(&v3,&v2) || v3.class!=ASN1_UNIVERSAL || v3.type!=ASN1_INTEGER) goto err1;
+    if(asn1_decode_number(&v3,ASN1_INTEGER,&th.p)) goto err1;
+    if(!asn1_next_of(&v3,&v2)) {
+      if(v3.class!=ASN1_UNIVERSAL || v3.type!=ASN1_INTEGER || asn1_decode_number(&v3,ASN1_INTEGER,&th.a)) goto err1;
+    }
+    music->th=realloc(music->th,++music->nth*sizeof(Thread));
+    if(!music->th) err(1,"Allocation failed");
+    music->th[music->nth-1]=th;
+    if(music->nth>127) errx(1,"Error in music lump \"%s\": Too many threads in song %d",nam,song);
+    if(asn1_next_of(&v2,&v1)) break;
+  }
+  asn1_free(&v0);
+  if(same) goto endfile;
+  // Tempo ratio
+  if(asn1_read_item(f,&v0,&remain)) goto err1;
+  if(v0.class!=ASN1_UNIVERSAL || v0.type!=ASN1_RATIONAL || !v0.length || !v0.constructed) goto err1;
+  if(asn1_first_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&a)) goto err1;
+  if(asn1_next_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&b)) goto err1;
+  asn1_free(&v0);
+  if(!a || !b) goto err1;
+  music->tmax=(spec.freq*(uint64_t)b)/a;
+  if(music->tmax<2) music->tmax=2;
+  // Instruments
+  if(asn1_read_item(f,&v0,&remain) || v0.class!=ASN1_UNIVERSAL || v0.type!=ASN1_SEQUENCE) goto err1;
+  if(v0.length) {
+    music->nin=a=asn1_count(&v0);
+    if(a&~0xFF) errx(1,"Error in music lump \"%s\": Too many instruments",nam);
+    music->in=calloc(music->nin,sizeof(Instrument));
+    if(!music->in) err(1,"Allocation failed");
+    for(i=0;i<music->nin;i++) {
+      if(i?asn1_next_of(&v1,&v0):asn1_first_of(&v1,&v0)) goto err1;
+      load_instrument(music->in+i,&v1);
+    }
+  } else {
+    music->nin=0; music->in=0;
+  }
+  asn1_free(&v0);
+  // Channels
+  if(asn1_read_item(f,&v0,&remain) || v0.class!=ASN1_UNIVERSAL || v0.type!=ASN1_SEQUENCE || !v0.length || !v0.constructed) goto err1;
+  music->nch=a=asn1_count(&v0);
+  if(a<0 || a>64) errx(1,"Error in music lump \"%s\": Too many channels",nam);
+  music->ch=realloc(music->ch,music->nch*sizeof(Channel));
+  if(!a || !music->ch) err(1,"Allocation failed");
+  for(i=0;i<music->nch;i++) {
+    if(i?asn1_next_of(&v1,&v0):asn1_first_of(&v1,&v0)) goto err1;
+    if(i) memset(music->ch+i,0,sizeof(Channel)); else music->ch->flag=0,music->ch->instrument=0;
+    if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_NULL) continue;
+    if(v1.class!=ASN1_CONTEXT_SPECIFIC || v1.type>2) goto err1;
+    if(v1.type==2) continue;
+    music->ch[i].flag=CHAN_USE;
+    if(i) {
+      music->ch[i].resam=music->ch->resam;
+      if(resample_init(&music->ch[i].resam,0,0,0,RESAMPLE_SHARE)) errx(1,"Error copying resample object");
+    }
+  }
+  asn1_free(&v0);
+  // Short call addresses
+  if(asn1_read_item(f,&v0,&remain) || v0.class!=ASN1_UNIVERSAL || v0.type!=ASN1_SEQUENCE) goto err1;
+  switch(asn1_count(&v0)) {
+    case 0: music->sc[0]=music->sc[1]=music->sc[2]=music->sc[3]=0; break;
+    case 1:
+      if(asn1_first_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,music->sc+0)) goto err1;
+      music->sc[3]=music->sc[2]=music->sc[1]=music->sc[0];
+      break;
+    case 2:
+      if(asn1_first_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,music->sc+0)) goto err1;
+      if(asn1_next_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,music->sc+2)) goto err1;
+      music->sc[3]=music->sc[2],music->sc[1]=music->sc[0];
+      break;
+    case 3:
+      if(asn1_first_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,music->sc+0)) goto err1;
+      if(asn1_next_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,music->sc+1)) goto err1;
+      if(asn1_next_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,music->sc+2)) goto err1;
+      music->sc[3]=music->sc[2];
+      break;
+    case 4:
+      if(asn1_first_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,music->sc+0)) goto err1;
+      if(asn1_next_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,music->sc+1)) goto err1;
+      if(asn1_next_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,music->sc+2)) goto err1;
+      if(asn1_next_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,music->sc+3)) goto err1;
+      break;
+    default: errx(1,"Error in music lump \"%s\": Too many short call addresses",music_name);
+  }
+  asn1_free(&v0);
+  // Real constants
+  if(asn1_read_item(f,&v0,&remain) || v0.class!=ASN1_UNIVERSAL || v0.type!=ASN1_SEQUENCE) goto err1;
+  if(music->nrc=a=asn1_count(&v0)) {
+    if(a<1 || a>0x70) err2: errx(1,"Error in music lump \"%s\": Too many real constants",nam);
+    music->rc=malloc(a*sizeof(double));
+    if(!music->rc) err(1,"Allocation failed");
+    for(i=0;i<music->nrc;i++) {
+      if(i?asn1_next_of(&v1,&v0):asn1_first_of(&v1,&v0)) goto err1;
+      if(i==music->nrc-1 && v1.class==ASN1_CONTEXT_SPECIFIC && v1.type==10) break;
+      music->rc[i]=load_realvalue(&v1,0);
+    }
+    if(v1.class==ASN1_CONTEXT_SPECIFIC && v1.type==10) {
+      if(asn1_first_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&a)) goto err1;
+      if(!a || (a&~0x7F) || a+i>0x70) goto err2;
+      music->rc=realloc(music->rc,(music->nrc=i+a)*sizeof(double));
+      if(!music->rc) err(1,"Allocation failed");
+      if(asn1_next_of(&v2,&v1)) goto err1;
+      for(a=0;i<music->nrc;i++) music->rc[i]=load_realvalue(&v2,a++);
+    }
+  }
+  asn1_free(&v0);
+  // VM codes
+  if(asn1_read(f,&cons,&clas,&typ,&len,&remain) || cons || clas!=ASN1_UNIVERSAL || typ!=ASN1_OCTET_STRING || len<1 || len>0xFFFE) goto err1;
+  music->rom=malloc(music->size=len);
+  if(!music->rom) err(1,"Allocation failed");
+  fread(music->rom,1,len,f);
+  // Done with file
+  endfile:
+  fclose(f);
+  
+  if(config.music_debug>98) {
+    printf("Loaded music \"%s\", %d, %d\n",music_name,song,music_song);
+    for(i=0;i<music->nin;i++) printf("Instrument #%d: %d\n",i+1,music->in[i].t);
+    for(i=0;i<music->nrc;i++) printf("Real #%d: %4.8g\n",i+16,music->rc[i]);
+    for(i=0;i<music->nch;i++) printf("Channel #%d: flag=0x%02X\n",i+1,music->ch[i].flag);
+  }
+  
+}
+
+void audio_set_music(const char*name,Uint16 song) {
+  if(!spec.freq) return;
+  if(name && !*name && !*music_name) return;
+  if(name && *name && !music && config.music_resample) {
+    music=calloc(1,sizeof(Music));
+    if(!music) err(1,"Allocation failed");
+    music->nch=1;
+    music->ch=calloc(1,sizeof(Channel));
+    if(!music->ch) err(1,"Allocation failed");
+    if(!init_resampler(&music->ch->resam,config.music_resample)) errx(1,"Improper setting for music_resample");
+    config.music_resample=0;
+    music_on=1;
+  } else if(!music) {
+    // This is ensuring that the music state is stored in the save game file, in case it is later restored with music enabled.
+    snprintf(music_name,9,"%s",name);
+    music_song=song;
+    return;
+  }
+  SDL_LockAudio();
+  if(name) {
+    // Activate music
+    load_bgm(name,song);
+  } else {
+    // Disactivate music
+    *music_name=0;
+    unload_bgm();
   }
   SDL_UnlockAudio();
 }

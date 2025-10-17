@@ -379,6 +379,14 @@ void save_state(void) {
     *m=pvarproperty.type; memcpy(m+1,pvarproperty.data,15);
     asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,m,16);
     if(nitemdefs) save_itemdef_flags(enc,IDF_UNIDENTIFIED); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    if(*music_name) {
+      asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+        asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,music_name);
+        asn1_encode_integer(enc,music_song);
+      asn1_end(enc);
+    } else {
+      asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    }
   asn1_end(enc);
   asn1_finish_encoder(enc);
   fclose(fp);
@@ -484,6 +492,18 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
   }
   if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j) goto bad;
   if(v1.class || v1.type!=ASN1_NULL) load_itemdef_flags(&v1,IDF_UNIDENTIFIED);
+  if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j) goto bad;
+  if(v1.class) goto bad;
+  if(v1.type==ASN1_SEQUENCE) {
+    char m[9]={};
+    Uint16 s=0;
+    if(asn1_first_of(&v2,&v1) || v2.class || v2.type!=ASN1_VISIBLE_STRING || v2.length<1 || v2.length>8) goto bad;
+    memcpy(m,v2.data,v2.length);
+    if(asn1_next_of(&v2,&v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&s)) goto bad;
+    audio_set_music(m,s);
+  } else if(v1.type!=ASN1_NULL) {
+    goto bad;
+  }
   // End
   done: asn1_free(&v0);
 }

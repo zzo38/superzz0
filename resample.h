@@ -99,10 +99,4 @@ void resample_process_int16(Resample*obj,int16_t*in,uint32_t nin,int16_t*out,uin
   use to keep track of the input/output positions for your own use.
 */
 
-void resample_process_int16_to_float_mix(Resample*obj,int16_t*in,uint32_t nin,float*out,uint32_t nout,float vol,double ratio);
-/*
-  Like above, but the output is floating point format (with no inherent
-  scaling; 32767 corresponds directly to 32767.0), and it is mixed with
-  existing audio in the output buffer, and you can specify the volume to
-  multiply the resampled data by.
-*/
+void resample_process_int16_to_float_mix(Resample*obj,int16_t*in,uint32_t nin,float*out,uint32_t nout,float vol,double rate);

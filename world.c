@@ -1063,6 +1063,18 @@ void work_varproperties(VarPropertyList*vp) {
     case 0x32 ... 0x3F:
       /* Do nothing; this case is handled by a separate function */
       break;
+    case 0x40:
+      if(!editor) audio_set_music(0,0);
+      break;
+    case 0x42 ... 0x4B:
+      p->data[p->type&15]=0;
+      if(!editor) {
+        int s=(p->data[0]&0x3F);
+        int k=1;
+        if(s==0x3F) k=3,s=p->data[1]|(p->data[2]<<8);
+        if(!*music_name || (p->data[0]>>6)==3 || ((p->data[0]&0xC0) && (((p->data[0]&0x80) && s!=music_song) || strcmp(music_name,p->data+k)))) audio_set_music(p->data+k,s);
+      }
+      break;
     default:
       if(!editor) errx(1,"Improper variable property list");
   }

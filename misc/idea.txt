@@ -75,17 +75,6 @@ might not be used in Super ZZ Zero.
 
 === Custom palettes ===
 
-This could be done like MegaZeux, by .PAL lumps. (With enhanced graphics,
-this could also be used with more than sixteen colours; there could be
-sizes of 16, 32, 64, or 128 colours.) (It might also be suitable to have
-VGA palettes (three bytes per entry, like MegaZeux) and EGA palettes (one
-byte per entry), so that EGA can be used for smaller files when you do not
-want the VGA. It is not necessary to mark this (or the number of colours)
-somewhere explicitly; it can be determined from the lump size.)
-
-VGA format:  00rrrrrr 00gggggg 00bbbbbb
-EGA format:  00rgbRGB
-
 The ability to enable/disable flashy text should also be added (this might
 be one of the text mode options in addition to SMZX mode; see the below
 section about enhanced graphics).
@@ -93,25 +82,20 @@ section about enhanced graphics).
 
 === Music ===
 
-For music lumps, there are some features I dislike of MOD/S3M/XM/IT even
-though it is good idea to have instruments and notes. Specifically:
+See music.doc. Other ideas to be added:
 
-* Such formats assume 12-TET; they are not very good for just intonation
-and stuff like that.
+* Music fading in/out
 
-* They must be arranged in patterns and orders; this is not always the
-best way for MML conversion.
+* Dynamic music that depends on game state (e.g. transpose the music when
+you lose a life)
 
-* There are some features that should not be necessary for play back;
-some of these (e.g. song title and some comments) may still be useful
-to keep, but such things as note ranges per instrument are probably
-not needed since the MML compiler can handle these.
+* FM synthesis
 
-However, it would be good for possibility to convert MOD, S3M, XM, IT
-(and possibly others, e.g. Reality Adlib Tracker) into the format which
-can be used for this, in case you want to use existing editors, and that
-many of the existing effects can be available. However, a MML compiler
-specifically for this format can also be made up.
+* Resonant filter
+
+* Ring modulation
+
+* Amiga
 
 
 === User preferences ===
@@ -178,28 +162,6 @@ If the second operand is negative then it could correspond to various
 kinds of built-in information which does not use this.
 
 
-=== Item window ===
-
-The item window is meant for a kind of inventory menu.
-
-Opcodes related to item memory and item windows:
-
-* IMNU = Display the item window, and request selection of an item. Flags
-can be used to allow/disallow/force sorting and to allow/disallow items
-to be discarded. You can also restrict display by classes of items.
-
-* IGIV = Give a specified quantity of a specified item.
-
-* ITAK = Take a specified quantity of a specified item.
-
-* ICNT = Count how many of a specific item you have (or of all items that
-have a specific quality or are in a specific class). Can also be used to
-total the value of a specific field (e.g. mass) of items.
-
-New commands to be used in scripts might also be made for working with item
-memory, such as #GIVEITEM and #TAKEITEM and #ASKITEM.
-
-
 === High scores ===
 
 There can be an optional high score file; the user configuration file could
@@ -220,7 +182,9 @@ This means optionally storing the editor version history (the user
 configuration file can control what is stored) in the world file. I am
 not really sure if this is useful, although OHRRPGCE does something
 similar (but unlike OHRRPGCE, a separate lump (e.g. HISTORY.DER) should
-be used which is not used for other purposes).
+be used which is not used for other purposes, so that it can be separately
+deleted or extracted more easily and to avoid reading it when it is not
+necessary to do so).
 
 
 === Screen transition animations ===
