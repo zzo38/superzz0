@@ -41,6 +41,8 @@ SCRIPTS
   +  RNDB and RNDNB directions.
   +  Script commands for dealing with items/inventory: #IFITEM, #IFNOTITEM,
      #GIVEITEM, #TAKEITEM.
+  +  "CC" in numeric expressions to count the number of links that can be
+     chosen in the text so far.
 
 ASSEMBLY
   +  The $C6 memory cell now stores the address of the next instruction if

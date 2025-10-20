@@ -2684,6 +2684,16 @@ static Sint32 parse_direction(Stat*s,StatXY*xy,Uint16*ip) {
   }
 }
 
+static Sint32 count_text_choices(void) {
+  size_t s;
+  Sint32 n=0;
+  if(!textfile) return 0;
+  fflush(textfile);
+  if(!textfile_text) return 0;
+  for(s=0;s<textfile_size;s+=TEXTREC) if(textfile_text[s] && textfile_text[s+1]=='!') n++;
+  return n;
+}
+
 static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
   Sint32 v=0;
   Sint32 w=0;
@@ -2748,6 +2758,9 @@ static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
       else if(c>='S' && c<='Z') w=status_vars[c+8-'S'];
       else if(c>='s' && c<='z') w=status_vars[c+8-'s'];
       ++*ip;
+    } else if(c=='C' || c=='c') {
+      c=s->text[++*ip];
+      if(c=='C' || c=='c') ++*ip,w=count_text_choices(); else goto badexp;
     } else if(c=='X' || c=='x') {
       c=s->text[++*ip];
       if(c=='X' || c=='x') ++*ip,w=stats->count?stats->xy->x:0; else w=xy->x;
