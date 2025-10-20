@@ -788,7 +788,6 @@ static void load_bgm(const char*name,Uint16 song) {
   size_t len;
   uint64_t remain;
   music_song=song;
-  music->tcur=0;
   if(*name) {
     for(i=0;i<8;i++) {
       if(name[i]>='a' && name[i]<='z') nam[i]=name[i]+'A'-'a';
@@ -971,14 +970,20 @@ static void load_bgm(const char*name,Uint16 song) {
   // Done with file
   endfile:
   fclose(f);
-  
   if(config.music_debug>98) {
     printf("Loaded music \"%s\", %d, %d\n",music_name,song,music_song);
     for(i=0;i<music->nin;i++) printf("Instrument #%d: %d\n",i+1,music->in[i].t);
     for(i=0;i<music->nrc;i++) printf("Real #%d: %4.8g\n",i+16,music->rc[i]);
     for(i=0;i<music->nch;i++) printf("Channel #%d: flag=0x%02X\n",i+1,music->ch[i].flag);
   }
-  
+  // Reset state
+  music->tcur=0;
+  for(i=0;i<music->nch;i++) {
+    if(music->ch[i].flag&=CHAN_USE) resample_reset(&music->ch[i].resam);
+    music->ch[i].amp=1.0;
+    music->ch[i].freq=1.0;
+    music->ch[i].instrument=0;
+  }
 }
 
 void audio_set_music(const char*name,Uint16 song) {

@@ -1,4 +1,193 @@
 
+=== Syntax ===
+
+Where a integer is expected, it can be decimal or hexadecimal; put $ at
+first for hexadecimal. Where a real number is expected, it uses the same
+format of the "strtod" function in C, but "$" has the same meaning as "0x"
+at the beginning (you can use either one).
+
+These commands are global and apply to all songs:
+
+#DIVISIONS number
+  Set the number of divisions of a whole note. The shortest possible note
+  will be this number; e.g. 64 means that a 64th note is the shortest note.
+
+#DEUTSCH
+  Same as #GERMAN.
+
+#ENGLISH
+  Equivalent to "#SCALE c.d.ef.g.a.b" and is the default setting.
+
+#GERMAN
+  Equivalent to "#SCALE c.d.ef.g.abh".
+
+#OMIT-STANDARD
+  Causes the standard VM codes and other things to be omitted. This is only
+  useful if you are writing your own VM codes to use instead.
+
+#SCALE text
+  Define the scale. Use the letters "a" to "j", and "." to mark a note that
+  is not given its own letter name.
+
+#TEMPERAMENT number number
+  The first number is the frequency multiplication per octave (normally 2),
+  and the second number is the number of divisions of an octave (normally
+  12). You cannot combine #TEMPERAMENT with #TUNING.
+
+#TEMPO-RATIO numerator denominator
+  Set the tempo ratio. This is specified as a fractional number of seconds
+  that tempo 1 corresponds to.
+
+#TUNING ...
+  You can specify the custom tuning of each note individually. Specify a
+  list of numbers, which are the frequency of each note; you are allowed
+  to have / to make fractions, if desired. The first number must be the
+  frequency multiplication of one octave (normally two). (You can use this
+  command for making just intonation.)
+
+@number = "filename"
+  Define a instrument from a file in the DER format explained below. The
+  instrument number can be in range 1 to 255.
+
+@number = "filename" bits frequency loopstart loopend
+  Define a instrument from a raw file. The bits can be one of: "u8",
+  "u16le", "u16be", "s8", "s16le", "s16be". The frequency is a positive
+  real number. The loop start and loop end are both optional (although
+  the loop start must be included if the loop end is included).
+
+These commands apply to a specific song:
+
+#NEXT number
+  Specify the next song number for the current song. If not specified,
+  then the next song number is the same as the current song number.
+
+#SONG number
+  Beginning of a new song with a specified number. If this command does not
+  occur before the specification of any tracks/notes, then it will start
+  song 0 automatically; otherwise, this must be the first command within a
+  song, before any other commands that apply to the specific song.
+
+#TEMPO number
+  Set the initial tempo of this song.
+
+ABC...
+  Put one or more track letters A to Z followed by a space and then the
+  notes for that track. If multiple tracks are specified, then those notes
+  will apply to all of those tracks.
+
+These commands are independent of songs:
+
+;
+  Make a comment; you can put anything else on the same line, and it will
+  be ignored and is not written into the output file.
+
+*
+  Defines a text macro. The second byte must be the character which is
+  used for this text macro, and then the rest is the definition of that
+  text macro. You can use * and the same character within the notes of
+  a channel to substitute the definition of the macro in its place. The
+  macro must be defined before it is used.
+
+#CHDIR directory
+  Change directory; this can be used in case you want to read multiple
+  instruments from one directory.
+
+#INCLUDE filename
+  Include the contents of another file as though it is included here.
+
+Within a track, you can use the commands:
+
+a b c d e f g h i j
+  Play a note. You can use + for sharp, - for flat, ' for one octave
+  higher; it is possible to have multiples and/or combinations of any
+  of these suffixes. You can also optionally follow it by the duration.
+  (The notes "h" and "i" and "j" are not valid unless you define a custom
+  scale by the use of the #SCALE or #GERMAN command.)
+
+k
+  Key off, like r (and can have an optional duration) but will not cut
+  the note immediately
+
+l
+  Set the duration. This must be followed by the number which specifies
+  the duration, which the number of divisions is divided by, and/or any
+  number of . afterward to each add half of the previous value; or, you
+  can alternatively use # and the number of frames. This format is also
+  valid anywhere that a note duration can be used (and is optional).
+
+n
+  Specify a note number directly. If the duration is included, then you
+  must put a comma between the note number and duration.
+
+o
+  Set the octave number. The lowest octave number is zero.
+
+r
+  Make a rest; can have an optional duration.
+
+t
+  Set the tempo; must be followed by a number. The number has the same
+  meaning as the #TEMPO command. This affects all tracks; you cannot
+  modify the tempo of each track individually.
+
+w
+  Waits for the note duration (which can be specified or implied).
+
+^
+  Follow by the optional duration, which extends the duration of the
+  previous note by this amount.
+
+<
+  Low octave.
+
+>
+  High octave.
+
+@
+  Select the instrument.
+
+v
+  Set the volume, which is a real number.
+
+[ | ]
+  Make a local loop. You must specify the number of times to repeat after
+  the ending bracket (1 means it does not repeat). The | is optional; if
+  it is present, then the part between | and ] will be skipped during the
+  last time it is played. Nesting is allowed.
+
+|: \ :|
+  Like [ | ] but this one will save space in the output file, and it is
+  not allowed to be nested.
+
+K
+  Follow by a signed integer, which will set the transpose amount. If the
+  transpose amount is set to zero, then the transpose is cancelled.
+
+L
+  Set the global loop start. When it reaches the end, it will continue
+  from the global loop start. This can be individually per track.
+
+!
+  Causes the rest of this track to be ignored.
+
+!!
+  Causes all data in the track before this command to not result in any
+  notes or delays, although any other command is still used. If !! is
+  after L then the part between L and !! will be played after it reaches
+  the end but not immediately.
+
+%%
+  Follow by any even number of hex digits without spaces in between (and
+  without $). This will cause the raw data to be included in the output.
+
+%:
+  Follow by either a decimal or hexadecimal integer (but + and - is not
+  allowed) or by two ASCII characters, which cannot start with a space
+  or $ or a digit. This makes a label. Labels have a single namespace
+  shared by all tracks and all songs. Label names starting with ! have
+  built-in meanings, and should not normally be redefined.
+
+
 === Binary file format ===
 
 If it is a wrapped file format, then it is universal type 75 and contains
@@ -76,7 +265,7 @@ The fields of a sampled instrument are:
 
 * Optional Graphic string or TRON string with the name of the instrument.
 
-* Base sample rate, which is a real number.
+* Base frequency, which is a real number.
 
 * Codec, which is enumerated. The values are the same as the codec numbers
 of the .SND lump.
@@ -148,7 +337,8 @@ Each thread has registers:
   X (real)
   Y (real)
 
-Each thread also has a stack with eight 16-bit integers.
+Each thread also has a stack with eight 16-bit integers. The bottom and
+secondly from bottom values of these stacks are called I and J.
 
 There are also global registers shared by all threads:
   G (16-bits)
@@ -162,9 +352,9 @@ the R register, and the opcode is pushed to the stack.
 [80-8F] Binary operations. These take two operands from the stack (the
 second operand is on top), and pushes the result to the stack.
 
-[90-97] Push registers: A B C G L M N R
+[90-97] Push registers: A B C G I J N R
 
-[98-9F] Pop registers: A B C G L M N R
+[98-9F] Pop registers: A B C G I J N R
 
 [A0-A7] Jump to relative signed 8-bits by conditions
 
@@ -202,6 +392,30 @@ is pushed to the stack.
 [BF] Like 0xBE but also pops a value from the stack to use as the parameter
 for the feature to check; this is a separate set than the 0xBE instruction.
 
+[C0-C7] Real operations. The second byte has the low 7-bits specifying the
+value to use for "v" and the high bit is set for negative.
+
+[C8] Unary real operations. The low 3-bits select the operation to do, and
+the high 2-bits select the register (X, Y, or Z; setting both high bits is
+not valid). Bit3 is set to multiply the input by tau, bit4 multiplies the
+input by -1, and bit5 multiplies the output by -1.
+
+[C9] Follow by one more byte; it is added to the number popped from the
+stack and then the low 7-bits are used to find the real number index which
+will overwrite the value of the X register.
+
+[CB] Exchange top two values of stack
+
+[CC] Discard top of stack
+
+[CD] Duplicate top of stack
+
+[CE] Copy second from top of stack
+
+[CF] Copy third from top of stack
+
+[DE 00] Destroy current thread
+
 [E0-EF] Same as 0xF0 to 0xFF but before doing that, also pop a number to
 set the wait time.
 
@@ -212,16 +426,20 @@ set the wait time.
 [F2] Set L to address of next instruction, and then pop from stack and
 store the popped number in N register.
 
-[F3] If N is nonzero, jump to M.
+[F3] If N is zero, jump to M.
 
 [F4] Set M to address of next instruction. If N is nonzero, decrement N and
 jump to L.
 
-[F5] (note on)
+[F5] Start a note. The frequency of the channel is set to the value of the
+X register, unless X is zero or negative in which case it is unchanged. It
+will also retrigger the instrument and envelopes.
 
-[F6] (note release)
+[F6] Release a note. This will release the loop of the instrument if it is
+set, and it will possibly release loops of envelopes as well.
 
-[F7] (note cut)
+[F7] Cut a note, which will cancel the instrument loop and all envelopes,
+and suppresses the sound on this channel until another note is on.
 
 [FF] No operation
 
@@ -262,9 +480,11 @@ The special integer registers are (*read-only):
   (Global)
   00  Current thread (zero-based) *
   01  Tempo
+  02  Tempo accumulator
   (Channel)
   80  Instrument
   81  Offset
+  82  Flags (partially read-only)
 
 The special real registers are (*read-only):
   (Channel)
@@ -272,4 +492,73 @@ The special real registers are (*read-only):
   41  Amplitude
   42  Direct frequency
   43  Resample offset
+
+The binary real operations are:
+  0  X=v
+  1  Y=v
+  2  X+=v
+  3  X*=v
+  4  X/=v
+  5  X=pow(X,v)
+  6  X=fmod(X,v)
+  7  X=fmin(X,v)
+
+The unary real operations are:
+  0  v=X
+  1  Exchange v with X
+  2  v=fabs(v)
+  3  v=sqrt(v)
+  4  v=sin(v)
+  5  v=cos(v)
+  6  v=floor(v)
+  7  (reserved)
+
+Built-in real values:
+   0  Zero
+   1  One
+   2  Two
+   3  Half
+   4  X
+   5  Y
+   6  Z
+   7  (reserved)
+   8  A
+   9  B
+  10  G
+  11  N
+  12  (reserved)
+  13  (reserved)
+  14  (reserved)
+  15  (reserved)
+
+The format of a envelope is: the flag byte, the special register to be
+affected (0x40 to 0x7F are real and 0x80 to 0xFF are integers), the loop
+start (0 means the first element), the loop end (0 means the first
+element), and then the elements of the envelope list (one byte each).
+The flags are:
+
+* bit0 = Set for relative operation or clear for absolute. For integers,
+relative values are treated as signed and absolute values are treated as
+unsigned. For reals, if it is relative then the high bit of each value
+will be set for multiplication or clear for addition.
+
+* bit1 = Reset when a new note is started.
+
+* bit2 = Continue when the note is released.
+
+* bit3 = Continue when the note is cut.
+
+* bit4 = Causes it to avoid looping when the note is released or cut
+and instead to stop when a zero is reached.
+
+* bit5 = Zero will stop the envelope instead of looping, and it will not
+count zero as affecting the register.
+
+* bit6 = (reserved)
+
+* bit7 = (reserved)
+
+Setting the loop start of a envelope to 255 means that it will stop the
+envelope when the loop end is reached (but may continue afterward if bit4
+is set).
 

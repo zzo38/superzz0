@@ -6,6 +6,7 @@ C /home/user/bin
 P superzz0-release/bin/
 ./superzz0 superzz0
 ./sz0asm sz0asm
+./sz0music sz0music
 ./har har
 C /home/user/superzz0
 # Documentations
@@ -14,6 +15,7 @@ P superzz0-release/doc/
 ./config.doc config.doc
 ./editops.doc editops.doc
 ./event.doc event.doc
+./music.doc music.doc
 ./opcodes.doc opcodes.doc
 ./printer.doc printer.doc
 ./script.doc script.doc

@@ -28,6 +28,7 @@ GAME
   +  Colours can now be defined for states of different parts of windows.
   +  The F2 key can now be used to toggle sounds in a text window or item
      window, as well as working during the normal game play.
+  +  Music is implemented.
   =  The current board number display now works correctly. (Previously this
      was documented but the implementation was missing.)
 
