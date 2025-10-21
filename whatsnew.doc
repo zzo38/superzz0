@@ -43,6 +43,9 @@ SCRIPTS
      #GIVEITEM, #TAKEITEM.
   +  "CC" in numeric expressions to count the number of links that can be
      chosen in the text so far.
+  +  #MIXCHOICES command mixes up the order of choices in a text window.
+  +  #AUTOCHOICE makes a selection automatically instead of displaying the
+     text window with choices.
 
 ASSEMBLY
   +  The $C6 memory cell now stores the address of the next instruction if

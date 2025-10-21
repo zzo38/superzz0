@@ -15,7 +15,8 @@ Most commands, arguments, etc are case-insensitive.
   Only allowed on the first line of the text of a stat within a board; it
   cannot be used within a script library, global script, etc. The name is
   the name of a script library (without the .LIB suffix), and it will be
-  replaced by the contents of that script library at run time.
+  replaced by the contents of that script library at run time. Changes to
+  the copy will not affect the script library that it is copied from.
 
 :label
   Make a label. If it is followed by an asterisk, then it is a subroutine;
@@ -94,6 +95,12 @@ are not allowed in this case.
 
 #=[name:]label
   An abbrevation for #SEND.
+
+#AUTOCHOICE [number]
+  Automatically chooses one of the links in the text window, and avoids
+  displaying the text window (even if none can be chosen). The number is
+  the 1-based choice number (1 for the first one, 2 for the second one,
+  etc). (If preceded by #MIXCHOICES then it will choose one at random.)
 
 #BECOME kind
   Changes this object into the specified kind.
@@ -196,6 +203,10 @@ are not allowed in this case.
 
 #MISC3 number
   Set this stat's misc3 value.
+
+#MIXCHOICES
+  Randomizes the order of an unbroken sequence of links that ends at the
+  point of this command; no other text lines are allowed in between.
 
 #PARAMETER number
   Set this object's tile parameter.

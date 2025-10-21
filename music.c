@@ -9,7 +9,6 @@ exit
 */
 
 #define _GNU_SOURCE
-#include "asn1.h"
 #include <err.h>
 #include <math.h>
 #include <stdint.h>
@@ -17,6 +16,7 @@ exit
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "asn1.h"
 
 typedef struct {
   FILE*file;

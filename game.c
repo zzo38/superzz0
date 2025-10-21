@@ -3358,6 +3358,52 @@ static inline void dieitem(Uint16 m,Uint16 n) {
   }
 }
 
+static void mix_text_choices(void) {
+  char w[TEXTREC];
+  char*t;
+  int i,s,m;
+  fclose(textfile);
+  if(!textfile_text) err(1,"Allocation failed");
+  t=textfile_text;
+  s=textfile_size/TEXTREC;
+  textfile_text=0;
+  textfile_size=0;
+  textfile=open_memstream(&textfile_text,&textfile_size);
+  if(!textfile) err(1,"Allocation failed");
+  for(m=s-1;m>=0 && t[m*TEXTREC] && t[m*TEXTREC+1]=='!';m--);
+  for(m++;m<s-1;m++) {
+    i=m+dice(s-m);
+    if(i!=m) {
+      memcpy(w,t+i*TEXTREC,TEXTREC);
+      memcpy(t+i*TEXTREC,t+m*TEXTREC,TEXTREC);
+      memcpy(t+m*TEXTREC,w,TEXTREC);
+    }
+  }
+  fwrite(t,s,TEXTREC,textfile);
+  free(t);
+}
+
+static void auto_text_choice(Uint32 n) {
+  char*t;
+  int i,s;
+  fclose(textfile);
+  textfile=0;
+  if(!textfile_text) err(1,"Allocation failed");
+  t=textfile_text;
+  s=textfile_size/TEXTREC;
+  textfile_text=0;
+  textfile_size=0;
+  for(i=0;n>0 && i<s;i++) if(t[i*TEXTREC] && t[i*TEXTREC+1]=='!' && !--n) break;
+  ntextbuf=0;
+  if(i<s && !n) {
+    s=2; i*=TEXTREC; if(t[i+2]=='<' && t[i+4]=='>') s=5;
+    for(ntextbuf=0;ntextbuf+s<t[i] && t[i+s+ntextbuf]!=';' && ntextbuf<80;ntextbuf++);
+    memcpy(textbuf,t+i+s,ntextbuf); textbuf[ntextbuf]=0;
+  }
+  textbuf[ntextbuf]=0;
+  free(t);
+}
+
 static int append_escaped(char*buf,int len,Stat*s,StatXY*xy,Uint16 ip) {
   Sint32 u,v;
   switch(s->text[ip++]) {
@@ -3471,6 +3517,15 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
           }
         }
         switch(*buf) {
+          case 'A':
+            if(!strcmp(buf,"AUTOCHOICE") && textfile) {
+              while(s->text[ip]==' ') ip++;
+              u=(s->text[ip]&~31)?parse_number(s,xy,&ip):1;
+              auto_text_choice(u);
+              if(*textbuf && (u=find_label(s,textbuf))>=0) {
+                ip=u; u=0; goto begin;
+              }
+            } else goto badcommand; break;
           case 'B':
             if(!strcmp(buf,"BECOME")) {
               become:
@@ -3638,6 +3693,8 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               if(buf[4]=='1') s->misc1=w;
               if(buf[4]=='2') s->misc2=w;
               if(buf[4]=='3') s->misc3=w;
+            } else if(!strcmp(buf,"MIXCHOICES") && textfile) {
+              mix_text_choices();
             } else goto badcommand; break;
           case 'P':
             if(!strcmp(buf,"PARAMETER")) {
