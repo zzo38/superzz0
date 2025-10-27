@@ -100,3 +100,5 @@ void resample_process_int16(Resample*obj,int16_t*in,uint32_t nin,int16_t*out,uin
 */
 
 void resample_process_int16_to_float_mix(Resample*obj,int16_t*in,uint32_t nin,float*out,uint32_t nout,float vol,double rate);
+
+void resample_process_uint8_to_float_mix(Resample*obj,uint8_t*in,uint32_t nin,float*out,uint32_t nout,float vol,double rate);

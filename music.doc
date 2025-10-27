@@ -21,6 +21,12 @@ These commands are global and apply to all songs:
 #GERMAN
   Equivalent to "#SCALE c.d.ef.g.abh".
 
+#NOTE-DURATION numbers
+  Can specify any number of numbers, which are assumed to be the note
+  duration (in frames) which are used most commonly, since they will be
+  encoded more efficiently. This is not required; if it is not specified
+  then it will decide them automatically.
+
 #OMIT-STANDARD
   Causes the standard VM codes and other things to be omitted. This is only
   useful if you are writing your own VM codes to use instead.
@@ -54,6 +60,9 @@ These commands are global and apply to all songs:
   "u16le", "u16be", "s8", "s16le", "s16be". The frequency is a positive
   real number. The loop start and loop end are both optional (although
   the loop start must be included if the loop end is included).
+
+@v number = kind { numbers }
+  Define a envelope. See the below section about syntax of envelopes.
 
 These commands apply to a specific song:
 
@@ -135,7 +144,8 @@ w
 
 ^
   Follow by the optional duration, which extends the duration of the
-  previous note by this amount.
+  previous note by this amount. (This must come after a note, rest, key
+  off, or wait.)
 
 <
   Low octave.
@@ -145,6 +155,12 @@ w
 
 @
   Select the instrument.
+
+@v
+  Select first envelope. (Zero means disable envelope.)
+
+@u
+  Select second envelope. (Zero means disable envelope.)
 
 v
   Set the volume, which is a real number.
@@ -186,6 +202,35 @@ L
   or $ or a digit. This makes a label. Labels have a single namespace
   shared by all tracks and all songs. Label names starting with ! have
   built-in meanings, and should not normally be redefined.
+
+
+=== Syntax of envelopes ===
+
+The syntax of a envelope is @v and a number and then = and then one of
+the following variables to be affected:
+  A  Amplitude (real)
+  F  Frequency (real)
+  I  Instrument (integer)
+  O  Offset (integer)
+  R  Resample offset (real)
+
+After the variable selection you can use any combination of:
+  +  Envelope values are relative
+  !  Continue after note release
+  $  Continue after note cut
+
+Put {} with numbers in between, and optionally | for the loop start.
+
+For a relative envelope, the first number can optionally have = at first
+to make the first number absolute instead of relative; if it is absolute
+already then the = is ignored.
+
+For real relative envelopes, any number can optionally have * at first
+(you cannot combine this with = at first) to multiply instead of add.
+
+You can have | in the envelope after the loop start to indicate the loop
+end; it will stop repeating after the note is release or cut (unless you
+tell it to continue in that case), and will continue after the loop end.
 
 
 === Binary file format ===
@@ -404,6 +449,8 @@ input by -1, and bit5 multiplies the output by -1.
 stack and then the low 7-bits are used to find the real number index which
 will overwrite the value of the X register.
 
+[CA] Stop current thread
+
 [CB] Exchange top two values of stack
 
 [CC] Discard top of stack
@@ -413,8 +460,6 @@ will overwrite the value of the X register.
 [CE] Copy second from top of stack
 
 [CF] Copy third from top of stack
-
-[DE 00] Destroy current thread
 
 [E0-EF] Same as 0xF0 to 0xFF but before doing that, also pop a number to
 set the wait time.
@@ -485,6 +530,10 @@ The special integer registers are (*read-only):
   80  Instrument
   81  Offset
   82  Flags (partially read-only)
+  90  First envelope address + 1 (0=none)
+  91  First envelope position
+  92  Second envelope address + 1 (0=none)
+  93  Second envelope position
 
 The special real registers are (*read-only):
   (Channel)
@@ -548,17 +597,19 @@ will be set for multiplication or clear for addition.
 
 * bit3 = Continue when the note is cut.
 
-* bit4 = Causes it to avoid looping when the note is released or cut
-and instead to stop when a zero is reached.
+* bit4 = Treat the first value as absolute even if it is relative.
 
-* bit5 = Zero will stop the envelope instead of looping, and it will not
-count zero as affecting the register.
+* bit5 = If the note is not on, and bit2 or bit3 is not set, then it will
+continue without looping, until a number 0 or 128 is found at which point
+the envelope stops; it will use the 0 or 128 to set the value, too. If it
+is absolute or integer (or both), then 128 does not set the value; if it
+is real relative than 128 does set the value (to zero). This will affect
+any 0 or 128 found in the envelope and not only the last one.
 
 * bit6 = (reserved)
 
 * bit7 = (reserved)
 
 Setting the loop start of a envelope to 255 means that it will stop the
-envelope when the loop end is reached (but may continue afterward if bit4
-is set).
+envelope when the loop end is reached.
 

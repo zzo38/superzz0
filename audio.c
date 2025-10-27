@@ -33,6 +33,8 @@ typedef struct {
 #define CHAN_USE 0x01
 #define CHAN_SOUND 0x02
 #define CHAN_LOOP 0x04
+#define CHAN_ENV1 0x40
+#define CHAN_ENV2 0x80
 
 typedef struct {
   Uint8 t;
@@ -42,18 +44,20 @@ typedef struct {
         Sint16*d16;
         Uint8*d8;
       };
-      double rate;
       Uint32 len,ls,le;
       Uint8 is8;
     } wave;
   };
+  double rate;
 } Instrument;
 
 typedef struct {
   Resample resam;
   double freq;
   float amp;
+  Uint16 env1,env2;
   Uint8 instrument,flag;
+  Uint8 pos1,pos2;
 } Channel;
 
 typedef struct {
@@ -143,6 +147,337 @@ static char init_resampler(Resample*resam,const char*text) {
   return 1;
 }
 
+static inline void render_music_frame(float*buf,int len) {
+  int i,m;
+  Sint32 p,r;
+  Instrument*ins;
+  Channel*cha;
+  for(m=0;m<music->nch;m++) if(music->ch[m].flag&CHAN_SOUND) {
+    cha=music->ch+m;
+    if(i=cha->instrument) {
+      ins=music->in+i-1;
+      if(ins->t==INST_WAVE) {
+        p=cha->resam.pin;
+        r=(cha->flag&CHAN_LOOP)?ins->wave.le:ins->wave.len;
+        cha->resam.pout=0;
+        while(r-p>0 && cha->resam.pout<len) {
+          if(ins->wave.is8) {
+            resample_process_uint8_to_float_mix(&cha->resam,ins->wave.d8+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
+          } else {
+            resample_process_int16_to_float_mix(&cha->resam,ins->wave.d16+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
+          }
+          if(!(cha->flag&CHAN_LOOP) || ins->wave.ls==ins->wave.le) {
+            cha->flag&=~(CHAN_SOUND|CHAN_LOOP);
+            break;
+          }
+          cha->resam.pin=ins->wave.ls;
+        }
+      }
+    }
+  }
+}
+
+static Uint16 get_special_i(const Channel*cha,Uint8 id,Uint8 th) {
+  if((id&0x80) && !cha) return 0;
+  switch(id) {
+    case 0x00: return th;
+    case 0x01: return music->tempo;
+    case 0x02: return music->tcur;
+    case 0x80: return cha->instrument;
+    case 0x81: return cha->resam.pin;
+    case 0x82: return cha->flag;
+    case 0x90: return cha->env1;
+    case 0x91: return cha->pos1;
+    case 0x92: return cha->env2;
+    case 0x93: return cha->pos2;
+    default: return 0;
+  }
+}
+
+static void put_special_i(Channel*cha,Uint8 id,Uint16 v) {
+  if((id&0x80) && !cha) return;
+  switch(id) {
+    case 0x01: if(v>music->tmax/2) v=music->tmax/2; music->tempo=v; break;
+    case 0x02: music->tcur=v; break;
+    case 0x80: cha->instrument=(v<=music->nin && v && music->in[v-1].t?v:0); break;
+    case 0x81: cha->resam.pin=v; break;
+    case 0x82: if(cha->flag&CHAN_USE) cha->flag=(cha->flag&CHAN_USE)|v; break;
+    case 0x90: cha->env1=(v+6<music->size?v:0); cha->pos1=0; break;
+    case 0x91: cha->pos1=v; break;
+    case 0x92: cha->env2=(v+6<music->size?v:0); cha->pos2=0; break;
+    case 0x93: cha->pos2=v; break;
+  }
+}
+
+static double get_special_r(const Channel*cha,Uint8 id) {
+  if((id&0x40) && !cha) return 0.0;
+  switch(id) {
+    case 0x40: return cha->freq/(cha->instrument && music->in[cha->instrument-1].t?music->in[cha->instrument-1].rate:1.0);
+    case 0x41: return cha->amp;
+    case 0x42: return cha->freq;
+    case 0x43: return cha->resam.offset;
+    default: return 0.0;
+  }
+}
+
+static void put_special_r(Channel*cha,Uint8 id,double v) {
+  if((id&0x40) && !cha) return;
+  switch(id) {
+    case 0x40: if(cha->instrument) cha->freq=v*music->in[cha->instrument-1].rate; break;
+    case 0x41: cha->amp=v; break;
+    case 0x42: cha->freq=v; break;
+    case 0x43: cha->resam.offset=v; break;
+  }
+}
+
+static double get_real(Uint8 id,const Thread*thr) {
+  double v=0.0;
+  switch(id&0x7F) {
+    case 0: v=0.0; break;
+    case 1: v=1.0; break;
+    case 2: v=2.0; break;
+    case 3: v=0.5; break;
+    case 4: v=thr->x; break;
+    case 5: v=thr->y; break;
+    case 6: v=music->z; break;
+    case 8: v=thr->a; break;
+    case 9: v=thr->b; break;
+    case 10: v=music->g; break;
+    case 11: v=thr->n; break;
+    case 16 ... 127: if((id&0x7F)-16<music->nrc) v=music->rc[(id&0x7F)-16]; break;
+  }
+  return id&0x80?-v:v;
+}
+
+static char do_envelope(Channel*cha,Uint16 addr,Uint8*pos) {
+  const Uint8*p=music->rom+addr;
+  Uint8 c;
+  Uint8 m=*pos;
+  double v;
+  if(cha->flag&CHAN_LOOP) {
+    if(*pos>=p[2]) {
+      if(p[1]==255) return 1;
+      *pos=p[1];
+    }
+    c=p[4+*pos];
+  } else {
+    c=p[m+4];
+    if(c==128 && ((p[1]&0x80) || !(*p&1))) return 1;
+  }
+  ++*pos;
+  m=(m || !(*p&0x10))?(*p&1):0;
+  if(!m && (p[1]&0x80)) {
+    // Integer, absolute
+    put_special_i(cha,p[1],c);
+  } else if(!m) {
+    // Real, absolute
+    put_special_r(cha,p[1],get_real(c,music->th));
+  } else if(p[1]&0x80) {
+    // Integer, relative
+    put_special_i(cha,p[1],get_special_i(cha,p[1],0)+c-((c&0x80)<<1));
+  } else if(c&0x80) {
+    // Real, multiplication
+    put_special_r(cha,p[1],get_special_r(cha,p[1])*get_real(c&0x7F,music->th));
+  } else {
+    // Real, addition
+    put_special_r(cha,p[1],get_special_r(cha,p[1])+get_real(c,music->th));
+  }
+  return (!c && !(cha->flag&CHAN_LOOP));
+}
+
+#define StackReq(A,B) if(thr->t>=8+B || thr->t<A) break;
+static inline void render_music(Sint16*buf,int len) {
+  Channel*cha;
+  Thread*thr;
+  float v;
+  double x,y;
+  static float*fbuf=0;
+  static int flen=0;
+  int c,m,pos,bpos;
+  if(flen<len) {
+    fbuf=realloc(fbuf,(flen=len)*sizeof(float));
+    if(!fbuf) err(1,"Allocation failed during audio callback");
+  }
+  for(bpos=pos=0;pos<len;pos++) {
+    if((music->tcur+=music->tempo)>=music->tmax) {
+      render_music_frame(fbuf+bpos,pos-bpos);
+      music->tcur-=music->tmax;
+      bpos=pos+1;
+      for(m=0;m<music->nch;m++) {
+        if((music->ch[m].flag&CHAN_ENV1) && music->ch[m].env1 && do_envelope(music->ch+m,music->ch[m].env1-1,&music->ch[m].pos1)) music->ch[m].flag&=~CHAN_ENV1;
+        if((music->ch[m].flag&CHAN_ENV2) && music->ch[m].env2 && do_envelope(music->ch+m,music->ch[m].env2-1,&music->ch[m].pos2)) music->ch[m].flag&=~CHAN_ENV2;
+      }
+      for(m=0;m<music->nth;m++) {
+        thr=music->th+m;
+        while(!thr->w && thr->p!=0xFFFF) {
+          c=music->rom[thr->p++];
+          reswitch: switch(c) {
+            case 0x00 ... 0x1F: StackReq(0,1); thr->r=thr->p; thr->s[thr->t++]=c; thr->p=music->sc[0]; break;
+            case 0x20 ... 0x3F: StackReq(0,1); thr->r=thr->p; thr->s[thr->t++]=c; thr->p=music->sc[1]; break;
+            case 0x40 ... 0x5F: StackReq(0,1); thr->r=thr->p; thr->s[thr->t++]=c; thr->p=music->sc[2]; break;
+            case 0x60 ... 0x7F: StackReq(0,1); thr->r=thr->p; thr->s[thr->t++]=c; thr->p=music->sc[3]; break;
+            case 0x80: StackReq(2,1); thr->t--; thr->s[thr->t]+=thr->s[thr->t+1]; break;
+            case 0x81: StackReq(2,1); thr->t--; thr->s[thr->t]-=thr->s[thr->t+1]; break;
+            case 0x82: StackReq(2,1); thr->t--; thr->s[thr->t]*=thr->s[thr->t+1]; break;
+            case 0x83: StackReq(2,1); thr->t--; thr->s[thr->t]/=thr->s[thr->t+1]; break;
+            case 0x84: StackReq(2,1); thr->t--; thr->s[thr->t]/=(Sint16)thr->s[thr->t+1]; break;
+            case 0x85: StackReq(2,1); thr->t--; thr->s[thr->t]%=thr->s[thr->t+1]; break;
+            case 0x86: StackReq(2,1); thr->t--; thr->s[thr->t]<<=thr->s[thr->t+1]; break;
+            case 0x87: StackReq(2,1); thr->t--; thr->s[thr->t]>>=thr->s[thr->t+1]; break;
+            case 0x88: StackReq(2,1); thr->t--; thr->s[thr->t]=((Sint16)thr->s[thr->t])>>thr->s[thr->t+1]; break;
+            case 0x89: StackReq(2,1); thr->t--; thr->s[thr->t]&=thr->s[thr->t+1]; break;
+            case 0x8A: StackReq(2,1); thr->t--; thr->s[thr->t]|=thr->s[thr->t+1]; break;
+            case 0x8B: StackReq(2,1); thr->t--; thr->s[thr->t]^=thr->s[thr->t+1]; break;
+            case 0x8C: StackReq(2,1); thr->t--; thr->s[thr->t]+=thr->s[thr->t+1]; break;
+            case 0x8D: StackReq(2,1); thr->t--; thr->s[thr->t]+=thr->s[thr->t+1]; break;
+            case 0x8E: StackReq(2,1); thr->t--; thr->s[thr->t]=music->rom[thr->s[thr->t]+thr->s[thr->t+1]]; break;
+            case 0x8F: StackReq(2,1); thr->t--; c=thr->s[thr->t]*2+thr->s[thr->t+1]; thr->s[thr->t]=music->rom[c]|(music->rom[c]<<8); break;
+            case 0x90: StackReq(0,1); thr->s[thr->t++]=thr->a; break;
+            case 0x91: StackReq(0,1); thr->s[thr->t++]=thr->b; break;
+            case 0x92: StackReq(0,1); thr->s[thr->t++]=thr->c; break;
+            case 0x93: StackReq(0,1); thr->s[thr->t++]=music->g; break;
+            case 0x94: StackReq(0,1); thr->s[thr->t++]=thr->s[0]; break;
+            case 0x95: StackReq(0,1); thr->s[thr->t++]=thr->s[1]; break;
+            case 0x96: StackReq(0,1); thr->s[thr->t++]=thr->n; break;
+            case 0x97: StackReq(0,1); thr->s[thr->t++]=thr->r; break;
+            case 0x98: StackReq(1,0); thr->a=thr->s[--thr->t]; break;
+            case 0x99: StackReq(1,0); thr->b=thr->s[--thr->t]; break;
+            case 0x9A: StackReq(1,0); thr->c=thr->s[--thr->t]; if(thr->c>music->nch || !thr->c || !(music->ch[thr->c-1].flag&CHAN_USE)) thr->c=0; break;
+            case 0x9B: StackReq(1,0); music->g=thr->s[--thr->t]; break;
+            case 0x9C: StackReq(1,0); thr->s[0]=thr->s[--thr->t]; break;
+            case 0x9D: StackReq(1,0); thr->s[1]=thr->s[--thr->t]; break;
+            case 0x9E: StackReq(1,0); thr->n=thr->s[--thr->t]; break;
+            case 0x9F: StackReq(1,0); thr->r=thr->s[--thr->t]; break;
+            case 0xA0: c=music->rom[thr->p++]; thr->p+=c-(c&0x80?256:0); break;
+            case 0xA1: c=music->rom[thr->p++]; if(thr->t && !thr->s[--thr->t]) thr->p+=c-(c&0x80?256:0); break;
+            case 0xA2: c=music->rom[thr->p++]; if(thr->t && thr->s[--thr->t]) thr->p+=c-(c&0x80?256:0); break;
+            case 0xA3: c=music->rom[thr->p++]; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]<thr->s[thr->t+1]) thr->p+=c-(c&0x80?256:0); break;
+            case 0xA4: c=music->rom[thr->p++]; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]==thr->s[thr->t+1]) thr->p+=c-(c&0x80?256:0); break;
+            case 0xA5: c=music->rom[thr->p++]; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]!=thr->s[thr->t+1]) thr->p+=c-(c&0x80?256:0); break;
+            case 0xA6: c=music->rom[thr->p++]; thr->r=thr->p; thr->p+=c-(c&0x80?256:0); break;
+            case 0xA7: c=music->rom[thr->p++]; StackReq(0,1); thr->s[thr->t++]=thr->p; thr->p+=c-(c&0x80?256:0); break;
+            case 0xA8: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; thr->p=c; break;
+            case 0xA9: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; if(thr->t && !thr->s[--thr->t]) thr->p=c; break;
+            case 0xAA: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; if(thr->t && thr->s[--thr->t]) thr->p=c; break;
+            case 0xAB: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]<thr->s[thr->t+1]) thr->p=c; break;
+            case 0xAC: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]==thr->s[thr->t+1]) thr->p=c; break;
+            case 0xAD: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]!=thr->s[thr->t+1]) thr->p=c; break;
+            case 0xAE: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; thr->r=thr->p; thr->p=c; break;
+            case 0xAF: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; StackReq(0,1); thr->s[thr->t++]=thr->p; thr->p=c; break;
+            case 0xB0 ... 0xB3: StackReq(0,1); thr->s[thr->t++]=c&3; break;
+            case 0xB4: StackReq(0,1); thr->s[thr->t++]=music->rom[thr->p++]; break;
+            case 0xB5: StackReq(0,1); thr->s[thr->t++]=music->rom[thr->p]|(music->rom[thr->p+1]); thr->p+=2; break;
+            case 0xB6: if(thr->t) thr->s[thr->t-1]++; break;
+            case 0xB7: if(thr->t) thr->s[thr->t-1]--; break;
+            case 0xB8: StackReq(0,1); thr->s[thr->t++]=get_special_i(thr->c?music->ch+thr->c-1:0,music->rom[thr->p++],m); break;
+            case 0xB9: StackReq(1,0); put_special_i(thr->c?music->ch+thr->c-1:0,music->rom[thr->p++],thr->s[--thr->t]); break;
+            case 0xBA: StackReq(1,1); c=music->rom[thr->p++]; put_special_i(thr->c?music->ch+thr->c-1:0,c,get_special_i(thr->c?music->ch+thr->c-1:0,c,0)+thr->s[--thr->t]); break;
+            case 0xBB: StackReq(1,1); c=music->rom[thr->p++]; put_special_i(thr->c?music->ch+thr->c-1:0,c,get_special_i(thr->c?music->ch+thr->c-1:0,c,0)-thr->s[--thr->t]); break;
+            case 0xBC: c=music->rom[thr->p++]; x=get_special_r(thr->c?music->ch+thr->c-1:0,c&0x7F); if(c&0x80) thr->y=x; else thr->x=x; break;
+            case 0xBD: c=music->rom[thr->p++]; put_special_r(thr->c?music->ch+thr->c-1:0,c&0x7F,c&0x80?thr->y:thr->x); break;
+            case 0xBE: StackReq(0,1); thr->p++; thr->s[thr->t++]=0; break;
+            case 0xBF: thr->p++; if(thr->t) thr->s[thr->t-1]=0; break;
+            case 0xC0: thr->x=get_real(music->rom[thr->p++],thr); break;
+            case 0xC1: thr->y=get_real(music->rom[thr->p++],thr); break;
+            case 0xC2: thr->x+=get_real(music->rom[thr->p++],thr); break;
+            case 0xC3: thr->x*=get_real(music->rom[thr->p++],thr); break;
+            case 0xC4: thr->x/=get_real(music->rom[thr->p++],thr); break;
+            case 0xC5: thr->x=pow(thr->x,get_real(music->rom[thr->p++],thr)); break;
+            case 0xC6: thr->x=fmod(thr->x,get_real(music->rom[thr->p++],thr)); break;
+            case 0xC7: thr->x=fmin(thr->x,get_real(music->rom[thr->p++],thr)); break;
+            case 0xC8:
+              c=music->rom[thr->p++];
+              switch(c>>6) {
+                case 0: x=thr->x; break;
+                case 1: x=thr->y; break;
+                case 2: x=music->z; break;
+              }
+              if(c&0x08) x*=2.0*M_PI;
+              if(c&0x10) x=-x;
+              switch(c&7) {
+                case 0: x=thr->x; break;
+                case 1: y=thr->x; thr->x=x; x=y; break;
+                case 2: x=fabs(x); break;
+                case 3: x=sqrt(x); break;
+                case 4: x=sin(x); break;
+                case 5: x=cos(x); break;
+                case 6: x=floor(x); break;
+              }
+              if(c&7) switch(c>>6) {
+                case 0: thr->x=(c&0x20?-x:x); break;
+                case 1: thr->y=(c&0x20?-x:x); break;
+                case 2: music->z=(c&0x20?-x:x); break;
+              }
+              break;
+            case 0xC9: StackReq(1,0); thr->x=get_real((thr->s[--thr->t]+music->rom[thr->p++])&0x7F,thr); break;
+            case 0xCA: thr->w=255; thr->p=0xFFFF; break;
+            case 0xCB: if(thr->t>1) c=thr->s[thr->t-1],thr->s[thr->t-1]=thr->s[thr->t-2],thr->s[thr->t-2]=c; break;
+            case 0xCC: if(thr->t) --thr->t; break;
+            case 0xCD: if(thr->t<8) thr->s[thr->t]=thr->s[thr->t-1],thr->t++; break;
+            case 0xCE: StackReq(2,3); thr->s[thr->t]=thr->s[thr->t-2]; thr->t++; break;
+            case 0xCF: StackReq(3,3); thr->s[thr->t]=thr->s[thr->t-3]; thr->t++; break;
+            case 0xE0 ... 0xEF: if(thr->t) thr->w=thr->s[--thr->t]; c+=0x10; goto reswitch;
+            case 0xF0: thr->p=thr->r; break;
+            case 0xF1: if(thr->t) thr->p=thr->s[--thr->t]; break;
+            case 0xF2: thr->l=thr->p; if(thr->t) thr->n=thr->s[--thr->t]; break;
+            case 0xF3: if(!thr->n) thr->p=thr->m; break;
+            case 0xF4: thr->m=thr->p; if(thr->n) thr->n--,thr->p=thr->l; break;
+            case 0xF5:
+              if(!thr->c) break;
+              cha=music->ch+thr->c-1;
+              if(!cha->instrument) break;
+              cha->flag=CHAN_USE|CHAN_SOUND|CHAN_LOOP;
+              if(cha->env1) {
+                cha->flag|=CHAN_ENV1;
+                if(music->rom[cha->env1-1]&0x02) {
+                  cha->pos1=0;
+                  do_envelope(cha,cha->env1-1,&cha->pos1);
+                }
+              }
+              if(cha->env2) {
+                cha->flag|=CHAN_ENV2;
+                if(music->rom[cha->env2-1]&0x02) {
+                  cha->pos2=0;
+                  do_envelope(cha,cha->env2-1,&cha->pos2);
+                }
+              }
+              c=cha->instrument-1;
+              cha->resam.pin=cha->resam.pout=0;
+              resample_reset(&cha->resam);
+              switch(music->in[c].t) {
+                case INST_WAVE:
+                  if(thr->x>0.0) cha->freq=music->in[c].rate*thr->x;
+              }
+              break;
+            case 0xF6:
+              if(!thr->c) break;
+              cha=music->ch+thr->c-1;
+              cha->flag&=~CHAN_LOOP;
+              if(cha->env1 && !(music->rom[cha->env1-1]&0x24)) cha->flag&=~CHAN_ENV1;
+              if(cha->env2 && !(music->rom[cha->env2-1]&0x24)) cha->flag&=~CHAN_ENV2;
+              break;
+            case 0xF7:
+              if(!thr->c) break;
+              cha=music->ch+thr->c-1;
+              cha->flag&=~(CHAN_SOUND|CHAN_LOOP);
+              if(cha->env1 && !(music->rom[cha->env1-1]&0x08)) cha->flag&=~CHAN_ENV1;
+              if(cha->env2 && !(music->rom[cha->env2-1]&0x08)) cha->flag&=~CHAN_ENV2;
+              break;
+            case 0xFF: break;
+          }
+        }
+        if(thr->w) --thr->w;
+      }
+    }
+  }
+  if(bpos!=pos) render_music_frame(fbuf+bpos,pos-bpos);
+  for(pos=0;pos<len;pos++) {
+    v=fbuf[pos]*config.music_amp+buf[pos];
+    buf[pos]=fmax(-32768.0,fmin(v,+32767.0));
+  }
+}
+#undef StackReq
+
 static void audiocb(void*userdata,Uint8*stream,int len) {
   static float prf=0.0;
   static float pha=0.0;
@@ -202,6 +537,7 @@ static void audiocb(void*userdata,Uint8*stream,int len) {
       }
     }
   }
+  if(music_on && music && music->rom) render_music(buf,len);
 }
 
 static int convertaudio(WaveSound*wav,Uint16 rate,Uint8 ratemode,Uint16 form,Resample*resam) {
@@ -657,8 +993,8 @@ static void load_instrument(Instrument*o,const ASN1_Value*v0) {
   if(v1.class==ASN1_UNIVERSAL && (v1.type==ASN1_GRAPHIC_STRING || v1.type==ASN1_TRON_STRING) && asn1_next_of(&v1,v0)) goto error;
   switch(o->t=v0->type) {
     case INST_WAVE:
-      if(v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_double(&v1,ASN1_REAL,&o->wave.rate)) goto error;
-      o->wave.rate/=(double)spec.freq;
+      if(v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_double(&v1,ASN1_REAL,&o->rate)) goto error;
+      o->rate/=(double)spec.freq;
       if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_ENUMERATED || asn1_decode_number(&v1,ASN1_INTEGER,&c)) goto error;
       if(c<0 || c>7 || c==5) goto error_c;
       if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_OCTET_STRING || v1.constructed || !v1.length || v1.length>0x7FFFFFULL) goto error;
@@ -705,7 +1041,7 @@ static void load_instrument(Instrument*o,const ASN1_Value*v0) {
           break;
         default: error_c: errx(1,"Unknown codec (%d) in %s.BGM",c,music_name);
       }
-      o->wave.ls=o->wave.le=0;
+      o->wave.ls=o->wave.le=o->wave.len;
       if(asn1_next_of(&v1,v0)) break;
       if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_BIT_STRING && v1.length==1 && asn1_next_of(&v1,v0)) break;
       if(v1.class!=ASN1_UNIVERSAL) goto error;
@@ -716,6 +1052,7 @@ static void load_instrument(Instrument*o,const ASN1_Value*v0) {
         } else {
           if(asn1_decode_number(&v1,ASN1_INTEGER,&o->wave.le)) goto error;
         }
+        if(o->wave.le>o->wave.len || o->wave.ls>=o->wave.le) goto error;
       } else if(v1.type!=ASN1_NULL) {
         goto error;
       }
@@ -977,7 +1314,7 @@ static void load_bgm(const char*name,Uint16 song) {
     for(i=0;i<music->nch;i++) printf("Channel #%d: flag=0x%02X\n",i+1,music->ch[i].flag);
   }
   // Reset state
-  music->tcur=0;
+  music->tcur=music->tmax-1;
   for(i=0;i<music->nch;i++) {
     if(music->ch[i].flag&=CHAN_USE) resample_reset(&music->ch[i].resam);
     music->ch[i].amp=1.0;

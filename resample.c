@@ -161,3 +161,27 @@ void resample_process_int16_to_float_mix(Resample*obj,int16_t*in,uint32_t nin,fl
   }
   obj->offset+=o;
 }
+
+void resample_process_uint8_to_float_mix(Resample*obj,uint8_t*in,uint32_t nin,float*out,uint32_t nout,float vol,double rate) {
+  double o=0.0;
+  uint32_t g=0;
+  int h=obj->ntap/2;
+  while(nout) {
+    if(obj->offset+o>=obj->index-h) {
+      if(!nin--) break;
+      if(obj->index==obj->nsam) {
+        memmove(obj->buf,obj->buf+obj->nsam-obj->ntap,obj->ntap*sizeof(float));
+        obj->offset-=obj->nsam-obj->ntap;
+        obj->index-=obj->nsam-obj->ntap;
+      }
+      obj->buf[obj->index++]=(*in++)*255.9f-32755.2f;
+      obj->pin++;
+    } else {
+      *out++ +=vol*subsample(obj,obj->offset+o);
+      o=++g*rate;
+      obj->pout++;
+      nout--;
+    }
+  }
+  obj->offset+=o;
+}
