@@ -166,11 +166,12 @@ static inline void render_music_frame(float*buf,int len) {
           } else {
             resample_process_int16_to_float_mix(&cha->resam,ins->wave.d16+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
           }
-          if(!(cha->flag&CHAN_LOOP) || ins->wave.ls==ins->wave.le) {
+          p=cha->resam.pin;
+          if(p==ins->wave.len && (ins->wave.ls==ins->wave.len || !(cha->flag&CHAN_LOOP))) {
             cha->flag&=~(CHAN_SOUND|CHAN_LOOP);
             break;
           }
-          cha->resam.pin=ins->wave.ls;
+          if((cha->flag&CHAN_LOOP) && p==ins->wave.le) p=cha->resam.pin=ins->wave.ls;
         }
       }
     }
@@ -199,6 +200,7 @@ static void put_special_i(Channel*cha,Uint8 id,Uint16 v) {
   switch(id) {
     case 0x01: if(v>music->tmax/2) v=music->tmax/2; music->tempo=v; break;
     case 0x02: music->tcur=v; break;
+    case 0x7F: if(config.music_debug==255) printf("MUSIC DEBUG: $%04X\n",v); break;
     case 0x80: cha->instrument=(v<=music->nin && v && music->in[v-1].t?v:0); break;
     case 0x81: cha->resam.pin=v; break;
     case 0x82: if(cha->flag&CHAN_USE) cha->flag=(cha->flag&CHAN_USE)|v; break;
@@ -298,6 +300,7 @@ static inline void render_music(Sint16*buf,int len) {
     fbuf=realloc(fbuf,(flen=len)*sizeof(float));
     if(!fbuf) err(1,"Allocation failed during audio callback");
   }
+  for(pos=0;pos<len;pos++) fbuf[pos]=0.0;
   for(bpos=pos=0;pos<len;pos++) {
     if((music->tcur+=music->tempo)>=music->tmax) {
       render_music_frame(fbuf+bpos,pos-bpos);
@@ -310,28 +313,32 @@ static inline void render_music(Sint16*buf,int len) {
       for(m=0;m<music->nth;m++) {
         thr=music->th+m;
         while(!thr->w && thr->p!=0xFFFF) {
+#if 0
+          for(c=0;c<thr->t;c++) printf(" $%04X",thr->s[c]);
+          printf(" :: p=$%04X op=$%02X x=%f y=%f\n",thr->p,music->rom[thr->p],thr->x,thr->y);
+#endif
           c=music->rom[thr->p++];
           reswitch: switch(c) {
             case 0x00 ... 0x1F: StackReq(0,1); thr->r=thr->p; thr->s[thr->t++]=c; thr->p=music->sc[0]; break;
             case 0x20 ... 0x3F: StackReq(0,1); thr->r=thr->p; thr->s[thr->t++]=c; thr->p=music->sc[1]; break;
             case 0x40 ... 0x5F: StackReq(0,1); thr->r=thr->p; thr->s[thr->t++]=c; thr->p=music->sc[2]; break;
             case 0x60 ... 0x7F: StackReq(0,1); thr->r=thr->p; thr->s[thr->t++]=c; thr->p=music->sc[3]; break;
-            case 0x80: StackReq(2,1); thr->t--; thr->s[thr->t]+=thr->s[thr->t+1]; break;
-            case 0x81: StackReq(2,1); thr->t--; thr->s[thr->t]-=thr->s[thr->t+1]; break;
-            case 0x82: StackReq(2,1); thr->t--; thr->s[thr->t]*=thr->s[thr->t+1]; break;
-            case 0x83: StackReq(2,1); thr->t--; thr->s[thr->t]/=thr->s[thr->t+1]; break;
-            case 0x84: StackReq(2,1); thr->t--; thr->s[thr->t]/=(Sint16)thr->s[thr->t+1]; break;
-            case 0x85: StackReq(2,1); thr->t--; thr->s[thr->t]%=thr->s[thr->t+1]; break;
-            case 0x86: StackReq(2,1); thr->t--; thr->s[thr->t]<<=thr->s[thr->t+1]; break;
-            case 0x87: StackReq(2,1); thr->t--; thr->s[thr->t]>>=thr->s[thr->t+1]; break;
-            case 0x88: StackReq(2,1); thr->t--; thr->s[thr->t]=((Sint16)thr->s[thr->t])>>thr->s[thr->t+1]; break;
-            case 0x89: StackReq(2,1); thr->t--; thr->s[thr->t]&=thr->s[thr->t+1]; break;
-            case 0x8A: StackReq(2,1); thr->t--; thr->s[thr->t]|=thr->s[thr->t+1]; break;
-            case 0x8B: StackReq(2,1); thr->t--; thr->s[thr->t]^=thr->s[thr->t+1]; break;
-            case 0x8C: StackReq(2,1); thr->t--; thr->s[thr->t]+=thr->s[thr->t+1]; break;
-            case 0x8D: StackReq(2,1); thr->t--; thr->s[thr->t]+=thr->s[thr->t+1]; break;
-            case 0x8E: StackReq(2,1); thr->t--; thr->s[thr->t]=music->rom[thr->s[thr->t]+thr->s[thr->t+1]]; break;
-            case 0x8F: StackReq(2,1); thr->t--; c=thr->s[thr->t]*2+thr->s[thr->t+1]; thr->s[thr->t]=music->rom[c]|(music->rom[c]<<8); break;
+            case 0x80: StackReq(2,1); thr->t--; thr->s[thr->t-1]+=thr->s[thr->t]; break;
+            case 0x81: StackReq(2,1); thr->t--; thr->s[thr->t-1]-=thr->s[thr->t]; break;
+            case 0x82: StackReq(2,1); thr->t--; thr->s[thr->t-1]*=thr->s[thr->t]; break;
+            case 0x83: StackReq(2,1); thr->t--; thr->s[thr->t-1]/=thr->s[thr->t]; break;
+            case 0x84: StackReq(2,1); thr->t--; thr->s[thr->t-1]/=(Sint16)thr->s[thr->t]; break;
+            case 0x85: StackReq(2,1); thr->t--; thr->s[thr->t-1]%=thr->s[thr->t]; break;
+            case 0x86: StackReq(2,1); thr->t--; thr->s[thr->t-1]<<=thr->s[thr->t]; break;
+            case 0x87: StackReq(2,1); thr->t--; thr->s[thr->t-1]>>=thr->s[thr->t]; break;
+            case 0x88: StackReq(2,1); thr->t--; thr->s[thr->t-1]=((Sint16)thr->s[thr->t-1])>>thr->s[thr->t]; break;
+            case 0x89: StackReq(2,1); thr->t--; thr->s[thr->t-1]&=thr->s[thr->t]; break;
+            case 0x8A: StackReq(2,1); thr->t--; thr->s[thr->t-1]|=thr->s[thr->t]; break;
+            case 0x8B: StackReq(2,1); thr->t--; thr->s[thr->t-1]^=thr->s[thr->t]; break;
+            case 0x8C: StackReq(2,1); thr->t--; thr->s[thr->t-1]+=thr->s[thr->t]; break;
+            case 0x8D: StackReq(2,1); thr->t--; thr->s[thr->t-1]+=thr->s[thr->t]; break;
+            case 0x8E: StackReq(2,1); thr->t--; thr->s[thr->t-1]=music->rom[(thr->s[thr->t-1]+thr->s[thr->t])&0xFFFF]; break;
+            case 0x8F: StackReq(2,1); thr->t--; c=(thr->s[thr->t-1]*2+thr->s[thr->t])&0xFFFF; thr->s[thr->t-1]=music->rom[c]|(music->rom[c+1]<<8); break;
             case 0x90: StackReq(0,1); thr->s[thr->t++]=thr->a; break;
             case 0x91: StackReq(0,1); thr->s[thr->t++]=thr->b; break;
             case 0x92: StackReq(0,1); thr->s[thr->t++]=thr->c; break;
@@ -356,17 +363,17 @@ static inline void render_music(Sint16*buf,int len) {
             case 0xA5: c=music->rom[thr->p++]; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]!=thr->s[thr->t+1]) thr->p+=c-(c&0x80?256:0); break;
             case 0xA6: c=music->rom[thr->p++]; thr->r=thr->p; thr->p+=c-(c&0x80?256:0); break;
             case 0xA7: c=music->rom[thr->p++]; StackReq(0,1); thr->s[thr->t++]=thr->p; thr->p+=c-(c&0x80?256:0); break;
-            case 0xA8: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; thr->p=c; break;
-            case 0xA9: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; if(thr->t && !thr->s[--thr->t]) thr->p=c; break;
-            case 0xAA: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; if(thr->t && thr->s[--thr->t]) thr->p=c; break;
-            case 0xAB: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]<thr->s[thr->t+1]) thr->p=c; break;
-            case 0xAC: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]==thr->s[thr->t+1]) thr->p=c; break;
-            case 0xAD: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]!=thr->s[thr->t+1]) thr->p=c; break;
-            case 0xAE: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; thr->r=thr->p; thr->p=c; break;
-            case 0xAF: c=music->rom[thr->p++]; c|=music->rom[thr->p++]; StackReq(0,1); thr->s[thr->t++]=thr->p; thr->p=c; break;
+            case 0xA8: c=music->rom[thr->p++]; c|=music->rom[thr->p++]<<8; thr->p=c; break;
+            case 0xA9: c=music->rom[thr->p++]; c|=music->rom[thr->p++]<<8; if(thr->t && !thr->s[--thr->t]) thr->p=c; break;
+            case 0xAA: c=music->rom[thr->p++]; c|=music->rom[thr->p++]<<8; if(thr->t && thr->s[--thr->t]) thr->p=c; break;
+            case 0xAB: c=music->rom[thr->p++]; c|=music->rom[thr->p++]<<8; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]<thr->s[thr->t+1]) thr->p=c; break;
+            case 0xAC: c=music->rom[thr->p++]; c|=music->rom[thr->p++]<<8; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]==thr->s[thr->t+1]) thr->p=c; break;
+            case 0xAD: c=music->rom[thr->p++]; c|=music->rom[thr->p++]<<8; StackReq(2,0); thr->t-=2; if(thr->s[thr->t]!=thr->s[thr->t+1]) thr->p=c; break;
+            case 0xAE: c=music->rom[thr->p++]; c|=music->rom[thr->p++]<<8; thr->r=thr->p; thr->p=c; break;
+            case 0xAF: c=music->rom[thr->p++]; c|=music->rom[thr->p++]<<8; StackReq(0,1); thr->s[thr->t++]=thr->p; thr->p=c; break;
             case 0xB0 ... 0xB3: StackReq(0,1); thr->s[thr->t++]=c&3; break;
             case 0xB4: StackReq(0,1); thr->s[thr->t++]=music->rom[thr->p++]; break;
-            case 0xB5: StackReq(0,1); thr->s[thr->t++]=music->rom[thr->p]|(music->rom[thr->p+1]); thr->p+=2; break;
+            case 0xB5: StackReq(0,1); thr->s[thr->t++]=music->rom[thr->p]|(music->rom[thr->p+1]<<8); thr->p+=2; break;
             case 0xB6: if(thr->t) thr->s[thr->t-1]++; break;
             case 0xB7: if(thr->t) thr->s[thr->t-1]--; break;
             case 0xB8: StackReq(0,1); thr->s[thr->t++]=get_special_i(thr->c?music->ch+thr->c-1:0,music->rom[thr->p++],m); break;
@@ -447,6 +454,7 @@ static inline void render_music(Sint16*buf,int len) {
               switch(music->in[c].t) {
                 case INST_WAVE:
                   if(thr->x>0.0) cha->freq=music->in[c].rate*thr->x;
+                  break;
               }
               break;
             case 0xF6:
@@ -471,12 +479,32 @@ static inline void render_music(Sint16*buf,int len) {
     }
   }
   if(bpos!=pos) render_music_frame(fbuf+bpos,pos-bpos);
-  for(pos=0;pos<len;pos++) {
-    v=fbuf[pos]*config.music_amp+buf[pos];
-    buf[pos]=fmax(-32768.0,fmin(v,+32767.0));
-  }
+  for(pos=0;pos<len;pos++) buf[pos]=fmax(-32767.5,fmin(fbuf[pos]*config.music_amp+buf[pos],+32767.0));
 }
 #undef StackReq
+
+static void dump_music_state(void) {
+  Channel*cha;
+  Thread*thr;
+  int i;
+  if(!music) return;
+  printf("\n*** Music ***\nname=\"%s\" song=%u on=%u\n",music_name,music_song,music_on);
+  printf("z=%f tcur=%lu tmax=%lu g=%u size=%u tempo=%u\n",music->z,(unsigned long)music->tcur,(unsigned long)music->tmax,music->g,music->size,music->tempo);
+  printf("*** Channels ***\n");
+  for(i=0;i<music->nch;i++) {
+    cha=music->ch+i;
+    printf("%d: resam.pin=%lu resam.pout=%lu freq=%f amp=%f env1=%d env2=%d instrument=%d flag=0x%X pos1=%d pos2=%d\n",i+1,
+     (unsigned long)cha->resam.pin,(unsigned long)cha->resam.pout,cha->freq,cha->amp,cha->env1,cha->env2,cha->instrument,cha->flag,cha->pos1,cha->pos2);
+  }
+  printf("*** Threads ***\n");
+  for(i=0;i<music->nth;i++) {
+    thr=music->th+i;
+    printf("%d: x=%f y=%f s={%d,%d,%d,%d,%d,%d,%d,%d} a=%u b=%u l=%u m=%u p=%u r=%u c=%u n=%u t=%u w=%u\n",i,
+     thr->x,thr->y,thr->s[0],thr->s[1],thr->s[2],thr->s[3],thr->s[4],thr->s[5],thr->s[6],thr->s[7],
+     thr->a,thr->b,thr->l,thr->m,thr->p,thr->r,thr->c,thr->n,thr->t,thr->w);
+  }
+  printf("*** End ***\n");
+}
 
 static void audiocb(void*userdata,Uint8*stream,int len) {
   static float prf=0.0;
@@ -490,7 +518,7 @@ static void audiocb(void*userdata,Uint8*stream,int len) {
   while(pos<len) {
     if(cfreq<0) {
       while(pos<len) buf[pos++]=vol*(prf*=fil);
-      return;
+      break;
     } else if(cfreq && cfreq<=NOTE_MASK) {
       while(pos<len && cpos<cmax) {
         pha+=note_table[cfreq];
@@ -862,6 +890,11 @@ void audio_set_sfx(const char*m) {
   SDL_LockAudio();
   if(*m=='@') {
     m++;
+    if(config.music_debug==255 && *m=='|') {
+      dump_music_state();
+      SDL_UnlockAudio();
+      return;
+    }
     n=0;
     while(*m>='0' && *m<='9') n=10*n+*m++-'0';
     if(n<priority || (n==priority && (n&1))) goto end;
@@ -1309,7 +1342,14 @@ static void load_bgm(const char*name,Uint16 song) {
   fclose(f);
   if(config.music_debug>98) {
     printf("Loaded music \"%s\", %d, %d\n",music_name,song,music_song);
-    for(i=0;i<music->nin;i++) printf("Instrument #%d: %d\n",i+1,music->in[i].t);
+    for(i=0;i<music->nin;i++) {
+      printf("Instrument #%d: Type %d\n",i+1,music->in[i].t);
+      switch(music->in[i].t) {
+        case INST_WAVE:
+          printf("  len=%lu ls=%lu le=%lu is8=%u\n",(unsigned long)music->in[i].wave.len,(unsigned long)music->in[i].wave.ls,(unsigned long)music->in[i].wave.le,music->in[i].wave.is8);
+          break;
+      }
+    }
     for(i=0;i<music->nrc;i++) printf("Real #%d: %4.8g\n",i+16,music->rc[i]);
     for(i=0;i<music->nch;i++) printf("Channel #%d: flag=0x%02X\n",i+1,music->ch[i].flag);
   }
@@ -1321,6 +1361,7 @@ static void load_bgm(const char*name,Uint16 song) {
     music->ch[i].freq=1.0;
     music->ch[i].instrument=0;
   }
+  for(i=0;i<music->nth;i++) if(i<music->nch && (music->ch[i].flag&CHAN_USE)) music->th[i].c=i+1;
 }
 
 void audio_set_music(const char*name,Uint16 song) {

@@ -526,6 +526,7 @@ The special integer registers are (*read-only):
   00  Current thread (zero-based) *
   01  Tempo
   02  Tempo accumulator
+  7F  Debug output
   (Channel)
   80  Instrument
   81  Offset

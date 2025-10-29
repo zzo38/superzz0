@@ -192,7 +192,7 @@ static uint16_t parse_notelen(char**p,uint16_t n) {
   if(*t>='0' && *t<='9') {
     n=*t++-'0';
     while(*t>='0' && *t<='9') n=10*n+*t++-'0';
-    if(!n || !(n=divisions/n)) errx(1,"Improper note duration (%d)",n);
+    if(!n || !(n=divisions/n)) errx(1,"Improper note duration");
   } else if(*t=='=') {
     n=0; t++;
     while(*t>='0' && *t<='9') n=10*n+*t++-'0';
@@ -851,8 +851,8 @@ static void send_standard(void) {
   w=romsize;
   for(i=0;i<nwaits;i++) add_op(waits[i]);
   labels['!'*128+'L']=romsize;
-  add_numb(w-2*0x60);
-  add_op(0x8F);
+  add_numb(w-0x60);
+  add_op(0x8E);
   add_op(0x99);
   add_op(0xF0);
 }
