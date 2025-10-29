@@ -1012,6 +1012,11 @@ static void edit_joystick(void) {
   win_refresh();
   // Encode the configuration as DER format
   asn1_free(general_parts+0);
+  for(y=0;y<32 && !jc[y].text[0];y++);
+  if(y==32) {
+    general_parts[0].class=0;
+    return;
+  }
   enc=asn1_start_encoding_constructed_value(general_parts+0,ASN1_CONTEXT_SPECIFIC,0,0);
   if(!enc) err(1,"Allocation failed");
   for(y=0;y<32;y++) if(jc[y].text[0]) {

@@ -85,6 +85,8 @@ OTHERS
   +  Improved audio resampling.
   =  Avoid processing the same key event multiple times after restoring
      a save game file.
+  =  Avoid saving the joystick configuration in the world file if the
+     joystick configuration is empty.
   *  The save game format has been changed (and is no longer compatible
      with older versions of Super ZZ Zero; if you have a save game file
      from an older version of Super ZZ Zero, it will not work with this
