@@ -3856,6 +3856,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
         esc=0;
       }
       if(esc) {
+        Uint8 lc=32,ll=0;
         for(v=0;v<80;) {
           c=buf[v]=s->text[ip];
           if(c=='\n' || !c) break;
@@ -3879,6 +3880,19 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
                   ip++;
                 }
                 continue;
+              }
+            } else if(s->text[ip]=='l' || s->text[ip]=='L') {
+              ip++;
+              lc=parse_number(s,xy,&ip)?:lc;
+              ll=v;
+            } else if(s->text[ip]=='r' || s->text[ip]=='R') {
+              ip++;
+              w=parse_number(s,xy,&ip);
+              if(w>80) break;
+              if(w>v && w>ll) {
+                memmove(buf+w+ll-v,buf+ll,v-ll);
+                memset(buf+ll,lc,w-v);
+                v=w;
               }
             } else {
               v+=append_escaped(buf+v,80-v,s,xy,ip);

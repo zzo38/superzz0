@@ -46,6 +46,8 @@ SCRIPTS
   +  #MIXCHOICES command mixes up the order of choices in a text window.
   +  #AUTOCHOICE makes a selection automatically instead of displaying the
      text window with choices.
+  +  When using #ESCAPE, you can now use {L} and {R} to do right alignment
+     with leaders.
 
 ASSEMBLY
   +  The $C6 memory cell now stores the address of the next instruction if

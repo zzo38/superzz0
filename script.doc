@@ -556,6 +556,10 @@ that they must be replaced by a parameter.
 {Dn}
   The text of a dynamic string, numbered n (1 to 255).
 
+{Ln}
+  Set the left position for leaders. The number is the character code
+  for the leaders;
+
 {Nn}
   Show the number n (this is usually an expression, rather than a
   plain number, since a plain number is not very useful here).
@@ -563,6 +567,11 @@ that they must be replaced by a parameter.
 {Nn,m}
   Like {Nn} but there is the minimum width is another number m; it
   will be right aligned and padded with spaces.
+
+{Rn}
+  Set the right position for leaders. The number is the zero-based
+  column number which is the right position. You must have {L} before
+  it on the same line, otherwise .
 
 {Tn}
   Given a number n being the zero-based column to advance to; it is

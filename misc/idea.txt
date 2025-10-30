@@ -419,7 +419,7 @@ if someone provides a patch). Some of these features include:
 * Password protection. (MegaZeux used to have this feature, and OHRRPGCE
 still does (although I think some maintainers want to remove it).)
 
-* RTC (date/time) access.
+* RTC (date/time) access. (The only timing is the number of frames.)
 
 * File I/O. (It may be possible to support lump I/O, but the codes in the
 world file would never be able to access external files. External file
@@ -427,7 +427,7 @@ access is always under the control of the user.)
 
 * In app purchases.
 
-* Unicode.
+* Unicode. (TRON code is better.)
 
 * Network access. (Communication with catalog services, version control
 services, etc, would use separate programs, and are not a part of the
@@ -441,11 +441,12 @@ can use an abstract handling.)
 use them it would be done by a separate package manager instead, which
 should allow the user to disable automatic updates, anyways.)
 
-* Operating system detection.
+* Operating system detection. (It is supposed to be independent of the
+operating system.)
 
 * Saving/restoring games by scripts/programs defined in the world file.
-(Restrictions for saving games may be added, but not restrictions for
-restoring saved games.)
+(You can prevent saving the game, but cannot prevent restoring, nor can
+you trigger an event from restoring a save game.)
 
 * Persisting data across different instances of a game. (Data will always
 persist across save/restore games, but if you restart the game and create
@@ -453,7 +454,7 @@ a new save file, it does not interact with the old save file at all.)
 
 * 3D graphics.
 
-* Ability for game world code to adjust game speed at run time. (I may add
+* Ability for game world code to adjust game speed at run time. (There is
 a setting within the world file to specify the default game speed, though.)
 
 * True colour graphics.
