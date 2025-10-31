@@ -11,7 +11,8 @@ each file; some of these instructions are within the source files themself
 and are called by the main.mak file.
 
 Normally, the executable file will be ~/bin/superzz0 but you can modify
-main.c in order to change this if you wish.
+main.c in order to change this if you wish. (You will need to create the
+directory ~/bin if it does not exist; it doesn't do this automatically.)
 
 Note that the documentation file opcodes.doc is also used for compiling
 asm.c and game.c, so it is not only for documentation. The lines starting
