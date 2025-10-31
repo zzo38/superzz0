@@ -23,3 +23,12 @@ the sz0version program for handling version numbers. For assembler (asm.c)
 must be compiled separately. The programs for handling the catalog service
 are not written yet, but they will also be compiled separately.
 
+In display.c you can add some preprocessor definitions to control the
+compilation (they can be used in other files as well, although they are
+ineffective in other files):
+
+  CONFIG_DISABLE_X11_FUNCTIONS = Disables all uses of X11 functions.
+  CONFIG_USE_DEPRECATED_X11_FUNCTION = Use XKeycodeToKeysym function.
+
+(In future, more preprocessor definitions to control compilation might
+also be defined, and will also be documented here.)

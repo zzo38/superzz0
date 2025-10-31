@@ -6,6 +6,10 @@ exit
 #include "common.h"
 #include <math.h>
 
+#ifdef CONFIG_DISABLE_X11_FUNCTIONS
+#undef SDL_VIDEO_DRIVER_X11
+#endif
+
 #ifdef SDL_VIDEO_DRIVER_X11
 #define Screen XScreen
 #include "SDL_syswm.h"
@@ -706,10 +710,20 @@ void init_display(void) {
         if(xlock=info.info.x11.lock_func) xlock();
         if(mods=XGetModifierMapping(xdisplay)) {
           for(i=3*mods->max_keypermod;i<8*mods->max_keypermod;i++) {
+#ifdef CONFIG_USE_DEPRECATED_X11_FUNCTION
             switch(XKeycodeToKeysym(xdisplay,mods->modifiermap[i],0)) {
               case XK_Num_Lock: num_mask=1<<(i/mods->max_keypermod); break;
               case XK_Mode_switch: mode_switch_mask=1<<(i/mods->max_keypermod); break;
             }
+#else
+          KeySym*x=0;
+          int j;
+          if(mods->modifiermap[i] && (x=XGetKeyboardMapping(xdisplay,mods->modifiermap[i],1,&j)) && j>0) switch(*x) {
+            case XK_Num_Lock: num_mask=1<<(i/mods->max_keypermod); break;
+            case XK_Mode_switch: mode_switch_mask=1<<(i/mods->max_keypermod); break;
+          }
+          if(x) XFree(x);
+#endif
           }
           XFreeModifiermap(mods);
         }
