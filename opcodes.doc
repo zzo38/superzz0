@@ -712,6 +712,13 @@ numbers are treated as unsigned.
   This works like PARN but can also parse a item name and optional flags;
   see the "Items" section of script.doc for details of the expected format.
 
+[087 PARY]
+  Reads a name (optionally preceded by spaces) from a script selected from
+  the second operand; the text buffer will contain the name, converted to
+  uppercase. The condition flag will be true if successful or false if not,
+  but will skip anyways. If it did not read anything, then the text buffer
+  will be empty after this command is executed.
+
 [089 CHEX]
   Changes a board exit. The low 2-bits second operand specifies the
   direction, and the first operand has the target board number.

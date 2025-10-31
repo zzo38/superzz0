@@ -3299,6 +3299,72 @@ static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
   }
 }
 
+static char parse_name(Stat*s,StatXY*xy,Uint16*ip) {
+  Uint8 c;
+  while(s->text[*ip]==' ') ++*ip;
+  for(ntextbuf=0;ntextbuf<80;ntextbuf++) {
+    c=s->text[*ip];
+    if(c>='a' && c<='z') textbuf[ntextbuf]=c+'A'-'a';
+    else if(c>32 && c<127) textbuf[ntextbuf]=c;
+    else break;
+    ++*ip;
+  }
+  textbuf[ntextbuf]=0;
+  return ntextbuf?1:0;
+}
+
+static void script_set_music(Stat*s,StatXY*xy,Uint16*ip) {
+  Uint16 w;
+  parse_name(s,xy,ip);
+  if(!strcmp(textbuf,"STOP")) {
+    audio_set_music(0,0);
+  } else if(!strcmp(textbuf,"PLAY")) {
+    parse_name(s,xy,ip);
+    w=parse_number(s,xy,ip);
+    if(w!=music_song || strcmp(music_name,textbuf)) audio_set_music(textbuf,w);
+  } else if(!strcmp(textbuf,"REPLAY")) {
+    parse_name(s,xy,ip);
+    w=parse_number(s,xy,ip);
+    audio_set_music(textbuf,w);
+  } else if(!strcmp(textbuf,"SKIP")) {
+    audio_set_music("",music_song);
+  } else if(!strcmp(textbuf,"RESET") || !strcmp(textbuf,"SET")) {
+    int m=*textbuf;
+    int i;
+    VarProperty*v;
+    for(i=0;i<board_info.varprop.count;i++) if((board_info.varprop.item[i].type>>4)==4) break;
+    if(i==board_info.varprop.count) return;
+    v=board_info.varprop.item+i;
+    if(ntextbuf>8) textbuf[ntextbuf=8]=0;
+    if(parse_name(s,xy,ip)) {
+      w=parse_number(s,xy,ip);
+      if(v->type==0x40) v->data[0]=(m=='R'?0xC0:0x80);
+      if(w>=63) {
+        v->data[0]|=63;
+        v->data[1]=w; v->data[2]=w>>8;
+        i=3;
+      } else {
+        v->data[0]=w+(v->data[0]&0xC0);
+        i=1;
+      }
+      v->type=ntextbuf+i+0x40;
+      memcpy(v->data+i,textbuf,9);
+    } else {
+      if(v->type==0x40) audio_set_music(0,0);
+      if(v->type<0x42 || v->type>0x4B) return;
+      v->data[v->type&15]=0;
+      if((w=v->data[0]&63)==63) w=(v->data[1])|(v->data[2]<<8),i=3; else i=1;
+      strncpy(textbuf,v->data+i,9);
+      ntextbuf=strlen(textbuf);
+    }
+    if(m=='R' || w!=music_song || strcmp(music_name,textbuf)) audio_set_music(textbuf,w);
+  } else if(!strcmp(textbuf,"CANCEL")) {
+    int i;
+    audio_set_music(0,0);
+    for(i=0;i<board_info.varprop.count;i++) if((board_info.varprop.item[i].type>>4)==4) board_info.varprop.item[i].type=0x40;
+  }
+}
+
 static void script_do_erase(const ScriptKind*sk) {
   Uint32 at;
   Uint32 m=board_info.width*board_info.height;
@@ -3695,6 +3761,8 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               if(buf[4]=='3') s->misc3=w;
             } else if(!strcmp(buf,"MIXCHOICES") && textfile) {
               mix_text_choices();
+            } else if(!strcmp(buf,"MUSIC")) {
+              script_set_music(s,xy,&ip);
             } else goto badcommand; break;
           case 'P':
             if(!strcmp(buf,"PARAMETER")) {
@@ -5089,6 +5157,10 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           so=parse_number(stats+(so&0xFFFF)-1,rs,&rs->instptr);
           if(condflag) regs[fo]=so;
         }
+        break;
+      case OP_PARY:
+        condflag=0;
+        if((rs=get_statxy(so)) && stats[(so&0xFFFF)-1].text && rs->instptr<stats[(so&0xFFFF)-1].length) condflag=parse_name(stats+(so&0xFFFF)-1,rs,&rs->instptr);
         break;
       case OP_PBF: board_info.flag=so; break;
       case OP_PBU: board_info.userdata=so; break;

@@ -208,11 +208,44 @@ are not allowed in this case.
   Randomizes the order of an unbroken sequence of links that ends at the
   point of this command; no other text lines are allowed in between.
 
+#MUSIC CANCEL
+  Like #MUSIC STOP but also prevents the music from starting again when
+  entering this board like #MUSIC RESET does (it will only work if the
+  music has already been set by the variable property lists).
+
+#MUSIC PLAY name number
+  Play the specified song number in the music lump with the specified name.
+  If that song is already playing, then it does nothing. If the song number
+  is omitted, then song 0 will be played.
+
+#MUSIC REPLAY name number
+  Same as #MUSIC PLAY but will restart the song if it is already playing.
+
+#MUSIC RESET name number
+  Like a combination of #MUSIC SET with #MUSIC REPLAY.
+
+#MUSIC SET name number
+  Same as #MUSIC PLAY but also sets the music for the board in the variable
+  property list. The name and number can be omitted, in which case it will
+  use the music that is already set in the variable property list instead
+  of changing it. Either way, this will only work if the variable property
+  list for the current board already specifies music or cancel music, and
+  it will not remember that it has been set unless the board is persistent.
+
+#MUSIC SKIP
+  Skip to the next song. If there is no next song, then it will restart
+  the current song instead.
+
+#MUSIC STOP
+  Stop the background music. (This does not affect music and sound effects
+  that has been played by #PLAY.)
+
 #PARAMETER number
   Set this object's tile parameter.
 
 #PLAY sfx_music
-  See the below section about sound effects.
+  See the below section about sound effects. (This is not the same as
+  #MUSIC and does not interact with it at all.)
 
 #PUT dir kind
   Like #PUTAT but the adjacent cell in the specified direction.

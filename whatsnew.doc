@@ -48,6 +48,7 @@ SCRIPTS
      text window with choices.
   +  When using #ESCAPE, you can now use {L} and {R} to do right alignment
      with leaders.
+  +  #MUSIC command to set the music.
 
 ASSEMBLY
   +  The $C6 memory cell now stores the address of the next instruction if
