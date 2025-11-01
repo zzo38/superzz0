@@ -3,7 +3,8 @@ This document describes how to compile Super ZZ Zero.
 Write the C compiler flags into the file called "cflags", e.g. "-s -O2"
 for release or "-g -O0" for debug. Other flags may also be specified;
 all C files that need to be compiled will use these flags. You may use
-other flags as well (e.g. "-march" and "-mtune").
+other flags as well (e.g. "-march" and "-mtune"). The -DCONFIG_ flags
+explained below can also be used to configure some functions.
 
 The program called "maker" will execute the build system. The file called
 "main.mak" specifies the dependencies and the instructions for compiling
