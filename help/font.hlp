@@ -1,0 +1,90 @@
+@Font editing
+On the font editing screen, you can edit the characters of a font. Select a
+character to edit (in the left window) by ALT+arrows, and then use arrows to
+move the cursor in the right window and space to toggle the pixel.
+
+!ed;Editing characters
+!me;Memory
+!ma;Macros
+!ba;Batch mode
+
+:ed;Editing characters
+You can use arrows to move the cursor in the right window and space to toggle
+the pixel. Push delete to clear the current glyph, and you can push insert to
+revert it to the PC font.
+
+Push tab to toggle draw mode; when the draw mode is activated, then it will
+set every pixel the cursor passes over, so that you do not need to push the
+space bar each time.
+
+In addition, there are some functions which modify the entire picture:
+  <I> Toggle all pixels
+  <F> Flip vertically
+  <M> Mirror horizontally
+
+:me;Memory
+There is an internal memory that can store a single character glyph; push Y
+to store the current glyph in the memory.
+
+You may also store one of nine predefined patterns in memory by using the
+numbers 1 to 9; the predefined patterns are as follows:
+  ° ± ² Û Ü Ý Þ ß þ
+  1 2 3 4 5 6 7 8 9
+
+You can then alter the current character glyph with the memory by using the
+functions mentioned below. The memory will remain even after you go to a
+different character to edit, or to a different font to edit, but will be
+lost if you quit the Super ZZ Zero editor, or overwrite the memory.
+
+Push A, O, or X to modify the current glyph by performing a AND, OR, or XOR
+operation on it with the memory.
+
+Push P to overwrite the current glyph with a copy of the memory.
+
+Push Z to exchange the current glyph with the memory.
+
+:ma;Macros
+You can record a macro, which is a sequence of operations; you can record up
+to 128 commands in one macro.
+
+Push F1 to start recording, and then enter the commands that you want to be
+recorded (they will be executed while doing so) and then F1 again to stop
+the recording. You can push F2 at a later time to play back the macro; it
+can be played back multiple times.
+
+However, the following commands cannot be recorded:
+
+þ Exiting the font editor
+
+þ Switching to batch mode (doing so will cancel the recording)
+
+þ Any operations in batch mode
+
+þ Starting/stopping recording and playing back macros
+
+Macros are also usable in batch mode; see below. (You cannot record macros
+in batch mode but you can play back macros.)
+
+:ba;Batch mode
+The batch mode allows you to perform operations on multiple characters at
+once. Push B to enter or leave batch mode.
+
+Use the arrows to move the cursor, and space to mark which characters you
+want to be selected for batch operations. If you hold the control key while
+moving the cursor, then it will mark the characters that the cursor passes
+over, so that you do not need to push space bar for each one.
+
+You can also push U to unselect all characters, or N to select all of the
+unselected characters and vice-versa.
+
+The operations A, F, I, M, O, P, and X will operate like in the normal mode
+but affects all selected characters, instead of the current one.
+
+If you push F2 in the batch mode, it will apply the macro to each of the
+selected characters. The macro is allowed to move to other characters to
+be edited, which will be affected whether or not they have been selected
+for batch operation; however, the macro should then go back to the
+originally selected character before stopping recording the macro. (In this
+way, it is possible to copy several characters at once, possibly with
+modifications such as being flipped and/or mirrored.)
+

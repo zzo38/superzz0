@@ -1426,6 +1426,7 @@ static void edit_font(const char*name) {
       break;
     case SDLK_F1: if(rec) rec=0; else rec=1,nmacro=0,play=255; break;
     case SDLK_F2: rec=play=0; break;
+    case SDLK_SLASH: case SDLK_QUESTION: online_help("font",0); goto draw0;
     default:
       if(event.key.keysym.unicode==27) goto exit;
       goto input;
@@ -1471,6 +1472,7 @@ static void edit_font(const char*name) {
     case SDLK_u: memset(batch,0,256/8); break;
     case SDLK_x: for(k=0;k<256;k++) if(batch[k>>3]&(1<<(k&7))) for(i=0;i<14;i++) font[14*k+i]^=clip[i]; break;
     case SDLK_F2: for(k=0;k<256 && !bplay;k++) if(batch[k>>3]&(1<<(k&7))) cch=k,bplay=1,play=0; batch[cch>>3]&=~(1<<(cch&7)); break;
+    case SDLK_SLASH: case SDLK_QUESTION: online_help("font",0); goto draw0;
     default:
       if(event.key.keysym.unicode==27) goto exit;
       goto input;

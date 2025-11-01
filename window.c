@@ -226,9 +226,11 @@ void online_help(const char*major,const char*minor) {
     }
   }
   if(*min) --top; else top=gtop,cur=gcur,gtop=0,gcur=0;
+  memcpy(sv_font,v_font,80*25);
   memcpy(sv_char,v_char,80*25);
   memcpy(sv_color,v_color,80*25);
   window:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
   memset(v_char,0x00,80*25);
   memset(v_color,0x3E,80);
   memset(v_color+80*24,0x30,80);
@@ -398,6 +400,7 @@ void online_help(const char*major,const char*minor) {
   quit:
   fclose(f);
   free(lines);
+  memcpy(v_font,sv_font,80*25);
   memcpy(v_char,sv_char,80*25);
   memcpy(v_color,sv_color,80*25);
   v_status[80]=0;
