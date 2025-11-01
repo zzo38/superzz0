@@ -1,0 +1,14 @@
+Super ZZ Zero is a 2D game creation system similar to ZZT (Potomac Computer
+Systems) and MegaZeux (Software Visions). It is mainly for action-adventure
+puzzle games using a board grid, with top-down perspective, but it may also
+be suitable for other games.
+
+See compile.doc for information about compiling Super ZZ Zero, or you may
+use the provided binaries (which are only for 64-bit x86 GNU/Linux, and are
+only the released versions; if you want a feature that is only available in
+development versions then you must compile it by yourself). You can also
+see tutor.doc for quick starting the use of the program. See the other
+documentations for further details about the working of Super ZZ Zero.
+
+You can make contributions if you wish to do so, including reviews, games
+being made with it, bug reports, feature requests, patches, questions, etc.

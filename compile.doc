@@ -1,4 +1,7 @@
-This document describes how to compile Super ZZ Zero.
+This document describes how to compile Super ZZ Zero. You may run the
+"compile.sh" program, which will try to figure out some details of the
+system automatically and ask questions as required; alternatively, you
+may use the instructions below, for more control over it.
 
 Write the C compiler flags into the file called "cflags", e.g. "-s -O2"
 for release or "-g -O0" for debug. Other flags may also be specified;
