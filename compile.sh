@@ -97,7 +97,7 @@ specifying different configuration; if it does not work, you should either
 try to fix it by yourself or make a bug report. If you manage to fix it
 then you should provide a patch that can be used by other people.
 
-The value if cflags is now:
+The value of cflags is now:
 ZZZ
 cat cflags
 echo

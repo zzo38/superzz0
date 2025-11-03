@@ -387,6 +387,7 @@ void save_state(void) {
     } else {
       asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
     }
+    asn1_encode_integer(enc,item_random_key);
   asn1_end(enc);
   asn1_finish_encoder(enc);
   fclose(fp);
@@ -504,6 +505,8 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
   } else if(v1.type!=ASN1_NULL) {
     goto bad;
   }
+  if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j) goto bad;
+  if(v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&item_random_key)) goto bad;
   // End
   done: asn1_free(&v0);
 }
@@ -549,7 +552,9 @@ void load_state(void) {
   restore_game(fp);
   //  SAVE.DER
   if(!(fp=open_lump("SAVE.DER","r"))) errx(1,open_lump("SAVE","r")?"This is an old save game file; not compatible with this version of Super ZZ Zero.":"Invalid save game file (missing SAVE.DER lump)");
+  randomize_itemdefs(1);
   load_saveder(fp,&useglobalscript);
+  randomize_itemdefs(0);
   fclose(fp);
   //  MEMORY
   if(fp=open_lump("MEMORY","r")) {

@@ -641,7 +641,7 @@ extern Uint16 ngtext;
 typedef struct {
   Uint32 flag,maxheap,name,script,desc,weight,price,ext3,appearance;
   Uint16 ext4,ext5;
-  Uint8 element,class,color,parameter;
+  Uint8 element,class,color,parameter,special;
   // (class 255 means this item is not defined)
 } ItemDef;
 
@@ -656,6 +656,10 @@ extern Uint16 nitemdefs;
 #define IDF_UNIDENTIFIED 0x0008
 #define IDF_NO_RANDOMIZE 0x0010
 #define IDF_HILIGHT 0x0020
+
+// ItemDef:special
+#define ISPECIAL_NONE 0x00
+#define ISPECIAL_STATUS 0x10 // add number of status variable 0 to 15
 
 typedef struct {
   Uint32 quantity,ext0;
@@ -678,6 +682,7 @@ extern Inventory inventory[8];
 #define INV_IGNORE_MAXHEAP 0x0100
 #define INV_SINGLE_HEAP 0x0200
 #define INV_IGNORE_WEIGHT 0x0400
+#define INV_SPECIAL 0x0800
 
 // ItemSlot:flag
 #define ISF_IN_USE 0x8000
@@ -685,10 +690,14 @@ extern Inventory inventory[8];
 #define ISF_HIDDEN 0x2000
 #define ISF_IGNORE 0x1000
 #define ISF_HILIGHT 0x0800
+#define ISF_SPECIAL 0x0200
 #define ISF_MARK 0x0100
 
 const char*load_inventory(FILE*fp,Inventory*inv);
 const char*save_inventory(FILE*fp,Inventory*inv);
+
+extern Uint32 item_random_key;
+const char*randomize_itemdefs(Uint8 rev);
 
 // === Game state ===
 

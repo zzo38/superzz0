@@ -777,12 +777,37 @@ string and Graphic string might also be accepted).
 second being parameter (both have a default value of zero).
 
 
-=== ITEMEXT.DER ===
+=== ITEMRAND.DER ===
 
-This lump is used for data which has to do with item definitions but which
-is not itself a part of the item definitions.
+This lump contains a sequence of item randomizers, which are used to shuffle
+some of the details of item definitions.
 
-(It is not defined yet)
+Each randomizer is specified as a sequence with fields:
+
+* Lowest class number (integer).
+
+* Highest class number (integer). This field is optional; if it is omitted,
+then the highest class number is the same as the lowest class number.
+
+* Bit string specifying the criteria to match (other than the class number,
+which is already specified by the preceding fields):
+  User flags 7 to 0 set
+  User flags 15 to 8 set
+  User flags 7 to 0 clear
+  User flags 15 to 8 clear
+  Appearance is not empty
+
+* Bit string specifying which fields should be affected by the randomizer:
+  User flags 7 to 0
+  User flags 15 to 8
+  Appearance
+  Name
+  Element
+  Colour
+  Parameter
+  Ext3
+  Ext4
+  Ext5
 
 
 === MEMORY ===

@@ -2090,6 +2090,115 @@ static void edit_inventory(const char*name) {
   wrongname: alert_text("Name must be four hex digits, or X followed by one digit 0 to 7");
 }
 
+static void itemrand_list_callback(Uint16 n,int y,void*uz) {
+  const ASN1_Value*v=uz;
+  ASN1_Value vv;
+  char buf[20];
+  Uint8 i,j;
+  if(v->type==ASN1_NULL && !v->class) {
+    draw_text(2,y,"<Empty>",6,-1);
+  } else if(v->type==ASN1_SEQUENCE && !v->class) {
+    if(asn1_first_of(&vv,v) || asn1_decode_number(&vv,ASN1_AUTO,&i)) goto bad;
+    if(asn1_next_of(&vv,v) || vv.class || vv.type!=ASN1_INTEGER || asn1_decode_number(&vv,ASN1_AUTO,&j)) j=i;
+    draw_text(2,y,buf,15,snprintf(buf,20,"%d:%d",i,j));
+  } else {
+    bad: draw_text(2,y,"<Invalid record>",4,-1);
+  }
+}
+
+static void edit_itemrand(ASN1_Value*v0) {
+  char txt[80];
+  static const char*const nam[8]={"Appearance","Name","Element","Color","Parameter","Ext3","Ext4","Ext5"};
+  ASN1_Encoder*e;
+  ASN1_Value v;
+  Uint8 bi[8]={};
+  Uint8 bo[8]={};
+  Uint8 lc=0;
+  Uint8 hc=0;
+  int w,x,y,z;
+  if(v0->type==ASN1_SEQUENCE && !v0->class) {
+    if(asn1_first_of(&v,v0) || v.class || v.type!=ASN1_INTEGER || v.length!=1 || asn1_decode_number(&v,ASN1_INTEGER,&lc)) goto notvalid;
+    if(asn1_next_of(&v,v0)) goto notvalid;
+    if(!v.class && v.type==ASN1_INTEGER && v.length==1) {
+      if(asn1_decode_number(&v,ASN1_INTEGER,&hc) || asn1_next_of(&v,v0)) goto notvalid;
+      if(asn1_next_of(&v,v0)) goto notvalid;
+    } else {
+      hc=lc;
+    }
+    if(v.class || v.type!=ASN1_BIT_STRING || v.length<1 || v.length>8 || v.constructed) goto notvalid;
+    memcpy(bi,v.data,v.length);
+    if(asn1_next_of(&v,v0) || v.class || v.type!=ASN1_BIT_STRING || v.length<1 || v.length>8 || v.constructed) goto notvalid;
+    memcpy(bo,v.data,v.length);
+    *bi=*bo=0;
+  } else if(v0->type!=ASN1_NULL || v0->class) {
+    notvalid: alert_text("The loaded data is not valid, and will be reset.");
+  }
+  asn1_free(v0);
+  x=y=0;
+  redraw:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
+  memset(v_char,32,80*25);
+  memset(v_color,0x07,80*25);
+  for(z=0;z<16;z++) draw_text(1,z,txt,0x07,snprintf(txt,40,"User%d",z));
+  for(z=0;z<8;z++) draw_text(1,z+16,nam[z],0x07,-1);
+  draw_text(0,24,"<\x18\x19> Move <SP> Set <ESC> Done <L> LoClass:000 <H> HiClass:000",15,-1);
+  draw_text(42,24,txt,0x1B,snprintf(txt,8,"%3d",lc));
+  draw_text(58,24,txt,0x1B,snprintf(txt,8,"%3d",hc));
+  show:
+  for(z=0;z<16;z++) {
+    if(bi[z/8+1]&bi[z/8+3]&(1<<(z&7))) draw_text(13,z,"???     ",12,8);
+    else if(bi[z/8+1]&(1<<(z&7))) draw_text(13,z,"if set  ",2,8);
+    else if(bi[z/8+3]&(1<<(z&7))) draw_text(13,z,"if clear",4,8);
+    else if(bo[z/8+1]&(1<<(z&7))) draw_text(13,z,"affected",14,8);
+    else draw_text(13,z,"---     ",8,8);
+  }
+  if(bi[5]&0x80) draw_text(13,16,"not empty",3,9); else draw_text(13,16,"---      ",8,9);
+  for(z=0;z<8;z++) {
+    if(bo[3]&(128>>z)) draw_text(24,z+16,"affected",14,8); else draw_text(24,z+16,"---     ",8,8);
+  }
+  v_char[y*80]=16; v_color[y*80]=14;
+  redisplay();
+  while(next_event()) {
+    v_char[y*80]=32;
+    if(event.type==SDL_KEYDOWN) switch(event.key.keysym.sym) {
+      case SDLK_ESCAPE: goto done;
+      case SDLK_DOWN: case SDLK_KP2: case SDLK_j: if(y<23) y++; goto show;
+      case SDLK_UP: case SDLK_KP8: case SDLK_k: if(y) y--; goto show;
+      case SDLK_LEFT: case SDLK_KP4: w=-1; goto right;
+      case SDLK_RIGHT: case SDLK_KP6: case SDLK_SPACE: w=1; right:
+        if(y<16) {
+          x=1<<(y&7); z=y/8+1;
+          w=(w+(bi[z]&x?1:bi[z+2]&x?2:bo[z]&x?3:0))&3;
+          bi[z]&=~x; bi[z+2]&=~x; bo[z]&=~x;
+          if(w==1) bi[z]|=x; else if(w==2) bi[z+2]|=x; else if(w==3) bo[z]|=x;
+        } else {
+          bo[3]^=x=128>>(y-16);
+          if(y==16 && (bo[3]&x?1:-1)==w) bi[5]^=x;
+        }
+        goto show;
+      case SDLK_h: *txt=0; ask_text("Hi class:",txt,3); if(*txt && !((x=strtol(txt,0,10))&~127)) hc=x; goto redraw;
+      case SDLK_l: *txt=0; ask_text("Lo class:",txt,3); if(*txt && !((x=strtol(txt,0,10))&~127)) lc=x; goto redraw;
+      case SDLK_SLASH: case SDLK_QUESTION: online_help("items","ir"); goto redraw;
+    }
+  }
+  done:
+  if(!bo[1] && !bo[2] && !bo[3] && !bo[4] && !bo[5] && !bo[6] && !bo[7]) {
+    *v0=(ASN1_Value){.type=ASN1_NULL};
+  } else {
+    e=asn1_start_encoding_constructed_value(v0,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+    if(!e) err(1,"Allocation failed");
+    asn1_encode_integer(e,lc);
+    if(lc!=hc) asn1_encode_integer(e,hc);
+    for(x=8;x>1 && !bi[x-1];x--);
+    if(x==6) *bi=7;
+    asn1_primitive(e,ASN1_UNIVERSAL,ASN1_BIT_STRING,bi,x);
+    for(x=8;x>1 && !bo[x-1];x--);
+    asn1_primitive(e,ASN1_UNIVERSAL,ASN1_BIT_STRING,bo,x);
+    asn1_finish_encoder(e);
+  }
+  win_refresh();
+}
+
 static void edit_items_inventory(void) {
   win_form("Items/inventory edit") {
     win_help("items",0);
@@ -2108,7 +2217,7 @@ static void edit_items_inventory(void) {
         win_list(ni+1,items,itemdef_list_callback,n) if(n) edit_itemdef(items+n-1,n);
         win_blank();
         if(ni<0xFFFF) win_command('A',"Add new item definition...") {
-          if(!(items=realloc(items,++ni*sizeof(ItemDef)))) err(1,"Allocation failed");
+          if(!(items=realloc(items,++ni*sizeof(ASN1_Value)))) err(1,"Allocation failed");
           items[ni-1]=(ASN1_Value){.type=ASN1_NULL};
           edit_itemdef(items+ni-1,ni);
         }
@@ -2134,6 +2243,56 @@ static void edit_items_inventory(void) {
       free(items);
     }
     win_command('v',"Starting inventory") lump_listing_menu("*.INV","Inventory",edit_inventory,"items","inv");
+    win_command('R',"Randomizers") {
+      ASN1_Encoder*e;
+      ASN1_Value*items=0;
+      ASN1_Value root={};
+      ASN1_Value v;
+      FILE*fp=open_lump("ITEMRAND.DER","r");
+      int ni=0;
+      int n;
+      if(fp) {
+        if(asn1_read_item(fp,&root,0) || root.class!=ASN1_UNIVERSAL || root.type!=ASN1_SEQUENCE) {
+          fclose(fp);
+          alert_text("Error loading ITEMRAND.DER");
+          goto error1;
+        }
+        if(!asn1_first_of(&v,&root)) {
+          ni=1;
+          while(!asn1_next_of(&v,&root)) ni++;
+          items=calloc(ni,sizeof(ASN1_Value));
+          if(!items) err(1,"Allocation failed");
+          asn1_first_of(&v,&root);
+          for(n=0;n<ni && ni<0xFFFF;n++) {
+            items[n]=v;
+            asn1_next_of(&v,&root);
+          }
+        }
+        fclose(fp);
+      }
+      win_form("Item randomizers") {
+        win_help("items","ir");
+        win_list(ni,items,itemrand_list_callback,n) edit_itemrand(items+n);
+        win_blank();
+        if(ni<0xFFFF) win_command('A',"Add new randomizer...") {
+          if(!(items=realloc(items,++ni*sizeof(ASN1_Value)))) err(1,"Allocation failed");
+          items[ni-1]=(ASN1_Value){.type=ASN1_NULL};
+          edit_itemrand(items+ni-1);
+        }
+        win_blank();
+        win_command_esc(0,"Done") break;
+      }
+      fp=open_lump("ITEMRAND.DER","w");
+      if(!fp || !(e=asn1_create_encoder(fp))) errx(1,"Cannot open ITEMRAND.DER lump for writing");
+      asn1_construct(e,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+      for(n=0;n<ni;n++) if(items[n].type!=ASN1_NULL) asn1_encode(e,items+n);
+      asn1_free(&root);
+      free(items);
+      asn1_end(e);
+      asn1_finish_encoder(e);
+      fclose(fp);
+      error1:;
+    }
     win_blank();
     win_command_esc(0,"Done") break;
   }

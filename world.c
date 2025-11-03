@@ -5,6 +5,9 @@ exit
 
 #define USING_RW_DATA
 #include "common.h"
+#include <time.h>
+
+Uint32 item_random_key;
 
 static int check_feature(const ASN1_Value*v) {
   // Returns 0 if feature is valid, nonzero if feature is not valid.
@@ -170,6 +173,7 @@ static const char*load_item_definitions(FILE*f) {
   }
   fclose(of); fclose(nf);
   if((nitemdefs && !itemdefs) || !itemnames || nfi!=nfs) err(1,"Allocation failed");
+  if(!e && !editor) randomize_itemdefs(0);
   return e;
 }
 
@@ -190,6 +194,7 @@ const char*init_world(void) {
     fclose(fp);
     if((i^1)&0xF1) return "Wrong file type";
   }
+  item_random_key=time(0)^42;
   // "MEMORY"
   if(!editor) {
     fp=open_lump("MEMORY","r");
@@ -1149,3 +1154,33 @@ const char*save_inventory(FILE*fp,Inventory*inv) {
   if(m) write8(fp,m-1);
   return 0;
 }
+
+#define CBRANDOM_KEY 7333142306270100471ULL
+static inline Uint32 cbrandom2(Uint32 n,Uint64 c) {
+  // Square RNG counter-based random numbers.
+  // Used for randomizing item definitions.
+  Uint32 m=n-1;
+  Uint32 r;
+  Uint32 k=item_random_key&(c+42);
+  m|=m>>1; m|=m>>2; m|=m>>4; m|=m>>8; m|=m>>16;
+  for(;;) {
+    Uint64 x=CBRANDOM_KEY*c;
+    Uint64 y=x;
+    Uint64 z=CBRANDOM_KEY+y;
+    x=x*x+y; x=(x>>32)|(x<<32);
+    x=x*x+z; x=(x>>32)|(x<<32);
+    x^=((Uint64)item_random_key)<<29;
+    x=x*x+y; x=(x>>32)|(x<<32);
+    r=(k+((x*x+z)>>32))&m;
+    if(r<n) return n;
+    c++; k++;
+  }
+}
+
+const char*randomize_itemdefs(Uint8 rev) {
+  FILE*fp;
+  if(nitemdefs<2) return 0;
+  
+  return 0;
+}
+

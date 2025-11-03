@@ -7,6 +7,7 @@ item definitions and the inventory lists.
 !inv;Inventory
 !ip;Inventory properties
 !is;Item slot
+!ir;Item randomizers
 
 :dl;Item definition list
 On this screen, you can select an item definition to edit. You can also add
@@ -173,3 +174,44 @@ reached the max heap for that item.
 items to this inventory list.
 
 þ User0, User1, User2, User3: Boolean flags with no inherent meaning.
+
+:ir;Item randomizers
+Item randomizers can be used to randomize some of the properties of item
+definitions during each game; they will be stored in a save game file and
+restored when you restore the save game, but are randomized for each new
+game. The specified properties are shuffled among all item definitions
+belonging to the group, according to your specified criteria.
+
+Note that each item randomizer is independent; the items that meet the
+criteria of one item randomizer are not mixed up with those belonging to
+others unless it meets the criteria of multiple item randomizers.
+
+Move the cursor up/down to the line to you want to change, and then push
+space to change it. Push L and H to change the affected class range.
+
+All of the criteria specified must be met in order to be affected by this
+item randomizer; the effect is then shuffling around the values of the
+properties that are marked as "affected". If multiple properties are being
+affected, then they will stay together; e.g. if Ext3 and Ext4 are both
+affected, and one item has Ext3=5 and Ext4=10 then whichever item it is
+switched with will now have Ext3=5 and Ext4=10; it will not mix the Ext3
+and Ext4 separately (if you want that, then you should define it as a
+separate item randomizer, instead).
+
+The "User0" to "User15" represent the custom flags for the item definition.
+You can specify to only be affected if that flag is set or if that flag is
+clear, or to affect them either way and include it in the shuffling.
+
+For the appearance, you can specify to only include those whose appearance
+is not empty, and can independently specify to affect it or not.
+
+Other properties can only specify if it is affected or not. Note that if
+the name is affected, then scripts that refer to the item by name will
+refer to the item that has been given that name by the randomization,
+rather than the original item by that name; however, preset inventory
+lists, and any reference to item definitions by number, will refer to the
+item definition having that number.
+
+The class range is the range of item class numbers (from 0 to 127) that are
+affected; item definitions whose class number is not in this range are not
+affected, regardless of the other criteria.
