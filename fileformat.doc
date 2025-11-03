@@ -407,110 +407,6 @@ if bit1 is set then the colour byte follows; if bit2 is set then the
 parameter byte follows. Any omitted bytes are copied from the previous
 cell if bit3 is clear, or are zero if bit3 is set.
 
-The commands are:
-
-* SC_BACKGROUND = Display a fixed colour and character (parameter). If bit0
-is set then uses the character, if bit1 is set then uses the colour; clear
-bits mean to display what was previously displayed on the screen instead.
-
-* SC_BOARD = Display the contents of the board. If it is out of range, then
-it displays the fixed colour and character (like SC_BACKGROUND) if bit0 is
-set, except that if the border character is nonzero and it is exactly one
-step beyond the edge of the board, and bit1 is set, then it will display
-the border colour and character instead. If bit2 of the kind is set then
-the overlay is suppressed. Clearing bit0 will cause it to display the tile
-of the nearest edge instead.
-
-* SC_NUMERIC = Display the value of a status variable. The low nybble of
-the kind specifies which variable. The high nybble of the parameter means
-which numeric format to use (defined in the NUMFORM lump), and the low
-nybble of the parameter means the digit position (0 for the rightmost).
-
-* SC_NUMERIC_SPECIAL = Same as SC_NUMERIC but one of the special values
-below instead of a general-purpose status variable.
-
-* SC_MEMORY = The colour is the high byte and the parameter is the low byte
-of a memory address; the low byte of the value at that address is the
-character to display, and the high byte is the colour to display.
-
-* SC_INDICATOR = One of the indicators. The parameter means the character
-to display if the indicator is set; most indicators will be a blank space
-if the indicator is clear but there are some exceptions. See below for the
-list of valid indicators.
-
-* SC_TEXT = Text in the text window. The left hard edge is the left edge of
-the text, and the viewport X is used for centred text.
-
-* SC_ITEM = (Reserved for future use.)
-
-* SC_BITS_0_LO = The low 16-bits of status variable 0; shows the parameter
-character if set, or a blank space if clear. The low nybble of the kind
-means which bit to use.
-
-* SC_BITS_0_HI = Same as SC_BITS_0_LO but the high 16-bits instead.
-
-* SC_BITS_1_LO = These and more, up to SC_BITS_3_HI, are like the above
-two kinds but for status variables numbered 1 to 3 instead.
-
-Special values for SC_NUMERIC_SPECIAL:
-
-* SC_SPEC_PLAYER_X = X coordinate of first XY record of stat 1.
-
-* SC_SPEC_PLAYER_Y = Y coordinate of first XY record of stat 1.
-
-* SC_SPEC_CAMERA_X = X coordinate of centre of viewport.
-
-* SC_SPEC_CAMERA_Y = Y coordinate of centre of viewport.
-
-* SC_SPEC_TEXT_SCROLL_PERCENT = If this is a text window, a number from 0
-to 100 indicating how far down scrolled it is from the top.
-
-* SC_SPEC_TEXT_LINE_NUMBER = If this is a text window, the 1-based line
-number of the cursor.
-
-* SC_SPEC_TEXT_LINE_COUNT = If this is a text window, the total number of
-lines of text.
-
-* SC_SPEC_CURRENT_BOARD = The current board number.
-
-* SC_SPEC_EXIT_E = The east exit of the current board.
-
-* SC_SPEC_EXIT_N = The north exit of the current board.
-
-* SC_SPEC_EXIT_W = The west exit of the current board.
-
-* SC_SPEC_EXIT_S = The south exit of the current board.
-
-* SC_SPEC_WIDTH = The width of the current board.
-
-* SC_SPEC_HEIGHT = The height of the current board.
-
-* SC_SPEC_USERDATA = The user data field of the current board.
-
-Indicators for SC_INDICATOR:
-
-* SC_IND_CURSOR = The cursor position or player position. Displayed if
-either the X or Y coordinate is aligned with the indicator.
-
-* SC_IND_SCROLL = Displayed if it is possible to scroll in the direction
-where this is relative to the nearest hard edge.
-
-* SC_IND_EXIT_E = Displayed if the east exit is nonzero.
-
-* SC_IND_EXIT_N = Displayed if the north exit is nonzero.
-
-* SC_IND_EXIT_W = Displayed if the west exit is nonzero.
-
-* SC_IND_EXIT_S = Displayed if the south exit is nonzero.
-
-* SC_IND_USER0 = Displayed if the user0 flag of the board is set.
-
-* SC_IND_USER1 = Displayed if the user1 flag of the board is set.
-
-* SC_IND_USER2 = Displayed if the user2 flag of the board is set.
-
-* SC_IND_USER3 = Displayed if the user3 flag of the board is set.
-
 
 === *.SND ===
 
@@ -777,37 +673,46 @@ string and Graphic string might also be accepted).
 second being parameter (both have a default value of zero).
 
 
-=== ITEMRAND.DER ===
+=== ITEMRAND ===
 
 This lump contains a sequence of item randomizers, which are used to shuffle
 some of the details of item definitions.
 
-Each randomizer is specified as a sequence with fields:
+Each record is sixteen bytes long, with the first eight bytes for the
+criteria and the last eight bytes for the effect.
 
-* Lowest class number (integer).
+The criteria consists of:
 
-* Highest class number (integer). This field is optional; if it is omitted,
-then the highest class number is the same as the lowest class number.
+* Lowest class number (8-bits). The high bit is reserved and must be clear.
 
-* Bit string specifying the criteria to match (other than the class number,
-which is already specified by the preceding fields):
-  User flags 7 to 0 set
-  User flags 15 to 8 set
-  User flags 7 to 0 clear
-  User flags 15 to 8 clear
-  Appearance is not empty
+* Highest class number (8-bits). The high bit is reserved and must be clear.
 
-* Bit string specifying which fields should be affected by the randomizer:
-  User flags 7 to 0
-  User flags 15 to 8
-  Appearance
-  Name
-  Element
-  Colour
-  Parameter
-  Ext3
-  Ext4
-  Ext5
+* A 16-bit field specifying which user-defined flags of the item definition
+must be set to match the criteria.
+
+* A 16-bit field specifying which user-defined flags of the item definition
+must be clear to match the criteria.
+
+* A 16-bit field specifying additional criteria:
+  bit7 = Appearance name must be not empty
+
+The effect consists of:
+
+* The effect type (8-bits). Currently, this must be zero.
+
+* A 8-bit field specifying things to be affected:
+  bit0 = Ext5
+  bit1 = Ext4
+  bit2 = Ext3
+  bit3 = Parameter
+  bit4 = Colour
+  bit5 = Element
+  bit6 = Name
+  bit7 = Appearance
+
+* A 16-bit field specifying which user-defined flags are affected.
+
+* Four reserved bytes (which must be zero).
 
 
 === MEMORY ===
