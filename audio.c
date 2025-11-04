@@ -569,7 +569,6 @@ static void audiocb(void*userdata,Uint8*stream,int len) {
 }
 
 static int convertaudio(WaveSound*wav,Uint16 rate,Uint8 ratemode,Uint16 form,Resample*resam) {
-  if(config.test_mode) printf("convertaudio(%p,%d,%d,%d,%p)\n",wav,rate,ratemode,form,resam);
   if(resam && (rate!=spec.freq || !ratemode)) {
     Sint16 buf[512];
     char*out=0;

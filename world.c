@@ -173,7 +173,7 @@ static const char*load_item_definitions(FILE*f) {
   }
   fclose(of); fclose(nf);
   if((nitemdefs && !itemdefs) || !itemnames || nfi!=nfs) err(1,"Allocation failed");
-  if(!e && !editor) randomize_itemdefs(0);
+  if(!e && !editor) e=randomize_itemdefs(0);
   return e;
 }
 
@@ -1172,15 +1172,93 @@ static inline Uint32 cbrandom2(Uint32 n,Uint64 c) {
     x^=((Uint64)item_random_key)<<29;
     x=x*x+y; x=(x>>32)|(x<<32);
     r=(k+((x*x+z)>>32))&m;
-    if(r<n) return n;
+    if(r<n) return r;
     c++; k++;
   }
 }
 
-const char*randomize_itemdefs(Uint8 rev) {
-  FILE*fp;
-  if(nitemdefs<2) return 0;
-  
+static inline const char*itemrand1(Uint8*d,Uint8 rev,Uint64 key) {
+  ItemDef*it;
+  ItemDef*it2;
+  Uint16*list=0;
+  Uint16*mix=0;
+  size_t nlist=0;
+  FILE*flist=0;
+  Uint32 q,r;
+  Uint16 k,m;
+  Uint16 n=0;
+  if((d[0]|d[1])&0x80) return "Error in item randomization";
+  flist=open_memstream((char**)&list,&nlist);
+  if(!flist) err(1,"Unexpected error");
+  do {
+    it=itemdefs+n;
+    if(it->class==255 || (it->flag&IDF_NO_RANDOMIZE)) continue;
+    if(it->class<d[0] || it->class>d[1]) continue;
+    if((d[6]&0x80) && !it->appearance) continue;
+    if((d[2]|(d[3]<<8))&~(it->flag>>16)) continue;
+    if((d[4]|(d[5]<<8))&(it->flag>>16)) continue;
+    fwrite(&n,sizeof(Uint16),1,flist);
+  } while(++n!=nitemdefs);
+  fclose(flist);
+  if(nlist && !list) err(1,"Unexpected error");
+  if(!nlist || (nlist<2 && !d[8])) { free(list); return 0; }
+  mix=malloc(nlist);
+  if(!mix) err(1,"Allocation failed");
+  nlist/=sizeof(Uint16);
+  for(n=0;n<nlist;n++) mix[n]=n;
+  for(m=nlist;m>1;m--) {
+    n=cbrandom2(m,key+=123456789ULL);
+    k=mix[n]; mix[n]=mix[m-1]; mix[m-1]=k;
+  }
+  q=(d[10]<<16)|(d[11]<<24);
+  for(n=0;n<nlist;n++) {
+    m=(rev?nlist-n-1:n);
+    if(m==mix[m]) continue;
+    it=itemdefs+list[m]; it2=itemdefs+list[mix[m]];
+    r=it->flag&q; it->flag&=~q; it->flag|=it2->flag&q; it2->flag&=~q; it2->flag|=r;
+    if(d[9]&0x01) r=it->ext5,it->ext5=it2->ext5,it2->ext5=r;
+    if(d[9]&0x02) r=it->ext4,it->ext4=it2->ext4,it2->ext4=r;
+    if(d[9]&0x04) r=it->ext3,it->ext3=it2->ext3,it2->ext3=r;
+    if(d[9]&0x08) r=it->parameter,it->parameter=it2->parameter,it2->parameter=r;
+    if(d[9]&0x10) r=it->color,it->color=it2->color,it2->color=r;
+    if(d[9]&0x20) r=it->element,it->element=it2->element,it2->element=r;
+    if(d[9]&0x40) r=it->name,it->name=it2->name,it2->name=r;
+    if(d[9]&0x80) r=it->appearance,it->appearance=it2->appearance,it2->appearance=r;
+  }
+  free(list);
+  free(mix);
   return 0;
+}
+
+const char*randomize_itemdefs(Uint8 rev) {
+  const char*e=0;
+  Uint64 key;
+  Uint32 n,s;
+  Uint8 d[16];
+  FILE*f;
+  if(config.test_mode) {
+    setbuf(stdout,0);
+    putchar(rev+'0'); putchar(' ');
+    f=popen("sha1sum","w");
+    fwrite(itemdefs,sizeof(ItemDef),nitemdefs,f);
+    pclose(f);
+  }
+  if(nitemdefs<2) return 0;
+  f=open_lump("ITEMRAND","r");
+  if(!f) return 0;
+  s=lump_size/16;
+  for(n=0;n<s && !e;n++) {
+    if(rev) fseek(f,key=(s-n-1)*16LL,SEEK_SET); else key=n*16LL;
+    fread(d,1,16,f);
+    e=itemrand1(d,rev,key);
+  }
+  fclose(f);
+  if(config.test_mode) {
+    putchar('+'); putchar(' ');
+    f=popen("sha1sum","w");
+    fwrite(itemdefs,sizeof(ItemDef),nitemdefs,f);
+    pclose(f);
+  }
+  return e;
 }
 
