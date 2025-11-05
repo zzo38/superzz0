@@ -26,11 +26,13 @@ C /home/user/superzz0/help
 P superzz0-release/help/
 ./anima.hlp anima.hlp
 ./appmap.hlp appmap.hlp
+./binfo.hlp binfo.hlp
 ./blist.hlp blist.hlp
 ./edit.hlp edit.hlp
 ./editbrd.hlp editbrd.hlp
 ./editgr.hlp editgr.hlp
 ./edithelp.hlp edithelp.hlp
+./editjoy.hlp editjoy.hlp
 ./editscr.hlp editscr.hlp
 ./edittext.hlp edittext.hlp
 ./editwin.hlp editwin.hlp
@@ -56,4 +58,5 @@ P superzz0-release/template/
 ./template/default.doc default.doc
 # Examples
 P superzz0-release/example/
+./example/music.sz0 music.sz0
 ./example/snake.sz0 snake.sz0

@@ -1,4 +1,22 @@
 
+=== Usage ===
+
+The "sz0music" program accepts the text format on stdin, and writes the
+binary format to stdout. By convention, the input should use ".mml" file
+name suffix and the output should use ".bgm" file name suffix. You can
+then use "har" to create a Hamster archive and "superzz0 -er" to add it
+into the world file.
+
+The example "music.sz0" world will play the MUSIC.BGM lump. This lump is
+not present in the world file; you can use the "extra_lump_name" and
+"extra_lump_file" configuration settings to load it from an external file,
+which may be useful to test the music playback.
+
+(You might also write your own program to make the same binary output
+format; it is not necessarily required to use this text input format.
+For example, a program might be made for converting other formats.)
+
+
 === Syntax ===
 
 Where a integer is expected, it can be decimal or hexadecimal; put $ at

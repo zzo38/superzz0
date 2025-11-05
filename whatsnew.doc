@@ -12,7 +12,7 @@ The notation is:
 The time zone for the dates in this file is Pacific (British Columbia).
 
 
-=== Version ??? ===
+=== Version 0.7.0 (2025-11-04) ===
 
 GAME
   +  Board flags to always allow saving the game in certain circumstances;
