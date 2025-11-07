@@ -419,3 +419,13 @@ The possible special command codes are:
 
 * ^] = Go to the bottom of a text window.
 
+
+=== [Emulator] ===
+
+This section is used for loading emulators for FM sound cards (or the
+ability to use the real hardware, if it is available).
+
+Each line has the file name (in the format accepted by dlopen; see the man
+page for dlopen), and then a space and then the argument. The format of the
+argument is defined by the plugin.
+

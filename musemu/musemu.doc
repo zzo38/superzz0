@@ -1,0 +1,99 @@
+(This is a draft and is incomplete.)
+
+This directory contains the documentation and header files for emulation
+of sound cards such as OPL3, and may also contain implementations.
+
+Your plugin must implement the interface defined in musemu.h, and must
+define musemu_main, which accepts the arguments:
+
+* flag = The bitwise OR of the MUSEMU_ constants.
+
+* arg = The argument text, which might be an empty string. The pointer is
+not valid after this function returns; if you want to keep it, then you
+must make a copy of it.
+
+* callback = The callback function. Call this for each emulator that you
+are registering. Do not call it after your main function returns.
+
+* cbarg = Pass this as the first argument of the callback function, but
+do not do anything else with it, and do not keep it after your main
+function returns. After calling the callback function, the pointer to the
+MUSEMUinf does not need to be valid, although the OID that it points to
+must remain valid and unchanged. The MUSEMU structure must remain valid
+and unchanged for the rest of the program, unless the callback returns
+a nonzero number (indicating that it is not needed).
+
+It returns a constant error message string if there is an error, or null
+if there is no error.
+
+The flags are:
+
+* MUSEMU_STEREO = Set if the audio output will be stereo, or clear if it
+is mono.
+
+* MUSEMU_DEBUG = Set if debug messages should be written to stderr, in
+case there is an error, or sometimes for other reasons. The argument text
+may contain switches that overrides this.
+
+* MUSEMU_ISO2022 = Set if the argument text is encoded as ISO 2022, or
+clear if it is ASCII; if this is clear, then it might still contain bytes
+outside of the ASCII range, which can be passed to fopen, popen, getenv,
+etc as they are without any conversion. Implementation of ISO 2022 is not
+mandatory; if it is not implemented, then this flag can be ignored and it
+will always be treated as ASCII.
+
+The MUSEMUinf structure contains the OID in binary format, and its size
+in bytes. This must be a absolute OID.
+
+The MUSEMU structure contains:
+
+* userdata = It can be anything (including null); it will be passed as the
+first argument to the "create" function, but not used for anything else.
+
+* create = Called to create a new instance of this emulator. It will return
+a non-null pointer if it is successful. The return value is used as the
+first argument of all of the other functions in this structure.
+
+* destroy = Called to destroy an instance of this emulator; it will be
+called exactly once for every created one and then the object will not be
+used after it is destroyed.
+
+* reset = Resets an instance of the emulator to the initial state.
+
+* render = Called to render a number of samples. The second argument is
+the number of samples (and it will also advance the time by that number
+of samples). If outl is not null, the output samples should be multiplied
+by ampl and then added to the value already in outl. If outr is not null,
+then the same is done with outr and ampr. If it is stereo, then outl is
+left and outr is right.
+
+* poke = Write a value to one of the registers of the emulated sound card.
+
+* peek = Read a value from one of the registers of the emulated sound card.
+
+* load = Load data into the emulated sound card's memory. This is not used
+for all kind of sound cards, but some are.
+
+* send = Send a (possibly incomplete) MIDI message. (If it is not complete
+then the rest of the message will be sent later. Also, it is possible to
+include multiple MIDI messages.) (Not all emulators will use MIDI; if they
+do not use MIDI then this function will do nothing.)
+
+The "reset", "render", "poke", and "peek" functions may be called in a
+separate thread than the main thread, so you should avoid using any
+functions that are not thread-safe.
+
+Arguments of "create" function:
+
+* userdata = Copy of the userdata in the MUSEMU structure.
+
+* samrate = The intended output sample rate. (This might not match the
+actual output sample rate if the emulated sound card is overclocked.)
+
+* parameters = DER encoding of zero or more items which are the parameters
+for the emulator.
+
+* size = The size of the parameters, in bytes.
+
+The usage of the parameters, and of peek/poke, is defined by the OID, but
+the argument text for musemu_main is by the specific implementation.
