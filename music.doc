@@ -357,6 +357,13 @@ numbers to multiply the amplitude for left and right output.
 
 * Type 2 = Like type 1 but disabled if the audio output is mono.
 
+* Type 3 = Sound card or emulated sound card (such as OPL3 or MPU-401).
+There are three fields: first the OID (which may be relative) of the type
+of sound card to emulate, second is a real number indicating the frequency
+multiplier (which is optional and defaults to +1.0), and third is the
+sequence of parameters for the plugin (which is optional, and the default
+is an empty sequence). (Not implemented yet)
+
 A real constant can be a real number, or it can be a implicit typed
 sequence for one of the following operations; the number in parentheses
 tells how many parameters it has, and + means it can optionally have more
@@ -402,6 +409,9 @@ Each thread has registers:
 
 Each thread also has a stack with eight 16-bit integers. The bottom and
 secondly from bottom values of these stacks are called I and J.
+
+Note: Writing the number of an unsupported channel to the C register will
+set the value of the C register to zero.
 
 There are also global registers shared by all threads:
   G (16-bits)
@@ -627,7 +637,10 @@ any 0 or 128 found in the envelope and not only the last one.
 
 * bit6 = (reserved)
 
-* bit7 = (reserved)
+* bit7 = Set if this envelope controls a emulator register, which only
+works if the current channel is a emulator channel. If this is set, then
+bit0 instead specifies bit8 of the register number, and it is always an
+absolute integer register. (Not implemented yet)
 
 Setting the loop start of a envelope to 255 means that it will stop the
 envelope when the loop end is reached.

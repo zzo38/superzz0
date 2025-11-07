@@ -79,9 +79,12 @@ then the rest of the message will be sent later. Also, it is possible to
 include multiple MIDI messages.) (Not all emulators will use MIDI; if they
 do not use MIDI then this function will do nothing.)
 
-The "reset", "render", "poke", and "peek" functions may be called in a
-separate thread than the main thread, so you should avoid using any
-functions that are not thread-safe.
+The "reset", "render", "poke", "peek", "load", and "send" functions may be
+called in a separate thread than the main thread, so you should avoid using
+any functions that are not thread-safe. The "load" function might be called
+in the main thread and in the separate thread. The "reset", "create", and
+"destroy" functions are only called in the main thread, and only while the
+other thread (if any) is not running.
 
 Arguments of "create" function:
 
