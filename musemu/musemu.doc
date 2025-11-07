@@ -10,7 +10,10 @@ define musemu_main, which accepts the arguments:
 
 * arg = The argument text, which might be an empty string. The pointer is
 not valid after this function returns; if you want to keep it, then you
-must make a copy of it.
+must make a copy of it. (The character encoding is always ASCII; any bytes
+outside of the ASCII range are not guaranteed to be any specific character
+encoding, but the character encoding is guaranteed to be correct for the
+C functions such as fopen, popen, getenv, etc.)
 
 * callback = The callback function. Call this for each emulator that you
 are registering. Do not call it after your main function returns.
@@ -34,13 +37,6 @@ is mono.
 * MUSEMU_DEBUG = Set if debug messages should be written to stderr, in
 case there is an error, or sometimes for other reasons. The argument text
 may contain switches that overrides this.
-
-* MUSEMU_ISO2022 = Set if the argument text is encoded as ISO 2022, or
-clear if it is ASCII; if this is clear, then it might still contain bytes
-outside of the ASCII range, which can be passed to fopen, popen, getenv,
-etc as they are without any conversion. Implementation of ISO 2022 is not
-mandatory; if it is not implemented, then this flag can be ignored and it
-will always be treated as ASCII.
 
 The MUSEMUinf structure contains the OID in binary format, and its size
 in bytes. This must be a absolute OID.
@@ -94,9 +90,11 @@ Arguments of "create" function:
 actual output sample rate if the emulated sound card is overclocked.)
 
 * parameters = DER encoding of zero or more items which are the parameters
-for the emulator.
+for the emulator. This pointer is not valid after this function returns.
 
-* size = The size of the parameters, in bytes.
+* size = The size of the parameters, in bytes. If the size is zero, then
+there are no parameters, and the pointer for the parameters might or might
+not be a null pointer.
 
 The usage of the parameters, and of peek/poke, is defined by the OID, but
 the argument text for musemu_main is by the specific implementation.
