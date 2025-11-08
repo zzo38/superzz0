@@ -1,5 +1,5 @@
 #if 0
-gcc -g -O0 -o ~/bin/sz0music -std=gnu99 -fwrapv -Wno-multichar -Wno-unused-result music.c asn1.c -lm
+gcc -g -O0 -o ~/bin/sz0music -std=gnu99 -fwrapv -Wno-multichar -Wno-unused-result music.c asn1.o -lm
 exit
 #endif
 

@@ -41,6 +41,7 @@ while [ $proceed = 0 ]; do
   echo '  <3> Generate instructions for local machine:' ${yesno[$native]}
   echo
   echo '  <0> Proceed'
+  echo '  <H> Help'
   echo '  <Q> Cancel'
   echo
   read -p 'Push the appropriate number and then enter: '
@@ -56,6 +57,25 @@ while [ $proceed = 0 ]; do
       ;;
     3)
       native="$(( native^1 ))"
+      ;;
+    h|H)
+      cat <<'ZZZ'
+Optimization level:
+  Set to "None (Debug)" for debugging; higher optimization will result in
+  a smaller executable file and faster execution, but slower compiling.
+  (It is possible that some bugs are only apparent at some optimization
+  levels, so you might wish to use all of them if you are testing.)
+Use X windows functions:
+  Turn this off if you are not using the X window system. Also try turning
+  it off if compiling display.c fails, or if linking fails due to the use
+  of some functions whose name starts with "X" being unavailable.
+Generate instructions for local machine:
+  If selected, then it will try to optimize the compiled program to run on
+  the computer that it is compiled on, and will enable features of the CPU
+  that the computer that it is compiled on has. You should avoid using this
+  option if you intend to redistribute the binaries, since the program
+  might not run on computers other than your own, if you enable this.
+ZZZ
       ;;
     q|Q)
       exit 1
@@ -106,9 +126,9 @@ echo
 echo 'Compiling Super ZZ Zero ...'
 echo 'sz0asm'
 bash asm.c
-echo 'sz0music'
-bash music.c
 echo 'superzz0'
 ./maker -a main.mak
+echo 'sz0music'
+bash music.c
 echo 'Done.'
 echo 'Use "./maker main.mak" to compile it again with the same configuration.'
