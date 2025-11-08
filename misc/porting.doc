@@ -67,8 +67,8 @@ The user configuration file will need to have a different name, and will
 probably be stored in the same directory as the executable file.
 
 audio_music_driver
-  Specify the sound driver for music lumps (not currently implemented).
-  (It can also read settings from the BLASTER environment variable.)
+  Specify the sound driver for music lumps. (It can also read settings
+  from the BLASTER environment variable.)
 
 audio_pc_driver
   Specify the sound driver for PC sound effects (#PLAY and SFX), such as
@@ -76,7 +76,7 @@ audio_pc_driver
   or emulated using some sound card.
 
 audio_wave_driver
-  Specify the sound driver for wave sounds (not currently implemented).
+  Specify the sound driver for wave sounds.
 
 boss_key
   Disable or enable the "boss key" function.
@@ -120,6 +120,11 @@ The following configuration settings are not meaningful on DOS:
   text_input
   time_utc
   video_gamma
+
+The [Emulator] division also will have to work differently; many things
+will be built-in and use real sound cards if they are available, so it is
+not necessary to load an external emulator specified in this division. (A
+TSR also might be used for some kinds of sound card emulation.)
 
 
 === Windows ===
@@ -166,6 +171,10 @@ menu_bar
 native_file_picker
   If set to 1 then the save/restore game menu will use the Windows file
   dialog boxes instead of the built-in UI of Super ZZ Zero.
+
+native_midi
+  Set to 1 to use the Windows MIDI functions if a .BGM lump requests a
+  sound card that uses MIDI but the emulator is not loaded.
 
 native_text_edit
   If set to 1 then the text editing widget of Windows is used instead of
@@ -284,8 +293,8 @@ time_format
   not have permission to determine the current date and time.
 
 time_format_mode
-  Selects to use short or long date/time formats. (This setting is not
-  meaningful if time_format is defined.)
+  Selects to use short or long date/time formats, according to the locale
+  setting. (This setting is not meaningful if time_format is defined.)
 
 The following configuration settings are not meaningful:
   auto_suffix
@@ -347,3 +356,101 @@ The following configuration settings are not meaningful on HTML:
   test_mode
   text_editor_command
 
+
+=== RetroArch ===
+
+Probably, if it is implemented on RetroArch then it will exclude the
+editor, and only the game engine will be implemented.
+
+Many configuration settings of Super ZZ Zero can have default values using
+the mechanisms of RetroArch, so that they do not need to be set separately,
+but in some cases it might be useful to override them.
+
+RetroArch is intended to use the Super Nintendo game controls rather than
+keyboard, but also works with keyboard. In Super ZZ Zero, some functions
+will require the keyboard, and it might also depend on the game world; you
+can define joystick mapping but not everything can be used with it.
+
+Due to the use of the game control input in RetroArch, the joystick mapping
+configuration can use the RetroArch button mapping names.
+
+The RETROK_ constants in RetroArch seem to have all of the same values as
+the SDLK_ constants in SDL1, so this will be easy to port. However, the
+values for the modifier keys are different, and not compatible with SDL.
+
+Super ZZ Zero can run at multiple speeds and allows the user to change the
+speed although the game itself cannot change it, the game is able to define
+the default speed. Due to this, it might be suitable to set the frame rate
+to that specified by the game world (or the Super ZZ Zero configuration if
+the game world does not specify or the user deliberately overrides it), but
+the fast-forward functions of RetroArch can be used as an alternative way
+to affect the game speed.
+
+RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE: This may be used for optimization
+since audio and video do not always need to be rendered. Super ZZ Zero does
+not require screen capture nor audio recording.
+
+RETRO_ENVIRONMENT_GET_LANGUAGE: May be used in future if game-specific user
+preferences are implemented; one of the OIDs might be assigned for the
+RetroArch language codes. The user may still override the user preferences
+in which case the RetroArch language is not used for this purpose. However,
+this function might also be used for text with Super ZZ Zero itself (e.g.
+save game file pickers). Another possible use of this is in case it is not
+possible for the front end to switch the character set to something other
+than Unicode, the language can be used to guess at the proper way to
+convert characters to/from TRON code.
+
+RETRO_ENVIRONMENT_GET_LOG_INTERFACE: This might be used instead of stderr
+for debugging messages (controlled by config.debug and config.music_debug).
+
+RETRO_ENVIRONMENT_GET_MIDI_INTERFACE: Might be used as a built-in sound
+chip emulator when MIDI is requested by a .BGM lump. This should be
+configurable; it might use an external emulator like normal Super ZZ Zero.
+
+RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: May be used as the default directory
+for save games, if not defined using the Super ZZ Zero configuration.
+
+RETRO_ENVIRONMENT_SET_MEMORY_MAPS: See retro_get_memory_data; in addition
+to the ones specified there, there may be additional memory maps for the
+board grid and possibly other stuff.
+
+RETRO_ENVIRONMENT_SET_MESSAGE_EXT: The Super ZZ Zero message scrollback
+might use RETRO_MESSAGE_TARGET_LOG, and the status indicators which are
+normally displayed outside of the game video area would be set using the
+RETRO_MESSAGE_TYPE_STATUS message type. Speed is handled by the front end
+and so probably does not need to be displayed in this way.
+
+RETRO_ENVIRONMENT_SET_PROC_ADDRESS_CALLBACK: This may be used for functions
+that RetroArch does not support, such as printers and setting character
+encoding (for message logging and file names and keyboard input).
+
+RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS: Super ZZ Zero currently assumes
+that save games are written to a file, and does not save the state of the
+random number generator (which is not guaranteed to be consistent between
+different versions of Super ZZ Zero, with the exception of the random
+number generator used for item randomization). Using the serialization
+function of RetroArch might not work as well as it should be, so some of
+these quirks might apply, or possibly the serialization cannot be used
+at all. (The current implementation of Super ZZ Zero is also limited that
+you cannot save the game while a text window is open.)
+
+RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS: See retro_get_memory_data.
+
+retro_get_memory_data: RETRO_MEMORY_SYSTEM_RAM would be used for the
+Super ZZ Zero "program memory", RETRO_MEMORY_SAVE_RAM for high scores and
+achievements (but not for save games; this is handled differently), and
+RETRO_MEMORY_VIDEO_RAM for the emulated PC text mode. Super ZZ Zero does
+not use the date/time for anything that affects the game (it is only used
+for the save/restore game menu), so RETRO_MEMORY_RTC is not applicable.
+
+retro_get_region: Probably should return RETRO_REGION_NTSC. However, some
+games may specify PAL frame rates.
+
+retro_load_game: This function is intended for loading a ROM image file,
+but can also be used to load the .sz0 world file. The full path is not
+required, although seeking is required, so I don't know if "need_fullpath"
+should be required or not (the documentation says that it may be read from
+stdin if the full path is not used; however, softpatching is useful).
+
+Some of the above is probably wrong; someone who is more familiar with the
+programming and usage of RetroArch might know better than I do about it.

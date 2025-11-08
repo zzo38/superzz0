@@ -489,6 +489,10 @@ will overwrite the value of the X register.
 
 [CF] Copy third from top of stack
 
+[D0] Pop a length from the stack, and then pop a address; the contents of
+the buffer at that address and length is sent as a MIDI message (see 0xF9
+for more details about MIDI).
+
 [E0-EF] Same as 0xF0 to 0xFF but before doing that, also pop a number to
 set the wait time.
 
@@ -513,6 +517,21 @@ set, and it will possibly release loops of envelopes as well.
 
 [F7] Cut a note, which will cancel the instrument loop and all envelopes,
 and suppresses the sound on this channel until another note is on.
+
+[F8] Pop the address and then the value from the stack, and write to the
+specified emulation port for this channel. This has no effect on any
+channel other than an emulation channel. (Note that, for emulation
+channels, the commands 0xF5, 0xF6, and 0xF7 only affect the envelopes;
+you must use this command to actually play notes.)
+
+[F9] Pop a 8-bit number from the stack and send it using MIDI. This only
+works if the current channel is an emulation channel that supports MIDI;
+not all channels do.
+
+[FA] Like 0xF9 but pop two numbers; the bottom one is first and the top
+one is second.
+
+[FB] Like 0xFA but three numbers instead of only two.
 
 [FF] No operation
 

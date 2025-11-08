@@ -68,7 +68,8 @@ left and outr is right.
 * peek = Read a value from one of the registers of the emulated sound card.
 
 * load = Load data into the emulated sound card's memory. This is not used
-for all kind of sound cards, but some are.
+for all kind of sound cards, but some are. It should also be possible to
+load data by the DER parameters, in case this function is never called.
 
 * send = Send a (possibly incomplete) MIDI message. (If it is not complete
 then the rest of the message will be sent later. Also, it is possible to
@@ -98,3 +99,8 @@ not be a null pointer.
 
 The usage of the parameters, and of peek/poke, is defined by the OID, but
 the argument text for musemu_main is by the specific implementation.
+
+If the implementation uses real sound cards, then render might do nothing
+other than timing synchronization, and create and destroy might only keep
+a counter for the maximum number of instances.
+

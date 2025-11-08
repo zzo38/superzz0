@@ -21,6 +21,7 @@ gcc -s -O2 -o ./maker maker.c
 echo 'Done'
 echo
 # TODO: check whether or not the X window system is available
+# TODO: add an option to exclude the editor
 declare -a optimization
 optimization[0]='None (Debug)'
 optimization[1]='Low'
