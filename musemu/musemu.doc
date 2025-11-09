@@ -29,6 +29,11 @@ a nonzero number (indicating that it is not needed).
 It returns a constant error message string if there is an error, or null
 if there is no error.
 
+Note that musemu_main may be called more than once with different argument
+text in some cases, such as if dlopen is called with the same file name
+multiple times. Plugins are not required to support this use, although in
+some cases it may be useful e.g. if OIDs can be specified in argument text.
+
 The flags are:
 
 * MUSEMU_STEREO = Set if the audio output will be stereo, or clear if it
@@ -45,10 +50,12 @@ The MUSEMU structure contains:
 
 * userdata = It can be anything (including null); it will be passed as the
 first argument to the "create" function, but not used for anything else.
+(The host environment will never dereference this pointer.)
 
 * create = Called to create a new instance of this emulator. It will return
 a non-null pointer if it is successful. The return value is used as the
-first argument of all of the other functions in this structure.
+first argument of all of the other functions in this structure; the caller
+will never dereference this pointer, but will check if it is null.
 
 * destroy = Called to destroy an instance of this emulator; it will be
 called exactly once for every created one and then the object will not be
@@ -61,7 +68,8 @@ the number of samples (and it will also advance the time by that number
 of samples). If outl is not null, the output samples should be multiplied
 by ampl and then added to the value already in outl. If outr is not null,
 then the same is done with outr and ampr. If it is stereo, then outl is
-left and outr is right.
+left and outr is right; if mono, then only outl is used and outr is null.
+It is possible for both to be null, in which case it is only time advance.
 
 * poke = Write a value to one of the registers of the emulated sound card.
 
@@ -69,12 +77,17 @@ left and outr is right.
 
 * load = Load data into the emulated sound card's memory. This is not used
 for all kind of sound cards, but some are. It should also be possible to
-load data by the DER parameters, in case this function is never called.
+load data by the DER parameters, in case this function is never called
+(Super ZZ Zero never uses this function, but it is provided for the use of
+other programs that might use the same API).
 
 * send = Send a (possibly incomplete) MIDI message. (If it is not complete
 then the rest of the message will be sent later. Also, it is possible to
 include multiple MIDI messages.) (Not all emulators will use MIDI; if they
 do not use MIDI then this function will do nothing.)
+
+All of the above functions are required (they cannot be null), although it
+is not required for any of the functions to do anything.
 
 The "reset", "render", "poke", "peek", "load", and "send" functions may be
 called in a separate thread than the main thread, so you should avoid using

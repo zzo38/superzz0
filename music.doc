@@ -362,7 +362,7 @@ There are three fields: first the OID (which may be relative) of the type
 of sound card to emulate, second is a real number indicating the frequency
 multiplier (which is optional and defaults to +1.0), and third is the
 sequence of parameters for the plugin (which is optional, and the default
-is an empty sequence). (Not implemented yet)
+is an empty sequence).
 
 A real constant can be a real number, or it can be a implicit typed
 sequence for one of the following operations; the number in parentheses
@@ -493,6 +493,10 @@ will overwrite the value of the X register.
 the buffer at that address and length is sent as a MIDI message (see 0xF9
 for more details about MIDI).
 
+[D1] Pop a address from the stack, and push the value of the corresponding
+emulation port for this channel to the stack. If this is not a emulation
+channel or if there is no such port, then the result is unspecified.
+
 [E0-EF] Same as 0xF0 to 0xFF but before doing that, also pop a number to
 set the wait time.
 
@@ -582,6 +586,14 @@ The special integer registers are (*read-only):
   91  First envelope position
   92  Second envelope address + 1 (0=none)
   93  Second envelope position
+
+Channel flags are:
+  01  If this channel exists *
+  02  The note has started and not finished or cut
+  04  The note has started and not released
+  08  If this is an emulation channel *
+  40  First envelope is on
+  80  Second envelope is on
 
 The special real registers are (*read-only):
   (Channel)

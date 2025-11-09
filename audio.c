@@ -6,6 +6,16 @@ exit
 #include "common.h"
 #include "resample.h"
 #include <math.h>
+#include <dlfcn.h>
+#include "musemu/musemu.h"
+
+typedef struct {
+  MUSEMUinf id;
+  const MUSEMU*em;
+} Emulator;
+
+static Emulator*emulator;
+static Uint8 nemulator;
 
 #define DRUM_NOTE 0x7F00
 #define WAVE_NOTE 0x7EFF
@@ -33,8 +43,11 @@ typedef struct {
 #define CHAN_USE 0x01
 #define CHAN_SOUND 0x02
 #define CHAN_LOOP 0x04
+#define CHAN_EMULATE 0x08
 #define CHAN_ENV1 0x40
 #define CHAN_ENV2 0x80
+
+#define CHAN_FLAG_MASK (CHAN_USE|CHAN_EMULATE)
 
 typedef struct {
   Uint8 t;
@@ -53,10 +66,11 @@ typedef struct {
 
 typedef struct {
   Resample resam;
+  void*state;
   double freq;
   float amp;
   Uint16 env1,env2;
-  Uint8 instrument,flag;
+  Uint8 instrument,flag,emu;
   Uint8 pos1,pos2;
 } Channel;
 
@@ -152,28 +166,33 @@ static inline void render_music_frame(float*buf,int len) {
   Sint32 p,r;
   Instrument*ins;
   Channel*cha;
-  for(m=0;m<music->nch;m++) if(music->ch[m].flag&CHAN_SOUND) {
-    cha=music->ch+m;
-    if(i=cha->instrument) {
-      ins=music->in+i-1;
-      if(ins->t==INST_WAVE) {
-        p=cha->resam.pin;
-        r=(cha->flag&CHAN_LOOP)?ins->wave.le:ins->wave.len;
-        cha->resam.pout=0;
-        while(r-p>0 && cha->resam.pout<len) {
-          if(ins->wave.is8) {
-            resample_process_uint8_to_float_mix(&cha->resam,ins->wave.d8+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
-          } else {
-            resample_process_int16_to_float_mix(&cha->resam,ins->wave.d16+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
-          }
+  for(m=0;m<music->nch;m++) {
+    if(music->ch[m].flag&CHAN_SOUND) {
+      cha=music->ch+m;
+      if(i=cha->instrument) {
+        ins=music->in+i-1;
+        if(ins->t==INST_WAVE) {
           p=cha->resam.pin;
-          if(p==ins->wave.len && (ins->wave.ls==ins->wave.len || !(cha->flag&CHAN_LOOP))) {
-            cha->flag&=~(CHAN_SOUND|CHAN_LOOP);
-            break;
+          r=(cha->flag&CHAN_LOOP)?ins->wave.le:ins->wave.len;
+          cha->resam.pout=0;
+          while(r-p>0 && cha->resam.pout<len) {
+            if(ins->wave.is8) {
+              resample_process_uint8_to_float_mix(&cha->resam,ins->wave.d8+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
+            } else {
+              resample_process_int16_to_float_mix(&cha->resam,ins->wave.d16+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
+            }
+            p=cha->resam.pin;
+            if(p==ins->wave.len && (ins->wave.ls==ins->wave.len || !(cha->flag&CHAN_LOOP))) {
+              cha->flag&=~(CHAN_SOUND|CHAN_LOOP);
+              break;
+            }
+            if((cha->flag&CHAN_LOOP) && p==ins->wave.le) p=cha->resam.pin=ins->wave.ls;
           }
-          if((cha->flag&CHAN_LOOP) && p==ins->wave.le) p=cha->resam.pin=ins->wave.ls;
         }
       }
+    } else if(music->ch[m].flag&CHAN_EMULATE) {
+      cha=music->ch+m;
+      emulator[cha->emu].em->render(cha->state,len,buf,cha->amp,0,0);
     }
   }
 }
@@ -203,7 +222,7 @@ static void put_special_i(Channel*cha,Uint8 id,Uint16 v) {
     case 0x7F: if(config.music_debug==255) printf("MUSIC DEBUG: $%04X\n",v); break;
     case 0x80: cha->instrument=(v<=music->nin && v && music->in[v-1].t?v:0); break;
     case 0x81: cha->resam.pin=v; break;
-    case 0x82: if(cha->flag&CHAN_USE) cha->flag=(cha->flag&CHAN_USE)|v; break;
+    case 0x82: if(cha->flag&CHAN_USE) cha->flag=(cha->flag&CHAN_FLAG_MASK)|(v&~CHAN_FLAG_MASK); break;
     case 0x90: cha->env1=(v+6<music->size?v:0); cha->pos1=0; break;
     case 0x91: cha->pos1=v; break;
     case 0x92: cha->env2=(v+6<music->size?v:0); cha->pos2=0; break;
@@ -289,6 +308,7 @@ static char do_envelope(Channel*cha,Uint16 addr,Uint8*pos) {
 
 #define StackReq(A,B) if(thr->t>=8+B || thr->t<A) break;
 static inline void render_music(Sint16*buf,int len) {
+  Uint8 midi[4];
   Channel*cha;
   Thread*thr;
   float v;
@@ -423,6 +443,18 @@ static inline void render_music(Sint16*buf,int len) {
             case 0xCD: if(thr->t<8) thr->s[thr->t]=thr->s[thr->t-1],thr->t++; break;
             case 0xCE: StackReq(2,3); thr->s[thr->t]=thr->s[thr->t-2]; thr->t++; break;
             case 0xCF: StackReq(3,3); thr->s[thr->t]=thr->s[thr->t-3]; thr->t++; break;
+            case 0xD0:
+              StackReq(2,0); thr->t-=2;
+              if(!thr->c) break;
+              cha=music->ch+thr->c-1;
+              if(cha->flag&CHAN_EMULATE) emulator[cha->emu].em->send(cha->state,music->rom+thr->s[thr->t],thr->s[thr->t+1]);
+              break;
+            case 0xD1:
+              StackReq(1,1);
+              if(!thr->c) break;
+              cha=music->ch+thr->c-1;
+              if(cha->flag&CHAN_EMULATE) thr->s[thr->t-1]=emulator[cha->emu].em->peek(cha->state,thr->s[thr->t-1]);
+              break;
             case 0xE0 ... 0xEF: if(thr->t) thr->w=thr->s[--thr->t]; c+=0x10; goto reswitch;
             case 0xF0: thr->p=thr->r; break;
             case 0xF1: if(thr->t) thr->p=thr->s[--thr->t]; break;
@@ -432,8 +464,20 @@ static inline void render_music(Sint16*buf,int len) {
             case 0xF5:
               if(!thr->c) break;
               cha=music->ch+thr->c-1;
-              if(!cha->instrument) break;
-              cha->flag=CHAN_USE|CHAN_SOUND|CHAN_LOOP;
+              if(!(cha->flag&CHAN_EMULATE)) {
+                if(!cha->instrument) break;
+                cha->flag=CHAN_USE|CHAN_SOUND|CHAN_LOOP;
+                c=cha->instrument-1;
+                cha->resam.pin=cha->resam.pout=0;
+                resample_reset(&cha->resam);
+                switch(music->in[c].t) {
+                  case INST_WAVE:
+                    if(thr->x>0.0) cha->freq=music->in[c].rate*thr->x;
+                    break;
+                }
+              } else {
+                cha->flag=CHAN_USE|CHAN_SOUND|CHAN_LOOP|CHAN_EMULATE;
+              }
               if(cha->env1) {
                 cha->flag|=CHAN_ENV1;
                 if(music->rom[cha->env1-1]&0x02) {
@@ -447,14 +491,6 @@ static inline void render_music(Sint16*buf,int len) {
                   cha->pos2=0;
                   do_envelope(cha,cha->env2-1,&cha->pos2);
                 }
-              }
-              c=cha->instrument-1;
-              cha->resam.pin=cha->resam.pout=0;
-              resample_reset(&cha->resam);
-              switch(music->in[c].t) {
-                case INST_WAVE:
-                  if(thr->x>0.0) cha->freq=music->in[c].rate*thr->x;
-                  break;
               }
               break;
             case 0xF6:
@@ -470,6 +506,15 @@ static inline void render_music(Sint16*buf,int len) {
               cha->flag&=~(CHAN_SOUND|CHAN_LOOP);
               if(cha->env1 && !(music->rom[cha->env1-1]&0x08)) cha->flag&=~CHAN_ENV1;
               if(cha->env2 && !(music->rom[cha->env2-1]&0x08)) cha->flag&=~CHAN_ENV2;
+              break;
+            case 0xF8:
+              StackReq(2,0); thr->t-=2; if(!thr->c) break; cha=music->ch+thr->c-1;
+              if(cha->flag&CHAN_EMULATE) emulator[cha->emu].em->poke(cha->state,thr->s[thr->t+1],thr->s[thr->t]);
+              break;
+            case 0xF9 ... 0xFB:
+              StackReq((c-0xF8),0); thr->t-=(c-0xF8); if(!thr->c) break; cha=music->ch+thr->c-1;
+              midi[0]=thr->s[thr->t]; if(c>0xF9) midi[1]=thr->s[thr->t+1]; if(c>0xFA) midi[2]=thr->s[thr->t+2];
+              if(cha->flag&CHAN_EMULATE) emulator[cha->emu].em->send(cha->state,midi,c-0xF8);
               break;
             case 0xFF: break;
           }
@@ -998,7 +1043,12 @@ static void unload_bgm(void) {
   int i;
   *music_name=0;
   if(!music) return;
-  for(i=1;i<music->nch;i++) if(music->ch[i].flag) resample_uninit(&music->ch[i].resam);
+  for(i=0;i<music->nch;i++) if(music->ch[i].flag) {
+    if(music->ch[i].flag&CHAN_EMULATE) emulator[music->ch[i].emu].em->destroy(music->ch[i].state);
+    else if(i) resample_uninit(&music->ch[i].resam);
+    music->ch[i].state=0;
+    music->ch[i].flag=0;
+  }
   music->ch=realloc(music->ch,sizeof(Channel))?:music->ch;
   free(music->rom);
   free(music->in);
@@ -1011,6 +1061,46 @@ static void unload_bgm(void) {
   music->nch=1;
   music->nin=music->nth=music->nrc=0;
   music->size=0;
+}
+
+static void load_emulation_channel(Channel*o,const ASN1_Value*v0) {
+  double freq=1.0;
+  int i;
+  ASN1_Value v1;
+  if(asn1_first_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || (v1.type!=ASN1_OID && v1.type!=ASN1_RELATIVE_OID)) {
+    asn1error:
+    if(config.music_debug) fprintf(stderr,"ASN.1 error in emulation channel in %s.BGM\n",music_name);
+    return;
+  }
+  for(i=0;i<nemulator;i++) {
+    if(v1.type==ASN1_RELATIVE_OID) {
+      if(emulator[i].id.oidlen<0x14 || memcmp(emulator[i].id.oid,"\x69\x82\xA8\xAC\x87\xDD\x97\x84\xA0\xC7\xDF\x96\xE9\x80\x84\xE1\xC3\xD1\xA8\x16",0x14)) continue;
+      if(v1.length==emulator[i].id.oidlen-0x14 && !memcmp(emulator[i].id.oid+0x14,v1.data,v1.length)) break;
+    } else {
+      if(v1.length==emulator[i].id.oidlen && !memcmp(emulator[i].id.oid,v1.data,v1.length)) break;
+    }
+  }
+  if(i==nemulator) {
+    if(config.music_debug>3) {
+      fputs("No emulator for OID ",stderr);
+      if(asn1_print_decimal_oid(&v1,ASN1_AUTO,stderr)) fputs("<Invalid OID>",stderr);
+      fputc('\n',stderr);
+    }
+    return;
+  }
+  o->emu=i;
+  i=0;
+  if(asn1_next_of(&v1,v0)) goto ok;
+  if(v1.class!=ASN1_UNIVERSAL) goto asn1error;
+  if(v1.type==ASN1_REAL) {
+    if(asn1_decode_number(&v1,ASN1_REAL,&freq)) goto asn1error;
+    if(asn1_next_of(&v1,v0)) goto ok;
+  }
+  if(v1.type!=ASN1_SEQUENCE) goto asn1error;
+  i=1;
+  ok:
+  o->state=emulator[o->emu].em->create(emulator[o->emu].em->userdata,freq*spec.freq,i?v1.data:0,i?v1.length:0);
+  if(o->state) o->flag=CHAN_USE|CHAN_EMULATE; else o->flag=0;
 }
 
 static void load_instrument(Instrument*o,const ASN1_Value*v0) {
@@ -1273,12 +1363,15 @@ static void load_bgm(const char*name,Uint16 song) {
     if(i?asn1_next_of(&v1,&v0):asn1_first_of(&v1,&v0)) goto err1;
     if(i) memset(music->ch+i,0,sizeof(Channel)); else music->ch->flag=0,music->ch->instrument=0;
     if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_NULL) continue;
-    if(v1.class!=ASN1_CONTEXT_SPECIFIC || v1.type>2) goto err1;
-    if(v1.type==2) continue;
-    music->ch[i].flag=CHAN_USE;
-    if(i) {
-      music->ch[i].resam=music->ch->resam;
-      if(resample_init(&music->ch[i].resam,0,0,0,RESAMPLE_SHARE)) errx(1,"Error copying resample object");
+    if(v1.class!=ASN1_CONTEXT_SPECIFIC || v1.type>3) goto err1;
+    if(v1.type<2) {
+      music->ch[i].flag=CHAN_USE;
+      if(i) {
+        music->ch[i].resam=music->ch->resam;
+        if(resample_init(&music->ch[i].resam,0,0,0,RESAMPLE_SHARE)) errx(1,"Error copying resample object");
+      }
+    } else if(v1.type==3) {
+      load_emulation_channel(music->ch+i,&v1);
     }
   }
   asn1_free(&v0);
@@ -1350,12 +1443,15 @@ static void load_bgm(const char*name,Uint16 song) {
       }
     }
     for(i=0;i<music->nrc;i++) printf("Real #%d: %4.8g\n",i+16,music->rc[i]);
-    for(i=0;i<music->nch;i++) printf("Channel #%d: flag=0x%02X\n",i+1,music->ch[i].flag);
+    for(i=0;i<music->nch;i++) printf("Channel #%d: flag=0x%02X emu=0x%02X\n",i+1,music->ch[i].flag,music->ch[i].emu);
   }
   // Reset state
   music->tcur=music->tmax-1;
   for(i=0;i<music->nch;i++) {
-    if(music->ch[i].flag&=CHAN_USE) resample_reset(&music->ch[i].resam);
+    if(music->ch[i].flag&=CHAN_FLAG_MASK) {
+      if(music->ch[i].flag&CHAN_EMULATE) emulator[music->ch[i].emu].em->reset(music->ch[i].state);
+      else if(music->ch[i].flag&CHAN_USE) resample_reset(&music->ch[i].resam);
+    }
     music->ch[i].amp=1.0;
     music->ch[i].freq=1.0;
     music->ch[i].instrument=0;
@@ -1391,4 +1487,36 @@ void audio_set_music(const char*name,Uint16 song) {
     unload_bgm();
   }
   SDL_UnlockAudio();
+}
+
+static int emulator_callback(void*cbarg,const MUSEMUinf*inf,const MUSEMU*impl) {
+  int i;
+  if(nemulator==128) {
+    warnx("Too many emulators are already loaded; any further emulators will be ignored");
+    return 1;
+  }
+  for(i=0;i<nemulator;i++) if(inf->oidlen==emulator[i].id.oidlen && !memcmp(inf->oid,emulator[i].id.oid,inf->oidlen)) return 1;
+  emulator=realloc(emulator,(nemulator+1)*sizeof(Emulator));
+  if(!emulator) err(1,"Allocation failed");
+  emulator[nemulator].id=*inf;
+  emulator[nemulator].em=impl;
+  nemulator++;
+  return 0;
+}
+
+void audio_load_emulator(const char*name,const char*arg) {
+  const char*e;
+  void*d=dlopen(name,RTLD_LAZY|RTLD_LOCAL);
+  typeof(&musemu_main) m;
+  if(!d) {
+    warnx("Error loading emulator: %s",dlerror()?:"(unknown error)");
+    return;
+  }
+  m=dlsym(d,"musemu_main");
+  if(!m) {
+    dlclose(d);
+    warnx("Error loading emulator \"%s\": Cannot find 'musemu_main': %s",name,dlerror()?:"(no error message)");
+    return;
+  }
+  if(e=m(config.music_debug>1?MUSEMU_DEBUG:0,arg,emulator_callback,d)) warnx("Error loading emulator \"%s\": Main function returned error: %s",name,e);
 }

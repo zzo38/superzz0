@@ -427,5 +427,15 @@ ability to use the real hardware, if it is available).
 
 Each line has the file name (in the format accepted by dlopen; see the man
 page for dlopen), and then a space and then the argument. The format of the
-argument is defined by the plugin.
+argument is defined by the plugin; see the plugin's documentation.
+
+If multiple plugins register an emulator for the same OID, then only the
+first one for each OID is used. This implementation is limited to no more
+than 128 OIDs; if plugins try to register more than that, then any beyond
+the first 128 are ignored. (Plugins that register a large number of OIDs
+should probably have switches to disable some of them.)
+
+It is possible to specify the same file multiple times with different
+arguments in each case, although plugins are not guaranteed to support
+that use, and this might cause undesired behaviours (and/or errors).
 
