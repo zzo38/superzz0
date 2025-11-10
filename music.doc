@@ -364,6 +364,10 @@ multiplier (which is optional and defaults to +1.0), and third is the
 sequence of parameters for the plugin (which is optional, and the default
 is an empty sequence).
 
+* Type 4 = Same as type 3 but intended for use of MIDI, so that it may be
+possible to use MIDI mapping with it. If MIDI mapping is not used, then it
+is the same as type 3.
+
 A real constant can be a real number, or it can be a implicit typed
 sequence for one of the following operations; the number in parentheses
 tells how many parameters it has, and + means it can optionally have more

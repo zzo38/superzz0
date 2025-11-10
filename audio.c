@@ -192,7 +192,7 @@ static inline void render_music_frame(float*buf,int len) {
       }
     } else if(music->ch[m].flag&CHAN_EMULATE) {
       cha=music->ch+m;
-      emulator[cha->emu].em->render(cha->state,len,buf,cha->amp,0,0);
+      emulator[cha->emu].em->render(cha->state,len,buf,cha->amp*32767.0,0,0);
     }
   }
 }
@@ -1049,6 +1049,9 @@ static void unload_bgm(void) {
     music->ch[i].state=0;
     music->ch[i].flag=0;
   }
+  if(music->in) for(i=0;i<music->nin;i++) switch(music->in[i].t) {
+    case INST_WAVE: free(music->in[i].wave.d8); break;
+  }
   music->ch=realloc(music->ch,sizeof(Channel))?:music->ch;
   free(music->rom);
   free(music->in);
@@ -1363,14 +1366,14 @@ static void load_bgm(const char*name,Uint16 song) {
     if(i?asn1_next_of(&v1,&v0):asn1_first_of(&v1,&v0)) goto err1;
     if(i) memset(music->ch+i,0,sizeof(Channel)); else music->ch->flag=0,music->ch->instrument=0;
     if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_NULL) continue;
-    if(v1.class!=ASN1_CONTEXT_SPECIFIC || v1.type>3) goto err1;
+    if(v1.class!=ASN1_CONTEXT_SPECIFIC || v1.type>4) goto err1;
     if(v1.type<2) {
       music->ch[i].flag=CHAN_USE;
       if(i) {
         music->ch[i].resam=music->ch->resam;
         if(resample_init(&music->ch[i].resam,0,0,0,RESAMPLE_SHARE)) errx(1,"Error copying resample object");
       }
-    } else if(v1.type==3) {
+    } else if(v1.type==3 || v1.type==4) {
       load_emulation_channel(music->ch+i,&v1);
     }
   }

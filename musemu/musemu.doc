@@ -86,8 +86,14 @@ then the rest of the message will be sent later. Also, it is possible to
 include multiple MIDI messages.) (Not all emulators will use MIDI; if they
 do not use MIDI then this function will do nothing.)
 
-All of the above functions are required (they cannot be null), although it
-is not required for any of the functions to do anything.
+* extension = Used for extensions beyond this set of functions. The first
+argument is the userdata in this structure, and the other arguments specify
+which extension, and it returns some kind of pointer relating to that
+extension, or null if that extension is not available.
+
+All of the above functions are required (they cannot be null), with the
+exception of the "extension" function (which may be null), although it is
+not required for any of the functions to do anything.
 
 The "reset", "render", "poke", "peek", "load", and "send" functions may be
 called in a separate thread than the main thread, so you should avoid using

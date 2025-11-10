@@ -2,7 +2,7 @@
 cflags common.h config.inc -> *c : *
 main.c asn1.o audio.o display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o printer.o savegame.o window.o world.o *c version.inc -> $ : bash main.c
 asn1.c asn1.h -> asn1.o : bash asn1.c
-audio.c resample.o *c -> audio.o : bash audio.c
+audio.c resample.o musemu/musemu.h *c -> audio.o : bash audio.c
 display.c *c -> display.o : bash display.c
 edit.c *c asn1.h -> edit.o : bash edit.c
 editbrd.c *c -> editbrd.o : bash editbrd.c
