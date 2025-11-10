@@ -1,0 +1,62 @@
+FREQUENTLY ASKED QUESTIONS -- SUPER ZZ ZERO
+
+ [0] GENERAL/MISCELLANEOUS
+   [0.1] What is the MIME type, UTI type, etc?
+
+ [1] COMPILING AND SYSTEM COMPATIBILITY
+   [1.1] Why doesn't it run on a headless system?
+   [1.2] There is an error with linking due to the unavailability of the
+     function "XGetKeyboardMapping" or "XKeycodeToKeysym".
+   [1.3] It does not work on Mac OS?
+
+
+===
+
+[0] GENERAL/MISCELLANEOUS
+
+
+[0.1] What is the MIME type, UTI type, etc?
+
+The UTI type for a Super ZZ Zero world file is
+"org.zzo38computer.superzz0.world", and this UTI type conforms to the
+UTI type "com.hamsterrepublic.lumped".
+
+The ULFI type for a Super ZZ Zero world file is "hamarc:superzz0.world".
+
+The MIME type is not currently defined.
+
+
+===
+
+[1] COMPILING AND SYSTEM COMPATIBILITY
+
+
+[1.1] Why doesn't it run on a headless system?
+
+As far as I know, no version of SDL will run on a headless system.
+
+
+[1.2] There is an error with linking due to the unavailability of the
+function "XGetKeyboardMapping" or "XKeycodeToKeysym".
+
+If this error occurs, then Xlib is not installed, which means that the
+functions that use Xlib will not work. Super ZZ Zero does not require
+Xlib, and will work without. Compile with -DCONFIG_DISABLE_X11_FUNCTIONS
+or disable "Use X windows functions" when using compile.sh.
+
+
+[1.3] It does not work on Mac OS?
+
+It uses several GNU specific functions and commands. This might be changed
+in future if someone is able to modify it (with conditional compilation if
+necessary, and/or implementation of compatibility functions/macros) to work
+on Mac OS X (and other computer systems) and can verify it, then I might
+include those changes.
+
+However, an alternative would be that someone who wants to use it on other
+computer systems would maintain their own version of the software, with the
+functions that are relevant for that system. For example, with Mac OS, you
+might implement such things as: UTI, menu bar, AppleScript, etc.
+
+
+===

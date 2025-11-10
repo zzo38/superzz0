@@ -1,4 +1,14 @@
 
+The catalog format is meant for when you publish a game world using this
+software, that it will then be indexed so that others can search, upload,
+and download them (it is also intended that it would be possible to mirror
+the game worlds and catalog data). This does not mean that anyone is
+required to use the catalog service; you can just use disks, or you can
+use an alternative catalog service, but regardless of which way you do it,
+the catalog format may be helpful for storing metadata (although this is
+not required if you are not using the catalog service, it can be helpful).
+A game world can also be uploaded to multiple catalog services if desired.
+
 (Note that the below is a DRAFT version and is not finalized yet. It is
 likely to be changed in future before it is implemented.)
 
