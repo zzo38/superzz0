@@ -14,7 +14,8 @@ The time zone for the dates in this file is Pacific (British Columbia).
 
 === Version ??? ===
 
-OTHERS
+SCRIPTS
+  +  The #SENT condition to check if a message was successfully sent.
 
 
 === Version 0.7.0 (2025-11-04) ===

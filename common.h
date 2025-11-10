@@ -628,6 +628,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define CONTROL_DISABLE_SAVING 0x0008
 #define CONTROL_SAVE_BOARD 0x0010
 #define CONTROL_RESTORE_BOARD 0x0020
+#define CONTROL_SENT 0x0040
 
 extern Uint16 memory[0x10000];
 extern Sint32 regs[8];

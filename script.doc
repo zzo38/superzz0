@@ -412,6 +412,14 @@ number@
 #RANDOM
   There is a 50% chance to be true.
 
+#SENT
+  Checks if a message has been successfully sent (by #SEND, #SENDALL,
+  #SENDDIR, #CLONE, and sometimes #RETURN). Note that this flag is global,
+  so you should not delay before checking; also, it will not automatically
+  clear this flag, so you must use #CLEAR #SENT first if you want to check
+  if it is successfully sent (the reason for this is so that you can make
+  multiple sends and then check if any one of them is successful).
+
 #UNDER:kind
   Same as U@kind.
 

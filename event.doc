@@ -162,6 +162,11 @@ board with the persist flag set). This bit will not be cleared after it is
 restored, but it will delete the saved board state, so this bit will be
 ineffective unless the board state is saved again.
 
+$0040 = When a message is successfully sent (because there is an unlocked
+stat that has the label with the specified name) then it will set this bit.
+You can clear this bit by yourself before sending it in case you want to
+check if it is successfully sent.
+
 
 === Order of execution ===
 

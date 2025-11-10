@@ -1599,6 +1599,7 @@ static Uint8 send_message_to(Stat*s,StatXY*r,Sint32 f,const char*e) {
     r->delay=0;
   }
   r->instptr=f;
+  memory[MEM_CONTROL]|=CONTROL_SENT;
   return h&4;
 }
 
@@ -3150,6 +3151,8 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
       v=check_pushable_at(xy->x+(c==DIR_E)-(c==DIR_W),xy->y+(c==DIR_S)-(c==DIR_N),c&1?A_PUSH_NS:A_PUSH_EW);
     } else if(!strcmp(buf+1,"RANDOM")) {
       v=dice(2);
+    } else if(!strcmp(buf+1,"SENT")) {
+      if(memory[MEM_CONTROL]&CONTROL_SENT) v=1;
     } else if(!strncmp(buf+1,"UNDER:",6)) {
       n=7; under: *ip=bip+n;
       if(count_script_kind(1,&sk)) v=1;
@@ -3264,6 +3267,8 @@ static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
       if(v) board_info.flag|=BF_OVERLAY; else board_info.flag&=~BF_OVERLAY;
     } else if(!strcmp(buf+1,"PERSIST")) {
       if(v) board_info.flag|=BF_PERSIST; else board_info.flag&=~BF_PERSIST;
+    } else if(!strcmp(buf+1,"SENT")) {
+      if(v) memory[MEM_CONTROL]|=CONTROL_SENT; else memory[MEM_CONTROL]&=~CONTROL_SENT;
     } else if(!strcmp(buf+1,"USER")) {
       if(v) xy->layer|=0x40; else xy->layer&=0xBF;
     } else if(!strcmp(buf+1,"WALK")) {
