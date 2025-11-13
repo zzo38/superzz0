@@ -20,6 +20,10 @@ audio_filter=0.75
 audio_rate=44100
 audio_volume=8000
 help=/home/user/superzz0/help/
+music_amp=0.81
+music_resample=16 16 L0.89 B I
+wave_resample=16 16 L0.89 B I
+wave_sound=1
 
 The "help=" line should be the full path of the directory containing the
 help files. (In the releases, this is "superzz0-release/help/"; you will
