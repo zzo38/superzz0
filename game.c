@@ -2391,6 +2391,7 @@ static Uint16 show_item_window(Uint32 opt) {
   for(i=0;i<inv->count;i++) {
     if((inv->item[i].flag&ISF_HIDDEN) || inv->item[i].item>nitemdefs) continue;
     if(!inv->item[i].item) {
+      vac:
       if(opt&4) continue;
       c.name=0; c.slot=i; c.ext=0x8000;
       fwrite(&c,1,sizeof(ItemMenuSlot),fp);
@@ -2399,6 +2400,10 @@ static Uint16 show_item_window(Uint32 opt) {
       continue;
     }
     d=itemdefs+inv->item[i].item-1;
+    if(inv->item[i].flag&ISF_SPECIAL) switch(d->special) {
+      case ISPECIAL_STATUS: inv->item[i].quantity=status_vars[d->special&15]; break;
+      case ISPECIAL_STATUS_NONZERO: if(!(inv->item[i].quantity=status_vars[d->special&15])) goto vac; break;
+    }
     condflag=(d->flag&IDF_UNIDENTIFIED?1:0);
     *textbuf=ntextbuf=0;
     k=run_program(memory[MEM_NAME_ITEM_EVENT],inv->item[i].item|(inv->item[i].flag<<16),i,d->flag,0);
@@ -2505,7 +2510,15 @@ static Uint16 show_item_window(Uint32 opt) {
             if(i>inv->count || !inv->item[i].item || inv->item[i].item>nitemdefs) break;
             if(inv->item[i].flag&(ISF_FIXED|ISF_IN_USE)) break;
             if(itemdefs[inv->item[i].item-1].flag&IDF_NO_DISCARD) break;
+            if(inv->item[i].flag&ISF_SPECIAL) {
+              switch((j=itemdefs[inv->item[i].item-1].special)&0xF0) {
+                case ISPECIAL_STATUS: status_vars[j&15]=0; inv->item[i].quantity=0; break;
+                case ISPECIAL_STATUS_NONZERO: status_vars[j&15]=0; inv->item[i].quantity=0; goto hide;
+              }
+              continue;
+            }
             inv->item[i]=(ItemSlot){};
+            hide:
             list[tcursor].name=0;
             list[tcursor].ext=0x8000;
             if(opt&4) {
@@ -4370,6 +4383,7 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
   ItemSlot*slot;
   Uint16 nsl,re;
   Uint32 tot,tw,heap;
+  Uint32 spect=0;
   int i=item&0xFFFF;
   int j;
   Uint8 step;
@@ -4378,14 +4392,42 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
   if((inv->flag&INV_IGNORE_WEIGHT) || !idef->weight) how|=8;
   heap=inv->maxheap;
   if(heap>idef->maxheap && !(inv->flag&INV_IGNORE_MAXHEAP)) heap=idef->maxheap;
+  if((how&32) || (inv->flag&INV_SPECIAL)) {
+    switch(idef->special&0xF0) {
+      case ISPECIAL_STATUS: case ISPECIAL_STATUS_NONZERO:
+        if((itemdefs[i-1].flag&IDF_SINGLE_HEAP) || (inv->flag&INV_SINGLE_HEAP)) {
+          how|=32;
+          spect=status_vars[idef->special&15];
+          if(spect+qty>heap || ((Uint32)spect+qty)<spect || ((Uint32)spect+qty)<qty) {
+            if(how&1) qty=heap-spect; else return memory[MEM_ARG_J]=how,condflag=0;
+          }
+          goto statusvarok;
+        } else if(status_vars[idef->special&15]>=heap) {
+          how&=~32;
+        } else {
+          how|=32;
+          spect=heap-status_vars[idef->special&15];
+          if(spect>qty) spect=qty;
+          if(spect==qty) {
+            statusvarok:
+            if(!(how&2)) status_vars[idef->special&15]+=qty;
+            condflag=1;
+            memory[MEM_ARG_J]=how;
+            return qty;
+          }
+        }
+        break;
+      default: how&=~32;
+    }
+  }
   regs[0]=regs[1]=regs[2]=regs[3]=0;
   retry:
-  nsl=tot=re=tw=0;
+  nsl=re=tw=0; tot=spect;
   for(i=0;i<inv->count;i++) {
     slot=inv->item+i;
     j=slot->item;
     slot->flag&=~ISF_MARK;
-    if(!(how&8) && !(slot->flag&ISF_IGNORE) && j && j<=nitemdefs) tw+=itemdefs[j-1].weight*slot->quantity;
+    if(!(how&8) && !(slot->flag&(ISF_IGNORE|ISF_SPECIAL)) && j && j<=nitemdefs) tw+=itemdefs[j-1].weight*slot->quantity;
   }
   if(!(how&8) && tw+qty*idef->weight>inv->strength) {
     if(how&1) qty=(inv->strength-tw)/idef->weight; else { condflag=0; goto done; }
@@ -4401,7 +4443,7 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
         if(slot->item!=(item&0xFFFF)) continue;
         if(slot->quantity>=heap) goto un;
         if(!step && slot->flag!=(item>>16)) goto un;
-        if((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE)) goto un;
+        if((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE|ISF_SPECIAL)) goto un;
       }
       memory[MEM_ARG_J]=how; memory[MEM_ARG_K]=nsl; condflag=0;
       re|=run_program(memory[MEM_GIVE_ITEM_EVENT],item,qty,i,re);
@@ -4431,7 +4473,7 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
     how&=~1;
   }
   if((how&18)==18) for(i=0;i<inv->count;i++) if(inv->item[i].flag&ISF_MARK) inv->cursor=i;
-  if(!(how&2)) for(tot=qty,i=0;i<inv->count && tot;i++) {
+  if(!(how&2)) for(tot=qty-spect,i=0;i<inv->count && tot;i++) {
     slot=inv->item+i;
     if(slot->flag&ISF_MARK) {
       if(slot->item && slot->item!=(item&0xFFFF)) continue;
@@ -4455,6 +4497,9 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
       if(how&16) inv->cursor=i;
     }
   }
+  if((how&34)==32) switch(itemdefs[(item&0xFFFF)-1].special&0xF0) {
+    case ISPECIAL_STATUS: case ISPECIAL_STATUS_NONZERO: status_vars[itemdefs[(item&0xFFFF)-1].special&15]+=spect; break;
+  }
   condflag=1;
   done:
   for(i=0;i<inv->count;i++) if(!inv->item[i].item && inv->item[i].flag==ISF_MARK) inv->item[i].flag=0;
@@ -4470,19 +4515,39 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
   Uint16 re=0;
   Uint32 tot=0;
   Uint16 nsl=0;
+  Uint32 spect=0;
   int i=item&0xFFFF;
   int j;
   if(!i || i>nitemdefs || itemdefs[i-1].class==255) return condflag=0;
   if(!qty && !((item>>16)&ISF_FIXED)) return condflag=1,0;
+  if((how&32) || (inv->flag&INV_SPECIAL)) {
+    switch(itemdefs[i-1].special&0xF0) {
+      case ISPECIAL_STATUS: case ISPECIAL_STATUS_NONZERO:
+        spect=status_vars[itemdefs[i-1].special&15];
+        if(spect>qty) spect=qty;
+        if(spect) how|=32; else how&=~32;
+        if(((itemdefs[i-1].flag&IDF_SINGLE_HEAP) || (inv->flag&INV_SINGLE_HEAP)) && qty>spect) {
+          if(how&1) qty=spect; else return memory[MEM_ARG_J]=how|32,condflag=0;
+        }
+        if(qty<=status_vars[itemdefs[i-1].special&15]) {
+          if(!(how&2)) status_vars[itemdefs[i-1].special&15]-=qty;
+          condflag=1;
+          memory[MEM_ARG_J]=how;
+          return qty;
+        }
+        break;
+      default: how&=~32;
+    }
+  }
   regs[0]=regs[1]=regs[2]=regs[3]=0;
   retry:
-  nsl=0; tot=0;
+  nsl=0; tot=spect;
   for(i=0;i<inv->count;i++) inv->item[i].flag&=~ISF_MARK;
   for(i=0;i<inv->count;i++) {
     slot=inv->item+i;
     if(slot->flag&ISF_IGNORE) continue;
     if(!(how&4) && slot->flag!=(item>>16)) continue;
-    if(slot->item==(item&0xFFFF) && !((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE))) {
+    if(slot->item==(item&0xFFFF) && !((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE|ISF_SPECIAL))) {
       if((slot->quantity && tot<qty) || ((slot->flag&(item>>16)&ISF_FIXED) && !nsl)) nsl++,slot->flag|=ISF_MARK;
       tot+=slot->quantity;
       if(tot && tot>=qty) break;
@@ -4512,7 +4577,7 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
           slot=inv->item+j;
           if(slot->flag&(ISF_IGNORE|ISF_MARK)) continue;
           if(!(how&4) && slot->flag!=(item>>16)) continue;
-          if(slot->item==(item&0xFFFF) && !((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE))) {
+          if(slot->item==(item&0xFFFF) && !((slot->flag^(item>>16))&(memory[MEM_ITEM_MASK]|ISF_IN_USE|ISF_SPECIAL))) {
             if((slot->quantity && tot<qty) || ((slot->flag&(item>>16)&ISF_FIXED) && !nsl)) nsl++,slot->flag|=ISF_MARK;
             tot+=slot->quantity;
             if(tot && tot>=qty) break;
@@ -4544,11 +4609,12 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
       goto reloop;
     }
     if(!(re&0x0010)) {
-      tot=0;
+      tot=spect;
       for(i=0;i<inv->count;i++) {
         slot=inv->item+i;
         if(slot->flag&ISF_MARK) {
           j=(slot->quantity<qty?slot->quantity:qty);
+          if(qty>=tot && j>qty-tot) j=qty-tot;
           tot+=j;
           if(!(how&2)) {
             slot->quantity-=j;
@@ -4560,6 +4626,9 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
         }
       }
       qty=tot;
+    }
+    if((how&34)==32) switch(itemdefs[(item&0xFFFF)-1].special&0xF0) {
+      case ISPECIAL_STATUS: case ISPECIAL_STATUS_NONZERO: status_vars[itemdefs[(item&0xFFFF)-1].special&15]-=spect; break;
     }
   }
   done:
@@ -4998,6 +5067,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           case 0x10: so=itemdefs[t].element|(itemdefs[t].color<<8)|(itemdefs[t].parameter<<16); goto store;
           case 0x11: item11: u=(ntextbuf<80?snprintf(textbuf+ntextbuf,81-ntextbuf,"%s",itemnames+(itemdefs[t].appearance?:itemdefs[t].name)):0); if(u+ntextbuf<80) ntextbuf+=u; else ntextbuf=80; break;
           case 0x12: if(itemdefs[t].flag&IDF_UNIDENTIFIED) goto item11; else goto item06;
+          case 0x13: so=itemdefs[t].special; goto store;
           case 0x80: itemdefs[t].flag&=~IDF_UNIDENTIFIED; break;
           case 0x81: itemdefs[t].flag|=IDF_UNIDENTIFIED; break;
           default: errx(1,"Improper use of ITEM instruction");

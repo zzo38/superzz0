@@ -8,6 +8,7 @@ exit
 #include <math.h>
 #include <dlfcn.h>
 #include "musemu/musemu.h"
+#define TAU (2.0*M_PI)
 
 typedef struct {
   MUSEMUinf id;
@@ -419,7 +420,7 @@ static inline void render_music(Sint16*buf,int len) {
                 case 1: x=thr->y; break;
                 case 2: x=music->z; break;
               }
-              if(c&0x08) x*=2.0*M_PI;
+              if(c&0x08) x*=TAU;
               if(c&0x10) x=-x;
               switch(c&7) {
                 case 0: x=thr->x; break;
@@ -1232,7 +1233,7 @@ static double load_realvalue(const ASN1_Value*v,Uint16 n) {
         return pow(r,load_realvalue(&u,n));
       case 9: return n;
       case 11: return M_PI;
-      case 12: return 2.0*M_PI;
+      case 12: return TAU;
       default: goto error;
     }
   }

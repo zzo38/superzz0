@@ -672,6 +672,8 @@ string and Graphic string might also be accepted).
 * 10 = Octet string with one or two bytes, the first being color and the
 second being parameter (both have a default value of zero).
 
+* 11 = Special type, which is enumerated.
+
 
 === ITEMRAND ===
 

@@ -1094,6 +1094,7 @@ numbers are treated as unsigned.
    bit1 = Only check; do not take any items
    bit2 = Don't add a first pass to check for fully matching slots
    bit4 = Move cursor to last affected (or affectable) slot
+   bit5 = Apply special use
 
 [0B7 IGIV]
   This is like ITAK but gives instead of takes items. This does more than
@@ -1106,6 +1107,7 @@ numbers are treated as unsigned.
    bit2 = Don't check for fully matching slots first
    bit3 = Ignore weight/strength
    bit4 = Move cursor to last affected (or affectable) slot
+   bit5 = Apply special use
 
 [0B9 IMOV]
   (TODO)
@@ -1221,6 +1223,7 @@ numbers are treated as unsigned.
    $10 = Element and color and parameter together
    $11 = Append appearance name to text buffer if not empty, else name
    $12 = Append appearance name if unidentified and not empty, else name
+   $13 = Special use (0 if none)
    $80 = Clear unidentified flag
    $81 = Set unidentified flag
   The result is written to the first operand, if the item number is valid

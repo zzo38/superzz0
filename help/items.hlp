@@ -8,6 +8,7 @@ item definitions and the inventory lists.
 !ip;Inventory properties
 !is;Item slot
 !ir;Item randomizers
+!sp;Special uses
 
 :dl;Item definition list
 On this screen, you can select an item definition to edit. You can also add
@@ -67,6 +68,9 @@ you can use them for your own use.
 inherent use and you can use them for your own use. See the below section
 for the working of standard flags.
 
+þ Special uses: Define the special use for this item definition.
+!sp;Special uses
+
 :df;Item definition flags
 The standard flags are as follows:
 
@@ -112,7 +116,8 @@ An item slot has the following attributes:
 þ Item: The item number. Specify zero if this slot is vacant.
 
 þ Quantity: How many of this item is in this slot. This should be set to
-at least one, if there is any of this item.
+at least one, if there is any of this item (although zero is sometimes
+appropriate for fixed or special slots).
 
 þ Ext0, Ext1, Ext2: These have no inherent use, and can be used for your
 own use. Ext0 is 32-bits and the others are 16-bits.
@@ -144,6 +149,12 @@ ICNT and IFND may also use and modify this flag. The give item and take
 item events can be used to read and/or change this flag at run time in
 order to affect which item slots are affected by giving and taking items.
 
+þ Special: Makes the special use of the item definition to be applied to
+the item in this slot. This does not prevent moving, discarding, etc, but
+you can apply other flags to control such things. This also causes it to be
+ignored when calculating encumbrance, and it prevents this slot from being
+used when giving or taking items unless you deliberately specify this flag.
+
 þ Custom flags: Flags that you can define for your own use.
 
 A slot is considered to be "vacant" if the item number is zero and none
@@ -172,6 +183,10 @@ reached the max heap for that item.
 
 þ Ignore weight: Causes the weight and strength to be ignored when adding
 items to this inventory list.
+
+þ Enable special uses: Allows the special uses of items to be applied
+when this inventory is selected (even if there are no items that have
+special uses defined within this inventory list).
 
 þ User0, User1, User2, User3: Boolean flags with no inherent meaning.
 
@@ -215,3 +230,22 @@ item definition having that number.
 The class range is the range of item class numbers (from 0 to 127) that are
 affected; item definitions whose class number is not in this range are not
 affected, regardless of the other criteria.
+
+:sp;Special uses
+An item can have special uses. The possibilities are:
+
+þ None: The default setting, which would be used for most item definitions.
+This has no special meaning.
+
+þ Status variable: This item definition is used for a status variable. If
+giving or taking this item when the inventory list has the "Special" flag,
+then it will affect the corresponding status variable; the max heap for
+this item definition will apply. A special slot in a inventory list that
+corresponds to this will display the value of that status variable when
+the item menu is displayed, and discarding it from the item menu will set
+the value of that variable to zero.
+
+þ Status variable (nonzero): Same as above except that it is not displayed
+in inventory lists if the value is zero. If it is discarded, it will still
+be in the inventory but will be hidden; the value is set to zero anyways.
+

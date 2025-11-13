@@ -162,6 +162,7 @@ static const char*load_item_definitions(FILE*f) {
           if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_OCTET_STRING || v1.length<1 || v1.length>2) goto error;
           id.color=v1.data[0]; if(v1.length==2) id.parameter=v1.data[1];
           break;
+        case 11: if(asn1_first_of(&v1,&v) || v1.class || v1.type!=ASN1_ENUMERATED || asn1_decode_number(&v1,ASN1_INTEGER,&id.special)) goto error; break;
         default: e="Unexpected field in ITEM.DER";
       }
     } else if(vv.class!=ASN1_UNIVERSAL || vv.type!=ASN1_NULL) {

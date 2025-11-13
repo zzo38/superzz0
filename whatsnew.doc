@@ -14,6 +14,9 @@ The time zone for the dates in this file is Pacific (British Columbia).
 
 === Version ??? ===
 
+GAME
+  +  Optional special uses for item definitions and inventory slots.
+
 SCRIPTS
   +  The #SENT condition to check if a message was successfully sent.
 

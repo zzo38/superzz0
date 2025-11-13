@@ -662,6 +662,7 @@ extern Uint16 nitemdefs;
 // ItemDef:special
 #define ISPECIAL_NONE 0x00
 #define ISPECIAL_STATUS 0x10 // add number of status variable 0 to 15
+#define ISPECIAL_STATUS_NONZERO 0x20 // add number of status variable 0 to 15
 
 typedef struct {
   Uint32 quantity,ext0;

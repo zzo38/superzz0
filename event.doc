@@ -297,7 +297,8 @@ $00A3 (#)
   another pass after this one instead of abandoning the attempt. [*]
 
   bit4 = Do not affect any slots. Everything else is still done and it
-  might be successful or not, but the inventory is unchanged. [*]
+  might be successful or not, but the inventory is unchanged. This does
+  not prevent the special use of item definitions from being applied. [*]
 
   bit5 = The quantity is changed to the value of the A register. No other
   changes are made; this does not change which slots are used.

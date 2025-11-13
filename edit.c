@@ -1818,6 +1818,7 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
         if(vv.class || vv.type!=ASN1_OCTET_STRING || vv.length<1 || vv.length>2) goto error;
         d.color=vv.data[0]; if(vv.length==2) d.parameter=vv.data[1];
         break;
+      case 11: if(asn1_decode_number(&vv,ASN1_AUTO,&d.special)) goto error; break;
       default: goto error;
     }
   }
@@ -1862,6 +1863,30 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
       }
       win_blank(); win_command_esc(0,"Done") break;
     }
+    win_command('i',"Special uses...") {
+      char k[2]={(d.special&15)+'A'+(d.special&8?10:0)};
+      i=d.special&0xF0;
+      if(!i) *k=0;
+      win_form("Item definition edit - Special uses") {
+        win_help("items","sp");
+        win_heading(title);
+        win_option('N',"None",i,ISPECIAL_NONE) win_refresh();
+        win_option('v',"Status variable",i,ISPECIAL_STATUS) win_refresh();
+        win_option('z',"Status variable (nonzero)",i,ISPECIAL_STATUS_NONZERO) win_refresh();
+        if(i==ISPECIAL_STATUS || i==ISPECIAL_STATUS_NONZERO) {
+          win_blank();
+          win_text_restrict('W',"Which variable: ",k);
+        }
+        win_blank(); win_command_esc(0,"Done") break;
+      }
+      switch(i) {
+        case ISPECIAL_STATUS: case ISPECIAL_STATUS_NONZERO:
+          if(*k>='A' & *k<='H') d.special=i+*k-'A';
+          if(*k>='S' & *k<='Z') d.special=i+*k+8-'S';
+          break;
+        default: d.special=i;
+      }
+    }
     win_blank();
     win_command_esc(0,"Done") {
       if(!*name) {
@@ -1896,6 +1921,7 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
     name[0]=d.color; name[1]=d.parameter;
     asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,10); asn1_primitive(e,ASN1_UNIVERSAL,ASN1_OCTET_STRING,name,name[1]?2:1);
   }
+  if(d.special) asn1_explicit(e,ASN1_CONTEXT_SPECIFIC,11),asn1_implicit(e,ASN1_UNIVERSAL,ASN1_ENUMERATED),asn1_encode_integer(e,d.special);
   asn1_finish_encoder(e);
   end: asn1_free(v0); *v0=v; free(script); free(desc);
 }
@@ -1944,6 +1970,7 @@ static void inventory_list_callback(Uint16 n,int y,void*uz) {
   if(s->flag&ISF_HIDDEN) v_color[80*y+17]=14,v_char[80*y+17]='H';
   if(s->flag&ISF_IGNORE) v_color[80*y+18]=14,v_char[80*y+18]='g';
   if(s->flag&ISF_HILIGHT) v_color[80*y+19]=14,v_char[80*y+19]='!';
+  if(s->flag&ISF_SPECIAL) v_color[80*y+21]=14,v_char[80*y+21]='s';
   if(s->flag&ISF_MARK) v_color[80*y+22]=14,v_char[80*y+22]=7;
   for(n=0;n<8;n+=2) if(s->flag&(3<<n)) v_color[80*y+n/2+23]=9,v_char[80*y+n/2+23]="\xC4\xDC\xDF\xDB"[(s->flag>>n)&3];
   if(s->ext0) v_color[80*y+27]=13,v_char[80*y+27]='0';
@@ -1992,6 +2019,7 @@ static void edit_invslot(Uint16 n) {
     win_boolean('g',"Ignore",s->flag,ISF_IGNORE);
     win_boolean('t',"Hilight",s->flag,ISF_HILIGHT);
     win_boolean('k',"Mark",s->flag,ISF_MARK);
+    win_boolean('S',"Special",s->flag,ISF_SPECIAL);
     win_command('u',"Custom flags...") win_form("Edit item slot") {
       win_heading("Custom flags:");
       win_boolean('0',"0 ($01)",s->flag,0x01);
@@ -2070,6 +2098,7 @@ static void edit_inventory(const char*name) {
       win_boolean('I',"Ignore max heap",inventory->flag,INV_IGNORE_MAXHEAP);
       win_boolean('g',"Single heap per item",inventory->flag,INV_SINGLE_HEAP);
       win_boolean('w',"Ignore weight",inventory->flag,INV_IGNORE_WEIGHT);
+      win_boolean('E',"Enable special uses",inventory->flag,INV_SPECIAL);
       win_boolean('0',"User0",inventory->flag,INV_USER0);
       win_boolean('1',"User1",inventory->flag,INV_USER1);
       win_boolean('2',"User2",inventory->flag,INV_USER2);
