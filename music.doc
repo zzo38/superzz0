@@ -75,9 +75,10 @@ These commands are global and apply to all songs:
 
 @number = "filename" bits frequency loopstart loopend
   Define a instrument from a raw file. The bits can be one of: "u8",
-  "u16le", "u16be", "s8", "s16le", "s16be". The frequency is a positive
-  real number. The loop start and loop end are both optional (although
-  the loop start must be included if the loop end is included).
+  "u16le", "u16be", "s8", "s16le", "s16be". (Use "s8" for Amiga sounds.)
+  The frequency is a positive real number. The loop start and loop end
+  are both optional (although the loop start must be included if the loop
+  end is included).
 
 @v number = kind { numbers }
   Define a envelope. See the below section about syntax of envelopes.

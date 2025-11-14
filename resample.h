@@ -102,3 +102,10 @@ void resample_process_int16(Resample*obj,int16_t*in,uint32_t nin,int16_t*out,uin
 void resample_process_int16_to_float_mix(Resample*obj,int16_t*in,uint32_t nin,float*out,uint32_t nout,float vol,double rate);
 
 void resample_process_uint8_to_float_mix(Resample*obj,uint8_t*in,uint32_t nin,float*out,uint32_t nout,float vol,double rate);
+
+void resample_process_to_float(Resample*obj,float*out,uint32_t nout,float vol,double rate);
+
+#define resample_full(x_) ({ Resample*resample_x_=(x_); (resample_x_->index==resample_x_->nsam); })
+
+#define resample_push(x_,y_) ({ Resample*resample_x_=(x_); resample_x_->buf[resample_x_->index++]=(y_); })
+

@@ -168,27 +168,29 @@ static inline void render_music_frame(float*buf,int len) {
   Instrument*ins;
   Channel*cha;
   for(m=0;m<music->nch;m++) {
-    if(music->ch[m].flag&CHAN_SOUND) {
+    if((music->ch[m].flag&CHAN_SOUND) && !(music->ch[m].flag&CHAN_EMULATE)) {
       cha=music->ch+m;
       if(i=cha->instrument) {
         ins=music->in+i-1;
-        if(ins->t==INST_WAVE) {
-          p=cha->resam.pin;
-          r=(cha->flag&CHAN_LOOP)?ins->wave.le:ins->wave.len;
-          cha->resam.pout=0;
-          while(r-p>0 && cha->resam.pout<len) {
-            if(ins->wave.is8) {
-              resample_process_uint8_to_float_mix(&cha->resam,ins->wave.d8+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
-            } else {
-              resample_process_int16_to_float_mix(&cha->resam,ins->wave.d16+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
-            }
+        switch(ins->t) {
+          case INST_WAVE:
             p=cha->resam.pin;
-            if(p==ins->wave.len && (ins->wave.ls==ins->wave.len || !(cha->flag&CHAN_LOOP))) {
-              cha->flag&=~(CHAN_SOUND|CHAN_LOOP);
-              break;
+            r=(cha->flag&CHAN_LOOP)?ins->wave.le:ins->wave.len;
+            cha->resam.pout=0;
+            while(r-p>0 && cha->resam.pout<len) {
+              if(ins->wave.is8) {
+                resample_process_uint8_to_float_mix(&cha->resam,ins->wave.d8+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
+              } else {
+                resample_process_int16_to_float_mix(&cha->resam,ins->wave.d16+p,r-p,buf+cha->resam.pout,len-cha->resam.pout,cha->amp,cha->freq);
+              }
+              p=cha->resam.pin;
+              if(p==ins->wave.len && (ins->wave.ls==ins->wave.len || !(cha->flag&CHAN_LOOP))) {
+                cha->flag&=~(CHAN_SOUND|CHAN_LOOP);
+                break;
+              }
+              if((cha->flag&CHAN_LOOP) && p==ins->wave.le) p=cha->resam.pin=ins->wave.ls;
             }
-            if((cha->flag&CHAN_LOOP) && p==ins->wave.le) p=cha->resam.pin=ins->wave.ls;
-          }
+            break;
         }
       }
     } else if(music->ch[m].flag&CHAN_EMULATE) {
@@ -470,11 +472,9 @@ static inline void render_music(Sint16*buf,int len) {
                 cha->flag=CHAN_USE|CHAN_SOUND|CHAN_LOOP;
                 c=cha->instrument-1;
                 cha->resam.pin=cha->resam.pout=0;
-                resample_reset(&cha->resam);
+                if(thr->x>0.0) cha->freq=music->in[c].rate*thr->x;
                 switch(music->in[c].t) {
-                  case INST_WAVE:
-                    if(thr->x>0.0) cha->freq=music->in[c].rate*thr->x;
-                    break;
+                  case INST_WAVE: resample_reset(&cha->resam); break;
                 }
               } else {
                 cha->flag=CHAN_USE|CHAN_SOUND|CHAN_LOOP|CHAN_EMULATE;
@@ -1109,6 +1109,7 @@ static void load_emulation_channel(Channel*o,const ASN1_Value*v0) {
 
 static void load_instrument(Instrument*o,const ASN1_Value*v0) {
   int i;
+  double r;
   ASN1_Value v1;
   Uint32 a;
   Uint8 c,m,p;
@@ -1439,7 +1440,7 @@ static void load_bgm(const char*name,Uint16 song) {
   if(config.music_debug>98) {
     printf("Loaded music \"%s\", %d, %d\n",music_name,song,music_song);
     for(i=0;i<music->nin;i++) {
-      printf("Instrument #%d: Type %d\n",i+1,music->in[i].t);
+      printf("Instrument #%d: Type(%d) Rate(%f)\n",i+1,music->in[i].t,music->in[i].rate);
       switch(music->in[i].t) {
         case INST_WAVE:
           printf("  len=%lu ls=%lu le=%lu is8=%u\n",(unsigned long)music->in[i].wave.len,(unsigned long)music->in[i].wave.ls,(unsigned long)music->in[i].wave.le,music->in[i].wave.is8);

@@ -7,6 +7,8 @@ exit
 // However, it is almost entirely rewritten compared from the original implementation.
 // That file suggests using -mavx2 but that is not supported on my computer, so is omitted.
 
+// (This might later be replaced by a different implementation; this one has a few problems.)
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -185,3 +187,26 @@ void resample_process_uint8_to_float_mix(Resample*obj,uint8_t*in,uint32_t nin,fl
   }
   obj->offset+=o;
 }
+
+#if 0
+void resample_process_to_float(Resample*obj,float*out,uint32_t nout,float vol,double rate) {
+  double o=0.0;
+  uint32_t g=0;
+  int h=obj->ntap/2;
+  while(nout) {
+    if(obj->offset+o>=obj->index-h) {
+      if(obj->index==obj->nsam) {
+        memmove(obj->buf,obj->buf+obj->nsam-obj->ntap,obj->ntap*sizeof(float));
+        obj->offset-=obj->nsam-obj->ntap;
+        obj->index-=obj->nsam-obj->ntap;
+      } else break;
+    } else {
+      *out++=vol*subsample(obj,obj->offset+o);
+      o=++g*rate;
+      obj->pout++;
+      nout--;
+    }
+  }
+  obj->offset+=o;
+}
+#endif
