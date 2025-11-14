@@ -5,6 +5,8 @@ Super ZZ Zero is a 2D game creation system similar to ZZT (Potomac Computer Syst
 
 It is mainly for action-adventure puzzle games using a board grid, with top-down perspective, but it may also be suitable for other games.
 
+Screenshots are available at:  https://zeta.asie.pl/wiki/doku.php?id=release:super_zz_zero#screenshots
+
 
 Building
 --------
