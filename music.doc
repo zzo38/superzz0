@@ -80,6 +80,12 @@ These commands are global and apply to all songs:
   are both optional (although the loop start must be included if the loop
   end is included).
 
+@number = @number
+  Define a instrument as a copy of an existing instrument. This is only
+  valid for delay-line-based instruments (which, in the current version
+  of this software, cannot be defined directly and must use an external
+  file in DER format to be defined).
+
 @v number = kind { numbers }
   Define a envelope. See the below section about syntax of envelopes.
 
@@ -322,8 +328,12 @@ sequence according to the kind of instrument:
 
 * Type 1 = Sampled instrument.
 
-(Currently, sampled instrument is the only kind of instruments; later,
-there might be added others, such as FM synthesis.)
+* Type 2 = Sampled with delay line and special effects. This instrument
+cannot be used multiple times at once (but see type 3 below).
+
+* Type 3 = Copy of a type 2 instrument. The only field is the instrument
+number to copy from, which must be a number of a type 2 instrument which
+has already been defined before this one.
 
 The fields of a sampled instrument are:
 
@@ -347,6 +357,46 @@ the beginning (zero means the beginning). Null or omitted disables looping.
 it is present, then releasing the note will cause the sound to continue to
 play until it reaches the end, without looping. (If the starting loop point
 is omitted, then this one is also omitted and cannot be null instead.)
+
+The fields of a sampled instrument with a delay line are:
+
+* Optional name of the instrument.
+
+* Sample rate of delay line, which is a real number.
+
+* Frequency multiplier, which is a real number. This is multiplied by the
+sample rate of the delay line to make the base frequency of the instrument.
+
+* Log2 of the length of the delay line. This value must be between 2 and 16
+inclusive; i.e. it cannot be longer than 65535 samples.
+
+* Codec, which is enumerated.
+
+* Wave data, which is a octet string, according to the codec.
+
+* An integer specifying the starting loop point, or null for no loop. (You
+cannot specify a ending loop point.)
+
+* Key/value list of feedback; the keys are integers which is the offset
+(which can be positive or negative or zero), and the values are the real
+numbers meaning the amount of feedback at that offset. The maximum number
+of pairs is currently eight (this may be increased in future).
+
+* Real number being the amplitude multiplier of the wave data per filling
+the delay line (it is reset to 1 on a new note).
+
+* A sequence defining the LFO, or omitted to disable LFO. The four fields
+of this sequence are: usage (enumerated 1 to 4), shape (enumerated 0 to 7),
+epsilon (real), depth (real). The epsilon should be less than 1 and greater
+than -1 (it should normally be close to zero; numbers that are closer to
+zero will result in a lower frequency oscillation), and the depth should
+normally not exceed 1 (but is allowed to exceed 1).
+
+* A integer specifying how much of the delay line will be used for output;
+omitted means to use the full delay line.
+
+* A bit string with additional options. This can be omitted, which is the
+same as a empty bit string.
 
 Each channel is a implicit typed sequence according to the kind of channel:
 

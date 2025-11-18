@@ -40,6 +40,8 @@ typedef struct {
 } WaveSound;
 
 #define INST_WAVE 1
+#define INST_DELAYLINE 2
+#define INST_DELAYLINE_COPY 3
 
 #define CHAN_USE 0x01
 #define CHAN_SOUND 0x02
@@ -49,6 +51,33 @@ typedef struct {
 #define CHAN_ENV2 0x80
 
 #define CHAN_FLAG_MASK (CHAN_USE|CHAN_EMULATE)
+
+#define MaxFeedbackItems 8
+
+typedef struct {
+  Resample resam;
+  union {
+    Sint16*d16;
+    Uint8*d8;
+  };
+  float*line;
+  double rate;
+  float fb[MaxFeedbackItems];
+  float amp,ampdecay;
+  float lfox,lfoy,lfoe,lfod;
+  Uint32 dlen,dpos,len,ls,duse;
+  Uint16 fbat[MaxFeedbackItems];
+  Uint8 is8,nfb,lfok,lfos,option;
+} DelayLine;
+
+#define DLOP_CONSTRATE 0x80
+#define DLOP_DUSEFREQ 0x40
+
+#define LFO_NONE 0
+#define LFO_OUT_AMPLITUDE 1
+#define LFO_FEEDBACK 2
+#define LFO_OUT_FREQUENCY 3
+#define LFO_IN_FREQUENCY 4
 
 typedef struct {
   Uint8 t;
@@ -61,6 +90,7 @@ typedef struct {
       Uint32 len,ls,le;
       Uint8 is8;
     } wave;
+    DelayLine*dline;
   };
   double rate;
 } Instrument;
@@ -165,6 +195,9 @@ static char init_resampler(Resample*resam,const char*text) {
 static inline void render_music_frame(float*buf,int len) {
   int i,m;
   Sint32 p,r;
+  float f,g;
+  double d;
+  Uint8 k;
   Instrument*ins;
   Channel*cha;
   for(m=0;m<music->nch;m++) {
@@ -189,6 +222,57 @@ static inline void render_music_frame(float*buf,int len) {
                 break;
               }
               if((cha->flag&CHAN_LOOP) && p==ins->wave.le) p=cha->resam.pin=ins->wave.ls;
+            }
+            break;
+          case INST_DELAYLINE: case INST_DELAYLINE_COPY:
+            r=ins->dline->len;
+            k=ins->dline->lfok;
+            for(ins->dline->resam.pout=0;ins->dline->resam.pout<len;) {
+              if(k) {
+                i=ins->dline->lfos;
+                if(i<6) {
+                  ins->dline->lfox-=ins->dline->lfoe*ins->dline->lfoy;
+                  ins->dline->lfoy+=ins->dline->lfoe*ins->dline->lfox;
+                }
+                switch(i) {
+                  case 0: g=ins->dline->lfox; break;
+                  case 1: g=fabs(ins->dline->lfox); break;
+                  case 2: g=ins->dline->lfox+1.0; break;
+                  case 3: g=1.0-fabs(ins->dline->lfox); break;
+                  case 4: g=fmax(0.0,ins->dline->lfox); break;
+                  case 5: g=ins->dline->lfox*ins->dline->lfoy; break;
+                  case 6: g=ins->dline->lfoy; ins->dline->lfoy*=ins->dline->lfoe; break;
+                  case 7: g=ins->dline->lfox; ins->dline->lfox=fmod(g+ins->dline->lfoe,ins->dline->lfod); break;
+                }
+              }
+              if(ins->dline->dpos>=ins->dline->dlen) {
+                ins->dline->dpos=0;
+                cha->resam.pout=0;
+                d=cha->freq;
+                if(k==LFO_IN_FREQUENCY) d=fmax(0.0,(1.0+g)*d);
+                again1:
+                if(ins->dline->is8) {
+                  resample_process_uint8_to_float_mix(&cha->resam,ins->dline->d8+cha->resam.pin,r-cha->resam.pin,ins->dline->line,ins->dline->dlen-cha->resam.pout,ins->dline->amp,d);
+                } else {
+                  resample_process_int16_to_float_mix(&cha->resam,ins->dline->d16+cha->resam.pin,r-cha->resam.pin,ins->dline->line,ins->dline->dlen-cha->resam.pout,ins->dline->amp,d);
+                }
+                if(cha->resam.pout<ins->dline->dlen && cha->resam.pin==ins->dline->len && (cha->flag&CHAN_LOOP) && ins->dline->ls<r) {
+                  cha->resam.pin=ins->dline->ls;
+                  goto again1;
+                }
+                ins->dline->amp*=ins->dline->ampdecay;
+              }
+              if(!resample_full(&ins->dline->resam)) {
+                f=ins->dline->line[ins->dline->dpos];
+                ins->dline->line[ins->dline->dpos]=(k!=LFO_FEEDBACK?0.0:f*g);
+                for(i=0;i<ins->dline->nfb;i++) ins->dline->line[(ins->dline->dpos+ins->dline->fbat[i])&(ins->dline->dlen-1)]+=f*ins->dline->fb[i];
+                if(ins->dline->dpos<ins->dline->duse) {
+                  if(k==LFO_OUT_AMPLITUDE) f*=g;
+                  resample_push(&ins->dline->resam,f);
+                }
+                ins->dline->dpos++;
+              }
+              resample_process_to_float_mix(&ins->dline->resam,buf+ins->dline->resam.pout,len-ins->dline->resam.pout,cha->amp,k!=LFO_OUT_FREQUENCY?ins->dline->rate:fmax(0.0,ins->dline->rate*(g+1.0)));
             }
             break;
         }
@@ -473,8 +557,19 @@ static inline void render_music(Sint16*buf,int len) {
                 c=cha->instrument-1;
                 cha->resam.pin=cha->resam.pout=0;
                 if(thr->x>0.0) cha->freq=music->in[c].rate*thr->x;
+                resample_reset(&cha->resam);
                 switch(music->in[c].t) {
-                  case INST_WAVE: resample_reset(&cha->resam); break;
+                  case INST_DELAYLINE: case INST_DELAYLINE_COPY:
+                    music->in[c].dline->resam.pin=music->in[c].dline->resam.pout=0;
+                    resample_reset(&music->in[c].dline->resam);
+                    memset(music->in[c].dline->line,0,music->in[c].dline->dlen*sizeof(float));
+                    music->in[c].dline->dpos=music->in[c].dline->dlen;
+                    music->in[c].dline->amp=1.0;
+                    music->in[c].dline->lfox=0.0;
+                    music->in[c].dline->lfoy=music->in[c].dline->lfod;
+                    if(music->in[c].dline->option&DLOP_DUSEFREQ) music->in[c].dline->duse=((Uint32)(music->in[c].dline->dlen/cha->freq+0.5))?:1;
+                    if(music->in[c].dline->option&DLOP_CONSTRATE) cha->freq=1.0;
+                    break;
                 }
               } else {
                 cha->flag=CHAN_USE|CHAN_SOUND|CHAN_LOOP|CHAN_EMULATE;
@@ -1052,6 +1147,13 @@ static void unload_bgm(void) {
   }
   if(music->in) for(i=0;i<music->nin;i++) switch(music->in[i].t) {
     case INST_WAVE: free(music->in[i].wave.d8); break;
+    case INST_DELAYLINE:
+      free(music->in[i].dline->d8);
+      // fall through
+    case INST_DELAYLINE_COPY:
+      free(music->in[i].dline->line);
+      free(music->in[i].dline);
+      break;
   }
   music->ch=realloc(music->ch,sizeof(Channel))?:music->ch;
   free(music->rom);
@@ -1107,12 +1209,55 @@ static void load_emulation_channel(Channel*o,const ASN1_Value*v0) {
   if(o->state) o->flag=CHAN_USE|CHAN_EMULATE; else o->flag=0;
 }
 
+static void load_instrument_codec(Uint8*d8,Uint16*d16,Uint8 c,const Uint8*d,Uint32 len) {
+  Uint32 a;
+  Uint8 m,p;
+  switch(c) {
+    case 0: // Unsigned 8-bits
+      memcpy(d8,d,len); break;
+    case 1: // ADPCM 4-bits
+      for(a=0,m=1,p=128;a<len;) {
+        c=*d++;
+        d8[a++]=adpcm4bits(c>>4,p,&m);
+        d8[a++]=adpcm4bits(c&15,p,&m);
+      }
+      break;
+    case 2: // ADPCM 3-bits
+      for(a=0,m=0,p=128;a<len;) {
+        c=*d++;
+        d8[a++]=adpcm3bits((c>>5)&7,p,&m);
+        d8[a++]=adpcm3bits((c>>2)&7,p,&m);
+        d8[a++]=adpcm3bits((c<<1)&7,p,&m);
+      }
+      break;
+    case 3: // ADPCM 2-bits
+      for(a=0,m=0,p=128;a<len;) {
+        c=*d++;
+        d8[a++]=adpcm2bits((c>>6)&3,p,&m);
+        d8[a++]=adpcm2bits((c>>4)&3,p,&m);
+        d8[a++]=adpcm2bits((c>>2)&3,p,&m);
+        d8[a++]=adpcm2bits((c>>0)&3,p,&m);
+      }
+      break;
+    case 4: // Signed 16-bits
+      for(a=0;a<len;a++,d+=2) d16[a]=d[0]|(d[1]<<8);
+      break;
+    case 6: // A-law
+      for(a=0;a<len;a++) d16[a]=d[a]&128?-alaw[d[a]&127]:alaw[d[a]&127];
+      break;
+    case 7: // mu-law
+      for(a=0;a<len;a++) d16[a]=d[a]&128?mulaw[d[a]&127]:(-mulaw[d[a]&127]-(d[a]==127));
+      break;
+    default: errx(1,"Unknown codec (%d) in %s.BGM",c,music_name);
+  }
+}
+
 static void load_instrument(Instrument*o,const ASN1_Value*v0) {
   int i;
   double r;
-  ASN1_Value v1;
+  ASN1_Value v1,v2;
   Uint32 a;
-  Uint8 c,m,p;
+  Uint8 c;
   const Uint8*d;
   if(v0->class==ASN1_UNIVERSAL && v0->type==ASN1_NULL) return;
   if(v0->class!=ASN1_CONTEXT_SPECIFIC || !v0->constructed) error: errx(1,"Invalid instrument in %s.BGM",music_name);
@@ -1123,51 +1268,13 @@ static void load_instrument(Instrument*o,const ASN1_Value*v0) {
       if(v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_double(&v1,ASN1_REAL,&o->rate)) goto error;
       o->rate/=(double)spec.freq;
       if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_ENUMERATED || asn1_decode_number(&v1,ASN1_INTEGER,&c)) goto error;
-      if(c<0 || c>7 || c==5) goto error_c;
+      if(c<0 || c>7 || c==5) errx(1,"Unknown codec (%d) in %s.BGM",c,music_name);
       if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_OCTET_STRING || v1.constructed || !v1.length || v1.length>0x7FFFFFULL) goto error;
       if(c==4 && (v1.length&1)) goto error;
       o->wave.len=(v1.length*"\x01\x02\x03\x04\x01\x00\x01\x01"[c])>>(c==4);
       if(o->wave.is8=1&(0x000F>>c)) o->wave.d8=malloc(o->wave.len); else o->wave.d16=malloc(o->wave.len*sizeof(Sint16));
       if(!(o->wave.is8?(void*)o->wave.d8:(void*)o->wave.d16)) err(1,"Allocation failed");
-      d=v1.data;
-      switch(c) {
-        case 0: // Unsigned 8-bits
-          memcpy(o->wave.d8,v1.data,v1.length); break;
-        case 1: // ADPCM 4-bits
-          for(a=0,m=1,p=128;a<o->wave.len;) {
-            c=*d++;
-            o->wave.d8[a++]=adpcm4bits(c>>4,p,&m);
-            o->wave.d8[a++]=adpcm4bits(c&15,p,&m);
-          }
-          break;
-        case 2: // ADPCM 3-bits
-          for(a=0,m=0,p=128;a<o->wave.len;) {
-            c=*d++;
-            o->wave.d8[a++]=adpcm3bits((c>>5)&7,p,&m);
-            o->wave.d8[a++]=adpcm3bits((c>>2)&7,p,&m);
-            o->wave.d8[a++]=adpcm3bits((c<<1)&7,p,&m);
-          }
-          break;
-        case 3: // ADPCM 2-bits
-          for(a=0,m=0,p=128;a<o->wave.len;) {
-            c=*d++;
-            o->wave.d8[a++]=adpcm2bits((c>>6)&3,p,&m);
-            o->wave.d8[a++]=adpcm2bits((c>>4)&3,p,&m);
-            o->wave.d8[a++]=adpcm2bits((c>>2)&3,p,&m);
-            o->wave.d8[a++]=adpcm2bits((c>>0)&3,p,&m);
-          }
-          break;
-        case 4: // Signed 16-bits
-          for(a=0;a<o->wave.len;a++,d+=2) o->wave.d16[a]=d[0]|(d[1]<<8);
-          break;
-        case 6: // A-law
-          for(a=0;a<o->wave.len;a++) o->wave.d16[a]=d[a]&128?-alaw[d[a]&127]:alaw[d[a]&127];
-          break;
-        case 7: // mu-law
-          for(a=0;a<o->wave.len;a++) o->wave.d16[a]=d[a]&128?mulaw[d[a]&127]:(-mulaw[d[a]&127]-(d[a]==127));
-          break;
-        default: error_c: errx(1,"Unknown codec (%d) in %s.BGM",c,music_name);
-      }
+      load_instrument_codec(o->wave.d8,o->wave.d16,c,v1.data,v1.length);
       o->wave.ls=o->wave.le=o->wave.len;
       if(asn1_next_of(&v1,v0)) break;
       if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_BIT_STRING && v1.length==1 && asn1_next_of(&v1,v0)) break;
@@ -1183,6 +1290,64 @@ static void load_instrument(Instrument*o,const ASN1_Value*v0) {
       } else if(v1.type!=ASN1_NULL) {
         goto error;
       }
+      break;
+    case INST_DELAYLINE:
+      if(!(o->dline=calloc(sizeof(DelayLine),1))) err(1,"Allocation failed");
+      o->dline->resam=music->ch->resam;
+      if(resample_init(&o->dline->resam,0,0,0,RESAMPLE_SHARE)) errx(1,"Error copying resample object");
+      if(v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_double(&v1,ASN1_REAL,&o->dline->rate)) goto error;
+      o->dline->rate/=(double)spec.freq;
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_double(&v1,ASN1_REAL,&o->rate)) goto error;
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&c) || c<2 || c>16) goto error;
+      o->dline->duse=o->dline->dlen=1UL<<c;
+      if(!(o->dline->line=calloc(o->dline->dlen,sizeof(float)))) err(1,"Allocation failed");
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_ENUMERATED || asn1_decode_number(&v1,ASN1_INTEGER,&c)) goto error;
+      if(c<0 || c>7 || c==5) errx(1,"Unknown codec (%d) in %s.BGM",c,music_name);
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_OCTET_STRING || v1.constructed || !v1.length || v1.length>0x7FFFFFULL) goto error;
+      if(c==4 && (v1.length&1)) goto error;
+      o->dline->len=(v1.length*"\x01\x02\x03\x04\x01\x00\x01\x01"[c])>>(c==4);
+      if(o->dline->is8=1&(0x000F>>c)) o->dline->d8=malloc(o->dline->len); else o->dline->d16=malloc(o->dline->len*sizeof(Sint16));
+      if(!(o->dline->is8?(void*)o->dline->d8:(void*)o->dline->d16)) err(1,"Allocation failed");
+      load_instrument_codec(o->dline->d8,o->dline->d16,c,v1.data,v1.length);
+      o->dline->ls=o->dline->len;
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL) goto error;
+      if(v1.type==ASN1_INTEGER?(asn1_decode_number(&v1,ASN1_INTEGER,&o->dline->ls) || o->dline->ls>=o->dline->len):(v1.type!=ASN1_NULL)) goto error;
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_KEY_VALUE_LIST) goto error;
+      if(!asn1_first_of(&v2,&v1)) for(c=0;;) {
+        if(v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&i)) goto error;
+        o->dline->nfb=c+1;
+        o->dline->fbat[c]=i;
+        if(asn1_next_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_REAL || asn1_decode_number(&v2,ASN1_REAL,o->dline->fb+c)) goto error;
+        if(asn1_next_of(&v2,&v1)) break;
+        if(++c==MaxFeedbackItems) goto error;
+      }
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_float(&v1,ASN1_REAL,&o->dline->ampdecay)) goto error;
+      if(asn1_next_of(&v1,v0)) break;
+      if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_SEQUENCE) {
+        if(asn1_first_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_ENUMERATED || asn1_decode_number(&v2,ASN1_INTEGER,&o->dline->lfok)) goto error;
+        if(asn1_next_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_ENUMERATED || asn1_decode_number(&v2,ASN1_INTEGER,&o->dline->lfos)) goto error;
+        if(asn1_next_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_REAL || asn1_decode_number(&v2,ASN1_REAL,&o->dline->lfoe)) goto error;
+        if(asn1_next_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_REAL || asn1_decode_number(&v2,ASN1_REAL,&o->dline->lfod)) goto error;
+        if(asn1_next_of(&v1,v0)) break;
+      }
+      if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_INTEGER) {
+        if(asn1_decode_number(&v1,ASN1_INTEGER,&o->dline->duse) || o->dline->duse<1 || o->dline->duse>o->dline->dlen) goto error;
+        if(asn1_next_of(&v1,v0)) break;
+      }
+      if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_BIT_STRING) {
+        if(v1.constructed || v1.length<1 || v1.length>2) goto error;
+        if(v1.length==2) o->dline->option=v1.data[1];
+        if(asn1_next_of(&v1,v0)) break;
+      }
+      break;
+    case INST_DELAYLINE_COPY:
+      if(v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&a)) goto error;
+      if(a<1 || a>music->nin || music->in[a-1].t!=INST_DELAYLINE) goto error;
+      if(!(o->dline=malloc(sizeof(DelayLine)))) err(1,"Allocation failed");
+      memcpy(o->dline,music->in[a-1].dline,sizeof(DelayLine));
+      o->dline->resam=music->ch->resam;
+      if(resample_init(&o->dline->resam,0,0,0,RESAMPLE_SHARE)) errx(1,"Error copying resample object");
+      if(!(o->dline->line=calloc(o->dline->dlen,sizeof(float)))) err(1,"Allocation failed");
       break;
     default: goto error;
   }
@@ -1444,6 +1609,10 @@ static void load_bgm(const char*name,Uint16 song) {
       switch(music->in[i].t) {
         case INST_WAVE:
           printf("  len=%lu ls=%lu le=%lu is8=%u\n",(unsigned long)music->in[i].wave.len,(unsigned long)music->in[i].wave.ls,(unsigned long)music->in[i].wave.le,music->in[i].wave.is8);
+          break;
+        case INST_DELAYLINE: case INST_DELAYLINE_COPY:
+          printf("  rate=%f\n",music->in[i].dline->rate);
+          for(a=0;a<music->in[i].dline->nfb;a++) printf("  %d %f\n",music->in[i].dline->fbat[a],music->in[i].dline->fb[a]);
           break;
       }
     }

@@ -19,6 +19,7 @@ catalog=base.3 % Catalog extensions
 feature=base.4 % Features specified in GENERAL.DER
 x509ext=base.5 % X.509 extension
 file=base.6 % File format
+sound=base.7 % Sound card
 
 % Hash algorithms
 nist=2.16.840.1.101.3.4.2 % OID for SHA-2 and SHA-3 hashes; this OID is for NIST
@@ -56,3 +57,14 @@ G_font=feature.0 % G_font.<height>
 
 % File formats
 F_music=file.1
+
+% Sound cards
+S_saa1099=sound.0 % Philips SAA1099
+S_opp=sound.1 % Yamaha OPP (YM2164)
+S_opl2=sound.2 % Yamaha OPL2 (YM3812)
+S_opl3=sound.3 % Yamaha OPL3 (YMF262)
+S_sn76496=sound.4 % Texas Instruments SN76496
+S_mt32=sound.5 % Roland MT-32
+S_sid=sound.6 % MOS Technology SID
+S_genmidi=sound.7 % General MIDI
+

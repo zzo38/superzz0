@@ -775,7 +775,7 @@ static void define_envelope(char*p) {
 
 static void process_line(char*line) {
   FILE*f;
-  int32_t n;
+  int32_t m,n;
   Command key={line+1};
   Command*cmd;
   char*p=line+strlen(line);
@@ -817,15 +817,25 @@ static void process_line(char*line) {
         while(*p==' ' || *p=='\t') ++p;
         if(*p++!='=') goto syntax;
         while(*p==' ' || *p=='\t') ++p;
-        if(*p++!='"') goto syntax;
-        q=p;
-        while(*q && *q!='"') q++;
-        if(!*q) goto syntax;
-        *q++=0;
-        f=fopen(p,"r");
-        if(!f) err(1,"Cannot open instrument file \"%s\"",p);
-        instrum[n-1]=load_instrument(f,q);
-        fclose(f);
+        if(*p=='@') {
+          p=parse_integer(p+1,&m,1);
+          if(m<1 || m>=n) errx(1,"Improper instrument number to be copied: %d",(int)m);
+          instrum[n-1]=malloc(sizeof(ASN1_Value));
+          q=malloc(4);
+          if(!instrum[n-1] || !q) err(1,"Allocation failed");
+          *(instrum[n-1])=(ASN1_Value){.class=ASN1_CONTEXT_SPECIFIC,.type=3,.data=q,.length=(m&128?4:3),.constructed=1};
+          q[0]=ASN1_INTEGER; q[1]=(m&128?2:1); q[2]=(m&128?0:m); q[3]=m;
+        } else {
+          if(*p++!='"') goto syntax;
+          q=p;
+          while(*q && *q!='"') q++;
+          if(!*q) goto syntax;
+          *q++=0;
+          f=fopen(p,"r");
+          if(!f) err(1,"Cannot open instrument file \"%s\"",p);
+          instrum[n-1]=load_instrument(f,q);
+          fclose(f);
+        }
       }
       break;
     case '#':

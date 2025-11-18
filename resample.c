@@ -188,8 +188,7 @@ void resample_process_uint8_to_float_mix(Resample*obj,uint8_t*in,uint32_t nin,fl
   obj->offset+=o;
 }
 
-#if 0
-void resample_process_to_float(Resample*obj,float*out,uint32_t nout,float vol,double rate) {
+void resample_process_to_float_mix(Resample*obj,float*out,uint32_t nout,float vol,double rate) {
   double o=0.0;
   uint32_t g=0;
   int h=obj->ntap/2;
@@ -201,7 +200,7 @@ void resample_process_to_float(Resample*obj,float*out,uint32_t nout,float vol,do
         obj->index-=obj->nsam-obj->ntap;
       } else break;
     } else {
-      *out++=vol*subsample(obj,obj->offset+o);
+      *out++ +=vol*subsample(obj,obj->offset+o);
       o=++g*rate;
       obj->pout++;
       nout--;
@@ -209,4 +208,3 @@ void resample_process_to_float(Resample*obj,float*out,uint32_t nout,float vol,do
   }
   obj->offset+=o;
 }
-#endif
