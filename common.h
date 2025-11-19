@@ -573,6 +573,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_NAME_ITEM_EVENT 0xA4
 #define MEM_ITEM_SCREEN 0xA5
 #define MEM_WINDOW_KEY_EVENT 0xB0
+#define MEM_MUSIC_EXTRA 0xB1
 #define MEM_GLOBAL_DELAY 0xC0
 #define MEM_NEW_DYNAMIC_STAT_EVENT 0xC1
 #define MEM_OVERLAYMEM_ADDRESS 0xC2

@@ -298,6 +298,7 @@ static Uint16 get_special_i(const Channel*cha,Uint8 id,Uint8 th) {
     case 0x00: return th;
     case 0x01: return music->tempo;
     case 0x02: return music->tcur;
+    case 0x03: return memory[MEM_MUSIC_EXTRA];
     case 0x80: return cha->instrument;
     case 0x81: return cha->resam.pin;
     case 0x82: return cha->flag;
@@ -408,6 +409,24 @@ static char do_envelope(Channel*cha,Uint16 addr,Uint8*pos) {
     put_special_r(cha,p[1],get_special_r(cha,p[1])+get_real(c,music->th));
   }
   return (!c && !(cha->flag&CHAN_LOOP));
+}
+
+static void emulator_multi_poke(Channel*ch,Uint16 x,Uint16 y) {
+  Uint8 f=music->rom[x++];
+  Uint8 n=music->rom[x++];
+  Uint16 a=0;
+  Uint16 b;
+  while(n--) {
+    if(f&2) {
+      a=music->rom[x++];
+      if(f&4) a|=music->rom[x++]<<8;
+    } else {
+      a++;
+    }
+    b=music->rom[x++];
+    if(f&1) b|=music->rom[x++]<<8;
+    emulator[ch->emu].em->poke(ch->state,a+y,b);
+  }
 }
 
 #define StackReq(A,B) if(thr->t>=8+B || thr->t<A) break;
@@ -558,6 +577,20 @@ static inline void render_music(Sint16*buf,int len) {
               if(!thr->c) break;
               cha=music->ch+thr->c-1;
               if(cha->flag&CHAN_EMULATE) thr->s[thr->t-1]=emulator[cha->emu].em->peek(cha->state,thr->s[thr->t-1]);
+              break;
+            case 0xD2:
+              StackReq(2,0); thr->t-=2;
+              if(thr->s[thr->t+1]>=0 && thr->s[thr->t+1]<music->size) music->rom[thr->s[thr->t+1]]=thr->s[thr->t];
+              break;
+            case 0xD3:
+              StackReq(2,0); thr->t-=2;
+              if(thr->s[thr->t+1]>=0 && thr->s[thr->t+1]<music->size-1) music->rom[thr->s[thr->t+1]]=thr->s[thr->t],music->rom[thr->s[thr->t+1]+1]=thr->s[thr->t]>>8;
+              break;
+            case 0xD4:
+              StackReq(2,0); thr->t-=2;
+              if(!thr->c) break;
+              cha=music->ch+thr->c-1;
+              if(cha->flag&CHAN_EMULATE) emulator_multi_poke(cha,thr->s[thr->t+1],thr->s[thr->t]);
               break;
             case 0xE0 ... 0xEF: if(thr->t) thr->w=thr->s[--thr->t]; c+=0x10; goto reswitch;
             case 0xF0: thr->p=thr->r; break;

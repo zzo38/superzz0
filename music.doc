@@ -555,6 +555,21 @@ for more details about MIDI).
 emulation port for this channel to the stack. If this is not a emulation
 channel or if there is no such port, then the result is unspecified.
 
+[D2-D3] Pop address and then pop value, and write it into the music VM
+memory. The change might or might not persist when changing to a different
+song in the same file, but never persists if a different .BGM lump is
+loaded. The code 0xD2 is 8-bit data and 0xD3 is 16-bit data. You cannot
+write beyond the initial size of the loaded program.
+
+[D4] Pop address of a sequence of emulation writes from the stack, and then
+pop a number which is used to adjust the port number. The format of the
+data is one flag byte, one count byte, and then the data. The bit0 of the
+flag byte is set for 16-bit data or clear for 8-bit data, the bit1 of the
+flag byte is set for explicit addresses for each data item or clear to be
+implicit (starting from zero), and bit2 is set for 16-bit addresses or
+clear for 8-bit addresses. If addresses are present, each item consists of
+the address and then the data.
+
 [E0-EF] Same as 0xF0 to 0xFF but before doing that, also pop a number to
 set the wait time.
 
@@ -635,6 +650,7 @@ The special integer registers are (*read-only):
   00  Current thread (zero-based) *
   01  Tempo
   02  Tempo accumulator
+  03  Value from host system (to implement dynamic music) *
   7F  Debug output
   (Channel)
   80  Instrument

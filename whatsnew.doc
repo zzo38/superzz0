@@ -17,6 +17,7 @@ The time zone for the dates in this file is Pacific (British Columbia).
 GAME
   +  Optional special uses for item definitions and inventory slots.
   +  Music can now have instruments with delay line and special effects.
+  +  Dynamic music (although sz0music currently lacks the way to use this).
 
 SCRIPTS
   +  The #SENT condition to check if a message was successfully sent.
