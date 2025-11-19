@@ -386,14 +386,17 @@ of pairs is currently eight (this may be increased in future).
 the delay line (it is reset to 1 on a new note).
 
 * A sequence defining the LFO, or omitted to disable LFO. The four fields
-of this sequence are: usage (enumerated 1 to 4), shape (enumerated 0 to 7),
+of this sequence are: usage (enumerated 1 to 5), shape (enumerated 0 to 9),
 epsilon (real), depth (real). The epsilon should be less than 1 and greater
-than -1 (it should normally be close to zero; numbers that are closer to
+than zero (it should normally be close to zero; numbers that are closer to
 zero will result in a lower frequency oscillation), and the depth should
-normally not exceed 1 (but is allowed to exceed 1).
+normally not exceed 1 (but is allowed to exceed 1; in some cases it makes
+sense to be negative).
 
 * A integer specifying how much of the delay line will be used for output;
 omitted means to use the full delay line.
+
+* A real number being a filter coefficient; omitted is the same as zero.
 
 * A bit string with additional options. This can be omitted, which is the
 same as a empty bit string.
@@ -641,6 +644,8 @@ The special integer registers are (*read-only):
   91  First envelope position
   92  Second envelope address + 1 (0=none)
   93  Second envelope position
+  (Instrument)
+  C0  Delay line usage amount
 
 Channel flags are:
   01  If this channel exists *
@@ -656,6 +661,14 @@ The special real registers are (*read-only):
   41  Amplitude
   42  Direct frequency
   43  Resample offset
+  (Instrument)
+  60  Delay line usage amount
+  61  Filter coefficient
+  62  LFO depth
+
+Changing the values (integer or real) of instruments is not reset when a
+new note is played, and is not necessarily reset when a new song is played
+either (although in some cases it is).
 
 The binary real operations are:
   0  X=v

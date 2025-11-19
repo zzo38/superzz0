@@ -63,7 +63,7 @@ typedef struct {
   float*line;
   double rate;
   float fb[MaxFeedbackItems];
-  float amp,ampdecay;
+  float amp,ampdecay,filter,prev;
   float lfox,lfoy,lfoe,lfod;
   Uint32 dlen,dpos,len,ls,duse;
   Uint16 fbat[MaxFeedbackItems];
@@ -72,12 +72,14 @@ typedef struct {
 
 #define DLOP_CONSTRATE 0x80
 #define DLOP_DUSEFREQ 0x40
+#define DLOP_AUTOFEEDBACK 0x20
 
 #define LFO_NONE 0
 #define LFO_OUT_AMPLITUDE 1
 #define LFO_FEEDBACK 2
 #define LFO_OUT_FREQUENCY 3
 #define LFO_IN_FREQUENCY 4
+#define LFO_FILTER 5
 
 typedef struct {
   Uint8 t;
@@ -243,6 +245,8 @@ static inline void render_music_frame(float*buf,int len) {
                   case 5: g=ins->dline->lfox*ins->dline->lfoy; break;
                   case 6: g=ins->dline->lfoy; ins->dline->lfoy*=ins->dline->lfoe; break;
                   case 7: g=ins->dline->lfox; ins->dline->lfox=fmod(g+ins->dline->lfoe,ins->dline->lfod); break;
+                  case 8: g=ins->dline->lfoy; ins->dline->lfoy*=1.0-ins->dline->lfoe; break;
+                  case 9: g=1.0-ins->dline->lfoy; ins->dline->lfoy*=1.0-ins->dline->lfoe; break;
                 }
               }
               if(ins->dline->dpos>=ins->dline->dlen) {
@@ -268,7 +272,10 @@ static inline void render_music_frame(float*buf,int len) {
                 for(i=0;i<ins->dline->nfb;i++) ins->dline->line[(ins->dline->dpos+ins->dline->fbat[i])&(ins->dline->dlen-1)]+=f*ins->dline->fb[i];
                 if(ins->dline->dpos<ins->dline->duse) {
                   if(k==LFO_OUT_AMPLITUDE) f*=g;
+                  if(k==LFO_FILTER) ins->dline->filter=g;
+                  f=ins->dline->prev=(1.0-ins->dline->filter)*f+ins->dline->filter*ins->dline->prev;
                   resample_push(&ins->dline->resam,f);
+                  if(ins->dline->option&DLOP_AUTOFEEDBACK) ins->dline->line[ins->dline->dpos]+=f;
                 }
                 ins->dline->dpos++;
               }
@@ -286,6 +293,7 @@ static inline void render_music_frame(float*buf,int len) {
 
 static Uint16 get_special_i(const Channel*cha,Uint8 id,Uint8 th) {
   if((id&0x80) && !cha) return 0;
+  if(id>=0xC0 && (!cha || !(th=cha->instrument))) return 0;
   switch(id) {
     case 0x00: return th;
     case 0x01: return music->tempo;
@@ -297,12 +305,14 @@ static Uint16 get_special_i(const Channel*cha,Uint8 id,Uint8 th) {
     case 0x91: return cha->pos1;
     case 0x92: return cha->env2;
     case 0x93: return cha->pos2;
+    case 0xC0: return (music->in[th-1].t==INST_DELAYLINE || music->in[th-1].t==INST_DELAYLINE_COPY)?music->in[th-1].dline->duse:0;
     default: return 0;
   }
 }
 
 static void put_special_i(Channel*cha,Uint8 id,Uint16 v) {
   if((id&0x80) && !cha) return;
+  if(id>=0xC0 && (!cha || !cha->instrument)) return;
   switch(id) {
     case 0x01: if(v>music->tmax/2) v=music->tmax/2; music->tempo=v; break;
     case 0x02: music->tcur=v; break;
@@ -314,6 +324,7 @@ static void put_special_i(Channel*cha,Uint8 id,Uint16 v) {
     case 0x91: cha->pos1=v; break;
     case 0x92: cha->env2=(v+6<music->size?v:0); cha->pos2=0; break;
     case 0x93: cha->pos2=v; break;
+    case 0xC0: if(cha->instrument && ((12>>music->in[cha->instrument-1].t)&1)) music->in[cha->instrument-1].dline->duse=v; break;
   }
 }
 
@@ -324,6 +335,9 @@ static double get_special_r(const Channel*cha,Uint8 id) {
     case 0x41: return cha->amp;
     case 0x42: return cha->freq;
     case 0x43: return cha->resam.offset;
+    case 0x60: if(cha->instrument && ((12>>music->in[cha->instrument-1].t)&1)) return music->in[cha->instrument-1].dline->duse/(float)music->in[cha->instrument-1].dline->dlen; else return 0.0; break;
+    case 0x61: if(cha->instrument && ((12>>music->in[cha->instrument-1].t)&1)) return music->in[cha->instrument-1].dline->filter; else return 0.0; break;
+    case 0x62: if(cha->instrument && ((12>>music->in[cha->instrument-1].t)&1)) return music->in[cha->instrument-1].dline->lfod; else return 0.0; break;
     default: return 0.0;
   }
 }
@@ -335,6 +349,9 @@ static void put_special_r(Channel*cha,Uint8 id,double v) {
     case 0x41: cha->amp=v; break;
     case 0x42: cha->freq=v; break;
     case 0x43: cha->resam.offset=v; break;
+    case 0x60: if(cha->instrument && ((12>>music->in[cha->instrument-1].t)&1)) music->in[cha->instrument-1].dline->duse=fmin(1.0,fmax(v,0.0))*(float)music->in[cha->instrument-1].dline->dlen; break;
+    case 0x61: if(cha->instrument && ((12>>music->in[cha->instrument-1].t)&1)) music->in[cha->instrument-1].dline->filter=v; break;
+    case 0x62: if(cha->instrument && ((12>>music->in[cha->instrument-1].t)&1)) music->in[cha->instrument-1].dline->lfod=v; break;
   }
 }
 
@@ -567,6 +584,7 @@ static inline void render_music(Sint16*buf,int len) {
                     music->in[c].dline->amp=1.0;
                     music->in[c].dline->lfox=0.0;
                     music->in[c].dline->lfoy=music->in[c].dline->lfod;
+                    music->in[c].dline->prev=0.0;
                     if(music->in[c].dline->option&DLOP_DUSEFREQ) music->in[c].dline->duse=((Uint32)(music->in[c].dline->dlen/cha->freq+0.5))?:1;
                     if(music->in[c].dline->option&DLOP_CONSTRATE) cha->freq=1.0;
                     break;
@@ -1332,6 +1350,10 @@ static void load_instrument(Instrument*o,const ASN1_Value*v0) {
       }
       if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_INTEGER) {
         if(asn1_decode_number(&v1,ASN1_INTEGER,&o->dline->duse) || o->dline->duse<1 || o->dline->duse>o->dline->dlen) goto error;
+        if(asn1_next_of(&v1,v0)) break;
+      }
+      if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_REAL) {
+        if(asn1_decode_number(&v1,ASN1_REAL,&o->dline->filter)) goto error;
         if(asn1_next_of(&v1,v0)) break;
       }
       if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_BIT_STRING) {
