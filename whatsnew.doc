@@ -21,6 +21,7 @@ GAME
 
 SCRIPTS
   +  The #SENT condition to check if a message was successfully sent.
+  +  Numeric storage labels.
 
 
 === Version 0.7.0 (2025-11-04) ===

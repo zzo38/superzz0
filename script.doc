@@ -20,7 +20,9 @@ Most commands, arguments, etc are case-insensitive.
 
 :label
   Make a label. If it is followed by an asterisk, then it is a subroutine;
-  see the below section about subroutines.
+  see the below section about subroutines. If it is followed by a equal
+  sign then the label stores a numeric value; see below about numeric
+  storage. If it has both, the subroutine specification must come first.
 
 'comment
   Make a zapped label or a comment. (Note that when finding a label, some
@@ -60,7 +62,7 @@ $text
   specify a command to do if it fails to move.
 
 
-=== Subroutines ===
+=== Subroutines and numeric storage ===
 
 A label acts as a subroutine if the label name where it is defined is
 followed by an asterisk, and then optionally any combination of:
@@ -82,6 +84,27 @@ Subroutines do not work in all circumstances; specifically, a subroutine
 cannot be called by a ! command.
 
 Use the #RETURN command to return from a subroutine call.
+
+For numeric storage, the label name where it is defined is followed by an
+equal sign, and then the numeric value. If it is both a subroutine and a
+numeric storage, the subroutine specification comes first.
+
+The format of the numeric value is one or more digits, optionally preceded
+by - or + for a signed number, or by $ for a hexadecimal number; if it is
+not hexadecimal then it is decimal. Some commands can change the value of
+the number; the valid range if the sign is omitted or $ is zero up to the
+largest number that will fit in however many digits are specified, and if
+the sign is - or + then it the range is negative however many digits will
+git up to positive however many digits will fit. Leading zeros are allowed
+and will affect the range. For example, +04 will have a range from -99 to
++99 and 004 will have a range from 000 to 999 and $04 will have a range
+from $00 to $FF even though their initial values are equal to each other.
+
+When reading or writing the numeric storage, if there are multiple labels
+that match then the first unzapped one is used; if the specified label has
+no numeric value then the value is always 1 and cannot be changed, and if
+there is no such unzapped label then the value is always 0 and it cannot
+be changed.
 
 
 === Standard commands ===
@@ -496,6 +519,7 @@ XX or YY are the coordinates of the player
 M1 or M2 or M3 are the misc values of this stat
 P is the parameter of this object
 @name: is how many objects (stat XY records) having the specified name
+:name: is the numeric storage value of a label
 
 A number inside or outside of an expression can also be hexadecimal if
 it has $ at first.

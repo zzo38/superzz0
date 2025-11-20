@@ -1391,7 +1391,7 @@ static int match_label(const char*v,const char*label) {
   for(;;) {
     a=v[n+1];
     b=label[n];
-    if(!b || b=='\n' || b==' ' || b=='\r' || b==';' || b=='(' || b==')') {
+    if(!b || b=='\n' || b==' ' || b=='\r' || b==';' || b=='(' || b==')' || b==':') {
       if(!a || a=='\n' || a==' ' || a=='\r' || a==';' || a=='(' || a==')' || a=='*' || a=='=') {
         end_of_label=v+(++n);
         while(v[n] && v[n]!='\n') n++;
@@ -2708,6 +2708,28 @@ static Sint32 count_text_choices(void) {
   return n;
 }
 
+static Sint32 parse_label_number(const Uint8*s) {
+  Uint8 y=*s;
+  Uint8 c;
+  Sint32 w=0;
+  if(y=='$' || y=='+' || y=='-') s++;
+  if(y=='$') {
+    while(c=*s++) {
+      if(c>='0' && c<='9') w=(w<<4)+c-'0';
+      else if(c>='A' && c<='F') w=(w<<4)+c+10-'A';
+      else if(c>='a' && c<='f') w=(w<<4)+c+10-'a';
+      else break;
+    }
+  } else {
+    while(c=*s++) {
+      if(c>='0' && c<='9') w=10*w+c-'0';
+      else break;
+    }
+  }
+  if(y=='-') w=-w;
+  return w;
+}
+
 static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
   Sint32 v=0;
   Sint32 w=0;
@@ -2795,6 +2817,17 @@ static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
       while((c=s->text[*ip]) && c!=':' && c!='(' && c!=')' && c>32 && c<127) ++*ip;
       if(c!=':') goto badexp;
       ++*ip;
+    } else if(c==':') {
+      w=find_unzapped_label(s,s->text+ ++*ip);
+      while((c=s->text[*ip]) && c!=':' && c!='(' && c!=')' && c>32 && c<127) ++*ip;
+      if(c!=':') goto badexp;
+      ++*ip;
+      if(w<0) {
+        w=0;
+      } else {
+        while((c=s->text[w]) && c!='=' && c!=';' && c>32) ++w;
+        w=(c=='=')?parse_label_number(s->text+w+1):1;
+      }
     } else {
       badexp:
       condflag=0;
