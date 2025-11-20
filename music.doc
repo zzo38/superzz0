@@ -36,6 +36,12 @@ These commands are global and apply to all songs:
 #ENGLISH
   Equivalent to "#SCALE c.d.ef.g.a.b" and is the default setting.
 
+#EX-soundcard
+  Selects a sound card to use. See below for the list of sound cards, and
+  which tracks are assigned to that sound card. You cannot have more than
+  one command like this, and normal instruments cannot be used on the
+  tracks that are assigned to the sound card. (Not implemented yet)
+
 #GERMAN
   Equivalent to "#SCALE c.d.ef.g.abh".
 
@@ -128,6 +134,13 @@ These commands are independent of songs:
 
 #INCLUDE filename
   Include the contents of another file as though it is included here.
+
+List of sound cards:
+  MIDI        A-P     (MIDI)
+  MT32        A-I     (Roland MT-32)
+  OPL2        A-I     (Yamaha OPL2; AdLib, Sound Blaster)
+  OPL3        A-R     (Yamaha OPL3; AdLib Gold, Sound Blaster Pro)
+(Note that the use of emulated sound cards does not work yet)
 
 Within a track, you can use the commands:
 
@@ -469,7 +482,8 @@ Each thread also has a stack with eight 16-bit integers. The bottom and
 secondly from bottom values of these stacks are called I and J.
 
 Note: Writing the number of an unsupported channel to the C register will
-set the value of the C register to zero.
+set the value of the C register to zero. (You can use this to check if a
+channel is valid.)
 
 There are also global registers shared by all threads:
   G (16-bits)
@@ -642,9 +656,6 @@ Conditions:
   6  Call subroutine; store return address in R register
   7  Call subroutine; push return address to stack
 
-No feature testing is currently defined. The result will always be zero
-for all possible features.
-
 The special integer registers are (*read-only):
   (Global)
   00  Current thread (zero-based) *
@@ -662,6 +673,11 @@ The special integer registers are (*read-only):
   93  Second envelope position
   (Instrument)
   C0  Delay line usage amount
+
+Trying to select an unsupported instrument (or an instrument number that
+is out of range) will set the instrument to zero instead of the instrument
+number that you intended to set; you can read it back to check if this
+instrument is valid.
 
 Channel flags are:
   01  If this channel exists *

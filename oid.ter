@@ -59,12 +59,11 @@ G_font=feature.0 % G_font.<height>
 F_music=file.1
 
 % Sound cards
-S_saa1099=sound.0 % Philips SAA1099
-S_opp=sound.1 % Yamaha OPP (YM2164)
+S_saa1099=sound.1 % Philips SAA1099
 S_opl2=sound.2 % Yamaha OPL2 (YM3812)
 S_opl3=sound.3 % Yamaha OPL3 (YMF262)
 S_sn76496=sound.4 % Texas Instruments SN76496
 S_mt32=sound.5 % Roland MT-32
 S_sid=sound.6 % MOS Technology SID
 S_genmidi=sound.7 % General MIDI
-
+S_esfm=sound.8 % ESS Technology ES1688 AudioDrive ESFM

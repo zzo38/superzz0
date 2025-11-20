@@ -63,6 +63,7 @@ static uint8_t waits[32];
 static uint8_t nwaits;
 static uint8_t nchannels;
 static uint16_t envelope[255];
+static uint8_t soundcard=0;
 
 static char*parse_integer(const char*t,int32_t*v,char r) {
   int32_t n=0;
@@ -209,7 +210,7 @@ static uint16_t parse_notelen(char**p,uint16_t n) {
 }
 
 #define WaitBefore do{ if(waiting) { while(waiting>255) add_numb(128),add_op(0xEF),waiting-=128; if(waiting==outlen) add_op(0x91); else add_numb(waiting); waiting=0; add_op(0xEF); } }while(0)
-static uint16_t do_track(char*t) {
+static uint16_t do_track(char*t,uint8_t chan) {
   char*p;
   double d;
   int32_t v;
@@ -453,7 +454,7 @@ static void finish_song(void) {
         t=track[i].text;
       }
       fprintf(stderr,"  %c ",i+'A');
-      track[i].addr=do_track(t);
+      track[i].addr=do_track(t,i);
       free(t);
     }
     e=asn1_start_encoding_constructed_value(songs+songnum,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
@@ -503,6 +504,22 @@ static void cmd_divisions(const char*arg) {
   arg=parse_integer(arg,&v,1);
   if(*arg || v<1) errx(1,"Improper divisions");
   divisions=v;
+}
+
+static void cmd_ex_midi(const char*arg) {
+  soundcard=7;
+}
+
+static void cmd_ex_mt32(const char*arg) {
+  soundcard=5;
+}
+
+static void cmd_ex_opl2(const char*arg) {
+  soundcard=2;
+}
+
+static void cmd_ex_opl3(const char*arg) {
+  soundcard=3;
 }
 
 static void cmd_german(const char*arg) {
@@ -604,6 +621,10 @@ static const Command commands[]={
   {"DEUTSCH",cmd_german},
   {"DIVISIONS",cmd_divisions},
   {"ENGLISH",cmd_english},
+  {"EX-MIDI",cmd_ex_midi},
+  {"EX-MT32",cmd_ex_mt32},
+  {"EX-OPL2",cmd_ex_opl2},
+  {"EX-OPL3",cmd_ex_opl3},
   {"GERMAN",cmd_german},
   {"INCLUDE",cmd_include},
   {"NEXT",cmd_next},
