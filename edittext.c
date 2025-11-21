@@ -14,6 +14,29 @@ static Line*lines;
 static Uint16 nlines,nchars;
 static Uint8*findtext[41];
 
+static void realloc_line(Uint16 y,Uint16 n) {
+  Line*li=lines+y;
+  Uint8*p;
+  if(n>255) n=255;
+  if(li->mem>=n) return;
+  if(li->own) {
+    li->ptr=realloc(li->ptr,li->mem=n);
+    if(!li->ptr) err(1,"Allocation failed");
+  } else {
+    li->own=1;
+    p=li->ptr;
+    li->ptr=malloc(li->mem=n);
+    if(!li->ptr) err(1,"Allocation failed");
+    memcpy(li->ptr,p,li->len);
+  }
+}
+
+static inline Uint16 wait_key(void) {
+  redisplay();
+  do { if(!next_event()) return 0; } while(event.type!=SDL_KEYDOWN);
+  return event.key.keysym.unicode;
+}
+
 static void print_document(void) {
   int n;
   lpt_document() {
@@ -142,6 +165,18 @@ static int copy_above(Uint8 xc,Uint16 yc) {
   }
   memcpy(lines[yc].ptr+xc,lines[yc-1].ptr+xc,lines[yc-1].len-xc);
   return lines[yc-1].len;
+}
+
+static int copy_until(Uint8 xc,Uint16 yc,Uint8 k) {
+  Uint8*p;
+  while(xc<lines[yc].len) if(lines[yc].ptr[xc]==k) return xc; else xc++;
+  if(!yc || xc>=lines[yc-1].len || xc!=lines[yc].len) return xc;
+  while(xc<lines[yc-1].len) if(lines[yc-1].ptr[xc]==k) break; else xc++;
+  realloc_line(yc,xc);
+  memcpy(lines[yc].ptr+lines[yc].len,lines[yc-1].ptr+lines[yc].len,xc-lines[yc].len);
+  nchars+=xc-lines[yc].len;
+  lines[yc].len=xc;
+  return xc;
 }
 
 static Uint8*text_editor_1(Uint8*text) {
@@ -280,6 +315,7 @@ static Uint8*text_editor_1(Uint8*text) {
     case_CTRL('Z'): if(scrol<nlines-1) ++scrol; if(yc<scrol) ++yc; goto display;
     case 0x1B: case -SDLK_F10: goto exit;
     case_CTRL('_'): i=config.text_editor_insert; config.text_editor_insert=0; ins_char(yc,xc,' '); config.text_editor_insert=i; break;
+    case -SDLK_F2: draw_text(63,24,"F2",0x30,2); k=wait_key(); if(k>=0x20 && k<0x200) xc=copy_until(xc,yc,k); goto display;
     case 0x20 ... 0x7E: case 0x80 ... 0x1FF: xc+=ins_char(yc,xc,k); break;
     case -SDLK_SLASH: case -SDLK_QUESTION: online_help("edittext",0); goto display;
     case -SDLK_BACKQUOTE:

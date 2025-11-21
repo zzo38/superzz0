@@ -86,9 +86,6 @@ See music.doc. Other ideas to be added:
 
 * Music fading in/out
 
-* Dynamic music that depends on game state (e.g. transpose the music when
-you lose a life)
-
 * FM synthesis
 
 * Resonant filter
@@ -294,21 +291,6 @@ instance rather than all of them.
 be used as a semaphore. It is decremented when the subroutine is called,
 and the call will fail if it is zero. When you return from the subroutine,
 the semaphore will be incremented.
-
-
-=== Script labels with numeric storage ===
-
-Another idea is to allow labels in a script to have = followed by a number,
-which can be used for storage of variable numeric data in a script.
-
-After = would be the number, with any number of digits; the number of
-digits, and the type, determines the range. The types are: unsigned
-decimal, signed decimal (add - or +), and hexadecimal (add $).
-
-You can then reference the value of the label in a numeric expression, and
-will also be possible to modify it (possibly by #GIVE and #TAKE). Only the
-first unzapped label will be used in this way, so if you zap a label then
-the next one's numeric storage is used, and then can later be restored.
 
 
 === Item randomization ===

@@ -38,6 +38,7 @@
  ^Y   destroy line
  ^Z   scroll line down
  ^_   insert space
+ F2   copy until character
  F10  exit
 
 (^ = control; @ = alt)
