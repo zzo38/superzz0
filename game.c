@@ -2730,6 +2730,44 @@ static Sint32 parse_label_number(const Uint8*s) {
   return w;
 }
 
+static Uint8 do_numstore(Stat*s,const Uint8*name,Sint8 op,Sint32 v) {
+  Sint32 lo=0;
+  Sint32 hi=1;
+  Sint32 u;
+  Uint8 c;
+  Sint32 w=find_unzapped_label(s,name);
+  Uint8*p;
+  Uint8*q;
+  if(w<0) return (op<0);
+  p=s->text+w;
+  while((c=*p) && c!='=' && c!=';' && c>32) ++p;
+  if(c!='=') return (op<0 || op=='|');
+  q=++p;
+  if(op!='=' && op!=-'=') u=parse_label_number(p);
+  c=*p;
+  if(c=='+' || c=='-' || c=='$') p++;
+  while(*p && *p>='0' && *p<='f') p++,hi*=(c=='$'?16:10);
+  hi--;
+  if(c=='+' || c=='-') lo=-hi;
+  switch(op) {
+    case '=': clip: if(v<lo) v=lo; if(v>hi) v=hi; break;
+    case '-': v=u-v; goto clip;
+    case '+': v=u+v; goto clip;
+    case -'-': v=u-v; break;
+    case -'+': v=u+v; break;
+    case '|': case -'|': v=u-v; if(v<0) return 1; break;
+  }
+  if(v<lo || v>hi) return (op<0);
+  if(*q=='+' || *q=='-') {
+    if(v<0) *q='-',v=-v; else *q='+';
+    q++;
+  }
+  if(*q=='$') q++;
+  c=(c=='$'?16:10);
+  while(p>q) *--p="0123456789ABCDEF"[v%c],v/=c;
+  return 0;
+}
+
 static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
   Sint32 v=0;
   Sint32 w=0;
@@ -3814,6 +3852,31 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               mix_text_choices();
             } else if(!strcmp(buf,"MUSIC")) {
               script_set_music(s,xy,&ip);
+            } else goto badcommand; break;
+          case 'N':
+            if(!strcmp(buf,"NUMSTORE")) {
+              while(s->text[ip]==' ') ++ip;
+              if(s->text[ip]==':') ++ip;
+              for(v=0;v<64;v++,ip++) {
+                c=s->text[ip];
+                if(c>32 && c<127 && c!=':' && c!='=') buf[v]=c;
+                else break;
+              }
+              buf[v]=0;
+              if(s->text[ip]==':') ++ip;
+              while(s->text[ip]==' ') ++ip;
+              c=s->text[ip++];
+              if(c!='=' && c!='-' && c!='+' && c!='|') goto badcommand;
+              if(s->text[ip]=='=') ++ip;
+              y=parse_number(s,xy,&ip);
+              while(s->text[ip]==' ') ip++;
+              if(do_numstore(s,buf,s->text[ip]&~31?-c:c,y)) {
+                if(c=='|' && (!(s->text[ip]&~31) || y<=0)) {
+                  ip=bip;
+                  goto stop;
+                }
+                goto same;
+              }
             } else goto badcommand; break;
           case 'P':
             if(!strcmp(buf,"PARAMETER")) {

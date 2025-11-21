@@ -263,6 +263,15 @@ are not allowed in this case.
   Stop the background music. (This does not affect music and sound effects
   that has been played by #PLAY.)
 
+#NUMSTORE label op number [command]
+  Work with numeric storage labels. The label is the name of a label within
+  this script, the op is = to overwrite, or + or += to add, or - or -= to
+  subtract, or | or |= to subtract if it could be done without reducing the
+  value to negative but otherwise waits until it can before continuing. If
+  a command is specified, the value is unchanged if the new value is
+  invalid, but if the command is omitted then it will set it to the maximum
+  or minimum possible value if it would otherwise be out of range.
+
 #PARAMETER number
   Set this object's tile parameter.
 
