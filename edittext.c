@@ -174,6 +174,7 @@ static int copy_until(Uint8 xc,Uint16 yc,Uint8 k) {
   while(xc<lines[yc-1].len) if(lines[yc-1].ptr[xc]==k) break; else xc++;
   realloc_line(yc,xc);
   memcpy(lines[yc].ptr+lines[yc].len,lines[yc-1].ptr+lines[yc].len,xc-lines[yc].len);
+  if(nchars+xc-lines[yc].len>=65530) return lines[yc].len;
   nchars+=xc-lines[yc].len;
   lines[yc].len=xc;
   return xc;

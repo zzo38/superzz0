@@ -2,12 +2,22 @@ FREQUENTLY ASKED QUESTIONS -- SUPER ZZ ZERO
 
  [0] GENERAL/MISCELLANEOUS
    [0.1] What is the MIME type, UTI type, etc?
+   [0.2] How to send bug reports and feature requests?
+   [0.3] When distributing the game, what files need to be distributed?
+   [0.4] Is there i18n and m17n?
+   [0.5] How many times was this question asked?
+   [0.6] What are the limits of various things?
 
  [1] COMPILING AND SYSTEM COMPATIBILITY
    [1.1] Why doesn't it run on a headless system?
    [1.2] There is an error with linking due to the unavailability of the
      function "XGetKeyboardMapping" or "XKeycodeToKeysym".
    [1.3] It does not work on Mac OS?
+
+ [2] HOW TO MAKE SPECIFIC THINGS
+   [2.1] How to make keys like MegaZeux?
+   [2.2] How to add wave sound effects?
+   [2.3] Can the world be protected from being opened in the editor?
 
 
 ===
@@ -24,6 +34,64 @@ UTI type "com.hamsterrepublic.lumped".
 The ULFI type for a Super ZZ Zero world file is "hamarc:superzz0.world".
 
 The MIME type is not currently defined.
+
+
+[0.2] How to send bug reports and feature requests?
+
+There are two ways. You can either use the issue tracker on GitHub, or you
+can use the NNTP server at zzo38computer.org (which can also be used for
+further discussion). The NNTP server does not require authentication, so
+you do not need a GitHub account to use it.
+
+
+[0.3] When distributing the game, what files need to be distributed?
+
+Only the world file (the .SZ0 file) is needed; everything needed to run
+the game, other than the game engine itself (and the computer and operating
+system, etc) is in the world file. The version number of Super ZZ Zero is
+stored inside of the world file, so someone trying to run it on a older
+version of ZZ Zero will get an error message explaining that a newer
+version of Super ZZ Zero is required.
+
+Someone who wants to play the game can get the appropriate implementation
+of Super ZZ Zero for their computer.
+
+
+[0.4] Is there i18n and m17n?
+
+It is incomplete, although you can customzie the fonts for the languages
+that you want to write in. In later versions, there may be the possibility
+to map font characters to the TRON character code, and the ability to add
+a wide font (which would be suitable for languages that have a lot of
+characters, such as Japanese, Chinese, etc).
+
+The built-in UI is not available in any language other than English,
+although some other people might try to add support for other languages,
+but I do not intend to do this by myself. (The UI for the specific game is
+customizable and can use any language you want to do, though.)
+
+
+[0.5] How many times was this question asked?
+
+Once, that I know of.
+
+
+[0.6] What are the limits of various things?
+
+Boards: 65535
+Screens: 65535
+Item definitions: 65535
+Active inventory lists: 65535
+Script size: 65530 bytes
+Stats per board: 255
+Instances per stat: 65535
+Elements: 256
+Appearance mapping: 128
+Characters per font: 256
+Status variables: 16
+Variable properties: 255 per screen and 255 per board
+
+Subroutines will not work if the script size limit is reached.
 
 
 ===
@@ -57,6 +125,69 @@ However, an alternative would be that someone who wants to use it on other
 computer systems would maintain their own version of the software, with the
 functions that are relevant for that system. For example, with Mac OS, you
 might implement such things as: UTI, menu bar, AppleScript, etc.
+
+
+===
+
+[2] HOW TO MAKE SPECIFIC THINGS
+
+
+[2.1] How to make keys like MegaZeux?
+
+In MegaZeux, you can carry multiple keys of the same colour but cannot hold
+more than sixteen keys in total.
+
+You can use the inventory lists and item definitions for this purpose.
+
+Add sixteen consecutive item definitions, named "black key", "blue key",
+etc (or whatever other names you want for them). Assign the number of your
+"Key" element to each one, and set the colours of each one. (If you want
+to, you might also use an item class number only for the keys.)
+
+You will need to know the item ID number of the colour 0 key for some of
+the below steps.
+
+Also add a inventory list, named "X0". Set the number of slots to sixteen,
+and set the max heap to 1. All slots should be initially empty.
+
+The next thing is to add the keys into the screen layout. Use the "Item
+window" type, and use the "Element" subtype. Assign the slot numbers 0 to
+15 of inventory list 0 to these screen tiles.
+
+In the assembly code, use IGIV and ITAK to give and take the key. An
+example if how the key might be implemented can be:
+
+	LET A,1
+	GTMC B,0
+	AND B,15
+	ADD B,black_key
+	IGIV A,B
+	JT A,1F
+	MESS E,"You are carrying too many keys!"
+	LET S,0
+1H	MESS E,"You pick up the key."
+	LET S,1
+
+
+[2.2] How to add wave sound effects?
+
+Currently this cannot be done using the editor; you will have to use an
+external program to convert it. The source code respository includes the
+programs "wavconvert" and "vocconvert" in the "misc" directory for
+converting existing soud files from the Microsoft .WAV format or the
+Creative Voice format into the format used by Super ZZ Zero.
+
+Note that some files are not compatible; specifically, only mono files
+will work (stereo does not work) and it must be 8-bit or 16-bit PCM, or
+Creative ADPCM, or A-law or mu-law format. The sample rate cannot be
+greater than 65535 Hz. Creative Voice files with multiple blocks of audio
+data cannot be used.
+
+
+[2.3] Can the world be protected from being opened in the editor?
+
+No, and this feature will not be added. Even if it was added, someone could
+remove that feature and recompile it to open it anyways.
 
 
 ===
