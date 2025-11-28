@@ -623,6 +623,10 @@ const char*load_board(FILE*fp) {
   free(stats);
   stats=0;
   maxstat=0;
+  for(i=0;i<16;i++) {
+    free(ozone[i]); ozone[i]=0;
+    free(uzone[i]); uzone[i]=0;
+  }
   memset(&board_info,0,sizeof(BoardInfo));
   board_info.flag=(ef&0x100?read16(fp):read8(fp));
   board_info.screen=read16(fp);
@@ -666,6 +670,7 @@ const char*load_board(FILE*fp) {
     stats[i].speed=read8(fp);
     stats[i].frame=(sf&0x10)?read16(fp):0;
     stats[i].mode=(sf&0x40)?read8(fp):0;
+    stats[i].zone=(stats[i].mode&STAT_ZONERESTRICT)?read8(fp):0;
     if(stats[i].frame && stats[i].frame>stats[i].length-4) return "Incorrect frame offset";
     if(stats[i].count=read16(fp)) {
       r=stats[i].xy=calloc(stats[i].count,sizeof(StatXY));
@@ -743,6 +748,7 @@ const char*save_board(FILE*fp,int m) {
   if(board_info.width>256 || board_info.height>256) ef|=0x10;
   if(board_info.userdata) ef|=0x20;
   if(board_info.varprop.count) ef|=0x800;
+  for(i=0;i<16 && !(ef&0x80);i++) if(ozone[i] || uzone[i]) ef|=0x80;
   write16(fp,ef);
   if(ef&0x100) write16(fp,board_info.flag); else write8(fp,board_info.flag);
   write16(fp,board_info.screen);
@@ -798,6 +804,7 @@ const char*save_board(FILE*fp,int m) {
     write8(fp,stats[i].speed);
     if(sf&0x10) write16(fp,stats[i].frame);
     if(sf&0x40) write8(fp,stats[i].mode);
+    if(stats[i].mode&STAT_ZONERESTRICT) write8(fp,stats[i].zone);
     write16(fp,stats[i].count);
     r=stats[i].xy;
     for(j=0;j<stats[i].count;j++) {

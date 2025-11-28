@@ -740,7 +740,9 @@ numbers are treated as unsigned.
   affected at all, so you should only use this when a stat has no instances
   or to vacate a independent stat. (Note that you cannot use this to remove
   the text of a stat whose text is the global script; if you want to do
-  that then you must change the board flags and then reload the board.)
+  that then you must change the board flags and then reload the board.) If
+  you set bit5, then the low 8-bits of the J register is used to specify
+  the zone restriction.
 
 [08B STEX]
   Set the text of stat W that does not currently have any text. This has no
@@ -1112,6 +1114,16 @@ numbers are treated as unsigned.
 [0B9 IMOV]
   (TODO)
 
+[0C0 XYZ]
+  Check if the X and Y coordinates are in a specified zone. The second
+  operand specifies which zone to check; the condition flag will be true
+  if it is in that zone or false if it is not in that zone. The first
+  operand is as follows:
+   A = only check
+   B = remove from zone
+   C = add to zone (prepend)
+   D = add to zone (append)
+
 [100 LET]
   Copy second operand to first.
 
@@ -1236,6 +1248,8 @@ numbers are treated as unsigned.
    bit0 = Dynamic (see event.doc).
    bit1 = Vacant: Text and instances are cleared during each frame.
    bit2 = Independent (see PMOD for details).
+   bit5 = Restricted to a specified zone.
+  If bit5 is set, then the J register will contain the zone restriction.
 
 [117 INEW]
   Add a new instance of a stat without affecting the board grid. This is

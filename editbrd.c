@@ -131,6 +131,10 @@ static void goto_board(Uint16 id) {
     b_over=b_main+board_info.height*board_info.width;
     board_info.exits[0]=board_info.exits[1]=0;
     board_info.exits[2]=board_info.exits[3]=0;
+    for(i=0;i<16;i++) {
+      free(ozone[i]); ozone[i]=0;
+      free(uzone[i]); uzone[i]=0;
+    }
     if(!stats || maxstat!=memory[m+3]) {
       for(i=0;i<maxstat;i++) {
         free(stats[i].text);
@@ -160,6 +164,10 @@ static void goto_board(Uint16 id) {
     board_info.exits[0]=board_info.exits[1]=0;
     board_info.exits[2]=board_info.exits[3]=0;
     board_info.userdata=board_info.flag=0;
+    for(i=0;i<16;i++) {
+      free(ozone[i]); ozone[i]=0;
+      free(uzone[i]); uzone[i]=0;
+    }
     for(i=0;i<maxstat;i++) {
       free(stats[i].text);
       free(stats[i].xy);
@@ -466,6 +474,8 @@ static void stat_edit(int n) {
     win_numeric('2',"Misc2: ",s->misc2,0,0xFFFF);
     win_numeric('3',"Misc3: ",s->misc3,0,0xFFFF);
     win_numeric('S',"Speed: ",s->speed,0,255);
+    win_boolean('m',"Restrict movement to zone",s->mode,STAT_ZONERESTRICT);
+    win_numeric('Z',"Zone: ",s->zone,0,255);
     win_picture(3) {
       draw_text(1,0,buf,7,snprintf(buf,80,"Length: %5d",s->length));
       draw_text(1,1,buf,7,snprintf(buf,80,"Count: %5d",s->count));

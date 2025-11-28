@@ -1,0 +1,52 @@
+@Zones
+Each grid cell of the board belongs to zero or more zones. The zones are:
+
+þ 0-15 ($00-$0F) þ User-defined unordered zones.
+!u;Unordered zones
+
+þ 16-31 ($10-$1F) þ User-defined ordered zones.
+!o;Ordered zones
+
+þ 32-47 ($20-$2F) þ The element at either the main layer or the under layer
+has the class whose number is the zone number minus thirty-two.
+
+þ 48-55 ($30-$37) þ If the corresponding bit of the overlay kind at that
+cell is set, where 48-51 are the user-defined flags, 52 is the solid flag,
+53 is the reserved flag, 54 is the BG thru flag, and 55 is the visible flag.
+
+þ 56-63 ($38-$3F) þ If user-defined attribute A to H is set for the element
+at the main layer or under layer.
+
+þ 64-79 ($40-$4F) þ The element at the main layer has the class whose number
+is the zone number minus sixty-four.
+
+þ 80-95 ($50-$5F) þ The element at the main layer if it is a floor, or the
+under layer if the main layer is not a floor, has the class whose number is
+the zone number minus eighty.
+
+þ 128-255 ($80-$8F) þ Any grid cell is in this zone iff it is not in the
+zone with the number of this one minus 128. For example, zone 129 consists
+of all cells that are not in zone 1 and vice versa.
+
+(Other numbers are not currently meaningful.)
+
+A stat can be set as restricted to movement within a specified zone.
+
+:u;Unordered zones
+Unordered zones consist of only a set of grid cells; each cell either
+belongs or does not belong to the zone.
+
+In addition, there are flags, and a 16-bit extra value which you can use for
+your own use.
+
+:o;Ordered zones
+Ordered zones consist of an ordered sequence of grid cells, so that you
+can specify the order of movement along the zone, etc.
+
+An ordered zone has flags and a 16-bit extra value like a unordered zone has.
+
+:f;Flags
+This section lists the possible flags, if it says (U) or (O) then it is only
+for unordered zones or ordered zones, respectively; (U,O) means both.
+
+þ User0 to User3 (U,O) þ No built-in use; you can use them for your own use.

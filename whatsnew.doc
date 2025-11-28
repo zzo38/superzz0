@@ -18,10 +18,17 @@ GAME
   +  Optional special uses for item definitions and inventory slots.
   +  Music can now have instruments with delay line and special effects.
   +  Dynamic music (although sz0music currently lacks the way to use this).
+  +  Zones in board grids, with several uses.
 
 SCRIPTS
   +  The #SENT condition to check if a message was successfully sent.
   +  Numeric storage labels.
+  +  Conditions #INZONE and #PLAYERINZONE to read/write zones.
+  =  Fix bugs with some commands and conditions.
+
+ASSEMBLY
+  +  New instructions for dealing with zones.
+  =  Fix bugs with some instructions.
 
 EDITOR
   +  Push F2 in text editor to copy until a specified character.

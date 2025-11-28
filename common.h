@@ -303,7 +303,7 @@ typedef struct {
   Uint8*text;
   Uint16 length,frame,count;
   Uint16 misc1,misc2,misc3;
-  Uint8 speed,mode;
+  Uint8 speed,mode,zone;
 } Stat;
 
 typedef struct {
@@ -315,12 +315,27 @@ typedef struct {
   VarPropertyList varprop;
 } BoardInfo;
 
+typedef struct {
+  Uint16 x,y;
+} OrdZoneXY;
+
+typedef struct {
+  Uint16 ncells,flag,extra;
+  OrdZoneXY xy[0];
+} OrdZone;
+
+typedef struct {
+  Uint16 flag,maxy,extra;
+  Uint8 data[0];
+} UnordZone;
+
 // Stat:mode
 #define STAT_DYNAMIC 0x01
 #define STAT_VACANT 0x02
 #define STAT_INDEPENDENT 0x04
 #define STAT_GLOBAL 0x08
 #define STAT_SPRITES 0x10
+#define STAT_ZONERESTRICT 0x20
 
 // BoardInfo:flag
 #define BF_USER0 0x0001
@@ -339,6 +354,14 @@ typedef struct {
 #define OVER_BG_THRU 0x40  // show through background colour
 #define OVER_VISIBLE 0x80  // overlay is visible (if not set, it is transparent)
 
+// OrdZone:flag, UnordZone:flag
+#define ZF_USER0 0x0001
+#define ZF_USER1 0x0002
+#define ZF_USER2 0x0004
+#define ZF_USER3 0x0008
+#define ZF_REVERSE 0x0010
+#define ZF_CYCLE 0x0020
+
 extern Uint16 cur_board_id;
 extern BoardInfo board_info;
 extern Tile*b_under;
@@ -346,6 +369,9 @@ extern Tile*b_main;
 extern Tile*b_over;
 extern Stat*stats;
 extern Uint8 maxstat;
+
+extern OrdZone*ozone[16];
+extern UnordZone*uzone[16];
 
 extern Uint8**boardnames;
 extern Uint16 maxboard;

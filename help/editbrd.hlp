@@ -233,6 +233,10 @@ features in the game engine treat it in a special way.
 If you push enter then you can edit that stat. Most of the settings are the
 same as explained above; "Text" allows to edit the script.
 
+A stat may optionally be restricted to movement only within a specified
+zone; if this is selected, then it cannot move outside of that zone.
+!-zone;Zones
+
 "XY List" will display a list of the tiles that use this stat. In this
 submenu, "Sort stat XY list" allows sorting them according to your own
 criteria, and "Reverse" will reverse the order of this list; this can be

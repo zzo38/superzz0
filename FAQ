@@ -2,11 +2,12 @@ FREQUENTLY ASKED QUESTIONS -- SUPER ZZ ZERO
 
  [0] GENERAL/MISCELLANEOUS
    [0.1] What is the MIME type, UTI type, etc?
-   [0.2] How to send bug reports and feature requests?
+   [0.2] How to send bug reports and feature requests and questions?
    [0.3] When distributing the game, what files need to be distributed?
    [0.4] Is there i18n and m17n?
    [0.5] How many times was this question asked?
    [0.6] What are the limits of various things?
+   [0.7] How to discuss about Super ZZ Zero?
 
  [1] COMPILING AND SYSTEM COMPATIBILITY
    [1.1] Why doesn't it run on a headless system?
@@ -36,7 +37,7 @@ The ULFI type for a Super ZZ Zero world file is "hamarc:superzz0.world".
 The MIME type is not currently defined.
 
 
-[0.2] How to send bug reports and feature requests?
+[0.2] How to send bug reports and feature requests and questions?
 
 There are two ways. You can either use the issue tracker on GitHub, or you
 can use the NNTP server at zzo38computer.org (which can also be used for
@@ -92,6 +93,17 @@ Status variables: 16
 Variable properties: 255 per screen and 255 per board
 
 Subroutines will not work if the script size limit is reached.
+
+
+[0.7] How to discuss about Super ZZ Zero?
+
+The recommended way is to use the NNTP server (zzo38computer.org) for
+discussion about Super ZZ Zero. The newsgroup name is:
+
+  un2.org.zzo38computer.superzz0
+
+You might also be able to use IRC, if you prefer that; however, note that
+some people might not always be available on IRC.
 
 
 ===
@@ -155,7 +167,7 @@ window" type, and use the "Element" subtype. Assign the slot numbers 0 to
 15 of inventory list 0 to these screen tiles.
 
 In the assembly code, use IGIV and ITAK to give and take the key. An
-example if how the key might be implemented can be:
+example of how the key might be implemented can be:
 
 	LET A,1
 	GTMC B,0
@@ -166,7 +178,7 @@ example if how the key might be implemented can be:
 	MESS E,"You are carrying too many keys!"
 	LET S,0
 1H	MESS E,"You pick up the key."
-	LET S,1
+	KILM D,0
 
 
 [2.2] How to add wave sound effects?

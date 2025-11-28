@@ -75,7 +75,7 @@ Summary of encoding flags:
   0010 = Large board
   0020 = User data
   0040 = (reserved)
-  0080 = (reserved)
+  0080 = Zones
   0100 = Long flag
   0200 = New stat format
   0400 = Layer inversion
@@ -134,6 +134,9 @@ Each stat (the first stat number is stat 1) is as follows:
 * Frame offset (16-bits)
 
 * Mode bits (8-bits)
+
+* If bit5 of the mode bits is set, then one byte being the number of the
+zone that the stat is restricted to moving within.
 
 * Number of XY records for this stat (16-bits)
 
@@ -843,6 +846,17 @@ current version; see SAVE.DER instead.
 === SAVE.DER ===
 
 Only used in save game files. See savegame.c for the definition.
+
+
+=== SAVESYS.DER ===
+
+This is not used by the reference implementation of Super ZZ Zero, but may
+be used in save games created by other implementations, and contains things
+which are specific to the system.
+
+The format is a key/value list (normally there is only one key/value pair
+but it is allowed to have more than one), where the key is a OID and the
+value can be anything appropriate according to the OID.
 
 
 === SCR.NAM ===

@@ -413,6 +413,11 @@ number@
 #FULL
   True if no more named flags can be set.
 
+#INZONE:number
+  True if the cell containing this object is in the specified zone. (See
+  help/zone.hlp for a list of the zone numbers.) You can use #SET and
+  #CLEAR with some zone numbers, but with others it does not work.
+
 #LOCKED
   True if this object is locked from receiving messages.
 
@@ -434,6 +439,10 @@ number@
 
 #PLAYER:kind
   Same as P@kind.
+
+#PLAYERINZONE:number
+  This is like #INZONE: but for the player (the first instance of stat 1)
+  instead of the currently executing object.
 
 #PUSHABLE:dir
   True if the tile in the specified direction is a pushable element. If

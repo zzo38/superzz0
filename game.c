@@ -49,6 +49,8 @@ Uint8*itemnames;
 ItemDef*itemdefs;
 Uint16 nitemdefs;
 Inventory inventory[8];
+UnordZone*uzone[16];
+OrdZone*ozone[16];
 
 static uint64_t rseed;
 static char soundon;
@@ -246,6 +248,10 @@ static void init_new_board(void) {
   board_info.flag=(n<5?0:memory[m+5]);
   for(i=0;i<4;i++) board_info.exits[i]=0;
   if(!(memory[m]&0x2000)) board_info.userdata=0;
+  for(i=0;i<16;i++) {
+    free(ozone[i]); ozone[i]=0;
+    free(uzone[i]); uzone[i]=0;
+  }
   free(b_under);
   b_under=calloc(3*sizeof(Tile),board_info.width*(uint32_t)board_info.height);
   if(!b_under) err(1,"Allocation failed");
@@ -273,6 +279,82 @@ static void init_new_board(void) {
     free(board_info.varprop.item);
     board_info.varprop.item=0;
     board_info.varprop.count=0;
+  }
+}
+
+static Uint8 in_zone(Uint32 x,Uint32 y,Uint8 z) {
+  OrdZone*o;
+  UnordZone*u;
+  Uint8 r=z>>7;
+  Uint32 at=y*board_info.width+x;
+  if(x>=board_info.width || y>=board_info.height) return 0;
+  switch(z&=0x7F) {
+    case 0x00 ... 0x0F: if((u=uzone[z&15]) && y<=u->maxy && ((1<<(at&7))&u->data[at/8])) r^=1; break;
+    case 0x10 ... 0x1F: if(o=ozone[z&15]) for(at=0;at<o->ncells;at++) if(o->xy[at].x==x && o->xy[at].y==y) r^=1; break;
+    case 0x20 ... 0x2F: if((elem_def[b_main[at].kind].attrib&15)==(z&15) || (elem_def[b_under[at].kind].attrib&15)==(z&15)) r^=1; break;
+    case 0x30 ... 0x37: if(b_over[at].kind&(1<<(z&7))) r^=1; break;
+    case 0x38 ... 0x3F: if((elem_def[b_main[at].kind].attrib|elem_def[b_under[at].kind].attrib)&(A_MISC_A<<(z&7))) r^=1; break;
+    case 0x40 ... 0x4F: if((elem_def[b_main[at].kind].attrib&15)==(z&15) || (elem_def[b_under[at].kind].attrib&15)==(z&15)) r^=1; break;
+    case 0x50 ... 0x5F: if((elem_def[(elem_def[b_main[at].kind].attrib&A_FLOOR?b_main:b_under)[at].kind].attrib&15)==(z&15)) r^=1; break;
+  }
+  return r;
+}
+
+static void zone_remove(Uint32 x,Uint32 y,Uint8 z);
+static void zone_add(Uint32 x,Uint32 y,Uint8 z,Uint8 w) {
+  OrdZone*o;
+  UnordZone*u;
+  Uint32 at=y*board_info.width+x;
+  if(z&0x80) zone_remove(x,y,z&0x7F);
+  if(x>=board_info.width || y>=board_info.height) return;
+  switch(z) {
+    case 0x00 ... 0x0F:
+     if(!(u=uzone[z&15])) u=uzone[z&15]=calloc(1,board_info.width/8+1+sizeof(UnordZone));
+     if(!u) err(1,"Allocation failed");
+     if(y>u->maxy) {
+       u=uzone[z&15]=realloc(u,((y+1)*(Uint32)board_info.width)/8+1+sizeof(UnordZone));
+       if(!u) err(1,"Allocation failed");
+       memset(u->data+((u->maxy+1)*(Uint32)board_info.width)/8,0,((y-u->maxy)*(Uint32)board_info.width)/8);
+       u->maxy=y;
+     }
+     u->data[at/8]|=1<<(at&7);
+     break;
+    case 0x10 ... 0x1F:
+      if(!(o=ozone[z&15])) o=ozone[z&15]=calloc(1,sizeof(OrdZone)+sizeof(OrdZoneXY));
+      if(!o) err(1,"Allocation failed");
+      if(o->ncells==0xFFFF) errx(1,"Too many cells in ordered zone");
+      if(o->flag&ZF_REVERSE) w^=1;
+      o=ozone[z&15]=realloc(o,sizeof(OrdZone)+(o->ncells+1)*sizeof(OrdZoneXY));
+      if(!o) err(1,"Allocation failed");
+      if(w) {
+        o->xy[o->ncells-1].x=x; o->xy[o->ncells-1].y=y;
+      } else {
+        memmove(o->xy+1,o->xy,o->ncells*sizeof(OrdZoneXY));
+        o->xy->x=x; o->xy->y=y;
+      }
+      o->ncells++;
+      break;
+    case 0x30 ... 0x37: b_over[at].kind|=1<<(z&7);
+    case 0x80 ... 0xFF: zone_remove(x,y,z&0x7F); break;
+  }
+}
+
+static void zone_remove(Uint32 x,Uint32 y,Uint8 z) {
+  OrdZone*o;
+  UnordZone*u;
+  Uint32 at=y*board_info.width+x;
+  if(x>=board_info.width || y>=board_info.height) return;
+  switch(z) {
+    case 0x00 ... 0x0F: if((u=uzone[z&15]) && y<=u->maxy) u->data[at/8]&=~(1<<(at&7)); break;
+    case 0x10 ... 0x1F:
+      if(o=ozone[z&15]) for(at=0;at<o->ncells;at++) if(o->xy[at].x==x && o->xy[at].y==y) {
+        if(at!=o->ncells-1) memmove(o->xy+at+1,o->xy+at,(o->ncells-at)*sizeof(OrdZoneXY));
+        o->ncells--;
+        break;
+      }
+      break;
+    case 0x30 ... 0x37: b_over[at].kind&=~(1<<(z&7));
+    case 0x80 ... 0xFF: zone_add(x,y,z&0x7F,1); break;
   }
 }
 
@@ -1178,6 +1260,7 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
   }
   // Find stat record if necessary
   if(b[at].stat && !sn && (qq=find_statxy(b+at))) sr=qq-stats[(sn=b[at].stat)-1].xy;
+  if(sn && (stats[sn-1].mode&STAT_ZONERESTRICT) && !in_zone(tx,ty,stats[sn-1].zone)) goto end;
   // Sensors
   if(qq && (e1&A_SENSOR&~e0)) {
     if(qq->sensor.kind) {
@@ -3212,8 +3295,14 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
       for(v=1,n=0;n<16 && v;n++) if(!namedflag[n].name[0]) v=0;
     } else if(!strcmp(buf+1,"LOCKED")) {
       if(xy->layer&0x80) v=1;
+    } else if(!strncmp(buf+1,"INZONE:",7)) {
+      *ip=bip+8;
+      z0=parse_number(s,xy,ip);
+      if(!condflag) goto bad;
+      if(in_zone(xy->x,xy->y,z0)) v=1;
     } else if(!strncmp(buf+1,"MAIN:",5)) {
       n=6; main: *ip=bip+n;
+      if(!parse_kind(s,xy,ip,&sk,0)) goto bad;
       if(count_script_kind(2,&sk)) v=1;
     } else if(!strcmp(buf+1,"NOSAVE")) {
       if(memory[MEM_CONTROL]&CONTROL_DISABLE_SAVING) v=1;
@@ -3228,6 +3317,11 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
       if(!parse_kind(s,xy,ip,&sk,0)) goto bad;
       for(z=0;z<stats->count && !v;z++)
        if((stats->xy[z].layer&3)==2 && stats->xy[z].x<board_info.width && stats->xy[z].y<board_info.height && match_script_kind(stats->xy[z].y*board_info.width+stats->xy[z].x,1,&sk)) v=1;
+    } else if(!strncmp(buf+1,"PLAYERINZONE:",13)) {
+      *ip=bip+14;
+      z0=parse_number(s,xy,ip);
+      if(!condflag) goto bad;
+      if(maxstat && stats->count && in_zone(stats->xy->x,stats->xy->y,z0)) v=1;
     } else if(!strncmp(buf+1,"PUSHABLE:",9)) {
       *ip=bip+10;
       c=parse_direction(s,xy,ip);
@@ -3239,6 +3333,7 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
       if(memory[MEM_CONTROL]&CONTROL_SENT) v=1;
     } else if(!strncmp(buf+1,"UNDER:",6)) {
       n=7; under: *ip=bip+n;
+      if(!parse_kind(s,xy,ip,&sk,0)) goto bad;
       if(count_script_kind(1,&sk)) v=1;
     } else if(!strcmp(buf+1,"USER")) {
       if(xy->layer&0x40) v=1;
@@ -3279,7 +3374,7 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
   } else if(*buf==':') {
     v=(find_label(s,buf+1)==-1?0:1);
   } else if(buf[1]=='@') {
-    n=3;
+    n=2;
     if(*buf=='B') goto beneath;
     if(*buf=='M') goto main;
     if(*buf=='P') goto player;
@@ -3341,7 +3436,12 @@ static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
   if(!n) return;
   buf[n]=0;
   if(*buf=='#') {
-    if(!strcmp(buf+1,"LOCKED")) {
+    if(!strncmp(buf+1,"INZONE:",7)) {
+      *ip=bip+8;
+      n=parse_number(s,xy,ip);
+      if(!condflag) goto bad;
+      if(v) zone_add(xy->x,xy->y,n,1); else zone_remove(xy->x,xy->y,n);
+    } else if(!strcmp(buf+1,"LOCKED")) {
       if(v) xy->layer|=0x80; else xy->layer&=0x7F;
     } else if(!strcmp(buf+1,"NOSAVE")) {
       if(v) memory[MEM_CONTROL]|=CONTROL_DISABLE_SAVING; else memory[MEM_CONTROL]&=~CONTROL_DISABLE_SAVING;
@@ -3351,6 +3451,13 @@ static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
       if(v) board_info.flag|=BF_OVERLAY; else board_info.flag&=~BF_OVERLAY;
     } else if(!strcmp(buf+1,"PERSIST")) {
       if(v) board_info.flag|=BF_PERSIST; else board_info.flag&=~BF_PERSIST;
+    } else if(!strncmp(buf+1,"PLAYERINZONE:",13)) {
+      *ip=bip+14;
+      n=parse_number(s,xy,ip);
+      if(!condflag) goto bad;
+      if(maxstat && stats->count) {
+        if(v) zone_add(stats->xy->x,stats->xy->y,n,1); else zone_remove(stats->xy->x,stats->xy->y,n);
+      }
     } else if(!strcmp(buf+1,"SENT")) {
       if(v) memory[MEM_CONTROL]|=CONTROL_SENT; else memory[MEM_CONTROL]&=~CONTROL_SENT;
     } else if(!strcmp(buf+1,"USER")) {
@@ -5038,6 +5145,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         if(so>0 && so<=maxstat) {
           condflag=1;
           so=stats[so-1].mode;
+          if(so&STAT_ZONERESTRICT) memory[MEM_ARG_J]=stats[so-1].zone;
           goto store;
         } else {
           condflag=0;
@@ -5358,10 +5466,10 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         }
         break;
       case OP_PIP: if(rs=get_statxy(so)) rs->instptr=regs[fo]; break;
-      case OP_PM1: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc1=regs[fo];
-      case OP_PM2: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc2=regs[fo];
-      case OP_PM3: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc3=regs[fo];
-      case OP_PMOD: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].mode=regs[fo];
+      case OP_PM1: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc1=regs[fo]; break;
+      case OP_PM2: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc2=regs[fo]; break;
+      case OP_PM3: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].misc3=regs[fo]; break;
+      case OP_PMOD: so&=0xFFFF; if(so>0 && so<=maxstat) stats[so-1].mode=regs[fo]; stats[so-1].mode=(regs[fo]&STAT_ZONERESTRICT)?memory[MEM_ARG_J]:0; break;
       case OP_POKE: memory[so&0xFFFF]=regs[fo]; break;
       case OP_PROP: do_varproperty_op(fo,so); break;
       case OP_PSD: if(rs=get_statxy(so)) rs->delay=regs[fo]; break;
@@ -5651,6 +5759,14 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_WOKE: memory[so&0xFFFF]=so>>16; memory[(so+1)&0xFFFF]=so; break;
       case OP_XOR: regs[fo]^=so; break;
       case OP_XORN: regs[fo]^=~so; break;
+      case OP_XYZ:
+        condflag=in_zone(x,y,so);
+        switch(fo) {
+          case 1: zone_remove(x,y,so); break;
+          case 2: zone_add(x,y,so,0); break;
+          case 3: zone_add(x,y,so,1); break;
+        }
+        break;
       case OP_ZEX: so=(Uint16)so; goto store;
       case OP_ZSEN:
         if(rs=get_statxy(so)) {
