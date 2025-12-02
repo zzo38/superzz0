@@ -47,6 +47,7 @@ P superzz0-release/help/
 ./slist.hlp slist.hlp
 ./stvar.hlp stvar.hlp
 ./varprop.hlp varprop.hlp
+./zinfo.hlp zinfo.hlp
 ./zone.hlp zone.hlp
 C /home/user/superzz0
 # Man pages

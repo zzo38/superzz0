@@ -229,6 +229,48 @@ inversion also affects stats: If they are exchanged in this way and, one
 layer has a stat at those coordinates but the other doesn't, then the
 layer field of the corresponding stat XY record is updated.
 
+The zones will be listed next if the bit7 of the encoding flags is set. The
+unordered zones are first, and then the ordered zones. Each of these sets
+starts with a 16-bit number indicating which zones are present (bit0 for
+zone 0, etc), and then each of the zones that is present.
+
+Both unordered and ordered zones start with:
+
+* The flags (16-bits).
+
+* The extra value (16-bits).
+
+After those two fields, the rest is different for unordered zones than
+for ordered zones.
+
+A unordered zone then contains a maximum Y value (8-bits if the board
+height is less than or equal to 256, or 16-bits otherwise), and then the
+zone grid data. The zone grid is stored as contiguous bits starting from
+the top-left corner, with the low bit first (there is no alignment). The
+number of bytes is calculated by adding one to the maximum Y value, and
+then multiplying by the board width, and then dividing by eight and round
+down, and then add one. The bytes are stored directly, except that if the
+value is 0 or 255 then one more byte follows to specify how many more bytes
+will have the same value.
+
+A ordered zone has a 16-bit number of cells and then each run of cells has
+the following format:
+
+* bit3-bit0 = One less than the run length.
+
+* bit5-bit4 = The X difference, where 0 means the X coordinate follows
+for each cell (16-bits if the board width is greater than 256 or 8-bits
+otherwise), 1 means previous minus one, 2 means same as previous, and 3
+means previous plus one. (If there is no previous one, assume that the
+previous coordinate is 1.)
+
+* bit7-bit6 = The Y difference; it works like the X difference but for Y
+coordinates instead of X coordinates.
+
+If the X difference or Y difference mode has both bits clear, then for each
+cell in this run, it is follows the X coordinate and then the Y coordinate
+(which ever one(s) is applicable).
+
 
 === *.CHR ===
 

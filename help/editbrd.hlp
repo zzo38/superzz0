@@ -8,6 +8,7 @@ The possible modes are:
 !text;Text mode
 !bloc;Block mode
 !walk;Boardwalk mode
+!zone;Zone mode
 
 Others:
 !flood;Flood fills
@@ -30,6 +31,7 @@ ALT+M      Exchange primary/secondary mark grid
 ALT+R      Resize board
 ALT+T      Test game
 ALT+U      Unmark all (primary and secondary)
+ALT+X      Zone info
 ALT+Y      Variable property list
 ALT+Z      Maximum numeric prefix
 ^O         Stat list
@@ -68,6 +70,7 @@ y          Copy tile from main layer (place with p)
 Y          Copy tile from under layer
 z          Far movement prefix (match kind only)
 Z          Far movement prefix (match kind and colour)
+ \         Edit zones
  :         Colon commands
 F1-F12     Custom menus
 , .        Circulate tile queue
@@ -142,16 +145,47 @@ This mode is used for traversing and linking boards. Commands below marked
 with ø can use any of the letters "e", "n", "w", "s" to link in the east,
 north, west, and south directions.
 
-ESC       Cancel boardwalk mode
-^Eø       Go east, put cursor at west edge
-ALT+Eø    Unlink east
-A         Add new board
-eø        Go east
-Eø        Link east
-m         Mark current board
-M         Mark numbered board
-q         Swap current with marked board
-u         Unmark board
+ESC        Cancel boardwalk mode
+^Eø        Go east, put cursor at west edge
+ALT+Eø     Unlink east
+A          Add new board
+eø         Go east
+Eø         Link east
+m          Mark current board
+M          Mark numbered board
+q          Swap current with marked board
+u          Unmark board
+
+:zone;Zone mode
+This mode is used for editing and viewing zone grids.
+
+ESC        Cancel zone mode
+ \         Select zone to edit by numeric prefix
+TAB        Toggle normal/draw mode
+RETURN     Add cell to zone
+0-9        Numeric prefix
+ALT+I      Board info
+ALT+M      Exchange primary/secondary mark grid
+ALT+R      Resize board
+ALT+T      Test game
+ALT+U      Unmark all (primary and secondary)
+ALT+V      Toggle zone visibility
+ALT+X      Zone info
+ALT+Y      Variable property list
+ALT+Z      Maximum numeric prefix
+^Q         Reset font/palette
+^V         Toggle view mode
+SPACE      Toggle mark
+d          Remove cell from zone
+h j k l    Move cursor
+i          Invert mark
+n          Find next mark
+N          Find previous mark
+p          Add cell to zone
+P          Add cell to zone (reverse)
+ :         Colon commands
+, .        Previous/next zone
+< >        Go to northwest/southeast corner of board
 
 :area;Area buffer
 The area buffer stores tiles including their relative position to the
@@ -382,6 +416,10 @@ will select tiles with any stats at all. It looks on both layers.
 
 * /x selects tiles that are marked in the secondary mark grid.
 
+* /z selects tils within a specified zone. The first argument is the zone
+number (which can be any zone, not necessarily a user-defined zone); if
+omitted, then the current zone is used.
+
 An optional space is allowed after the last filter and before the command.
 
 The format of a tile specification (a colour/kind/parameter) is like that
@@ -507,4 +545,17 @@ writeunder/wu
 
 xmg
   Exchange the primary and secondary mark grid.
+
+zone
+  Select a zone to edit.
+
+zoneadd/za
+  Add a cell to the current zone.
+
+zoneprepend/zp
+  Prepend a cell to the current zone. For unordered zones, this is the same
+  as "zoneadd", but for ordered zones it is different.
+
+zoneremove/zr
+  Remove a cell from the current zone.
 

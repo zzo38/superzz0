@@ -22,6 +22,8 @@ static Uint8*markgrid;
 static Uint16 markwidth,markheight,markskip;
 static Uint8*markgrid2;
 static Uint16 markwidth2,markheight2,markskip2;
+static Uint8 zcur,zvmode;
+static Uint32 zvis;
 
 static Tile*areabuf;
 static Uint16 area_width,area_height;
@@ -227,6 +229,155 @@ static void edit_board_info(void) {
     win_command_esc(0,"Done") break;
   }
   if(*nam) set_board_name(brd_id,nam);
+}
+
+static void fix_zones(void) {
+  UnordZone*u;
+  OrdZone*o;
+  Uint32 a,y;
+  int z;
+  for(z=0;z<16;z++) {
+    if(u=uzone[z]) {
+      for(a=((u->maxy+1)*(Uint32)board_info.width)/8+1;a && !u->data[a-1];a--);
+      if(a) y=(8ULL*a+board_info.width-1)/board_info.width-1; else y=0;
+      if(y<u->maxy) u->maxy=y;
+      if(!u->flag && !a && !u->data[0] && !u->extra) free(uzone[z]),uzone[z]=0;
+    }
+    if(o=ozone[z]) {
+      if(!o->flag && !o->ncells && !o->extra) free(ozone[z]),ozone[z]=0;
+    }
+  }
+}
+
+static void edit_zone_cells(void) {
+  char buf[80];
+  OrdZone*o=ozone[zcur-16];
+  Uint32 id=0;
+  Uint32 s=0;
+  int i;
+  show0:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
+  memset(v_color,0x07,80*25);
+  memset(v_char,0x20,80*25);
+  show1:
+  draw_text(0,0,buf,0x2F,snprintf(buf,80," Zone#%d (%d cells) ",zcur,o->ncells));
+  if(id>=o->ncells) id=o->ncells?o->ncells-1:0;
+  s=24*(id/24);
+  for(i=0;i<24;i++) {
+    if(i+s<o->ncells) {
+      draw_text(1,i+1,buf,i+s==id?0x0E:0x07,snprintf(buf,80,"%5d: (%5d,%5d)",i+s,o->xy[i+s].x,o->xy[i+s].y));
+    } else {
+      draw_text(1,i+1,"     : (-----,-----)",0x08,-1);
+    }
+  }
+  redisplay();
+  key:
+  do { if(!next_event()) return; } while(event.type!=SDL_KEYDOWN);
+  switch(event.key.keysym.sym) {
+    case SDLK_ESCAPE: case SDLK_q: return;
+    case SDLK_DELETE: case SDLK_d:
+      if(o->ncells && id<o->ncells) {
+        memmove(o->xy+id,o->xy+id+1,(o->ncells-id-1)*sizeof(OrdZoneXY));
+        o->ncells--;
+      }
+      goto show1;
+    case SDLK_INSERT: case SDLK_i:
+      if(o->ncells==0xFFFF) goto key;
+      o->ncells++;
+      o=ozone[zcur-16]=realloc(o,o->ncells*sizeof(OrdZoneXY)+sizeof(OrdZone));
+      memmove(o->xy+id+1,o->xy+id,(o->ncells-id-1)*sizeof(OrdZoneXY));
+      o->xy[id].x=xcur; o->xy[id].y=ycur;
+      // fall through
+    case SDLK_SPACE: case SDLK_e:
+      win_form("Edit zone cell") {
+        win_numeric('X',"X: ",o->xy[id].x,0,board_info.width-1);
+        win_numeric('Y',"Y: ",o->xy[id].y,0,board_info.height-1);
+        win_blank();
+        win_command_esc(0,"Done") break;
+      }
+      goto show0;
+    case SDLK_UP: case SDLK_KP8: case SDLK_k: if(id) id--; goto show1;
+    case SDLK_DOWN: case SDLK_KP2: case SDLK_j: if(id+1<o->ncells) id++; goto show1;
+    case SDLK_PAGEUP: case SDLK_KP4: case SDLK_KP9: case SDLK_LEFT: case SDLK_h: id=(id>24?id-24:0); goto show1;
+    case SDLK_PAGEDOWN: case SDLK_KP3: case SDLK_KP6: case SDLK_RIGHT: case SDLK_l: id=(id>24?id-24:0); goto show1;
+    case SDLK_HOME: case SDLK_KP7: id=0; goto show1;
+    case SDLK_END: case SDLK_KP1: if(o->ncells) id=o->ncells-1; goto show1;
+    default: goto key;
+  }
+}
+
+static void edit_zone_info(void) {
+  char buf[80];
+  UnordZone*u;
+  OrdZone*o;
+  int i;
+  Uint32 x,y;
+  win_form("Zone info") {
+    win_help("zone",zcur&16?"o":"u");
+    win_numeric(':',"Zone: ",zcur,0,31) win_refresh();
+    win_blank();
+    if(zcur&16) {
+      if(!(o=ozone[zcur-16]) && !(o=ozone[zcur-16]=calloc(1,sizeof(OrdZone)))) err(1,"Allocation failed");
+      win_picture(1) draw_text(2,0,buf,7,snprintf(buf,40,"(%d cells)",o->ncells));
+      win_boolean('0',"User0",o->flag,ZF_USER0);
+      win_boolean('1',"User1",o->flag,ZF_USER1);
+      win_boolean('2',"User2",o->flag,ZF_USER2);
+      win_boolean('3',"User3",o->flag,ZF_USER3);
+      win_boolean('R',"Reverse",o->flag,ZF_REVERSE);
+      win_boolean('C',"Cycle",o->flag,ZF_CYCLE);
+      win_numeric('x',"Extra value: ",o->extra,0,0xFFFF);
+      win_command('v',"Remove all cells") {
+        o->ncells=0;
+        win_refresh();
+      }
+      if(o->ncells) win_command('M',"Move cells...") {
+        int d=DIR_E;
+        Uint16 n=1;
+        win_form("Move zone cells") {
+          win_numeric('A',"Amount: ",n,0,65535);
+          win_option('E',"East",d,DIR_E);
+          win_option('N',"North",d,DIR_N);
+          win_option('W',"West",d,DIR_W);
+          win_option('S',"South",d,DIR_S);
+          win_blank();
+          win_command('x',"Execute") {
+            for(i=0;i<o->ncells;o++) {
+              x=o->xy[i].x+(d==DIR_E?n:d==DIR_W?-n:0); y=o->xy[i].y+(d==DIR_S?n:d==DIR_N?-n:0);
+              if(x<board_info.width && y<board_info.height) {
+                o->xy[i].x=x; o->xy[i].y=y;
+              } else {
+                o->ncells--;
+                memmove(o->xy+i,o->xy+i+1,(o->ncells-i)*sizeof(OrdZoneXY));
+                i--;
+              }
+            }
+            break;
+          }
+          win_command_esc(0,"Cancel") break;
+        }
+      }
+      win_command('E',"Edit cells...") {
+        edit_zone_cells();
+        win_refresh();
+      }
+    } else {
+      if(!(u=uzone[zcur]) && !(u=uzone[zcur]=calloc(1,board_info.width/8+1+sizeof(UnordZone)))) err(1,"Allocation failed");
+      win_picture(1) draw_text(2,0,buf,7,snprintf(buf,40,"(Max Y = %d)",u->maxy));
+      win_boolean('0',"User0",u->flag,ZF_USER0);
+      win_boolean('1',"User1",u->flag,ZF_USER1);
+      win_boolean('2',"User2",u->flag,ZF_USER2);
+      win_boolean('3',"User3",u->flag,ZF_USER3);
+      win_numeric('x',"Extra value: ",u->extra,0,0xFFFF);
+      win_command('v',"Remove all cells") {
+        u->maxy=0;
+        memset(u->data,0,board_info.width/8+1);
+        win_refresh();
+      }
+    }
+    win_blank();
+    win_command_esc(0,"Done") break;
+  }
+  fix_zones();
 }
 
 static void clear_extra_stats(void) {
@@ -599,6 +750,20 @@ static void resize_board(void) {
     win_command_esc(0,"Cancel") return;
   }
   if(w==board_info.width && h==board_info.height) return;
+  if(w!=board_info.width) {
+    for(z=0;z<16;z++) if(uzone[z]) {
+      if(ask_yn("If you proceed, unordered zones will be erased. Are you sure?",0)) break; else return;
+    }
+  } else if(h<board_info.height) {
+    for(z=0;z<16;z++) if(uzone[z]->maxy>=h) {
+      if(ask_yn("If you proceed, unordered zones may be truncated. Are you sure?",0)) break; else return;
+    }
+  }
+  if(w<board_info.width || h<board_info.height) {
+    for(z=0;z<16;z++) if(ozone[z] && ozone[z]->ncells) {
+      if(ask_yn("If you proceed, ordered zones may be truncated. Are you sure?",0)) break; else return;
+    }
+  }
   b_under=calloc(w*h,3*sizeof(Tile));
   if(!b_under) err(1,"Allocation failed");
   b_main=b_under+w*h;
@@ -649,6 +814,23 @@ static void resize_board(void) {
       b_under[x+y*w]=ku[z];
       b_main[x+y*w]=km[z];
       b_over[x+y*w]=ko[z];
+    }
+  }
+  if(w!=board_info.width) {
+    for(z=0;z<16;z++) if(uzone[z]) {
+      uzone[z]->maxy=0;
+      memset(uzone[z]->data,0,board_info.width/8+1);
+    }
+  } else if(h<board_info.height) {
+    for(z=0;z<16;z++) if(uzone[z]->maxy>=h) uzone[z]->maxy=h;
+  }
+  if(w<board_info.width || h<board_info.height) {
+    for(z=0;z<16;z++) if(ozone[z] && ozone[z]->ncells) {
+      for(x=0;x<ozone[z]->ncells;x++) if(ozone[z]->xy[x].x>=w || ozone[z]->xy[x].y>=h) {
+         ozone[z]->ncells--;
+         memmove(ozone[z]->xy+x,ozone[z]->xy+x+1,(ozone[z]->ncells-x)*sizeof(OrdZoneXY));
+         x--;
+      }
     }
   }
   board_info.width=w;
@@ -862,6 +1044,50 @@ static void estatus_over(void) {
   }
 }
 
+static void estatus_zone(void) {
+  // 00000000001111111111222222222233333333334444444444555555555566666666667777777777
+  // 01234567890123456789012345678901234567890123456789012345678901234567890123456789
+  // _____\\ ZONE:__              umo_____    VE................+____+____(____,____)
+  char buf[80];
+  int y=24;
+  int x;
+  if(board_info.height>24 && v_ycur>12) y=0;
+  memset(v_color+y*80,0x11,80);
+  draw_text(0,y,buf,0x1B,snprintf(buf,80,"%5d",brd_id));
+  v_color[y*80+5]=0x14;
+  v_char[y*80+5]='\\';
+  draw_text(8,y,buf,0x1B,snprintf(buf,80,"ZONE:%02d",zcur));
+  if(b_under[ycur*board_info.width+xcur].kind) v_char[y*80+31]='u',v_color[y*80+31]=0x13;
+  if(b_main[ycur*board_info.width+xcur].kind) v_char[y*80+32]='m',v_color[y*80+32]=0x13;
+  if(b_over[ycur*board_info.width+xcur].kind) v_char[y*80+33]='o',v_color[y*80+33]=0x13;
+  if(numprefix) draw_text(34,y,buf,0x1E,snprintf(buf,80,"%5d",numprefix));
+  if(markgrid && xcur<markwidth && ycur<markheight) {
+    if(markgrid[(xcur>>3)+ycur*markskip]&(1<<(xcur&7))) v_char[y*80+39]=7,v_color[y*80+39]=0x1A;
+  }
+  if(zvmode) v_char[y*80+41]='V',v_color[y*80+41]=0x1D;
+  v_char[y*80+42]=emode;
+  v_color[y*80+42]=0x1C;
+  draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
+  v_char[y*80+69]="(\x11\x10\x04"[(scroll_x?1:0)+(scroll_x+80<board_info.width?2:0)];
+  v_char[y*80+79]=")\x1E\x1F\x04"[(scroll_y?1:0)+(scroll_y+25<board_info.height?2:0)];
+  if(emode=='v') {
+    draw_text(59,y,buf,0x19,snprintf(buf,80,"%c%04d%c%04d",xcur2>xcur?'-':'+',abs(xcur2-xcur),ycur2>ycur?'-':'+',abs(ycur2-ycur)));
+  }
+  if(zvmode) {
+    for(x=0;x<16;x++) {
+      if(in_zone(xcur,ycur,x)) v_char[y*80+x+43]="0123456789ABCDEF"[x],v_color[y*80+x+43]=0x1F; else v_char[y*80+x+43]=250,v_color[y*80+x+43]=0x10;
+    }
+  } else {
+    for(x=0;x<16;x++) {
+      v_char[y*80+x+43]=223; v_color[y*80+x+43]=0x11;
+      if(zvis&(1UL<<x)) v_color[y*80+x+43]+=0x01;
+      if(zvis&(0x10000UL<<x)) v_color[y*80+x+43]+=0x10;
+      if(x==zcur) v_color[y*80+x+43]^=0x0F;
+      if(x+16==zcur) v_color[y*80+x+43]^=0xF0;
+    }
+  }
+}
+
 static StatXY*find_stat(Uint16 x,Uint16 y,Uint8 n,Uint8 lay,Uint8 nlay) {
   // Moves a stat with number (n) from layer (lay) to (nlay), at coordinates (x,y).
   // If either layer number is zero, means a nonexistent stat XY record.
@@ -1004,6 +1230,22 @@ static void over_cursor_move(Sint32 xd,Sint32 yd) {
     while(numprefix-- && xcur+xd>=0 && xcur+xd<board_info.width && ycur+yd>=0 && ycur+yd<board_info.height) {
       if(autocirc) circulate_clipq(-1,&overclip,overclipq);
       over_place_at(xcur+=xd,ycur+=yd,clip);
+    }
+  }
+  numprefix=0;
+}
+
+static void zone_cursor_move(Sint32 xd,Sint32 yd) {
+  Sint32 x=xcur+xd*(numprefix?:1);
+  Sint32 y=ycur+yd*(numprefix?:1);
+  if(emode!='*') {
+    if(x<0) xcur=0; else if(x>=board_info.width) xcur=board_info.width-1; else xcur=x;
+    if(y<0) ycur=0; else if(y>=board_info.height) ycur=board_info.height-1; else ycur=y;
+  } else {
+    if(!numprefix) numprefix=1;
+    while(numprefix-- && xcur+xd>=0 && xcur+xd<board_info.width && ycur+yd>=0 && ycur+yd<board_info.height) {
+      xcur+=xd; ycur+=yd;
+      if(zcur<16 || !in_zone(xcur,ycur,zcur)) zone_add(xcur,ycur,zcur,1);
     }
   }
   numprefix=0;
@@ -1619,6 +1861,22 @@ static void cc_xmg(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   exchange_mark_grid();
 }
 
+static void cc_zone(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  if(arg && *arg) zcur=strtol(arg,0,10)&31;
+}
+
+static void cc_zoneappend_step(Uint16 x,Uint16 y,const char*arg) {
+  zone_add(x,y,zcur,1);
+}
+
+static void cc_zoneprepend_step(Uint16 x,Uint16 y,const char*arg) {
+  zone_add(x,y,zcur,0);
+}
+
+static void cc_zoneremove_step(Uint16 x,Uint16 y,const char*arg) {
+  zone_remove(x,y,zcur);
+}
+
 static const ColonCommand colon_commands[]={
   {"b",0,cc_board,0,0,0},
   {"bi",0,cc_boardinfo,0,0,0},
@@ -1671,6 +1929,14 @@ static const ColonCommand colon_commands[]={
   {"wu",'.',0,cc_place_begin,cc_writeunder_step,0},
   {"xl",'.',0,0,cc_exchangelayer_step,0},
   {"xmg",0,cc_xmg,0,0,0},
+  {"za",'.',0,0,cc_zoneappend_step,0},
+  {"zp",'.',0,0,cc_zoneprepend_step,0},
+  {"zone",0,cc_zone,0,0,0},
+  {"zoneadd",'.',0,0,cc_zoneappend_step,0},
+  {"zoneappend",'.',0,0,cc_zoneappend_step,0},
+  {"zoneprepend",'.',0,0,cc_zoneprepend_step,0},
+  {"zoneremove",'.',0,0,cc_zoneremove_step,0},
+  {"zr",'.',0,0,cc_zoneremove_step,0},
 };
 
 typedef struct {
@@ -1746,6 +2012,10 @@ static int cf_tile(Uint16 x,Uint16 y,Filter*f) {
   return 0;
 }
 
+static int cf_zone(Uint16 x,Uint16 y,Filter*f) {
+  return in_zone(x,y,f->narg?f->arg[0]:zcur);
+}
+
 typedef int(*FilterCode)(Uint16 x,Uint16 y,Filter*f);
 
 static const FilterCode filtcode[127]={
@@ -1759,6 +2029,7 @@ static const FilterCode filtcode[127]={
   ['r']=cf_random,
   ['s']=cf_stat,
   ['x']=cf_mark2,
+  ['z']=cf_zone,
 };
 
 static void do_colon_command(char*text) {
@@ -2029,6 +2300,67 @@ static void update_over_screen(void) {
       if(x+scroll_x>=board_info.width) break;
       v_char[a+x]=b_over[b+x].param;
       v_color[a+x]=b_over[b+x].color;
+    }
+  }
+}
+
+static void update_zone_screen(void) {
+  OrdZoneXY*o;
+  int i,z;
+  Uint32 x,y,p,q;
+  if(zvmode) {
+    update_screen();
+    if(zcur<16) {
+      if(uzone[zcur]) for(p=x=y=0,q=board_info.width*(Uint32)board_info.height;p<q;p++) {
+        if(x>=scroll_x && x-scroll_x<80 && y>=scroll_y && (uzone[zcur]->data[p>>3]&(1<<(p&7)))) {
+          i=(y-scroll_y)*80+x-scroll_x;
+          v_font[i]=VF_SYSTEM; v_char[i]=254; v_color[i]=(v_color[i]==0x8E?0x8F:0x8E);
+        }
+        if(++x==board_info.width) {
+          x=0; if(++y==scroll_y+25 || y>uzone[zcur]->maxy) break;
+        }
+      }
+    } else {
+      if(ozone[zcur-16]) for(p=0,q=ozone[zcur-16]->ncells;p<q;p++) {
+        o=ozone[zcur-16]->xy+p; x=o->x-scroll_x; y=o->y-scroll_y;
+        if(x<80 && y<25) {
+          i=y*80+x;
+          v_font[i]=VF_SYSTEM;
+          v_char[i]=(p==q-1?4:o[1].x==o->x+1&&o[1].y==o->y?26:o[1].x==o->x-1&&o[1].y==o->y?27:o[1].y==o->y+1&&o[1].x==o->x?25:o[1].y==o->y-1&&o[1].x==o->x?24:35);
+          v_color[i]=(p&1)+0x8E;
+        }
+      }
+    }
+  } else {
+    memset(v_color,0x08,80*25);
+    memset(v_char,250,80*25);
+    memset(v_font,VF_SYSTEM,80*25);
+    q=board_info.width*(Uint32)board_info.height;
+    for(z=0;z<32;z++) if((z==zcur && !zvis) || ((1UL<<z)&zvis)) {
+      if(z<16) {
+        if(uzone[z]) for(p=x=y=0;p<q;p++) {
+          if(x>=scroll_x && x-scroll_x<80 && y>=scroll_y && (uzone[z]->data[p>>3]&(1<<(p&7)))) {
+            i=(y-scroll_y)*80+x-scroll_x;
+            v_char[i]=254; v_color[i]^=1<<(z&7);
+            if(!(v_color[i]%17)) v_color[i]^=7,v_char[i]='+';
+            if(z==zcur) v_char[i]=15;
+          }
+          if(++x==board_info.width) {
+            x=0; if(++y==scroll_y+25 || y>uzone[z]->maxy) break;
+          }
+        }
+      } else {
+        if(ozone[z-16]) for(p=0,q=ozone[z-16]->ncells;p<q;p++) {
+          o=ozone[z-16]->xy+p; x=o->x-scroll_x; y=o->y-scroll_y;
+          if(x<80 && y<25) {
+            i=y*80+x;
+            v_char[i]='#';
+            v_color[i]^=1<<(z&7);
+            if(!(v_color[i]%17)) v_color[i]^=7,v_char[i]='$';
+            if(z==zcur) v_char[i]=(p==q-1?4:o[1].x==o->x+1&&o[1].y==o->y?26:o[1].x==o->x-1&&o[1].y==o->y?27:o[1].y==o->y+1&&o[1].x==o->x?25:o[1].y==o->y-1&&o[1].x==o->x?24:15);
+          }
+        }
+      }
     }
   }
 }
@@ -3090,6 +3422,7 @@ Uint16 edit_board(Uint16 id) {
           run_test_game(brd_id);
           break;
         case -SDLK_u: free(markgrid); free(markgrid2); markwidth=markheight=markskip=markwidth2=markheight2=markskip2=0; markgrid=markgrid2=0; break;
+        case -SDLK_x: edit_zone_info(); break;
         case -SDLK_y: edit_varprop(&board_info.varprop); work_varproperties(&board_info.varprop); break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
@@ -3132,6 +3465,7 @@ Uint16 edit_board(Uint16 id) {
         case '{': switch_to_board(numprefix); numprefix=0; break;
         case '}': switch_to_board(maxboard); numprefix=0; break;
         case ':': ask_colon_command(); break;
+        case '\\': zcur=numprefix&31; numprefix=0; goto zone;
         case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd",0); break;
         case -SDLK_F12 ... -SDLK_F1: f_menu((event.key.keysym.mod&KMOD_SHIFT?13:1)-k-SDLK_F1); break;
       } break;
@@ -3289,6 +3623,7 @@ Uint16 edit_board(Uint16 id) {
           run_test_game(brd_id);
           break;
         case -SDLK_u: free(markgrid); free(markgrid2); markwidth=markheight=markskip=markwidth2=markheight2=markskip2=0; markgrid=markgrid2=0; break;
+        case -SDLK_x: edit_zone_info(); break;
         case -SDLK_y: edit_varprop(&board_info.varprop); work_varproperties(&board_info.varprop); break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
@@ -3394,6 +3729,59 @@ Uint16 edit_board(Uint16 id) {
         case 'l': case -SDLK_RIGHT: far_cursor_move(1,0,emode=='Z',1); break;
       } emode=numprefix=0; break;
       default: emode=0;
+    }
+  }
+  goto exit;
+  zone:
+  for(emode=numprefix=0;;) {
+    escroll();
+    update_zone_screen();
+    if(markgrid) show_marks();
+    if(emode=='v') show_selection();
+    v_xcur=xcur-scroll_x; v_ycur=ycur-scroll_y;
+    if(status_on) estatus_zone();
+    redisplay();
+    do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
+    k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+    switch(emode) {
+      case 0: case '*': no_mode2: switch(k) {
+        case 0x08: numprefix/=10; break;
+        case 0x09: if(emode=(emode?0:'*')) if(zcur<16 || !in_zone(xcur,ycur,zcur)) zone_add(xcur,ycur,zcur,1); break;
+        case 0x11: load_font(0,LOADFONT_RESET); load_palette(0,LOADPAL_RESET); break;
+        case 0x16: zvmode^=1; break;
+        case 0x1B: fix_zones(); if(numprefix) numprefix=0; else if(emode) emode=0; else goto norm; break;
+        case -SDLK_i: edit_board_info(); break;
+        case -SDLK_m: exchange_mark_grid(); break;
+        case -SDLK_r: fix_zones(); resize_board(); break;
+        case -SDLK_t:
+          if(boardnames) write_name_list("BRD.NAM",boardnames,maxboard);
+          esave();
+          run_test_game(brd_id);
+          break;
+        case -SDLK_u: free(markgrid); free(markgrid2); markwidth=markheight=markskip=markwidth2=markheight2=markskip2=0; markgrid=markgrid2=0; break;
+        case -SDLK_v: zvis^=1UL<<zcur; break;
+        case -SDLK_x: edit_zone_info(); break;
+        case -SDLK_y: edit_varprop(&board_info.varprop); work_varproperties(&board_info.varprop); break;
+        case -SDLK_z: numprefix=0xFFFF; break;
+        case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
+        case 'd': zone_remove(xcur,ycur,zcur); break;
+        case 'h': case -SDLK_LEFT: zone_cursor_move(-1,0); break;
+        case 'i': do_colon_command("%toggle"); break;
+        case 'j': case -SDLK_DOWN: zone_cursor_move(0,1); break;
+        case 'k': case -SDLK_UP: zone_cursor_move(0,-1); break;
+        case 'l': case -SDLK_RIGHT: zone_cursor_move(1,0); break;
+        case 'n': find_next_marked(numprefix?:1); numprefix=0; break;
+        case 'N': find_next_marked(-(numprefix?:1)); numprefix=0; break;
+        case 'p': case 0x0D: if(zcur<16 || !in_zone(xcur,ycur,zcur)) zone_add(xcur,ycur,zcur,1); break;
+        case 'P': if(zcur<16 || !in_zone(xcur,ycur,zcur)) zone_add(xcur,ycur,zcur,0); break;
+        case '\\': zcur=numprefix&31; numprefix=0; break;
+        case ',': zcur=(zcur-1)&31; break;
+        case '.': zcur=(zcur+1)&31; break;
+        case '<': case -SDLK_HOME: xcur=ycur=0; break;
+        case '>': case -SDLK_END: xcur=board_info.width-1; ycur=board_info.height-1; break;
+        case ':': ask_colon_command(); break;
+        case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editbrd","zone"); break;
+      }
     }
   }
   goto exit;

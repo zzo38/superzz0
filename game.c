@@ -282,7 +282,7 @@ static void init_new_board(void) {
   }
 }
 
-static Uint8 in_zone(Uint32 x,Uint32 y,Uint8 z) {
+Uint8 in_zone(Uint32 x,Uint32 y,Uint8 z) {
   OrdZone*o;
   UnordZone*u;
   Uint8 r=z>>7;
@@ -300,8 +300,7 @@ static Uint8 in_zone(Uint32 x,Uint32 y,Uint8 z) {
   return r;
 }
 
-static void zone_remove(Uint32 x,Uint32 y,Uint8 z);
-static void zone_add(Uint32 x,Uint32 y,Uint8 z,Uint8 w) {
+void zone_add(Uint32 x,Uint32 y,Uint8 z,Uint8 w) {
   OrdZone*o;
   UnordZone*u;
   Uint32 at=y*board_info.width+x;
@@ -314,7 +313,7 @@ static void zone_add(Uint32 x,Uint32 y,Uint8 z,Uint8 w) {
      if(y>u->maxy) {
        u=uzone[z&15]=realloc(u,((y+1)*(Uint32)board_info.width)/8+1+sizeof(UnordZone));
        if(!u) err(1,"Allocation failed");
-       memset(u->data+((u->maxy+1)*(Uint32)board_info.width)/8,0,((y-u->maxy)*(Uint32)board_info.width)/8);
+       memset(u->data+((u->maxy+1)*(Uint32)board_info.width)/8+1,0,((y+1)*(Uint32)board_info.width)/8-((u->maxy+1)*(Uint32)board_info.width)/8);
        u->maxy=y;
      }
      u->data[at/8]|=1<<(at&7);
@@ -327,7 +326,7 @@ static void zone_add(Uint32 x,Uint32 y,Uint8 z,Uint8 w) {
       o=ozone[z&15]=realloc(o,sizeof(OrdZone)+(o->ncells+1)*sizeof(OrdZoneXY));
       if(!o) err(1,"Allocation failed");
       if(w) {
-        o->xy[o->ncells-1].x=x; o->xy[o->ncells-1].y=y;
+        o->xy[o->ncells].x=x; o->xy[o->ncells].y=y;
       } else {
         memmove(o->xy+1,o->xy,o->ncells*sizeof(OrdZoneXY));
         o->xy->x=x; o->xy->y=y;
@@ -339,7 +338,7 @@ static void zone_add(Uint32 x,Uint32 y,Uint8 z,Uint8 w) {
   }
 }
 
-static void zone_remove(Uint32 x,Uint32 y,Uint8 z) {
+void zone_remove(Uint32 x,Uint32 y,Uint8 z) {
   OrdZone*o;
   UnordZone*u;
   Uint32 at=y*board_info.width+x;

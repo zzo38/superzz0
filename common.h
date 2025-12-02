@@ -380,6 +380,10 @@ StatXY*add_statxy(int n);
 const char*select_board(Uint16 b);
 //Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h);
 
+Uint8 in_zone(Uint32 x,Uint32 y,Uint8 z);
+void zone_add(Uint32 x,Uint32 y,Uint8 z,Uint8 w);
+void zone_remove(Uint32 x,Uint32 y,Uint8 z);
+
 const char*load_board(FILE*fp);
 const char*save_board(FILE*fp,int m);
 

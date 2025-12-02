@@ -491,6 +491,98 @@ static void save_varproperties(FILE*fp,const VarPropertyList*vp) {
   for(i=0;i<vp->count;i++) fputc(vp->item[i].type,fp),fwrite(vp->item[i].data,1,vp->item[i].type&15,fp);
 }
 
+static void load_zones(FILE*fp) {
+  UnordZone*u;
+  OrdZone*o;
+  Uint32 at,n,x,y;
+  Uint16 zo,v,f,ex;
+  Uint8 c,w;
+  // Unordered zones
+  zo=read16(fp);
+  for(w=0;w<16;w++) if(zo&(1<<w)) {
+    f=read16(fp); ex=read16(fp); v=board_info.height>256?read16(fp):read8(fp);
+    u=uzone[w]=calloc(1,(y=((v+1)*board_info.width)/8+1)+sizeof(UnordZone));
+    if(!u) err(1,"Allocation failed");
+    u->flag=f; u->extra=ex; u->maxy=v;
+    for(x=0;x<y;) {
+      u->data[x++]=c=fgetc(fp);
+      if(c==0 || c==255) {
+        n=fgetc(fp)&255;
+        while(n-- && x<y) u->data[x++]=c;
+      }
+    }
+  }
+  // Ordered zones
+  zo=read16(fp);
+  for(w=0;w<16;w++) if(zo&(1<<w)) {
+    f=read16(fp); ex=read16(fp); n=read16(fp);
+    o=ozone[w]=malloc(sizeof(OrdZone)+n*sizeof(OrdZoneXY));
+    if(!o) err(1,"Allocation failed");
+    o->flag=f; o->extra=ex; o->ncells=n;
+    x=y=1;
+    for(v=0;v<n;) {
+      c=fgetc(fp);
+      for(;;) {
+        f=(c>>4)&3;
+        if(!f) x=board_info.width>256?read16(fp):read8(fp); else x+=f-2;
+        if(x>=board_info.width) x=0;
+        f=(c>>6)&3;
+        if(!f) y=board_info.height>256?read16(fp):read8(fp); else y+=f-2;
+        if(y>=board_info.height) y=0;
+        o->xy[v].x=x; o->xy[v].y=y; v++;
+        if(!(c&15)) break;
+        c--;
+      }
+    }
+  }
+}
+
+static void save_zones(FILE*fp) {
+  UnordZone*u;
+  OrdZone*o;
+  Uint32 at,n,x,y;
+  Uint16 zo,v;
+  Uint8 c,d,w;
+  // Unordered zones
+  for(zo=w=0;w<16;w++) if(uzone[w]) zo|=1<<w;
+  write16(fp,zo);
+  for(w=0;w<16;w++) if(u=uzone[w]) {
+    write16(fp,u->flag); write16(fp,u->extra);
+    if(board_info.height>256) write16(fp,u->maxy); else write8(fp,u->maxy);
+    y=((u->maxy+1)*board_info.width)/8+1;
+    for(x=0;x<y;) {
+      fputc(c=u->data[x++],fp);
+      if(c==0 || c==255) {
+        for(n=0;n<255 && x+n<y && u->data[x+n]==c;n++);
+        fputc(n,fp);
+        x+=n;
+      }
+    }
+  }
+  // Ordered zones
+  for(zo=w=0;w<16;w++) if(ozone[w]) zo|=1<<w;
+  write16(fp,zo);
+  for(w=0;w<16;w++) if(o=ozone[w]) {
+    write16(fp,o->flag); write16(fp,o->extra); write16(fp,o->ncells);
+    x=y=1;
+    for(n=v=d=0;n<=o->ncells;n++) {
+      if(n!=o->ncells) {
+        c=(o->xy[n].x==x-1?0x10:o->xy[n].x==x?0x20:o->xy[n].x==x+1?0x30:0x00)+(o->xy[n].y==y-1?0x40:o->xy[n].y==y?0x80:o->xy[n].y==y+1?0xC0:0x00);
+        x=o->xy[n].x; y=o->xy[n].y;
+      }
+      if(n!=v && (c!=d || n==o->ncells || n==v+16)) {
+        fputc(d+n-v-1,fp);
+        while(v<n) {
+          if(!(d&0x30)) board_info.width>256?write16(fp,o->xy[v].x):write8(fp,o->xy[v].x);
+          if(!(d&0xC0)) board_info.height>256?write16(fp,o->xy[v].y):write8(fp,o->xy[v].y);
+          v++;
+        }
+      }
+      d=c;
+    }
+  }
+}
+
 static inline void fill_layer(Tile*p,Tile t,Uint32 c) {
   while(c--) *p++=t;
 }
@@ -612,7 +704,7 @@ const char*load_board(FILE*fp) {
   Tile*end;
   StatXY*r;
   int i,j;
-  if(ef&0x70C0) return "Unrecognized file format";
+  if(ef&0x7040) return "Unrecognized file format";
   if(feof(fp)) return "Input past end of file";
   free(b_under);
   b_under=b_main=b_over=0;
@@ -723,6 +815,8 @@ const char*load_board(FILE*fp) {
   memset(guess,0,256);
   for(pt=b_under;pt<end;) pt+=load_board_run(fp,pt,end,2,guess);
   if(ef&0x0400) layer_inversion();
+  // Zones
+  if(ef&0x80) load_zones(fp);
   return 0;
 }
 
@@ -859,6 +953,8 @@ const char*save_board(FILE*fp,int m) {
   memset(guess,0,256);
   for(pt=b_under;pt<end;) pt+=save_board_run(fp,pt,end,2,guess);
   if(ef&0x0400) layer_inversion();
+  // Zones
+  if(ef&0x80) save_zones(fp);
   // Restore saved stat1
   if(savedstat1.text) {
     *stats=savedstat1;
