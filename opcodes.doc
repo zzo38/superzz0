@@ -1039,7 +1039,9 @@ numbers are treated as unsigned.
    $7 = Weight
    $8 = Item slot flags
    $9 = Item definition flags
-   $A to $F = (Reserved)
+   $A = Slot number
+   $B = Slot number (return immediately)
+   $C to $F = (Reserved)
   The operations on values can be:
    $0 = Add
    $1 = Subtract
@@ -1061,7 +1063,10 @@ numbers are treated as unsigned.
    $EA = Slots other than the slot that the cursor is at
    $EB = The slot that the cursor is at
    $EC = Quantity is nonzero
-   $ED to $FF = (Reserved)
+   $ED = The slot that the cursor is at and all further slots
+   $EE = Only slots after the slot that the cursor is at
+   $EF = Only slots before the slot that the cursor is at
+   $F0 to $FF = (Reserved)
   The extra criteria 1 means that the J register is a AND mask of the item
   slot flags, and it will check that it equals the value of the K register.
 
@@ -1076,6 +1081,7 @@ numbers are treated as unsigned.
    4 = Ext0
    5 = Ext1
    6 = Ext2
+   7 = Copy
   The condition flag is set if this slot is in range or clear if not (in
   which case the first operand is unchanged). You can add $800 plus $100
   times the active inventory number like with INVE.
@@ -1083,7 +1089,10 @@ numbers are treated as unsigned.
 [0B5 IPUT]
   Write a value into a slot in a inventory list. The J and second operand
   have the same meaning as IGET, and the value to be written is read from
-  the first operand.
+  the first operand. If the second operand is 7 then it is copied from a
+  slot of another inventory list; the low 16-bits specifies which slot and
+  the next 3-bits specifies which inventory list; you can use IGET with 7
+  to automatically calculate this.
 
 [0B6 ITAK]
   Try to take items from the current inventory. This first clears the
@@ -1123,6 +1132,10 @@ numbers are treated as unsigned.
    B = remove from zone
    C = add to zone (prepend)
    D = add to zone (append)
+   E = same as B and C together
+   F = same as B and D together
+   G = same as C but only if not already in zone
+   H = same as D but only if not already in zone
 
 [100 LET]
   Copy second operand to first.

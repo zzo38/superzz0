@@ -94,6 +94,8 @@ See music.doc. Other ideas to be added:
 
 * Amiga
 
+* Include some features of 8SVX file format for sampled instruments
+
 
 === User preferences ===
 

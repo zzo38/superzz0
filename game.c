@@ -4876,6 +4876,9 @@ static Sint32 count_items(Sint32 t,Uint32 m) {
       case 0xEA: if(i==inv->cursor) goto skip; break;
       case 0xEB: if(i!=inv->cursor) goto skip; break;
       case 0xEC: if(!slot->quantity) goto skip; break;
+      case 0xED: if(i<inv->cursor) goto skip; break;
+      case 0xEE: if(i<=inv->cursor) goto skip; break;
+      case 0xEF: if(i>=inv->cursor) goto skip; break;
       default: errx(1,"Improper use of ICNT");
     }
     switch((m>>18)&3) {
@@ -4892,6 +4895,8 @@ static Sint32 count_items(Sint32 t,Uint32 m) {
           case 7: v=itemdefs[slot->item-1].weight; break;
           case 8: v=slot->flag; break;
           case 9: v=itemdefs[slot->item-1].flag; break;
+          case 10: v=i; break;
+          case 11: if((m&0x800000) && (slot->item || slot->flag)) slot->flag^=ISF_MARK; return i;
           default: errx(1,"Improper use of ICNT");
         }
         break;
@@ -5197,6 +5202,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
             case 4: regs[fo]=inventory[u].item[t].ext0; break;
             case 5: regs[fo]=inventory[u].item[t].ext1; break;
             case 6: regs[fo]=inventory[u].item[t].ext2; break;
+            case 7: regs[fo]=t+(u<<16); break;
             default: errx(1,"Improper IGET");
           }
         } else {
@@ -5229,6 +5235,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
             case 4: inventory[u].item[t].ext0=regs[fo]; break;
             case 5: inventory[u].item[t].ext1=regs[fo]; break;
             case 6: inventory[u].item[t].ext2=regs[fo]; break;
+            case 7: if(inventory[(regs[fo]>>16)&7].count>=(regs[fo]&0xFFFF)) inventory[u].item[t]=inventory[(regs[fo]>>16)&7].item[regs[fo]&0xFFFF]; break;
             default: errx(1,"Improper IGET");
           }
         } else {
@@ -5764,6 +5771,10 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           case 1: zone_remove(x,y,so); break;
           case 2: zone_add(x,y,so,0); break;
           case 3: zone_add(x,y,so,1); break;
+          case 4: zone_remove(x,y,so); zone_add(x,y,so,0); break;
+          case 5: zone_remove(x,y,so); zone_add(x,y,so,1); break;
+          case 6: if(!condflag) zone_add(x,y,so,0); break;
+          case 7: if(!condflag) zone_add(x,y,so,1); break;
         }
         break;
       case OP_ZEX: so=(Uint16)so; goto store;
