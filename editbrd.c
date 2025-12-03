@@ -261,13 +261,13 @@ static void edit_zone_cells(void) {
   memset(v_char,0x20,80*25);
   show1:
   draw_text(0,0,buf,0x2F,snprintf(buf,80," Zone#%d (%d cells) ",zcur,o->ncells));
-  if(id>=o->ncells) id=o->ncells?o->ncells-1:0;
+  if(id>o->ncells) id=o->ncells;
   s=24*(id/24);
   for(i=0;i<24;i++) {
     if(i+s<o->ncells) {
-      draw_text(1,i+1,buf,i+s==id?0x0E:0x07,snprintf(buf,80,"%5d: (%5d,%5d)",i+s,o->xy[i+s].x,o->xy[i+s].y));
+      draw_text(1,i+1,buf,i+s==id?14:7,snprintf(buf,80,"%c %5d: (%5d,%5d)",i+s==id?16:32,i+s,o->xy[i+s].x,o->xy[i+s].y));
     } else {
-      draw_text(1,i+1,"     : (-----,-----)",0x08,-1);
+      draw_text(1,i+1,buf,i+s==id?6:8,snprintf(buf,80,"%c      : (-----,-----)",i+s==id?16:32));
     }
   }
   redisplay();
@@ -276,7 +276,7 @@ static void edit_zone_cells(void) {
   switch(event.key.keysym.sym) {
     case SDLK_ESCAPE: case SDLK_q: return;
     case SDLK_DELETE: case SDLK_d:
-      if(o->ncells && id<o->ncells) {
+      if(id<o->ncells) {
         memmove(o->xy+id,o->xy+id+1,(o->ncells-id-1)*sizeof(OrdZoneXY));
         o->ncells--;
       }
@@ -286,22 +286,27 @@ static void edit_zone_cells(void) {
       o->ncells++;
       o=ozone[zcur-16]=realloc(o,o->ncells*sizeof(OrdZoneXY)+sizeof(OrdZone));
       memmove(o->xy+id+1,o->xy+id,(o->ncells-id-1)*sizeof(OrdZoneXY));
-      o->xy[id].x=xcur; o->xy[id].y=ycur;
+      o->xy[id].x=o->xy[id].y=0;
       // fall through
     case SDLK_SPACE: case SDLK_e:
+      if(id>=o->ncells) goto key;
       win_form("Edit zone cell") {
         win_numeric('X',"X: ",o->xy[id].x,0,board_info.width-1);
         win_numeric('Y',"Y: ",o->xy[id].y,0,board_info.height-1);
+        win_command('U',"Use cursor position") {
+          o->xy[id].x=xcur; o->xy[id].y=ycur;
+          win_refresh();
+        }
         win_blank();
         win_command_esc(0,"Done") break;
       }
       goto show0;
     case SDLK_UP: case SDLK_KP8: case SDLK_k: if(id) id--; goto show1;
-    case SDLK_DOWN: case SDLK_KP2: case SDLK_j: if(id+1<o->ncells) id++; goto show1;
+    case SDLK_DOWN: case SDLK_KP2: case SDLK_j: if(id<o->ncells) id++; goto show1;
     case SDLK_PAGEUP: case SDLK_KP4: case SDLK_KP9: case SDLK_LEFT: case SDLK_h: id=(id>24?id-24:0); goto show1;
     case SDLK_PAGEDOWN: case SDLK_KP3: case SDLK_KP6: case SDLK_RIGHT: case SDLK_l: id=(id>24?id-24:0); goto show1;
     case SDLK_HOME: case SDLK_KP7: id=0; goto show1;
-    case SDLK_END: case SDLK_KP1: if(o->ncells) id=o->ncells-1; goto show1;
+    case SDLK_END: case SDLK_KP1: id=o->ncells; goto show1;
     default: goto key;
   }
 }
@@ -341,7 +346,7 @@ static void edit_zone_info(void) {
           win_option('S',"South",d,DIR_S);
           win_blank();
           win_command('x',"Execute") {
-            for(i=0;i<o->ncells;o++) {
+            for(i=0;i<o->ncells;i++) {
               x=o->xy[i].x+(d==DIR_E?n:d==DIR_W?-n:0); y=o->xy[i].y+(d==DIR_S?n:d==DIR_N?-n:0);
               if(x<board_info.width && y<board_info.height) {
                 o->xy[i].x=x; o->xy[i].y=y;
