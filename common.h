@@ -360,7 +360,10 @@ typedef struct {
 #define ZF_USER2 0x0004
 #define ZF_USER3 0x0008
 #define ZF_REVERSE 0x0010
-#define ZF_CYCLE 0x0020
+#define ZF_AFFECT_UNDER 0x0100
+#define ZF_AFFECT_MAIN 0x0200
+#define ZF_AFFECT_OVER 0x0400
+// The two high bits are movement kind: 0(cyclic) 1(full) 2(normal) 3(pushable)
 
 extern Uint16 cur_board_id;
 extern BoardInfo board_info;

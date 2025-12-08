@@ -1136,6 +1136,27 @@ numbers are treated as unsigned.
    F = same as B and D together
    G = same as C but only if not already in zone
    H = same as D but only if not already in zone
+  The only zones that you can add/remove cells in this way are: $00 to $1F,
+  $30 to $37, $80 to $9F, and $B0 to $BF. E,F,G,H are only different from
+  C and D for ordered zones; in the case of unordered zones and overlay
+  zones, C to H all have the same meaning as each other.
+
+[0C1 ZINF]
+  Read/write zone info for user-defined zones. The first operand is either
+  used to store the value being read, or is the source of the value to be
+  written, and the second operand is:
+   bit4-bit0 = Select which zone to use
+   bit5 = Set for writing or clear for reading
+   bit7-bit6 = 0(count), 1(flag), 2(extra)
+  Writing anything to "count" will remove all cells from the zone (which
+  will reset the count to zero).
+
+[0C2 ZROT]
+  Perform rotation of ordered zones. Only the low 16-bits of the second
+  operand is used, and the high 16-bits are ignored. Each bit which is
+  set corresponds to one zone (bit0 for zone 16, bit 15 for zone 31),
+  which will be affected. The first operand is B for backward or F for
+  forward. Only enabled zones are considered, though.
 
 [100 LET]
   Copy second operand to first.

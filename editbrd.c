@@ -322,6 +322,7 @@ static void edit_zone_info(void) {
     win_numeric(':',"Zone: ",zcur,0,31) win_refresh();
     win_blank();
     if(zcur&16) {
+      Uint8 m;
       if(!(o=ozone[zcur-16]) && !(o=ozone[zcur-16]=calloc(1,sizeof(OrdZone)))) err(1,"Allocation failed");
       win_picture(1) draw_text(2,0,buf,7,snprintf(buf,40,"(%d cells)",o->ncells));
       win_boolean('0',"User0",o->flag,ZF_USER0);
@@ -329,8 +330,19 @@ static void edit_zone_info(void) {
       win_boolean('2',"User2",o->flag,ZF_USER2);
       win_boolean('3',"User3",o->flag,ZF_USER3);
       win_boolean('R',"Reverse",o->flag,ZF_REVERSE);
-      win_boolean('C',"Cycle",o->flag,ZF_CYCLE);
       win_numeric('x',"Extra value: ",o->extra,0,0xFFFF);
+      win_blank();
+      win_heading("Rotation:");
+      m=o->flag>>14;
+      win_option('C',"Cyclic",m,0);
+      win_option('F',"Full",m,1);
+      win_option('N',"Normal",m,2);
+      win_option('P',"Pushable",m,3);
+      o->flag=(o->flag&0x3FFF)+(m<<14);
+      win_boolean('u',"Affect under layer",o->flag,ZF_AFFECT_UNDER);
+      win_boolean('a',"Affect main layer",o->flag,ZF_AFFECT_MAIN);
+      win_boolean('o',"Affect over layer",o->flag,ZF_AFFECT_OVER);
+      win_blank();
       win_command('v',"Remove all cells") {
         o->ncells=0;
         win_refresh();
@@ -373,6 +385,7 @@ static void edit_zone_info(void) {
       win_boolean('2',"User2",u->flag,ZF_USER2);
       win_boolean('3',"User3",u->flag,ZF_USER3);
       win_numeric('x',"Extra value: ",u->extra,0,0xFFFF);
+      win_blank();
       win_command('v',"Remove all cells") {
         u->maxy=0;
         memset(u->data,0,board_info.width/8+1);

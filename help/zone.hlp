@@ -43,7 +43,8 @@ your own use.
 Ordered zones consist of an ordered sequence of grid cells, so that you
 can specify the order of movement along the zone, etc.
 
-An ordered zone has flags and a 16-bit extra value like a unordered zone has.
+An ordered zone has flags and a 16-bit extra value like a unordered zone has
+(although the set of available flags is different).
 
 :f;Flags
 This section lists the possible flags of zones.
@@ -58,4 +59,36 @@ The flags that are only applicable to ordered zones are:
 affects adding new cells to the zone, as well as some operations during
 the game which involve the order of cells in the zone.
 
-þ Cycle
+þ Cycle þ Means that the first cell comes immediately after the last cell
+(and the last cell comes immediately before the first cell).
+
+The flags dealing with rotation zones (which are always ordered zones) are:
+
+þ Affect ____ layer þ This tells which layers should be affected. If none
+are specified, then this zone is not used as a rotation zone.
+
+A rotation zone also has a movement kind, which is one of:
+
+þ Cyclic þ All cells in the specified layers move in a cycle; the last tile
+is moved to the first. All attributes are ignored.
+
+þ Full þ Anything that is not a floor is moved, and floors are moved
+between the main layer and under layer.
+
+þ Normal þ Like "Full" but the movement classes are considered, and if it
+cannot move on the class of the floor it is moving to then it cannot move.
+
+þ Pushable þ Like "Normal" but only objects that can be pushed in the
+direction of movement will be moved.
+
+:c;Comparison of unordered vs ordered zones
+Ordered zones are limited to 65535 cells each, but unordered zones can
+each contain any number of cells.
+
+Enumeration of cells in a zone, and counting how many cells are in a zone,
+is more efficent for ordered zones.
+
+Checking whether or not a cell is in a zone is usually more efficient for
+unordered zones, especially for zones containing many cells.
+
+Only ordered zones can be used for rotation (the ZROT instruction).

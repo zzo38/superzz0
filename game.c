@@ -357,6 +357,58 @@ void zone_remove(Uint32 x,Uint32 y,Uint8 z) {
   }
 }
 
+static Uint32 zone_info(Uint8 s,Uint32 v) {
+  UnordZone*u=uzone[s&15];
+  OrdZone*o=ozone[s&15];
+  Uint32 a=(s>>4)&15;
+  Uint32 b;
+  if(a==6 || a==10) {
+    if(!u) u=uzone[s&15]=calloc(1,board_info.width/8+1+sizeof(UnordZone));
+    if(!u) errx(1,"Allocation failed");
+  } else if(a==7 || a==11) {
+    if(!o) o=ozone[s&15]=calloc(1,sizeof(OrdZone)+sizeof(OrdZoneXY));
+    if(!o) errx(1,"Allocation failed");
+  }
+  switch((s>>4)&15) {
+    case 0: // unordered read count
+      v=0;
+      if(u) {
+        b=((u->maxy+1)*board_info.width)>>3;
+        for(a=0;a<b;a++) v+=__builtin_popcount(u->data[a]);
+        if((b=(u->maxy+1)*board_info.width)&7) v+=__builtin_popcount(u->data[b>>3]&~(0xFF<<(b&7)));
+      }
+      return v;
+    case 1: // ordered read count
+      return o?o->ncells:0;
+    case 2: // unordered write count
+      if(u) {
+        u->maxy=0;
+        memset(u->data,0,board_info.width/8+1);
+      }
+      return v;
+    case 3: // ordered write count
+      if(o) o->ncells=0;
+      return v;
+    case 4: // unordered read flag
+      return u?u->flag:0;
+    case 5: // ordered read flag
+      return o?o->flag:0;
+    case 6: // unordered write flag
+      return u->flag=v;
+    case 7: // ordered write flag
+      return o->flag=v;
+    case 8: // unordered read extra
+      return u?u->extra:0;
+    case 9: // ordered read extra
+      return o?o->extra:0;
+    case 10: // unordered write extra
+      return u->extra=v;
+    case 11: // ordered write extra
+      return o->extra=v;
+    default: errx(1,"Improper use of ZINF");
+  }
+}
+
 static void warp_to_board(Uint16 b,char m) {
   FILE*fp;
   const char*e;
@@ -4403,6 +4455,74 @@ static void do_spin(Sint32 x,Sint32 y,Uint8 fo,Uint32 so) {
   }
 }
 
+static void zone_rotation(Uint8 zn,Uint8 forw) {
+  Tile*b;
+  Tile t,u;
+  StatXY*ts;
+  StatXY*us;
+  int n,q;
+  Uint32 a,h,v;
+  Uint8 c;
+  OrdZone*o=ozone[zn];
+  if(!o || !o->ncells || !(o->flag&(ZF_AFFECT_UNDER|ZF_AFFECT_MAIN|ZF_AFFECT_OVER))) return;
+  if(o->flag&ZF_REVERSE) forw^=1;
+  if(o->flag&0xC000) {
+    for(q=0,n=forw?o->ncells-1:0;forw?(n>=0):(n<o->ncells);n+=forw?-1:1) {
+      h=a; a=o->xy[n].y*board_info.width+o->xy[n].x;
+      v=elem_def[b_main[a].kind].attrib;
+      if(v&A_FLOOR) {
+        q=1; c=v&15;
+      } else if(q) {
+        q=0;
+        if(o->flag&0x8000) {
+          if(c>8 || (c!=8 && !((A_MOVE_C0<<c)&v))) continue;
+          if(o->flag&0x4000) {
+            if(!(v&(((h%board_info.width==a%board_info.width?A_PUSH_NS:0)|(h/board_info.width==a/board_info.width?A_PUSH_EW:0))))) continue;
+          }
+        }
+        if(o->flag&ZF_AFFECT_MAIN) {
+          if(b_main[h].stat && (ts=find_statxy(b_main+h))) ts->layer--;
+          b_under[h]=b_main[h];
+          if(b_main[a].stat && (ts=find_statxy(b_main+a))) ts->x=h%board_info.width,ts->y=h/board_info.width;
+          b_main[h]=b_main[a];
+          if(b_under[a].stat && (ts=find_statxy(b_under+a))) ts->layer++;
+          b_main[a]=b_under[a];
+          b_under[a]=(Tile){};
+        }
+        if(o->flag&ZF_AFFECT_OVER) {
+          if(b_over[a].stat && (ts=find_statxy(b_over+a))) ts->x=h%board_info.width,ts->y=h/board_info.width;
+          if(b_over[h].stat) break_tile(h,3,0,0,1);
+          b_over[h]=b_over[a];
+          b_over[a].kind=(b_over[a].kind&OVER_BG_THRU)|(memory[MEM_DEFAULT_OVERLAY]?OVER_VISIBLE:0);
+          b_over[a].color=memory[MEM_DEFAULT_OVERLAY]>>8;
+          b_over[a].param=memory[MEM_DEFAULT_OVERLAY];
+          b_over[a].stat=0;
+        }
+      }
+    }
+  } else {
+    for(b=b_under,q=0;q<3;b+=board_info.width*board_info.height,q++) if(o->flag&(ZF_AFFECT_UNDER<<q)) {
+      if(forw) {
+        t=b[h=o->xy[o->ncells-1].y*board_info.width+o->xy[o->ncells-1].x];
+        ts=t.stat?find_statxy(b+h):0;
+        for(n=0;n<o->ncells;n++) {
+          u=b[a=o->xy[n].y*board_info.width+o->xy[n].x]; us=u.stat?find_statxy(b+a):0;
+          if(ts) ts->x=o->xy[n].x,ts->y=o->xy[n].y;
+          b[a]=t; t=u; ts=us;
+        }
+      } else {
+        t=b[o->xy->y*board_info.width+o->xy->x];
+        ts=t.stat?find_statxy(b+h):0;
+        for(n=o->ncells-1;n>=0;n--) {
+          u=b[a=o->xy[n].y*board_info.width+o->xy[n].x]; us=u.stat?find_statxy(b+a):0;
+          if(ts) ts->x=o->xy[n].x,ts->y=o->xy[n].y;
+          b[a]=t; t=u; ts=us;
+        }
+      }
+    }
+  }
+}
+
 static void do_varproperty_op(Uint8 fo,Sint32 so) {
   VarPropertyList vp={&pvarproperty,1};
   Uint16 j=memory[MEM_ARG_J];
@@ -5778,6 +5898,8 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         }
         break;
       case OP_ZEX: so=(Uint16)so; goto store;
+      case OP_ZINF: regs[fo]=zone_info(so,regs[fo]); break;
+      case OP_ZROT: for(t=0;t<16;t++) if(so&(1UL<<t)) zone_rotation(t,fo>>2); break;
       case OP_ZSEN:
         if(rs=get_statxy(so)) {
           condflag=rs->sensor.kind?1:0;
