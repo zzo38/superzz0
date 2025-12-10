@@ -1158,6 +1158,18 @@ numbers are treated as unsigned.
   which will be affected. The first operand is B for backward or F for
   forward. Only enabled zones are considered, though.
 
+[0FE CALS]
+  Call a subroutine using a stack stored in the program memory. The W,X,Y,Z
+  registers are not local to this kind of subroutine, since they all use
+  the same call frame. The second operand is the address of the subroutine
+  to call; if it is less than 256 then it continues from here instead. See
+  $B2 in event.doc for more details.
+
+[0FF RETS]
+  Return from a subroutine using a stack stored in the program memory. If
+  the stack is empty then nothing happens, but if it is not empty then it
+  will also copy the second operand to the first operand (like LET).
+
 [100 LET]
   Copy second operand to first.
 

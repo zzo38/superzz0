@@ -5122,6 +5122,14 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_BTST: condflag=((1L<<(so&31))&regs[fo])?1:0; break;
       case OP_CALL: so=run_program(so,w,x,y,z); goto store;
       case OP_CALM: if((t=convxy(so,x,y))!=-1) w=run_program(elem_def[b_main[t].kind].event[fo],w,t%board_info.width,t/board_info.width,z); break;
+      case OP_CALS:
+        memory[MEM_CALL_STATUS]=(so&0x1FFF)+(fo<<13);
+        if(so>=256) {
+          t=++memory[memory[MEM_CALL_STACK]];
+          memory[(t+memory[MEM_CALL_STACK])&0xFFFF]=pc;
+          pc=so;
+        }
+        break;
       case OP_CALU: if((t=convxy(so,x,y))!=-1) w=run_program(elem_def[b_under[t].kind].event[fo],w,t%board_info.width,t/board_info.width,z); break;
       case OP_CAM: do_camera(fo,so,x,y); break;
       case OP_CASE: so=memory[(so+regs[fo])&0xFFFF]; goto jump;
@@ -5676,6 +5684,15 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PUSH: general_move(1,regs[fo],x,y,(so&0xF8)+0x8800+(so&7)*0x1100,(so&0xFF00)+1,0,0); break;
       case OP_REGL: load_registers(fo,so); break;
       case OP_REGS: save_registers(fo,so); break;
+      case OP_RETS:
+        memory[MEM_CALL_STATUS]=(so&0x1FFF)+(fo<<13);
+        if(t=memory[memory[MEM_CALL_STACK]]) {
+          regs[fo]=so;
+          memory[MEM_RETURNED_PC]=pc;
+          pc=memory[(t+memory[MEM_CALL_STACK])&0xFFFF];
+          --memory[memory[MEM_CALL_STACK]];
+        }
+        break;
       case OP_REVB: revert_lump_by_number(so,"BRD"); break;
       case OP_REWD:
         if(!w) break;

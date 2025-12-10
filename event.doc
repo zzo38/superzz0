@@ -26,6 +26,15 @@ $B0 = Window keyboard event (see below).
 $B1 = A value which can be read by music programs in .BGM lumps. This can
 be used to make dynamic music according to the state of the game.
 
+$B2 = The address of the call stack used with CALS and RETS. This has the
+same format as the deck used with DPUT and DTAK, and you can use those
+instructions with this as well.
+
+$B3 = Status which is written by CALS and RETS (the game engine never reads
+this but you can read this for your own use). The low 13-bits are a copy of
+the low 8-bits of the second operand of CALS or RETS, and the high 3-bits
+are the first operand register number (0 for A, 7 for H).
+
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
 save the delay, bit9 means to save the walk/face/user flags, and bit13

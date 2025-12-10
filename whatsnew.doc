@@ -29,6 +29,7 @@ SCRIPTS
 ASSEMBLY
   +  New instructions for dealing with zones.
   +  IGET and IPUT can now be used to copy item slots.
+  +  CALS and RETS to use a call stack stored in the program memory.
   =  Fix bugs with some instructions.
 
 EDITOR
