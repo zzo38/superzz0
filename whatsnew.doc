@@ -19,6 +19,8 @@ GAME
   +  Music can now have instruments with delay line and special effects.
   +  Dynamic music (although sz0music currently lacks the way to use this).
   +  Zones in board grids, with several uses.
+  +  User structured data (.USD) lumps.
+  =  Fix a memory leak with loading variable property lists.
 
 SCRIPTS
   +  The #SENT condition to check if a message was successfully sent.
@@ -30,10 +32,15 @@ ASSEMBLY
   +  New instructions for dealing with zones.
   +  IGET and IPUT can now be used to copy item slots.
   +  CALS and RETS to use a call stack stored in the program memory.
+  +  ASN.1 operators. (This feature is considered experimental.)
   =  Fix bugs with some instructions.
 
 EDITOR
   +  Push F2 in text editor to copy until a specified character.
+
+OTHERS
+  +  Experimental "front" mode to communicate with external programs.
+     (This feature is considered to be experimental.)
 
 
 === Version 0.7.0 (2025-11-04) ===

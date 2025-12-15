@@ -84,6 +84,11 @@ event_input
   occurring normally. Setting it to 0 disables this feature. Other numbers
   are not currently meaningful.
 
+external
+  An external command to run and connect to Super ZZ Zero. It is expected
+  to communicate with its standard I/O in DER format. Game worlds should
+  not use this feature except for specialized cases.
+
 extra_lump_file
   See extra_lump_name.
 

@@ -146,6 +146,10 @@ void run_test_game(int);
 Uint32 dice(Uint32 n);
 Uint32 reseed(uint64_t n);
 
+extern FILE*extern_in;
+extern ASN1_Encoder*extern_out;
+void unlock_front(void);
+
 // === Editor ===
 
 typedef struct VarPropertyList VarPropertyList;
@@ -609,6 +613,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_MUSIC_EXTRA 0xB1
 #define MEM_CALL_STACK 0xB2
 #define MEM_CALL_STATUS 0xB3
+#define MEM_RECEIVED_DATA_EVENT 0xB4
 #define MEM_GLOBAL_DELAY 0xC0
 #define MEM_NEW_DYNAMIC_STAT_EVENT 0xC1
 #define MEM_OVERLAYMEM_ADDRESS 0xC2
@@ -763,6 +768,7 @@ typedef struct {
 extern DynaString*dynastr;
 extern Uint8 ndynastr;
 extern VarProperty pvarproperty;
+extern ASN1_Value asn1reg[4];
 
 // === File access (Hamster archives) ===
 

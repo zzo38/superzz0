@@ -232,8 +232,9 @@ const char*init_world(void) {
   v=read32(fp);
   if((v&~0xFFFF) || read32(fp)) return "Unrecognized data in START lump";
   for(i=0;i<16;i++) status_vars[i]=(v&(1<<i))?0:read32(fp);
-  for(i=0;i<16;i++) namedflag[i].name[0]=0;
   fclose(fp);
+  for(i=0;i<16;i++) namedflag[i].name[0]=0;
+  for(i=0;i<4;i++) asn1reg[i]=(ASN1_Value){.type=ASN1_NULL};
   // "GENERAL.DER"
   if(fp=open_lump("GENERAL.DER","r")) {
     // (Note: This is not really tested properly yet)
@@ -719,6 +720,7 @@ const char*load_board(FILE*fp) {
     free(ozone[i]); ozone[i]=0;
     free(uzone[i]); uzone[i]=0;
   }
+  free(board_info.varprop.item);
   memset(&board_info,0,sizeof(BoardInfo));
   board_info.flag=(ef&0x100?read16(fp):read8(fp));
   board_info.screen=read16(fp);
@@ -968,6 +970,7 @@ const char*load_screen(FILE*fp) {
   Uint8 c;
   Uint32 at=0;
   int i,n;
+  free(cur_screen.varprop.item);
   memset(&cur_screen,0,sizeof(Screen));
   vp=fgetc(fp);
   if(vp&0x7F) return "Unrecognized file format";

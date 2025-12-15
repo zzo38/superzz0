@@ -35,6 +35,9 @@ this but you can read this for your own use). The low 13-bits are a copy of
 the low 8-bits of the second operand of CALS or RETS, and the high 3-bits
 are the first operand register number (0 for A, 7 for H).
 
+$B4 = Received data event (see below). This event will only be used if the
+"external" configuration setting has been defined as a non-empty string.
+
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
 save the delay, bit9 means to save the walk/face/user flags, and bit13
@@ -398,6 +401,18 @@ $00B0 (#)
   $00C6) after doing the operation. The W,X,Y,Z,J,K registers will be set
   again before it is called.
 
+$00B4
+  If config.external is defined, then this event is called when ASN.1 data
+  is received from the external program.
+
+  W = Class number
+  X = Type number
+  Y = Length
+  Z = Zero if primitive, one if constructed
+
+  Return = Nonzero to send the contents of a ASN.1 register as a reply;
+  subtract one from the return value to figure out which one to use.
+
 $00C1
   This event is called during each frame, before $00E1, but also creates a
   new dynamic stat when this event is nonzero. It is set to zero before
@@ -607,4 +622,189 @@ warp subroutine is called, but it can affect its arguments).
 The subroutine call will have the registers set as follows: W is the
 previously selected board number, and X,Y,Z are zero. The return value
 should be zero (but is ignored in the current version).
+
+
+=== ASN.1 ===
+
+(This feature is considered to be experimental.)
+
+There are four global ASN.1 registers, each of which stores a ASN.1 value.
+There are also .USD lumps each of which stores a ASN.1 value. These should
+not be used too often, since they might be inefficient.
+
+In the below explanations, there are three contexts, and each one indicates
+which contexts it is applicable for:
+  (d) = Direct (the ASN1 opcode)
+  (r) = Reading
+  (w) = Writing
+  (s) = String writing
+  (R) = Begin a reading context
+  (W) = Begin a writing context
+  (S) = Begin a string writing context
+  (!) = Different usage of low 4-bits
+
+When beginning a writing context, the program counter will be the next
+instruction but it is a subroutine call; when it returns, the return value
+is interpreted as described below but it will then continue from that
+point. The W, X, Y, Z registers are zero when entering the context and each
+time it returns, until it fully exits the context at which point the values
+of those registers are restored. A reading context is similar but the W, X,
+Y, Z registers work like the $00B4 event.
+
+The ASN1 opcode working is complicated and is explained here. The second
+operand is as follows:
+
+* bit1-bit0 (drws) = First ASN.1 register.
+
+* bit3-bit2 (drws) = Second ASN.1 register.
+
+* bit4 (rws) = Exit context. If it is inside of a construction other than
+the top one when in a writing context, it will end that construction and
+otherwise continue writing.
+
+* bit5 (rws) = Set the program counter back to the beginning of the reading
+or writing context.
+
+* bit6 (r) = Conditionally set the program counter back to the beginning
+of the reading context.
+
+* bit6 (d) = For operations that create a context, this will cause it to
+use the first operand as the instruction address in the context instead of
+using the existing instruction address.
+
+* bit7 (d) = Copy J to first operand register after doing operation.
+
+* bit15-bit8 (drw) = ASN.1 operation code.
+
+Any bits not listed here should be clear.
+
+The operation codes are:
+
+$00 (drw) = Copy second register to first register. If both specify the
+same register, then there is no effect.
+
+$01 (drw) = Move second register to first register; the second register
+will be null after it is moved. This is more efficient than copying.
+
+$02 (d) = Save the first register in the .USD lump whose number is
+specified by the first operand.
+
+$03 (d) = Load the first register from the .USD lump whose number is
+specified by the first operand.
+
+$04 (d) = Read the class, type, and length of the first register; the
+class is stored in J, the type is stored in K, and the length in the first
+operand. The condition flag is set if constructed or clear if primitive.
+
+$05 (d) = Write the class and type and primitive/constructed of the first
+register; the class is read from J (only the low 2-bits are used), the type
+is read from K, and the condition flag is for primitive/constructed.
+
+$06 (d) = Set the first register to a signed integer, read from the
+first operand.
+
+$07 (d) = Set the first register to a unsigned integer, read from the
+first operand.
+
+$08 (d) = Read the first register as a signed integer into the first
+operand. The condition flag will be true if it is valid or false if not
+valid. The ASN.1 type must be either integer or enumerated.
+
+$09 (d) = Read the first register as a unsigned integer into the first
+operand. The condition flag will be true if it is valid or false if not
+valid. The ASN.1 type must be either integer or enumerated.
+
+$0A (drw) = Send the first register to an external program (which must be
+set by the user configuration file).
+
+$0B (d) = Read the contents of the first register into the text buffer; the
+first operand will then contain the new length of the text buffer. If there
+is not enough room, or if the ASN.1 value contains a null byte, it will be
+truncated and the condition flag will be false; if it works then it will be
+true. This operation ignores the ASN.1 type, and just copies the bytes
+directly into the text buffer.
+
+$0C (d) = Revert the .USD lump specified by the first operand.
+
+$0D (dW) = Begin a constructed value into the first register. The class
+will be read from J and the type from K. The first operand is A to not
+sort the data, B to sort it as a set, and C to sort as a key/value list.
+
+$0E (dW) = Begin a single value into the first register. This works like
+the $0D except that J and K are ignored and only one item can be written,
+and the first operand is ignored.
+
+$0F (drw) = Exchange registers.
+
+$10 (w) = Begin a sequence.
+
+$11 (w) = Begin a set.
+
+$12 (w) = Begin a key/value list.
+
+$13 (w) = Set an implicit type for the next item, according to the J and
+K registers.
+
+$14 (w) = Write the value from the first register.
+
+$15 (w) = Write a boolean value; the condition flag specifies the boolean
+value to be written.
+
+$16 (w) = Write a null value.
+
+$17 (w) = Write the contents of the text buffer as a octet string. (Use $13
+if you want to specify a different type.)
+
+$18 (w!) = Write a integer with the value of a status variable. The low
+4-bits selects which status variable.
+
+$19 (w) = Write the value from the first register and then second register.
+
+$28 (d) = Read a byte from the first register; the first operand specifies
+the zero-based byte offset. The J register will contain the byte that has
+been read, and the condition flag is true if it is in range; if it is not
+in range or if it is constructed then the condition flag will be false.
+This ignores the class and type of the ASN.1 register; it only cares about
+the length and if it is primitive.
+
+$29 (d) = Set the script text of a stat to the text of the first register,
+which must be a PC string, IA5 string, or octet string. The first operand
+specifies which stat; if it is zero, or if it a stat that already has text
+or does not exist, or if the ASN.1 type is wrong or if it is too long,
+then it is an error.
+
+$2D (dW) = Like $0D but writes to the external program instead.
+
+$2E (dW) = Like $0E but writes to the external program instead.
+
+$30 (dR) = Begin a reading context for the first register, which must be
+constructed; it will enumerate the items it contains. The second register
+is the one that the current item will be stored in. When it is finished,
+the second register will contain null, and the first register will be
+restored to its original value.
+
+$31 (r) = Access the next item in a reading context. It will exit the
+context if there is no more left.
+
+$32 (r) = Go back to the first item in a reading context.
+
+$38 (dS) = Begin a primitive value into the first register; this will use
+the string writing context, to write raw data. The J and K registers are
+used to specify the class and type. The first register is not set until
+the context is finished.
+
+$39 (dS) = Like $38 but writes to the external program instead.
+
+$3A (s) = Append a single byte from the J register.
+
+$3B (s!) = Append a single byte from the low 8-bits of one of the registers
+A to H selected by using the low 3-bits of this operand.
+
+$3C (s) = Append the contents of the text buffer.
+
+$3D (s) = Append the contents of the first register.
+
+$3E (s) = Append a substring of the first register; A specifies the start
+offset (zero-based) and B specifies the length. If they are out of range,
+they are changed to numbers that are in range.
 

@@ -5,6 +5,10 @@ exit
 
 #include "common.h"
 #include <math.h>
+#ifndef CONFIG_DISABLE_FRONT
+#include <errno.h>
+#include <sys/select.h>
+#endif
 
 #ifdef CONFIG_DISABLE_X11_FUNCTIONS
 #undef SDL_VIDEO_DRIVER_X11
@@ -26,6 +30,7 @@ static unsigned int num_mask,mode_switch_mask;
   Use of v_status by Super ZZ Zero:
   [0] Current mode (editor, fast, normal, pause)
   [1] Sub-mode
+  [77] Front mode
   [79] Joystick shift state
   [80] Display '?' if help file
 
@@ -486,6 +491,28 @@ static int custom_event_thread(void*unuse) {
   return 1;
 }
 
+#ifndef CONFIG_DISABLE_FRONT
+static SDL_sem*frontsem;
+
+static int custom_event_thread_1(void*fp) {
+  SDL_Event e={.type=SDL_USEREVENT+1};
+  int c;
+  for(;;) {
+    e.user.code=c=fgetc(fp);
+    if(c==EOF) break;
+    ungetc(c,fp);
+    if(SDL_PushEvent(&e)) break;
+    if(SDL_SemWait(frontsem)) break;
+  }
+  warn("Error reading events from external program");
+  return 1;
+}
+
+void unlock_front(void) {
+  SDL_SemPost(frontsem);
+}
+#endif
+
 int load_font(const char*name,Uint8 z) {
   //TODO: also support DER-based fonts (.FNT instead of .CHR)
   FILE*f;
@@ -737,6 +764,13 @@ void init_display(void) {
   }
   SDL_EnableKeyRepeat(config.key_repeat_delay,config.key_repeat_interval);
   if(config.event_input==1) SDL_CreateThread(custom_event_thread,0);
+#ifndef CONFIG_DISABLE_FRONT
+  if(extern_in && extern_out) {
+    frontsem=SDL_CreateSemaphore(0);
+    if(!frontsem) errx(1,"Cannot create semaphore");
+    SDL_CreateThread(custom_event_thread_1,extern_in);
+  }
+#endif
   clear:
   memset(v_color,7,80*25);
   memset(v_char,32,80*25);
@@ -874,7 +908,7 @@ void stop_key_repeat(void) {
 }
 
 void set_input_codepage() {
-  
+  // Not implemented
 }
 
 Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
@@ -916,6 +950,9 @@ Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
 
   SDL_USEREVENT:
     A timer event; the data is not used. Call set_timer to set it.
+
+  SDL_USEREVENT+1:
+    Data received from an external program (the extern_in file descriptor).
 
   SDL_QUIT:
     Program is terminated.

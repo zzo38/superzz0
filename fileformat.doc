@@ -488,6 +488,11 @@ The flags are:
 * bit2 = Set for stereo. (Super ZZ Zero does not currently support stereo.)
 
 
+=== *.USD ===
+
+User-defined structured data. Contains arbitrary data in DER format.
+
+
 === *.WIN ===
 
 Window info; this is optionally present for each screen, and is only used

@@ -388,6 +388,9 @@ void save_state(void) {
       asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
     }
     asn1_encode_integer(enc,item_random_key);
+    asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+      for(i=0;i<4;i++) asn1_encode(enc,asn1reg+i);
+    asn1_end(enc);
   asn1_end(enc);
   asn1_finish_encoder(enc);
   fclose(fp);
@@ -507,6 +510,12 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
   }
   if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j) goto bad;
   if(v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&item_random_key)) goto bad;
+  if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j || v1.class!=ASN1_UNIVERSAL) goto bad;
+  if(v1.type==ASN1_SEQUENCE) for(i=0;i<4;i++) {
+    asn1_free(asn1reg+i);
+    if(i?asn1_next_of(&v2,&v1):asn1_first_of(&v2,&v1)) goto bad;
+    if(asn1_copy(&v2,asn1reg+i)) goto bad;
+  }
   // End
   done: asn1_free(&v0);
 }

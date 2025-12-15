@@ -86,6 +86,11 @@ copy_current_font
   text mode font into the world file. This only works if the video mode
   is set to a suitable text mode.
 
+external_port
+  Works like "external" but with a serial port, or with some other suitable
+  device if a suitable DOS device driver is loaded. You can specify which
+  serial port, and optionally can also specify the baud rate to use.
+
 help
   In DOS, if this option is not specified, it will look in the subdirectory
   of the directory with the executable file. (You can still override it
@@ -134,8 +139,8 @@ does not require any changes to Super ZZ Zero. However, another feature
 of file names in Windows is that they will normally use Unicode; this
 will not work with Super ZZ Zero unless native_file_picker is used (see
 the below description), but file names with only ASCII characters can
-still be displayed and used. If the PC character set is in use though,
-then it can be used directly.
+still be displayed and used. If the PC character set is in use (if the
+current code page is 437), then it can be used directly.
 
 It will probably also be appropriate on Windows to allow user settings to
 be stored in the registry. Windows registry has several data types. For
@@ -316,6 +321,10 @@ The button/axis mapping still needs to be configured in Super ZZ Zero.)
 One possible feature is to allow automation of some editor functions using
 JavaScripts (like it would be possible using AppleScript on Mac OS X).
 
+external_ws
+  Specifies a URL of a web socket to use; a single DER item is received or
+  sent in one message. This otherwise works like the "external" option.
+
 joy_name
   When using HTML, the joy_name is the "id" property of the Gamepad object.
   If it does not match any of them exactly, it is a prefix.
@@ -342,6 +351,7 @@ time_format
 
 The following configuration settings are not meaningful on HTML:
   auto_suffix
+  external
   extra_lump_file
   extra_lump_name
   file_list

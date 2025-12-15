@@ -1158,6 +1158,12 @@ numbers are treated as unsigned.
   which will be affected. The first operand is B for backward or F for
   forward. Only enabled zones are considered, though.
 
+[0EE CWIN]
+  (TODO)
+
+[0EF ASN1]
+  Operations with ASN.1. See event.doc for details.
+
 [0FE CALS]
   Call a subroutine using a stack stored in the program memory. The W,X,Y,Z
   registers are not local to this kind of subroutine, since they all use

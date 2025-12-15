@@ -51,6 +51,7 @@ Uint16 nitemdefs;
 Inventory inventory[8];
 UnordZone*uzone[16];
 OrdZone*ozone[16];
+ASN1_Value asn1reg[4];
 
 static uint64_t rseed;
 static char soundon;
@@ -233,6 +234,177 @@ static void load_script_library(Stat*s,const Uint8*name) {
   fread(s->text,1,s->length=lump_size,fp);
   s->text[s->length]=0;
   fclose(fp);
+}
+
+static Uint16 do_asn1_operator(Uint8 fo,Uint16 op,Uint16 pc) {
+  FILE*fp;
+  ASN1_Encoder*enc;
+  ASN1_Value*r1=asn1reg+(op&3);
+  ASN1_Value*r2=asn1reg+((op>>2)&3);
+  ASN1_Value u,v;
+  size_t s;
+  Uint16 pc1=pc;
+  Uint32 n;
+  int q;
+printf("(%c) %04X %04X \n",fo+'A',op,pc);
+  switch(op>>8) {
+    case 0x00: if(r1==r2) break; asn1_free(r1); if(asn1_copy(r2,r1)) err(1,"Allocation failed"); break;
+    case 0x01: if(r1==r2) break; asn1_free(r1); *r1=*r2; *r2=(ASN1_Value){.type=ASN1_NULL}; break;
+    case 0x02:
+      fp=open_lump_by_number(regs[fo]&0xFFFF,"USD","w");
+      if(!fp) errx(1,"Cannot open .USD lump");
+      asn1_write_type(r1->constructed,r1->class,r1->type,fp);
+      asn1_write_length(r1->length,fp);
+      fwrite(r1->data,1,r1->length,fp);
+      fclose(fp);
+      break;
+    case 0x03:
+      asn1_free(r1);
+      fp=open_lump_by_number(regs[fo]&0xFFFF,"USD","r");
+      if(!fp) errx(1,"Cannot open .USD lump");
+      if(asn1_read_item(fp,r1,0)) errx(1,"Error reading from .USD lump");
+      fclose(fp);
+      break;
+    case 0x04: memory[MEM_ARG_J]=r1->class; memory[MEM_ARG_K]=r1->type; regs[fo]=r1->length; condflag=r1->constructed; break;
+    case 0x05: r1->class=memory[MEM_ARG_J]; r1->type=memory[MEM_ARG_K]; r1->constructed=condflag; break;
+    case 0x06: case 0x07:
+      asn1_free(r1);
+      if(!(enc=asn1_start_encoding_value(r1))) err(1,"Allocation failed");
+      if(op&0x100?asn1_encode_uint32(enc,regs[fo]):asn1_encode_int32(enc,regs[fo])) errx(1,"Error encoding ASN.1 value");
+      if(asn1_finish_encoder(enc)) err(1,"Allocation failed");
+      break;
+    case 0x08: condflag=!asn1_decode_int32(r1,ASN1_AUTO,(void*)(regs+fo)); break;
+    case 0x09: condflag=!asn1_decode_uint32(r1,ASN1_AUTO,(void*)(regs+fo)); break;
+#ifndef CONFIG_DISABLE_FRONT
+    case 0x0A: asn1_encode(extern_out,r1); asn1_flush(extern_out); break;
+#endif
+    case 0x0B:
+      condflag=1;
+      for(s=0;condflag && s<r1->length;s++) {
+        if(ntextbuf>=80 || !r1->data[s]) condflag=0; else textbuf[ntextbuf++]=r1->data[s];
+      }
+      textbuf[ntextbuf]=0;
+      regs[fo]=ntextbuf;
+      break;
+    case 0x0C: revert_lump_by_number(regs[fo]&0xFFFF,"USD"); break;
+    case 0x0D: case 0x0E: case 0x2D: case 0x2E:
+      q=1&~op;
+      v=(ASN1_Value){};
+#ifndef CONFIG_DISABLE_FRONT
+      if(op&0x2000) {
+        enc=extern_out;
+        if(!q) asn1_construct(enc,memory[MEM_ARG_J],memory[MEM_ARG_K],fo==2?ASN1_KVSORT:fo==1?ASN1_SORT:0);
+      } else
+#endif
+      enc=q?asn1_start_encoding_value(&v):asn1_start_encoding_constructed_value(&v,memory[MEM_ARG_J],memory[MEM_ARG_K],fo==2?ASN1_KVSORT:fo==1?ASN1_SORT:0);
+      if(!enc) errx(1,"Internal error");
+      for(n=1;n;) {
+        op=run_program(pc,0,0,0,0);
+        pc=(op&0x20?pc1:memory[MEM_RETURNED_PC]);
+printf("%04X %04X (%d) (%d)\n",op,pc,(int)n,(int)q);
+        switch(op>>8) {
+          case 0x00: case 0x01: case 0x0A: case 0x0F: pc=do_asn1_operator(0,op,pc); break;
+          case 0x10: n++; asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0); break;
+          case 0x11: n++; asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SET,ASN1_SORT); break;
+          case 0x12: n++; asn1_construct(enc,ASN1_UNIVERSAL,ASN1_KEY_VALUE_LIST,ASN1_KVSORT); break;
+          case 0x13: asn1_implicit(enc,memory[MEM_ARG_J],memory[MEM_ARG_K]); break;
+          case 0x14: asn1_encode(enc,asn1reg+(op&3)); goto once;
+          case 0x15: asn1_encode_boolean(enc,condflag); goto once;
+          case 0x16: asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,"",0); goto once;
+          case 0x17: asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,textbuf,ntextbuf); goto once;
+          case 0x18: asn1_encode_integer(enc,status_vars[op&15]); goto once;
+          case 0x19: if(n>1 || !q) asn1_encode(enc,asn1reg+(op&3)); asn1_encode(enc,asn1reg+((op>>4)&3)); goto once;
+          default: errx(1,"Unimplemented ASN.1 operator (or incorrect context): $%04X",op); break;
+          once: if(q && n==1) goto fin; break;
+        }
+        if(op&0x10) if(--n) {
+          asn1_end(enc);
+          if(q && n<=1) goto fin;
+        }
+      }
+#ifndef CONFIG_DISABLE_FRONT
+      fin: if(enc==extern_out?asn1_flush(enc):asn1_finish_encoder(enc)) err(1,"Allocation failed");
+#else
+      fin: if(asn1_finish_encoder(enc)) err(1,"Allocation failed");
+#endif
+      asn1_free(r1);
+      *r1=v;
+printf("end %d %d\n",(int)v.class,(int)v.type);
+      break;
+    case 0x0F: v=*r1; *r1=*r2; *r2=v; break;
+    case 0x28: if(regs[fo]>=0 && regs[fo]<r1->length && !r1->constructed) memory[MEM_ARG_J]=r1->data[regs[fo]],condflag=1; else condflag=0; break;
+    case 0x29:
+      q=regs[fo]&0xFF;
+      if(q<1 || q>maxstat || stats[q-1].text || r1->constructed || r1->length>0xFFF8 || r1->class!=ASN1_UNIVERSAL || r1->length<0
+       || (r1->type!=ASN1_IA5_STRING && r1->type!=ASN1_PC_STRING && r1->type!=ASN1_OCTET_STRING) || (r1->length && memchr(r1->data,0,r1->length))) errx(1,"Improper use of ASN1 $%04X",op);
+      if(!r1->length) break;
+      if(!(stats[q-1].text=malloc(r1->length+1))) err(1,"Allocation failed");
+      memcpy(stats[q-1].text,r1->data,r1->length);
+      stats[q-1].text[r1->length]=0;
+      stats[q-1].length=r1->length;
+      stats[q-1].frame=0;
+      break;
+    case 0x30:
+      u=*r1; r1->own=0; asn1_free(r2); *r2=(ASN1_Value){.type=ASN1_NULL};
+      condflag=0;
+      if(!asn1_first_of(&v,&u)) for(condflag=1;;) {
+        asn1_free(r2); *r2=v;
+        op=run_program(pc,v.class,v.type,v.length,v.constructed);
+        pc=(op&0x20?pc1:memory[MEM_RETURNED_PC]);
+        switch(op>>8) {
+          case 0x00: case 0x01: case 0x0A: case 0x0F: pc=do_asn1_operator(0,op,pc); break;
+          case 0x31: condflag=0; if(asn1_next_of(&v,&u)) goto finr; condflag=1; break;
+          case 0x32: condflag=1; asn1_first_of(&v,&u); break;
+          default: errx(1,"Unimplemented ASN.1 operator (or incorrect context): $%04X",op); break;
+        }
+        if(op&0x10) break;
+        if((op&0x40) && condflag) pc=pc1;
+      }
+      finr:
+      asn1_free(r1); *r1=u;
+      asn1_free(r2); *r2=(ASN1_Value){.type=ASN1_NULL};
+      break;
+    case 0x38: case 0x39:
+      v=(ASN1_Value){};
+#ifndef CONFIG_DISABLE_FRONT
+      if(op&0x100) enc=extern_out; else
+#endif
+      enc=asn1_start_encoding_value(&v);
+      if(!enc) errx(1,"Internal error");
+      fp=asn1_primitive_stream(enc,memory[MEM_ARG_J],memory[MEM_ARG_K]);
+      if(!fp) errx(1,"Internal error");
+      for(;;) {
+        op=run_program(pc,v.class,v.type,v.length,v.constructed);
+        pc=(op&0x20?pc1:memory[MEM_RETURNED_PC]);
+        switch(op>>8) {
+          case 0x3A: fputc(memory[MEM_ARG_J],fp); break;
+          case 0x3B: fputc(regs[op&7],fp); break;
+          case 0x3C: fwrite(textbuf,1,ntextbuf,fp); break;
+          case 0x3D: fwrite(asn1reg[op&3].data,1,asn1reg[op&3].length,fp); break;
+          case 0x3E:
+            if(regs[0]<0) regs[1]+=regs[0],regs[0]=0;
+            if(regs[0]>asn1reg[op&3].length) regs[0]=asn1reg[op&3].length;
+            if(regs[1]<0) regs[1]=0;
+            if(regs[1]>asn1reg[op&3].length-regs[0]) regs[1]=asn1reg[op&3].length-regs[0];
+            if(regs[1]>0 && regs[0]>=0 && regs[0]<asn1reg[op&3].length) fwrite(asn1reg[op&3].data+regs[0],1,regs[1],fp);
+            break;
+          default: errx(1,"Unimplemented ASN.1 operator (or incorrect context): $%04X",op); break;
+        }
+        if(op&0x10) break;
+      }
+      if(asn1_end(enc)) errx(1,"Internal error");
+#ifndef CONFIG_DISABLE_FRONT
+      if(enc==extern_out?asn1_flush(enc):asn1_finish_encoder(enc)) err(1,"Allocation failed");
+      if(enc!=extern_out)
+#else
+      if(asn1_finish_encoder(enc)) err(1,"Allocation failed");
+#endif
+      { asn1_free(r1); *r1=v; }
+      break;
+    default: errx(1,"Unimplemented ASN.1 operator (or incorrect context): $%04X",op);
+  }
+  if(op&0x80) regs[fo]=memory[MEM_ARG_J];
+  return pc;
 }
 
 static void init_new_board(void) {
@@ -5105,6 +5277,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_ADD: regs[fo]+=so; break;
       case OP_AND: regs[fo]&=so; break;
       case OP_ANDN: regs[fo]&=~so; break;
+      case OP_ASN1: t=do_asn1_operator(fo,so,so&0x40?regs[fo]:pc); if(so&0x40) memory[MEM_RETURNED_PC]=t; else pc=t; break;
       case OP_ASUB: regs[fo]=labs(regs[fo]-so); break;
       case OP_BACK: so^=2; goto forw;
       case OP_BFLG: condflag=(board_info.flag>>fo)&1; if(so>0) board_info.flag|=1<<fo; else if(so<0) board_info.flag&=~(1<<fo); break;
@@ -6420,6 +6593,16 @@ int run_game(void) {
         case 'T'+0x100: goto k_f12;
         case 'X'+0x100: goto k_del;
       }
+#ifndef CONFIG_DISABLE_FRONT
+    } else if(event.type==SDL_USEREVENT+1) {
+      asn1_free(asn1reg);
+      if(asn1_read_item(extern_in,asn1reg,0)) errx(1,"Error reading ASN.1 data from external program");
+      unlock_front();
+      if(b=run_program(memory[MEM_RECEIVED_DATA_EVENT],asn1reg->class,asn1reg->type,asn1reg->length,0)) {
+        asn1_encode(extern_out,asn1reg+((b-1)&3));
+        asn1_flush(extern_out);
+      }
+#endif
     }
   }
   nextturn:

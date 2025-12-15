@@ -20,7 +20,12 @@ Config config={
 #undef P
 #undef S
 };
+
 Uint8 editor=0;
+#ifndef CONFIG_DISABLE_FRONT
+FILE*extern_in;
+ASN1_Encoder*extern_out;
+#endif
 
 typedef struct {
   const char*name;
@@ -127,6 +132,27 @@ static void load_config(char*nam) {
   fclose(f);
   free(line);
 }
+
+#ifndef CONFIG_DISABLE_FRONT
+static void init_front(void) {
+  int fd[4];
+  long pid;
+  if(pipe(fd) || pipe(fd+2)) err(1,"Cannot open pipe");
+  if(pid=fork()) {
+    if(pid<0) err(1,"Cannot fork");
+    close(fd[0]); close(fd[3]);
+    extern_in=fdopen(fd[2],"re");
+    extern_out=asn1_create_encoder(fdopen(fd[1],"we"));
+    if(!extern_out || !extern_in) err(1,"Unexpected error in init_front");
+  } else {
+    close(fd[1]); close(fd[2]);
+    dup2(fd[0],0); dup2(fd[3],1);
+    execl("/bin/sh","/bin/sh","-c",config.external,(char*)0);
+    err(1,"Cannot execute");
+    _exit(1);
+  }
+}
+#endif
 
 static void combine_raw(void) {
   FILE*fp;
@@ -361,6 +387,9 @@ int main(int argc,char**argv) {
       save_world(0);
       return 0;
   }
+#ifndef CONFIG_DISABLE_FRONT
+  if(config.external && config.external[0] && !editor) init_front();
+#endif
   init_display();
   if(s=init_world()) {
     if((config.version_warn&5)==5) {
@@ -386,6 +415,9 @@ int main(int argc,char**argv) {
   }
   config.version_warn=0;
   if(config.audio_buffer && !editor) audio_init();
+#ifndef CONFIG_DISABLE_FRONT
+  if(extern_out) v_status[77]='*';
+#endif
   if(editor) run_editor(); else run_game();
   return 0;
 }
