@@ -784,7 +784,8 @@ the second register will contain null, and the first register will be
 restored to its original value.
 
 $31 (r) = Access the next item in a reading context. It will exit the
-context if there is no more left.
+context if there is no more left. The condition flag is true if there is
+another item or false if not (operation $30 also does this).
 
 $32 (r) = Go back to the first item in a reading context.
 

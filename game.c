@@ -246,7 +246,6 @@ static Uint16 do_asn1_operator(Uint8 fo,Uint16 op,Uint16 pc) {
   Uint16 pc1=pc;
   Uint32 n;
   int q;
-printf("(%c) %04X %04X \n",fo+'A',op,pc);
   switch(op>>8) {
     case 0x00: if(r1==r2) break; asn1_free(r1); if(asn1_copy(r2,r1)) err(1,"Allocation failed"); break;
     case 0x01: if(r1==r2) break; asn1_free(r1); *r1=*r2; *r2=(ASN1_Value){.type=ASN1_NULL}; break;
@@ -288,7 +287,7 @@ printf("(%c) %04X %04X \n",fo+'A',op,pc);
       break;
     case 0x0C: revert_lump_by_number(regs[fo]&0xFFFF,"USD"); break;
     case 0x0D: case 0x0E: case 0x2D: case 0x2E:
-      q=1&~op;
+      q=0x0100&~op;
       v=(ASN1_Value){};
 #ifndef CONFIG_DISABLE_FRONT
       if(op&0x2000) {
@@ -301,7 +300,6 @@ printf("(%c) %04X %04X \n",fo+'A',op,pc);
       for(n=1;n;) {
         op=run_program(pc,0,0,0,0);
         pc=(op&0x20?pc1:memory[MEM_RETURNED_PC]);
-printf("%04X %04X (%d) (%d)\n",op,pc,(int)n,(int)q);
         switch(op>>8) {
           case 0x00: case 0x01: case 0x0A: case 0x0F: pc=do_asn1_operator(0,op,pc); break;
           case 0x10: n++; asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0); break;
@@ -323,13 +321,12 @@ printf("%04X %04X (%d) (%d)\n",op,pc,(int)n,(int)q);
         }
       }
 #ifndef CONFIG_DISABLE_FRONT
-      fin: if(enc==extern_out?asn1_flush(enc):asn1_finish_encoder(enc)) err(1,"Allocation failed");
+      fin: if(enc==extern_out?(q?0:asn1_end(enc))||asn1_flush(enc):asn1_finish_encoder(enc)) err(1,"Allocation failed");
 #else
       fin: if(asn1_finish_encoder(enc)) err(1,"Allocation failed");
 #endif
       asn1_free(r1);
       *r1=v;
-printf("end %d %d\n",(int)v.class,(int)v.type);
       break;
     case 0x0F: v=*r1; *r1=*r2; *r2=v; break;
     case 0x28: if(regs[fo]>=0 && regs[fo]<r1->length && !r1->constructed) memory[MEM_ARG_J]=r1->data[regs[fo]],condflag=1; else condflag=0; break;
@@ -5277,7 +5274,9 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_ADD: regs[fo]+=so; break;
       case OP_AND: regs[fo]&=so; break;
       case OP_ANDN: regs[fo]&=~so; break;
-      case OP_ASN1: t=do_asn1_operator(fo,so,so&0x40?regs[fo]:pc); if(so&0x40) memory[MEM_RETURNED_PC]=t; else pc=t; break;
+      case OP_ASN1:
+        if(!config.enable_asn1_op) errx(1,"ASN1 is disabled");
+        t=do_asn1_operator(fo,so,so&0x40?regs[fo]:pc); if(so&0x40) memory[MEM_RETURNED_PC]=t; else pc=t; break;
       case OP_ASUB: regs[fo]=labs(regs[fo]-so); break;
       case OP_BACK: so^=2; goto forw;
       case OP_BFLG: condflag=(board_info.flag>>fo)&1; if(so>0) board_info.flag|=1<<fo; else if(so<0) board_info.flag&=~(1<<fo); break;
@@ -6597,11 +6596,11 @@ int run_game(void) {
     } else if(event.type==SDL_USEREVENT+1) {
       asn1_free(asn1reg);
       if(asn1_read_item(extern_in,asn1reg,0)) errx(1,"Error reading ASN.1 data from external program");
-      unlock_front();
       if(b=run_program(memory[MEM_RECEIVED_DATA_EVENT],asn1reg->class,asn1reg->type,asn1reg->length,0)) {
         asn1_encode(extern_out,asn1reg+((b-1)&3));
         asn1_flush(extern_out);
       }
+      unlock_front();
 #endif
     }
   }

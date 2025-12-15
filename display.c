@@ -1037,7 +1037,7 @@ int next_event(void) {
       }
       if(event.key.keysym.sym<300 || event.key.keysym.sym>314) repeating=rscancode=0;
       break;
-    case SDL_USEREVENT: return 1;
+    case SDL_USEREVENT: case SDL_USEREVENT+1: return 1;
     case SDL_QUIT: return 0;
     case SDL_VIDEOEXPOSE: redisplay(); break;
     // All joystick events will be translated to SDL_JOYBUTTONDOWN and SDL_JOYBUTTONUP.

@@ -137,6 +137,7 @@ static void load_config(char*nam) {
 static void init_front(void) {
   int fd[4];
   long pid;
+  config.enable_asn1_op=1;
   if(pipe(fd) || pipe(fd+2)) err(1,"Cannot open pipe");
   if(pid=fork()) {
     if(pid<0) err(1,"Cannot fork");

@@ -79,6 +79,12 @@ editor_scroll_y
   Amount by which to scroll the board editor window if the cursor is moved
   out of the range of the screen.
 
+enable_asn1_op
+  Set to 1 to enable the ASN.1 operations, or 0 (which is the default) to
+  disable them. In future, the default setting might be changed to enabled,
+  or this setting might be removed entirely; do not rely on it too much.
+  This will automatically be enabled if "external" is also specified.
+
 event_input
   If set to 1, then it allows events to be read from stdin, in addition to
   occurring normally. Setting it to 0 disables this feature. Other numbers
