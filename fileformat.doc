@@ -93,6 +93,9 @@ The possible types are:
 
 * 0x00 = The previous variable property only applies once.
 
+* 0x01 = Set the video mode. Bit0 is set for 80 columns and bit7 is set
+for SMZX mode.
+
 * 0x04 = Set scroll position; the data is two unsigned 16-bit numbers,
 first the X scroll and then the Y scroll, of the board coordinates that
 will be placed at the view center.
@@ -936,6 +939,8 @@ The flags are:
 * bit0 = Clear to automatically pause the game when it starts.
 
 * bit1 = Forty columns mode.
+
+* bit2 = SMZX mode.
 
 
 === TEMPLATE.DER ===

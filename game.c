@@ -6309,9 +6309,11 @@ static void statxy_list_callback(Uint16 n,int y,void*uz) {
 }
 
 static void debug_menu(void) {
+  Uint8 vm=v_mode;
   int i;
   char buf[81];
   v_status[1]='D';
+  v_mode=VIDEO_80COLUMNS;
   win_form("Debug menu") {
     win_picture(2) {
       draw_text(0,0,buf,0x07,snprintf(buf,81,"BRD:%u  SCR:%u  Scroll:%d,%d",cur_board_id,cur_screen_id,(int)scroll_x,(int)scroll_y));
@@ -6449,7 +6451,7 @@ static void debug_menu(void) {
     win_command('i',"Video mode...") {
       *buf=0;
       ask_text("Video mode (hex):",buf,2);
-      if(*buf) v_mode=strtol(buf,0,16);
+      if(*buf) vm=strtol(buf,0,16);
       break;
     }
     win_command('d',"Make debug log...") {
@@ -6465,6 +6467,7 @@ static void debug_menu(void) {
     win_command_esc(0,"Cancel") break;
   }
   repeating=0;
+  v_mode=vm;
 }
 
 int run_game(void) {

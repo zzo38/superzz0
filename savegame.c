@@ -391,6 +391,7 @@ void save_state(void) {
     asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
       for(i=0;i<4;i++) asn1_encode(enc,asn1reg+i);
     asn1_end(enc);
+    asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,&v_mode,1);
   asn1_end(enc);
   asn1_finish_encoder(enc);
   fclose(fp);
@@ -516,6 +517,8 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
     if(i?asn1_next_of(&v2,&v1):asn1_first_of(&v2,&v1)) goto bad;
     if(asn1_copy(&v2,asn1reg+i)) goto bad;
   }
+  if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j || v1.class!=ASN1_UNIVERSAL) goto bad;
+  if(v1.type==ASN1_OCTET_STRING && v1.length==1) v_mode=v1.data[0]; else if(v1.type!=ASN1_NULL) goto bad;
   // End
   done: asn1_free(&v0);
 }

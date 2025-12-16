@@ -6,6 +6,10 @@ variable properties. Each one can be one of the following types:
 
 þ Palette: Load the specified palette when this board or screen is entered.
 
+þ Video mode: Sets the video mode for this board or screen. In this way,
+you can have some screens using 80 columns or 40 columns and some might
+use SMZX mode while others do not.
+
 þ Scroll: Set the initial scroll position, by specifying the board
 coordinates of the view center. This is only meaningful in boards and not
 in screens, and if it is specified then it will override the default

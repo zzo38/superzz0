@@ -226,7 +226,8 @@ const char*init_world(void) {
   start_mode=u=read16(fp);
   if(!(u&0x0001)) config.pause|=128;
   if((u&0x0002) && !editor) v_mode&=~VIDEO_80COLUMNS;
-  if(u&~0x0003) return "Unrecognized data in START lump";
+  if((u&0x0004) && !editor) v_mode|=VIDEO_SMZX; else v_mode&=~VIDEO_SMZX;
+  if(u&~0x0007) return "Unrecognized data in START lump";
   cur_screen.message_l=222;
   cur_board_id=read16(fp);
   v=read32(fp);
@@ -1144,7 +1145,7 @@ const char*load_window(FILE*fp,WindowInfo*wind) {
 }
 
 void work_varproperties(VarPropertyList*vp) {
-  int i;
+  int i,j;
   VarProperty*p;
   for(i=0;i<vp->count;i++) switch((p=vp->item+i)->type) {
     case 0x00:
@@ -1154,6 +1155,10 @@ void work_varproperties(VarPropertyList*vp) {
         --i;
         vp->count-=2;
       }
+      break;
+    case 0x01:
+      j=(editor?VIDEO_SMZX|VIDEO_FLASHY:VIDEO_SMZX|VIDEO_80COLUMNS|VIDEO_FLASHY|VIDEO_EGS|VIDEO_MONO);
+      v_mode=(v_mode&~j)|(p->data[0]&j);
       break;
     case 0x04:
       if(!editor) {

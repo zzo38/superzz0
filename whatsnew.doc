@@ -20,6 +20,8 @@ GAME
   +  Dynamic music (although sz0music currently lacks the way to use this).
   +  Zones in board grids, with several uses.
   +  User structured data (.USD) lumps.
+  +  Allow SMZX mode to be usable.
+  +  Variable properties to adjust the video mode.
   =  Fix a memory leak with loading variable property lists.
 
 SCRIPTS

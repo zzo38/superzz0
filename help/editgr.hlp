@@ -37,6 +37,11 @@ will always use 80 columns regardless of this. Note that if it is set to 40
 columns then only the first 40 columns of the screen are used and the other
 40 columns will not be displayed.
 
+þ SMZX: If selected, then the display during the game uses SMZX mode. In
+eighty column SMZX mode, colours are decided by the two horizontally
+adjacent pixels, which are then displayed using the same colour; in forty
+column SMZX mode, it is similar but uses vertically adjacent pixels.
+
 þ Mandatory font/palettes: If selected, then it means that this world file
 requires these fonts/palettes for the game to work properly. Super ZZ Zero
 will refuse to run the world if you try to run it on a computer that is not
