@@ -41,6 +41,8 @@ EDITOR
   +  Push F2 in text editor to copy until a specified character.
 
 OTHERS
+  =  More fixes to avoid processing key events multiple times when saving
+     or restoring a save game file.
   +  Experimental "front" mode to communicate with external programs.
      (This feature is considered to be experimental.)
 

@@ -180,6 +180,7 @@ int ask_save_file(char issave) {
     case SDLK_ESCAPE: escape:
       free(items);
       v_mode=vm;
+      if(event.type==SDL_KEYDOWN) event.type=SDL_NOEVENT;
       return 0;
     case SDLK_F1: config.file_list&=0x7F; chdir(".."); goto list;
     case SDLK_F2: config.file_list^=4; config.file_list&=0x7F; goto list;
@@ -298,6 +299,7 @@ int ask_save_file(char issave) {
   savename=strdup(entry);
   if(!savename) err(1,"Allocation failed");
   v_mode=vm;
+  if(event.type==SDL_KEYDOWN) event.type=SDL_NOEVENT;
   return 1;
 }
 
@@ -532,6 +534,7 @@ void load_state(void) {
   if(init_savegame()) return;
   if(!savename) {
     alert_text("File is not selected; push F3 or F4 to select a file");
+    if(event.type==SDL_KEYDOWN) event.type=SDL_NOEVENT;
     return;
   }
   v_status[1]='$';
@@ -557,6 +560,7 @@ void load_state(void) {
       v_status[1]='!';
       alert_text("Save game does not match world file, or not a save game file");
       fclose(fp);
+      if(event.type==SDL_KEYDOWN) event.type=SDL_NOEVENT;
       return;
     }
   }
