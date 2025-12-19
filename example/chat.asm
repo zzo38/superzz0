@@ -1,0 +1,63 @@
+; A simple chat program to demonstrate the usage of config.external.
+
+	; Control flags
+	TA $CB,$000F
+
+	; Received data
+	TA $B4
+	LET T,W
+	FLET T,%,X,-65
+	JT A,0
+	TEXT E,0
+	ASN1 E,$0B00
+	MESS G,0
+	LET J,0
+	LET K,$8780
+	MEM F,80
+	LET J,$000C
+	MEM D,80
+	GOTO A,SCROLL
+
+	; Keyboard event
+	TA $E0
+	LET K,W
+	EQ K,$0D
+	JT A,SEND
+	EQ K,$08
+	JT A,BKSP
+	DYN C,1
+	GOTO C,SHOW
+
+SEND	MESS E,-1
+	LET J,0
+	LET K,65
+	ASN1 A,$3900
+	LET S,$3C10
+	DYN E,1
+	LET J,$000A
+	LET K,$8780
+	TEXT C,32
+	MEM D,80
+	GOTO A,SCROLL
+
+BKSP	DYN B,1
+	SUB J,1
+	LET K,0
+	DYN H,1
+	GOTO A,SHOW
+
+SCROLL	LET J,$8050
+	LET K,$8000
+	MEM C,2000
+SHOW	TEXT E,-1
+	LET J,0
+	LET K,$8780
+	MEM F,80
+	LET J,$0007
+	MEM D,80
+	INFO H,-8
+	ADD H,$8780
+	LET G,$0FB1
+	POKE G,H
+	LET S,0
+

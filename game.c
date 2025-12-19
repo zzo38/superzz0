@@ -6604,6 +6604,7 @@ int run_game(void) {
         asn1_flush(extern_out);
       }
       unlock_front();
+      goto display;
 #endif
     }
   }
