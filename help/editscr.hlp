@@ -134,6 +134,9 @@ case, the northwest corner of the board is placed at the hard edges.
 "Message edging" will add character zero (normally displayed as a blank
 space) on the left and right edge of the message text when it is displayed.
 
+"Alternate mode" causes the alternate SMZX palette to be used in SMZX mode
+(it has no effect otherwise).
+
 In addition, there is a submenu for dealing with edges.
 :edge
 "Soft edges" are the soft limits where the player can be inside of; if the

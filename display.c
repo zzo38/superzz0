@@ -953,6 +953,8 @@ Uint8 draw_text(Uint8 x,Uint8 y,const char*t,Uint8 c,int n) {
 
   SDL_USEREVENT+1:
     Data received from an external program (the extern_in file descriptor).
+    You must call unlock_front() after you have read the data; this event
+    will not be triggered any more until it is called.
 
   SDL_QUIT:
     Program is terminated.

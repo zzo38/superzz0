@@ -37,10 +37,9 @@ will always use 80 columns regardless of this. Note that if it is set to 40
 columns then only the first 40 columns of the screen are used and the other
 40 columns will not be displayed.
 
-þ SMZX: If selected, then the display during the game uses SMZX mode. In
-eighty column SMZX mode, colours are decided by the two horizontally
-adjacent pixels, which are then displayed using the same colour; in forty
-column SMZX mode, it is similar but uses vertically adjacent pixels.
+þ SMZX: If selected, then the display during the game uses SMZX mode. See
+the below section about SMZX mode.
+!smzx;SMZX mode
 
 þ Mandatory font/palettes: If selected, then it means that this world file
 requires these fonts/palettes for the game to work properly. Super ZZ Zero
@@ -58,3 +57,30 @@ built-in PC font.
 þ Main palette: The name of the main palette to use. Leave it blank to use
 the built-in PC colours.
 
+:smzx;SMZX mode
+In SMZX mode, the horizontal resolution per character is half (resulting in
+4x14) if it is 80 columns screen mode, or the vertical resolution per
+character is half (resulting in 8x7) if it is 40 columns screen mode. These
+will double the pixels, so that it uses two pixels on the screen for one
+character pixel in this way, although you can now display four colours per
+character instead of only two colours, so the number of bits is still the
+same as it is normally.
+
+Two adjacent pixels in a character raster are effectively combined into a
+single pixel. These are assigned four colour numbers, from I to IV,
+according to which of the individual bits are set or clear.
+
+There are two kind of SMZX modes, which can be used on the same screen at
+the same time.
+
+Normal SMZX mode uses a palette with 128 colours. Colour I uses the
+background colour (the high nybble of the tile colour) as both the high
+and low nybbles of the colour to select from the palette (except that the
+high bit is ignored, since the palette has only 7-bit colours). Colour II
+uses the foreground as the high nybble, colour III uses the foreground as
+the low nybble, and colour IV uses the foreground as both nybbles.
+
+Alternate SMZX mode uses a palette with 64 colours. The high 2-bits of the
+palette index are according to the bits of the character raster, and of
+those two bits, the lower one selects which nybble of the tile colour will
+be used as the low 4-bits of the palette index.

@@ -43,6 +43,14 @@ saving is always allowed even if these board flags are not specified, but
 when the control flags disable saving, these flags can be used to override
 the control flags and allow saving anyways.
 
+þ Alternate mode for board colors: This is only effective in SMZX mode,
+and causes it to use the alternate palette for board tiles in the main
+and under layer.
+
+þ Alternate mode for overlay colors: This is only effective in SMZX mode,
+and causes it to use the alternate palette for overlay tiles. This setting
+is ignored for overlay tiles with the "bg thru" bit set.
+
 þ Exits: Specify the board number of the exit in each direction (0 means
 no exit in that direction).
 

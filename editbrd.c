@@ -208,6 +208,8 @@ static void edit_board_info(void) {
     win_boolean('V',"Visible overlay",board_info.flag,BF_OVERLAY);
     win_boolean('o',"Always allow saving on sensors",board_info.flag,BF_SAVE_ON_SENSOR);
     win_boolean('y',"Always allow saving not on sensors",board_info.flag,BF_SAVE_NOT_SENSOR);
+    win_boolean('A',"Alternate mode for board colors",board_info.flag,BF_MAIN_ALT_MODE);
+    win_boolean('r',"Alternate mode for overlay colors",board_info.flag,BF_OVER_ALT_MODE);
     if(config.editor_custom_labels && memory[0x225] && maxstat) win_numeric('5',gtext[memory[0x225]],stats->misc1,0,65535);
     if(config.editor_custom_labels && memory[0x226] && maxstat) win_numeric('6',gtext[memory[0x226]],stats->misc2,0,65535);
     if(config.editor_custom_labels && memory[0x227] && maxstat) win_numeric('7',gtext[memory[0x227]],stats->misc3,0,65535);
@@ -1024,16 +1026,19 @@ static void estatus_over(void) {
   int x;
   if(board_info.height>24 && v_ycur>12) y=0;
   memset(v_color+y*80,0x11,80);
+  memset(v_font+y*80,VF_SYSTEM|VF_FRONT,80);
   draw_text(0,y,buf,0x1B,snprintf(buf,80,"%5d",brd_id));
   v_color[y*80+5]=v_color[y*80+6]=0x14;
   v_char[y*80+5]=v_char[y*80+6]='^';
   draw_text(7,y,"<\xFE>",0x17,3);
   v_color[y*80+8]=overclip.color;
+  v_font[y*80+27]=VF_FRONT;
   draw_text(10,y,"overlay:",0x1B,-1);
   for(x=0;x<8;x++) if(overclip.kind&(1<<x)) v_color[y*80+x+18]=0x1B,v_char[y*80+x+18]="1248SRBV"[x];
   draw_text(26,y,"<\xFE>",0x17,3);
   v_char[y*80+27]=overclip.param;
   v_color[y*80+27]=0x1F;
+  v_font[y*80+27]=VF_FRONT;
   v_char[y*80+29]=(overclip.stat?'s':' ');
   v_color[y*80+29]=0x1A;
   if(b_under[ycur*board_info.width+xcur].kind) v_char[y*80+31]='u',v_color[y*80+31]=0x13;
@@ -1071,6 +1076,7 @@ static void estatus_zone(void) {
   int x;
   if(board_info.height>24 && v_ycur>12) y=0;
   memset(v_color+y*80,0x11,80);
+  memset(v_font+y*80,VF_SYSTEM|VF_FRONT,80);
   draw_text(0,y,buf,0x1B,snprintf(buf,80,"%5d",brd_id));
   v_color[y*80+5]=0x14;
   v_char[y*80+5]='\\';
@@ -2318,6 +2324,7 @@ static void update_over_screen(void) {
       if(x+scroll_x>=board_info.width) break;
       v_char[a+x]=b_over[b+x].param;
       v_color[a+x]=b_over[b+x].color;
+      v_font[a+x]=(board_info.flag&(b_over[b+x].kind&OVER_BG_THRU?BF_MAIN_ALT_MODE:BF_OVER_ALT_MODE)?VF_ALTERNATE:0);
     }
   }
 }

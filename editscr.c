@@ -219,6 +219,7 @@ static void edit_screen_info(void) {
     win_boolean('U',"User indicators use border character",cur_screen.flag,SF_USER_BORDER);
     win_boolean('o',"Disable scrolling",cur_screen.flag,SF_NO_SCROLL);
     win_boolean('i',"Message edging",cur_screen.flag,SF_MESSAGE_EDGE);
+    win_boolean('d',"Alternate mode",cur_screen.flag,SF_ALT_MODE);
     win_blank();
     win_command('.',"Edges...") {
       win_form("Screen edges") {

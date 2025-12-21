@@ -351,6 +351,8 @@ typedef struct {
 #define BF_OVERLAY 0x0040  // display overlay
 #define BF_SAVE_ON_SENSOR 0x0100
 #define BF_SAVE_NOT_SENSOR 0x0200
+#define BF_MAIN_ALT_MODE 0x0400
+#define BF_OVER_ALT_MODE 0x0800
 
 // Overlay kind bits (the low nybble has user-defined meanings)
 #define OVER_SOLID 0x10  // affects movement of stats in overlay
@@ -499,6 +501,7 @@ typedef struct {
 #define SF_USER_BORDER 0x08
 #define SF_NO_SCROLL 0x10
 #define SF_MESSAGE_EDGE 0x20
+#define SF_ALT_MODE 0x40
 
 extern NumericFormat num_format[16];
 extern Screen cur_screen;

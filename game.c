@@ -836,6 +836,7 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
       o=b_over[xy].kind;
     }
     light:
+    v_font[at]=board_info.flag&((o&(OVER_VISIBLE|OVER_BG_THRU))==OVER_VISIBLE?BF_OVER_ALT_MODE:BF_MAIN_ALT_MODE)?VF_ALTERNATE:0;
     if(o&OVER_VISIBLE) {
       v_char[at]=b_over[xy].param;
       v_color[at]=b_over[xy].color;
@@ -956,7 +957,7 @@ void update_screen(void) {
   int i;
   Uint32 v,x,y;
   Uint8 cmd,col,chr;
-  memset(v_font,0,80*25);
+  memset(v_font,cur_screen.flag&SF_ALT_MODE?VF_ALTERNATE:0,80*25);
   for(i=0;i<80*25;i++) {
     cmd=cur_screen.command[i];
     col=cur_screen.color[i];
@@ -2020,6 +2021,7 @@ static void update_text_window(const WindowInfo*wind) {
     cmd=cur_screen.command[i];
     col=cur_screen.color[i];
     chr=cur_screen.parameter[i];
+    if(cmd) v_font[i]=(cur_screen.flag&SF_ALT_MODE?VF_ALTERNATE:0);
     switch(cmd&0xF0) {
       case SC_BACKGROUND:
         if(cmd&1) v_char[i]=chr;
@@ -2423,7 +2425,6 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
   Uint8 rf=0;
   Uint8 rn=0;
   Uint8 on=0;
-  memset(v_font,0,80*25);
   if(!cur_screen.hard_edge[DIR_N]) inn=1;
   if(tcursor<tnlines && !(inf->list[tcursor].ext&0x8000)) {
     if(m=inv->item[inf->list[tcursor].slot].item) desc=itemnames+itemdefs[m-1].desc;
@@ -2439,6 +2440,7 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
     cmd=cur_screen.command[i];
     col=cur_screen.color[i];
     chr=cur_screen.parameter[i];
+    if(cmd) v_font[i]=(cur_screen.flag&SF_ALT_MODE?VF_ALTERNATE:0);
     switch(cmd&0xF0) {
       case SC_BACKGROUND:
         if(cmd&1) v_char[i]=chr;
