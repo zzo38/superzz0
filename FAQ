@@ -55,7 +55,8 @@ version of ZZ Zero will get an error message explaining that a newer
 version of Super ZZ Zero is required.
 
 Someone who wants to play the game can get the appropriate implementation
-of Super ZZ Zero for their computer.
+of Super ZZ Zero for their computer. (It is also possible to distribute
+Super ZZ Zero with it, if you know what computer it is expected to run on.)
 
 
 [0.4] Is there i18n and m17n?
@@ -82,15 +83,19 @@ Once, that I know of.
 Boards: 65535
 Screens: 65535
 Item definitions: 65535
-Active inventory lists: 65535
+Active inventory lists: 8
+Stored inventory lists: 65536
 Script size: 65530 bytes
 Stats per board: 255
 Instances per stat: 65535
 Elements: 256
 Appearance mapping: 128
+Tile animation definitions: 4
 Characters per font: 256
 Status variables: 16
 Variable properties: 255 per screen and 255 per board
+User structured data lumps: 65536
+Maximum lump size: 4 gigabytes
 
 Subroutines will not work if the script size limit is reached.
 
@@ -160,7 +165,8 @@ You will need to know the item ID number of the colour 0 key for some of
 the below steps.
 
 Also add a inventory list, named "X0". Set the number of slots to sixteen,
-and set the max heap to 1. All slots should be initially empty.
+and set the max heap to 1. All slots should be initially empty (unless you
+are supposed to start with already having some keys).
 
 The next thing is to add the keys into the screen layout. Use the "Item
 window" type, and use the "Element" subtype. Assign the slot numbers 0 to

@@ -7,7 +7,9 @@ values can be set using the assembler, and they can also be changed at
 run time.
 
 $A0 = The low 3-bits selects which active inventory is the current one. The
-other bits are not currently meaningful.
+bit3 is automatically set when IMOV is used, within the $A2 and $A3 events,
+and so is bit4 when it is actually affecting the slots; this can be used to
+detect if that event is due to IMOV rather than IGIV or ITAK.
 
 $A1 = Mask for item slot flags to match for IGIV, ITAK, and some other
 inventory-oriented instructions. Some flags are always handled in a special

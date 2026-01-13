@@ -1903,7 +1903,7 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
       }
       if(*name) break;
     }
-    win_command('D',"Delete") {
+    win_command('l',"Delete") {
       if(ask_yn("Delete this item definition?",0)) {
         v=(ASN1_Value){.type=ASN1_NULL};
         goto end;

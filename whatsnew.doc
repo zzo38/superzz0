@@ -33,18 +33,20 @@ SCRIPTS
 ASSEMBLY
   +  New instructions for dealing with zones.
   +  IGET and IPUT can now be used to copy item slots.
+  +  A new flag for IGIV and ITAK to restrict it to a single slot.
+  +  IMOV to move items from one inventory list to another.
   +  CALS and RETS to use a call stack stored in the program memory.
   +  ASN.1 operators. (This feature is considered experimental.)
   =  Fix bugs with some instructions.
 
 EDITOR
   +  Push F2 in text editor to copy until a specified character.
+  =  Changed a conflicting keyboard command in the item definition editor.
 
 OTHERS
+  +  Experimental "front" mode to communicate with external programs.
   =  More fixes to avoid processing key events multiple times when saving
      or restoring a save game file.
-  +  Experimental "front" mode to communicate with external programs.
-     (This feature is considered to be experimental.)
 
 
 === Version 0.7.0 (2025-11-04) ===

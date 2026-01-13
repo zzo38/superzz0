@@ -1106,6 +1106,7 @@ numbers are treated as unsigned.
    bit2 = Don't add a first pass to check for fully matching slots
    bit4 = Move cursor to last affected (or affectable) slot
    bit5 = Apply special use
+   bit6 = Only take from slot where cursor is at
 
 [0B7 IGIV]
   This is like ITAK but gives instead of takes items. This does more than
@@ -1119,9 +1120,21 @@ numbers are treated as unsigned.
    bit3 = Ignore weight/strength
    bit4 = Move cursor to last affected (or affectable) slot
    bit5 = Apply special use
+   bit6 = Only give to slot where cursor is at
+   bit15 = Always remember all marks after working, including vacant slots
 
 [0B9 IMOV]
-  (TODO)
+  Move items from one inventory list to another one. This involves both
+  taking and giving items, but will first check if it is able to do so,
+  and if it can then it will take from one and give to the other. The K
+  register specifies which inventory to give to. The J register has the
+  low 8-bits like ITAK and the high 8-bits like IGIV. The high 13-bits
+  of K register are used for flags:
+   bit11 = Use existing marks
+   bit12 = Reverse move (use K to take from instead of to give to)
+   bit13 = Keep originally specified flag by second operand
+   bit14 = Read quantity from cursor instead of first operand
+   bit15 = Read from cursor instead of second operand
 
 [0C0 XYZ]
   Check if the X and Y coordinates are in a specified zone. The second
@@ -1137,7 +1150,7 @@ numbers are treated as unsigned.
    G = same as C but only if not already in zone
    H = same as D but only if not already in zone
   The only zones that you can add/remove cells in this way are: $00 to $1F,
-  $30 to $37, $80 to $9F, and $B0 to $BF. E,F,G,H are only different from
+  $30 to $37, $80 to $9F, and $B0 to $B7. E,F,G,H are only different from
   C and D for ordered zones; in the case of unordered zones and overlay
   zones, C to H all have the same meaning as each other.
 

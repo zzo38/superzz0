@@ -82,6 +82,7 @@ static const char*end_of_label;
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z);
 static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how);
 static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how);
+static Sint32 move_item(Uint32 item,Uint32 qty,Uint16 how);
 static Sint32 count_items(Sint32 t,Uint32 m);
 
 static Uint32 do_joystick(Uint8 mode) {
@@ -4880,12 +4881,13 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
   int i=item&0xFFFF;
   int j;
   Uint8 step;
+  if(how&0x8000) for(j=0;j<inv->count;j++) inv->item[j].flag&=~ISF_MARK;
   if(!i || i>nitemdefs || itemdefs[i-1].class==255) return condflag=0;
   idef=itemdefs+i-1;
   if((inv->flag&INV_IGNORE_WEIGHT) || !idef->weight) how|=8;
   heap=inv->maxheap;
   if(heap>idef->maxheap && !(inv->flag&INV_IGNORE_MAXHEAP)) heap=idef->maxheap;
-  if((how&32) || (inv->flag&INV_SPECIAL)) {
+  if((how&32) || ((inv->flag&INV_SPECIAL) && !(how&64))) {
     switch(idef->special&0xF0) {
       case ISPECIAL_STATUS: case ISPECIAL_STATUS_NONZERO:
         if((itemdefs[i-1].flag&IDF_SINGLE_HEAP) || (inv->flag&INV_SINGLE_HEAP)) {
@@ -4929,7 +4931,7 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
     re|=0x10<<step;
     for(i=0;i<inv->count && tot<qty;i++) {
       slot=inv->item+i;
-      if(slot->flag&(ISF_IGNORE|ISF_MARK)) continue;
+      if(how&64?i!=inv->cursor:(slot->flag&(ISF_IGNORE|ISF_MARK))) continue;
       if(step==2) {
         if(slot->item || slot->flag) continue;
       } else {
@@ -4995,7 +4997,7 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
   }
   condflag=1;
   done:
-  for(i=0;i<inv->count;i++) if(!inv->item[i].item && inv->item[i].flag==ISF_MARK) inv->item[i].flag=0;
+  if(!(how&0x8000)) for(i=0;i<inv->count;i++) if(!inv->item[i].item && inv->item[i].flag==ISF_MARK) inv->item[i].flag=0;
   memcpy(regs,rs,4*sizeof(Sint32));
   memory[MEM_ARG_J]=how;
   return condflag?qty:0;
@@ -5013,7 +5015,7 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
   int j;
   if(!i || i>nitemdefs || itemdefs[i-1].class==255) return condflag=0;
   if(!qty && !((item>>16)&ISF_FIXED)) return condflag=1,0;
-  if((how&32) || (inv->flag&INV_SPECIAL)) {
+  if((how&32) || ((inv->flag&INV_SPECIAL) && !(how&64))) {
     switch(itemdefs[i-1].special&0xF0) {
       case ISPECIAL_STATUS: case ISPECIAL_STATUS_NONZERO:
         spect=status_vars[itemdefs[i-1].special&15];
@@ -5037,6 +5039,7 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
   nsl=0; tot=spect;
   for(i=0;i<inv->count;i++) inv->item[i].flag&=~ISF_MARK;
   for(i=0;i<inv->count;i++) {
+    if((how&64) && i!=inv->cursor) continue;
     slot=inv->item+i;
     if(slot->flag&ISF_IGNORE) continue;
     if(!(how&4) && slot->flag!=(item>>16)) continue;
@@ -5067,6 +5070,7 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
         re&=~0x0102;
         slot->flag&=~ISF_MARK; tot-=slot->quantity; nsl--;
         for(j=i+1;j<inv->count;j++) {
+          if((how&64) && j!=inv->cursor) continue;
           slot=inv->item+j;
           if(slot->flag&(ISF_IGNORE|ISF_MARK)) continue;
           if(!(how&4) && slot->flag!=(item>>16)) continue;
@@ -5127,6 +5131,86 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
   done:
   memcpy(regs,rs,4*sizeof(Sint32));
   memory[MEM_ARG_J]=how;
+  return condflag?qty:0;
+}
+
+static Sint32 move_item(Uint32 item,Uint32 qty,Uint16 how) {
+  Inventory*inv;
+  ItemSlot*s;
+  Uint32 q,m;
+  Uint16 k=memory[MEM_ARG_K];
+  Uint16 frn=memory[k&0x1000?MEM_ARG_K:MEM_INVENTORY];
+  Uint16 ton=memory[k&0x1000?MEM_INVENTORY:MEM_ARG_K];
+  Uint16 frc=inventory[frn&7].cursor;
+  Uint16 toc=inventory[ton&7].cursor;
+  Uint16 c;
+  condflag=0;
+  if((k&0x4000) && frc<inventory[frn&7].count) qty=inventory[frn&7].item[frc].quantity;
+  if(k&0x8000) {
+    if(frc>=inventory[frn&7].count) goto stop;
+    item=inventory[frn&7].item[frc].item|(ton&0x2000?item&0xFFFF0000:((Uint32)inventory[frn&7].item[frc].flag)<<16);
+  }
+  if(!(k&0x0800)) {
+    memory[MEM_INVENTORY]=(frn&7)|8;
+    qty=take_item(item,qty,0x12|how&0xFF);
+    if(!condflag || !qty) goto stop;
+    c=inventory[frn&7].cursor;
+    if(c<inventory[frn&7].count && qty<=inventory[frn&7].item[c].quantity) {
+      if(!(k&0x2000)) item=(item&0xFFFF)|(inventory[frn&7].item[c].flag<<16);
+      item&=~(ISF_MARK<<16);
+    }
+    memory[MEM_INVENTORY]=(ton&7)|8;
+    qty=give_item(item,qty,0x8012|(how>>8));
+    if(!condflag || !qty) goto stop;
+  }
+  if(!(how&0x0002)) {
+    memory[MEM_INVENTORY]=(frn&7)|24;
+    inv=inventory+(frn&7);
+    q=qty;
+    if(how&0x40) { c=inv->cursor; if(c<inv->count) goto take1; }
+    for(c=0;c<inv->count;c++) if(inv->item[c].flag&ISF_MARK) {
+      take1:
+      s=inv->item+c;
+      if(s->quantity<=q) {
+        q-=s->quantity;
+        if(s->flag&ISF_FIXED) s->quantity=0; else *s=(ItemSlot){};
+        if(!q) break;
+      } else {
+        s->quantity-=q;
+        break;
+      }
+      if(how&0x40) break;
+    }
+  }
+  if(!(how&0x0200)) {
+    memory[MEM_INVENTORY]=(ton&7)|24;
+    inv=inventory+(ton&7);
+    m=inv->maxheap;
+    if(!(inv->flag&INV_IGNORE_MAXHEAP) && (q=item&0xFFFF) && q<=nitemdefs && itemdefs[q-1].maxheap<m) m=itemdefs[q-1].maxheap;
+    q=qty;
+    if(how&0x4000) { c=inv->cursor; if(c<inv->count) goto give1; }
+    for(c=0;q && c<inv->count;c++) if(inv->item[c].flag&ISF_MARK) {
+      give1:
+      s=inv->item+c;
+      if(s->item) {
+        if(s->quantity<m) {
+          if(q>m-s->quantity) q-=(m-s->quantity),s->quantity=m;
+          else s->quantity+=q,q=0;
+        }
+      } else {
+        *s=(ItemSlot){.item=item&0xFFFF,.flag=(item>>16)|ISF_MARK,.quantity=q<m?q:m};
+        if(q<=m) break;
+        q-=m;
+      }
+      if(how&0x4000) break;
+    }
+  }
+  stop:
+  memory[MEM_INVENTORY]=how&0x1000?ton:frn;
+  memory[MEM_ARG_J]=how;
+  memory[MEM_ARG_K]=how&0x1000?frn:ton;
+  if(!(how&0x10)) inventory[frn&7].cursor=frc;
+  if(!(how&0x1000)) inventory[ton&7].cursor=toc;
   return condflag?qty:0;
 }
 
@@ -5513,6 +5597,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         break;
       case OP_IGIV: regs[fo]=give_item(so,regs[fo],memory[MEM_ARG_J]); break;
       case OP_IMNU: t=show_item_window(so); if(condflag) regs[fo]=t; break;
+      case OP_IMOV: regs[fo]=move_item(so,regs[fo],memory[MEM_ARG_J]); break;
       case OP_INC: ++so; goto store;
       case OP_INCL: ++so; goto lstore;
       case OP_INEW:
