@@ -6,9 +6,6 @@
 %  or relative, use relative if possible, since the specification of ASN.1X
 %  DER says that it is supposed to be.)
 
-%  Note that "UTC-based timestamp" means ASN1_UTC_TIMESTAMP and not
-%  ASN1_UTCTIME. It SHOULD use the integer-only format.
-
 % Super ZZ Zero base OID; most OIDs in the .DER lumps can be relative to this one
 base=2.25.196954517921581521497869385664052876310
 

@@ -198,8 +198,7 @@ some are suitable for both.
   URL listed has preference; if it is a set then there is no preference.
 
 ...3.6 (Publish date/time) [Date/time]
-  Specifies when the world file is published. This should be the UTC-based
-  timestamp, although Generalized time is also supported.
+  Specifies when the world file is published.
 
 ...3.7 (Mandatory and optional feature sets) [Sequence]
   A sequence of two sets, which are the copy of the first two fields of the
