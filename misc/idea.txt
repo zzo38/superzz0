@@ -430,6 +430,60 @@ of the arrows, to scroll the view in some editors and some menus. However,
 due to limitations in SDL, this is not implemented yet.
 
 
+=== Catalog service ===
+
+The catalog service would be a separate program, although there might be
+a separate division in the configuration file for it anyways, which might
+have options such as:
+
+* client_certificate = The file with the client certificate chain. This
+is only used if the service URL specifies a protocol that uses TLS, and
+is ignored otherwise.
+
+* private_key = The file with the private key. This is only valid if the
+client certificate is specified; if the certificate is specified but the
+key is not specified, then the same file as the certificate is also used
+for the private key.
+
+* proxy = The proxy. If not specified, then a proxy is not used.
+
+* readonly_url = You can optionally specify a different URL for read-only
+access (which will not use the client certificate, and is not required to
+use TLS even if the main URL does use TLS).
+
+* server_certificate = The file with the server certificate. If this is
+not specified, then it will not check the server certificate, but if it
+is specified then it will require the server's certificate to match and
+will otherwise refuse to connect.
+
+* tls_option = Forces a specific TLS version, ciphers, etc. If this is
+specified but the URL does not use TLS, then it is an error, and it will
+refuse to connect to the server.
+
+* unix_socket = You can specify a UNIX socket on the same computer to use
+as the catalog service if you do not want to connect to the internet. In
+this case, your local credentials are used, rather than a certificate.
+
+* url = The URL of the remote service.
+
+I should then issue certificates to anyone who wants to use it. They can
+then use that certificate to issue further certificates to themself (this
+is for improved security allowing you to store the original private key
+on a separate computer that is not connected to the internet; improved
+security in this way is probably not necessary here but it will be a
+demonstration of how X.509 can be used to improve security in this way).
+
+The separate program might be "sz0catalog", which can access the catalog
+service to upload and download and search, and to create/edit/display the
+CATALOG.DER lump and side file. Another possible feature would be to create
+key pairs and certificate signing requests, although this can be done with
+separate programs as well, so it might not be needed.
+
+The server implementation should also be published so that others can run
+their own servers; the catalog service does not need to be only one. Also,
+someone might make their own implementation from the documentation.
+
+
 === Undesirable features ===
 
 There are some features which will probably be permanently out of scope

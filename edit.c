@@ -1862,6 +1862,7 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
       win_boolean('i',"Unidentified",d.flag,IDF_UNIDENTIFIED);
       win_boolean('o',"Do not randomize",d.flag,IDF_NO_RANDOMIZE);
       win_boolean('H',"Hilight",d.flag,IDF_HILIGHT);
+      win_boolean('E',"Event",d.flag,IDF_EVENT);
       win_blank(); win_command_esc(0,"Done") break;
     }
     win_command('u',"Custom flags...") win_form("Item definition edit - Custom flags") {

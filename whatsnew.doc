@@ -22,6 +22,7 @@ GAME
   +  User structured data (.USD) lumps.
   +  Allow SMZX mode to be usable.
   +  Variable properties to adjust the video mode.
+  +  Item definition event flag.
   =  Fix a memory leak with loading variable property lists.
 
 SCRIPTS

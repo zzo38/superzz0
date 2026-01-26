@@ -407,6 +407,10 @@ number@
   same cell (but different layer) of the player. (For this purpose, the
   "player" means any tile belonging to stat 1.)
 
+#EVENT:item
+  Checks if the specified item definition has the event flag. You can also
+  use #SET and #CLEAR to change the state of this flag.
+
 #FACING:dir
   True if the current facing direction matches the specified direction.
 

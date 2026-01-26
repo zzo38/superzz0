@@ -702,6 +702,7 @@ extern Uint16 nitemdefs;
 #define IDF_UNIDENTIFIED 0x0008
 #define IDF_NO_RANDOMIZE 0x0010
 #define IDF_HILIGHT 0x0020
+#define IDF_EVENT 0x0080
 
 // ItemDef:special
 #define ISPECIAL_NONE 0x00

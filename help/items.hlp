@@ -100,6 +100,13 @@ set if #GIVEITEM or IGIV is used to give this item into a vacant slot.
 IPUT, IMOV, etc.) See the explanation in the below section about attributes
 of item slots for more details about the use of this flag.
 
+þ Event: This is another flag whose value can be modified at run time and
+will be saved in the save game file. It does nothing by itself, but there
+are some commands and instructions that can work with it, and you can also
+use your own codes to do something with it. The intention of this is to
+mark events that only occur once which are associated with items, although
+you can also use it for something else.
+
 :inv;Inventory
 You can define any number of inventory lists. The name must be four hex
 digits for a inactive inventory, or X followed by one digit 0 to 7 for a

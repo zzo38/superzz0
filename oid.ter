@@ -53,6 +53,7 @@ C_worldversion=catalog.8
 G_font=feature.0 % G_font.<height>
 
 % File formats
+F_world=file.0
 F_music=file.1
 
 % Sound cards

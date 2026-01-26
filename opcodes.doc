@@ -1303,6 +1303,8 @@ numbers are treated as unsigned.
    $13 = Special use (0 if none)
    $80 = Clear unidentified flag
    $81 = Set unidentified flag
+   $82 = Clear event flag
+   $83 = Set event flag
   The result is written to the first operand, if the item number is valid
   and the operation has a result.
 

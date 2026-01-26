@@ -394,6 +394,7 @@ void save_state(void) {
       for(i=0;i<4;i++) asn1_encode(enc,asn1reg+i);
     asn1_end(enc);
     asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,&v_mode,1);
+    if(nitemdefs) save_itemdef_flags(enc,IDF_EVENT); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
   asn1_end(enc);
   asn1_finish_encoder(enc);
   fclose(fp);
@@ -521,6 +522,8 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
   }
   if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j || v1.class!=ASN1_UNIVERSAL) goto bad;
   if(v1.type==ASN1_OCTET_STRING && v1.length==1) v_mode=v1.data[0]; else if(v1.type!=ASN1_NULL) goto bad;
+  if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j || v1.class!=ASN1_UNIVERSAL) goto bad;
+  if(v1.type!=ASN1_NULL) load_itemdef_flags(&v1,IDF_EVENT);
   // End
   done: asn1_free(&v0);
 }

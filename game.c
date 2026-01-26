@@ -3514,6 +3514,11 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
         if(xy->y<board_info.height-1 && b_main[z+board_info.width].stat==1) v=1;
         if(b_main[z].stat==1 || b_under[z].stat==1 || b_over[z].stat==1) v=1;
       }
+    } else if(!strncmp(buf+1,"EVENT:",6)) {
+      *ip=bip+7;
+      z0=parse_item(s,xy,ip);
+      if(!condflag) goto bad;
+      if(z0>0 && z0<=nitemdefs && (itemdefs[z0-1].flag&IDF_EVENT)) v=1;
     } else if(!strcmp(buf+1,"FULL")) {
       for(v=1,n=0;n<16 && v;n++) if(!namedflag[n].name[0]) v=0;
     } else if(!strcmp(buf+1,"LOCKED")) {
@@ -3659,7 +3664,14 @@ static void script_set_flag(Stat*s,StatXY*xy,Uint16*ip,char v) {
   if(!n) return;
   buf[n]=0;
   if(*buf=='#') {
-    if(!strncmp(buf+1,"INZONE:",7)) {
+    if(!strncmp(buf+1,"EVENT:",6)) {
+      *ip=bip+7;
+      n=parse_item(s,xy,ip);
+      if(!condflag) goto bad;
+      if(n>0 && n<=nitemdefs) {
+        if(v) itemdefs[n-1].flag|=IDF_EVENT; else itemdefs[n-1].flag&=~IDF_EVENT;
+      }
+    } else if(!strncmp(buf+1,"INZONE:",7)) {
       *ip=bip+8;
       n=parse_number(s,xy,ip);
       if(!condflag) goto bad;
@@ -5667,6 +5679,8 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           case 0x13: so=itemdefs[t].special; goto store;
           case 0x80: itemdefs[t].flag&=~IDF_UNIDENTIFIED; break;
           case 0x81: itemdefs[t].flag|=IDF_UNIDENTIFIED; break;
+          case 0x82: itemdefs[t].flag&=~IDF_EVENT; break;
+          case 0x83: itemdefs[t].flag|=IDF_EVENT; break;
           default: errx(1,"Improper use of ITEM instruction");
         }
         break;
