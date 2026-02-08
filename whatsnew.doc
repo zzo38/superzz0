@@ -30,6 +30,7 @@ SCRIPTS
   +  Numeric storage labels.
   +  Conditions #INZONE and #PLAYERINZONE to read/write zones.
   +  The #EVENT: condition to check/modify event flags.
+  +  The #EDITFONT command to modify a single character of the font.
   =  Fix bugs with some commands and conditions.
 
 ASSEMBLY
@@ -43,6 +44,10 @@ ASSEMBLY
 
 EDITOR
   +  Push F2 in text editor to copy until a specified character.
+  +  Font editor now displays numeric values of the raster data.
+  +  You can now specify modification of a single character of a font in
+     the variable property editor. (This variable property was already
+     implemented, but the editor for this feature was previously missing.)
   =  Changed a conflicting keyboard command in the item definition editor.
 
 OTHERS

@@ -22,6 +22,11 @@ In addition, there are some functions which modify the entire picture:
   <F> Flip vertically
   <M> Mirror horizontally
 
+The numbers shown to the right of the character editing window are numeric
+representation of the character raster, and can be used in the variable
+property menu to modify a single character or in a #EDITFONT command in a
+script to modify a single character.
+
 :me;Memory
 There is an internal memory that can store a single character glyph; push Y
 to store the current glyph in the memory.

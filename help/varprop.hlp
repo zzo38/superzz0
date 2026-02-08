@@ -4,6 +4,11 @@ variable properties. Each one can be one of the following types:
 
 þ Font: Load the specified font when this board or screen is entered.
 
+þ Edit font character: Modify a single font character. This will only work
+if a font is also loaded; it cannot be used with the built-in PC font. The
+numbers for the character raster are those shown in the right side of the
+font editor screen.
+
 þ Palette: Load the specified palette when this board or screen is entered.
 
 þ Video mode: Sets the video mode for this board or screen. In this way,

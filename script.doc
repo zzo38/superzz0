@@ -160,6 +160,13 @@ are not allowed in this case.
   Delete this object and stop executing, and move the player (the first
   instance of stat 1) to the location where this object was.
 
+#EDITFONT number raster
+  Edit a single character in the current primary font. The number is the
+  character code number from 0 to 255, and the raster is seven numbers with
+  spaces in between, in the range 0 to 65535, and are the numbers displayed
+  on the right of the font editor screen (the raster data is treated as
+  seven small-endian 16-bit numbers, where the low bit is on the right).
+
 #END
   Stop executing this object.
 

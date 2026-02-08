@@ -155,6 +155,7 @@ void edit_varprop(VarPropertyList*vp) {
           case 0x01: i=8; x=vp->item[cur].data[0]; break;
           case 0x04: i=3; x=vp->item[cur].data[0]|(vp->item[cur].data[1]<<8); y=vp->item[cur].data[2]|(vp->item[cur].data[3]<<8); break;
           case 0x11 ... 0x18: i=1; snprintf(name,9,"%s",vp->item[cur].data); break;
+          case 0x1F: i=9; break;
           case 0x21 ... 0x28: i=2; snprintf(name,9,"%s",vp->item[cur].data); break;
           case 0x32 ... 0x3F: i=5; x=vp->item[cur].type-0x31; break;
           case 0x40: i=6; break;
@@ -168,6 +169,7 @@ void edit_varprop(VarPropertyList*vp) {
         }
         win_form("Variable Property Edit") {
           win_option('F',"Font",i,1) win_refresh();
+          win_option('c',"Edit font character",i,9) win_refresh();
           win_option('P',"Palette",i,2) win_refresh();
           win_option('V',"Video mode",i,8) win_refresh();
           win_option('S',"Scroll",i,3) win_refresh();
@@ -223,6 +225,18 @@ void edit_varprop(VarPropertyList*vp) {
             win_boolean('8',"80 columns",x,VIDEO_80COLUMNS);
             win_boolean('X',"SMZX",x,VIDEO_SMZX);
           }
+          if(i==9) {
+            win_numeric('e',"Character code: ",vp->item[cur].data[0],0,255);
+            win_heading("Raster data:");
+            text[1]=':'; text[2]=' '; text[3]=0;
+            for(x=0;x<7;x++) {
+              y=vp->item[cur].data[x+x+1]+(vp->item[cur].data[x+x+2]<<8);
+              win_numeric(*text=x+'1',text,y,0,0xFFFF) {
+                vp->item[cur].data[x+x+1]=y;
+                vp->item[cur].data[x+x+2]=y>>8;
+              }
+            }
+          }
           win_blank();
           win_command_esc(0,"Done") break;
         }
@@ -250,6 +264,7 @@ void edit_varprop(VarPropertyList*vp) {
             }
             break;
           case 8: vp->item[cur].type=0x01; vp->item[cur].data[0]=x; break;
+          case 9: vp->item[cur].type=0x1F; break;
         }
         goto draw0;
       case SDLK_ESCAPE: return;
@@ -1357,9 +1372,12 @@ static void edit_font(const char*name) {
   } else if(mode==1) {
     for(i=0;i<256;i++) v_color[(i>>4)*80+(i&15)+161]=(i==cch?0x1E:0x06)+(batch[i>>3]&(1<<(i&7))?0x21:0x00);
   }
-  if(!mode) for(i=0;i<14;i++) for(j=0;j<8;j++) {
-    v_color[i*80+202+j*2]=v_color[i*80+203+j*2]=(x==j && y==i)?0x1B:0x07;
-    v_char[i*80+202+j*2]=v_char[i*80+203+j*2]=(font[cch*14+i]&(128>>j))?177:250;
+  if(!mode) for(i=0;i<14;i++) {
+    for(j=0;j<8;j++) {
+      v_color[i*80+202+j*2]=v_color[i*80+203+j*2]=(x==j && y==i)?0x1B:0x07;
+      v_char[i*80+202+j*2]=v_char[i*80+203+j*2]=(font[cch*14+i]&(128>>j))?177:250;
+    }
+    if(!(i&1)) draw_text(62,i+2,b,0x03,snprintf(b,6,"%5d",font[cch*14+i]+(font[cch*14+i+1]<<8)));
   }
   redisplay();
   input:

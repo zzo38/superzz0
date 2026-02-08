@@ -3796,6 +3796,17 @@ static void script_set_music(Stat*s,StatXY*xy,Uint16*ip) {
   }
 }
 
+static void script_do_editfont(Stat*s,StatXY*xy,Uint16*ip) {
+  Uint16 w;
+  Uint8 m=parse_number(s,xy,ip);
+  Uint8*f=font+(m&0xFF)*14;
+  Uint8 n;
+  for(n=0;n<7;n++) {
+    w=parse_number(s,xy,ip);
+    *f++=w; *f++=w>>8;
+  }
+}
+
 static void script_do_erase(const ScriptKind*sk) {
   Uint32 at;
   Uint32 m=board_info.width*board_info.height;
@@ -4100,7 +4111,9 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               ip=65535; goto stop;
             } else goto badcommand; break;
           case 'E':
-            if(!strcmp(buf,"END")) {
+            if(!strcmp(buf,"EDITFONT")) {
+              if(font) script_do_editfont(s,xy,&ip);
+            } else if(!strcmp(buf,"END")) {
               ip=65535; stop=1;
             } else if(!strcmp(buf,"ERASE")) {
               if(!parse_kind(s,xy,&ip,&sk,0)) {script_error(m,xy,"Improper #ERASE"); return;}

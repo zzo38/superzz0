@@ -294,6 +294,12 @@ be used as a semaphore. It is decremented when the subroutine is called,
 and the call will fail if it is zero. When you return from the subroutine,
 the semaphore will be incremented.
 
+It might also be useful for choices in a text window to optionally have
+extra parameters with = (to set the value, useful when you have many
+choices whose effects only differ by a numeric value) and/or * (to specify
+effects such as automatically zapping the choice when it is selected, or
+returning to the list of choices when #RETURN is used).
+
 
 === Item randomization ===
 
