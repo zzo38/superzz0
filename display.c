@@ -513,8 +513,13 @@ void unlock_front(void) {
 }
 #endif
 
+static int load_font_advanced(const ASN1_Value*root,Uint8 z) {
+  warnx("load_font_advanced: not implemented yet");
+  return 0;
+}
+
 int load_font(const char*name,Uint8 z) {
-  //TODO: also support DER-based fonts (.FNT instead of .CHR)
+  ASN1_Value root;
   FILE*f;
   char buf[16];
   int i;
@@ -529,10 +534,7 @@ int load_font(const char*name,Uint8 z) {
   }
   buf[i++]='.'; buf[i]='C'; buf[i+1]='H'; buf[i+2]='R'; buf[i+3]=0;
   f=open_lump(buf,"r");
-  if(!f) {
-    warnx("Font '%s' is not available",buf);
-    return 0;
-  }
+  if(!f) goto advanced;
   if(lump_size!=3584) {
     fclose(f);
     warnx("Font '%s' is not 3584 bytes long; ignoring",buf);
@@ -545,6 +547,32 @@ int load_font(const char*name,Uint8 z) {
   fread(font,14,256,f);
   fclose(f);
   return 1;
+  advanced:
+  root=(ASN1_Value){};
+  buf[i]='F'; buf[i+1]='N'; buf[i+2]='T';
+  f=open_lump(buf,"r");
+  if(!f) {
+    buf[i-1]=0;
+    warnx("Font '%s' is not available",buf);
+    return 0;
+  }
+  if(asn1_read_item(f,&root,0)) goto error;
+  if(root.class==ASN1_UNIVERSAL && root.type==ASN1_IDENTIFIED_DATA && root.constructed) {
+    ASN1_Value a;
+    if(asn1_first_of(&a,&root) || asn1_next_of(&a,&root)) goto error;
+    if(!load_font_advanced(&a,z)) goto error;
+  } else {
+    if(!load_font_advanced(&root,z)) goto error;
+  }
+  asn1_free(&root);
+  return 1;
+  error:
+  asn1_free(&root);
+  if(!editor) errx(1,"Font '%s' in mode %d has incorrect or unusable data",buf,z);
+  alert_text("Invalid font data");
+  free(font);
+  font=0;
+  return 0;
 }
 
 static inline void adjust_gamma(SDL_Color*c,int n) {
@@ -1197,6 +1225,8 @@ Sint32 configure_joystick(char mode,const char*text) {
         case '3': lv|=1<<JL_LEVEL3; break;
         case '4': lv|=1<<JL_LEVEL4; break;
         case 'T': lv|=1<<JL_TEXT_WINDOW; break;
+        case 'I': lv|=1<<JL_ITEM_WINDOW; break;
+        case 'C': lv|=1<<JL_CUSTOM_WINDOW; break;
         default: goto err1;
       }
       t++;

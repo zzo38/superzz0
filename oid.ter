@@ -51,10 +51,13 @@ C_worldversion=catalog.8
 
 % Features specified in GENERAL.DER
 G_font=feature.0 % G_font.<height>
+G_graphics=feature.1
+G_smzx=feature.2
 
 % File formats
-F_world=file.0
+F_world=file.0 % (not used directly in world files, due to not directly using DER format)
 F_music=file.1
+F_font=file.2
 
 % Sound cards
 S_saa1099=sound.1 % Philips SAA1099

@@ -29,6 +29,7 @@ SCRIPTS
   +  The #SENT condition to check if a message was successfully sent.
   +  Numeric storage labels.
   +  Conditions #INZONE and #PLAYERINZONE to read/write zones.
+  +  The #EVENT: condition to check/modify event flags.
   =  Fix bugs with some commands and conditions.
 
 ASSEMBLY

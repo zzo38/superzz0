@@ -497,7 +497,8 @@ still does (although I think some maintainers want to remove it).)
 
 * File I/O. (It may be possible to support lump I/O, but the codes in the
 world file would never be able to access external files. External file
-access is always under the control of the user.)
+access is always under the control of the user, and how it is working may
+depend on the operating system.)
 
 * In app purchases.
 
@@ -512,8 +513,9 @@ and/or operating system and/or window manager. The keys that can be used
 can use an abstract handling.)
 
 * Automatic updates. (I dislike automatic updates, and if someone wants to
-use them it would be done by a separate package manager instead, which
-should allow the user to disable automatic updates, anyways.)
+use them, it would be done by a separate package manager instead, which
+should allow the user to disable automatic updates, as well as being able
+to manage dependencies of packages, etc.)
 
 * Operating system detection. (It is supposed to be independent of the
 operating system.)
@@ -524,7 +526,9 @@ you trigger an event from restoring a save game.)
 
 * Persisting data across different instances of a game. (Data will always
 persist across save/restore games, but if you restart the game and create
-a new save file, it does not interact with the old save file at all.)
+a new save file, it does not interact with the old save file at all. There
+may be a high score file that can persist data, but this file is write-only
+so it cannot be used to affect the behaviour of the game.)
 
 * 3D graphics.
 
@@ -534,5 +538,9 @@ a setting within the world file to specify the default game speed, though.)
 * True colour graphics.
 
 * Multiplayer mode.
+
+* Large language model.
+
+* Cryptocurrency.
 
 (Some of these are not entirely certain, though.)
