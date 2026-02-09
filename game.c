@@ -2245,6 +2245,7 @@ static char show_text_window(Uint32 xyn,char help) {
     v_status[1]=232;
     work_varproperties(&cur_screen.varprop);
     open:
+    if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
     for(;;) {
       update_text_window(&wind);
       redisplay();
@@ -2387,6 +2388,7 @@ static char show_text_window(Uint32 xyn,char help) {
     fclose(fp);
     work_varproperties(&cur_screen.varprop);
     work_varproperties(&board_info.varprop);
+    if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
   }
   free(textfile_text);
   textfile=0;
@@ -2687,6 +2689,7 @@ static Uint16 show_item_window(Uint32 opt) {
   }
   work_varproperties(&cur_screen.varprop);
   v_status[1]='I';
+  if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
   // Load names and slots
   load:
   tcursor=tnlines=0;
@@ -2856,6 +2859,7 @@ static Uint16 show_item_window(Uint32 opt) {
   }
   // End
   end:
+  if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
   memcpy(regs,rs,4*sizeof(Sint32));
   if(tcursor<tnlines && !(opt&2)) inv->cursor=list[tcursor].slot;
   if(condflag && tcursor<tnlines) k=list[tcursor].slot; else k=condflag=0;

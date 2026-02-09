@@ -40,6 +40,8 @@ ASSEMBLY
   +  IMOV to move items from one inventory list to another.
   +  CALS and RETS to use a call stack stored in the program memory.
   +  ASN.1 operators. (This feature is considered experimental.)
+  +  Control flag to automatically stop key repeat when opening and closing
+     a text window or item window.
   =  Fix bugs with some instructions.
 
 EDITOR

@@ -34,7 +34,7 @@ instructions with this as well.
 
 $B3 = Status which is written by CALS and RETS (the game engine never reads
 this but you can read this for your own use). The low 13-bits are a copy of
-the low 8-bits of the second operand of CALS or RETS, and the high 3-bits
+the low 13-bits of the second operand of CALS or RETS, and the high 3-bits
 are the first operand register number (0 for A, 7 for H).
 
 $B4 = Received data event (see below). This event will only be used if the
@@ -183,6 +183,9 @@ $0040 = When a message is successfully sent (because there is an unlocked
 stat that has the label with the specified name) then it will set this bit.
 You can clear this bit by yourself before sending it in case you want to
 check if it is successfully sent.
+
+$0080 = Causes it to automatically stop the key repeat when a text window,
+item window, or custom window is opened, and again when it is closed.
 
 
 === Order of execution ===
