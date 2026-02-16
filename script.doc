@@ -183,6 +183,10 @@ are not allowed in this case.
   Allows further lines of this text message to contain {} which can be
   used to include variable data in the text.
 
+#EXTRA number
+  Changes the extra value of this object. Each instance of a stat has a
+  extra value which is a 16-bit number.
+
 #FACE dir
   Set the facing direction. If it is idle, then it is not changed. If the
   object is currently walking, then the walking direction is also changed.
@@ -545,6 +549,7 @@ Operands can be a number, or it can be one of the following:
 
 #A to #H or #S to #Z accesses a status variable
 CC means the number of text lines so far with links
+E means the extra value of this object
 X or Y are the coordinates of this object
 XX or YY are the coordinates of the player
 M1 or M2 or M3 are the misc values of this stat
@@ -654,7 +659,10 @@ that they must be replaced by a parameter.
 
 {Ln}
   Set the left position for leaders. The number is the character code
-  for the leaders;
+  for the leaders, which should not be zero. The text which is to be
+  right aligned should be written between the {L} and {R} codes, and
+  then the leader character is repeated as many times as necessary to
+  fill the space between.
 
 {Nn}
   Show the number n (this is usually an expression, rather than a
@@ -667,7 +675,7 @@ that they must be replaced by a parameter.
 {Rn}
   Set the right position for leaders. The number is the zero-based
   column number which is the right position. You must have {L} before
-  it on the same line, otherwise .
+  it on the same line, otherwise it might not work properly.
 
 {Tn}
   Given a number n being the zero-based column to advance to; it is

@@ -547,6 +547,7 @@ static void stat_xy_edit(Stat*s,Uint16 n) {
     win_boolean('L',"Lock",o->layer,0x80);
     win_numeric('y',"Delay: ",o->delay,0,255);
     win_numeric('I',"Instruction: ",o->instptr,0,65535);
+    win_numeric('v',"Extra value: ",o->extra,0,65535);
     win_blank();
     win_command('R',"Restart script") o->instptr=0,r=1;
     win_command('o',"Stop script") o->instptr=0xFFFF,r=1;

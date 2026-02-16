@@ -181,11 +181,14 @@ If the "additional XY data" is present, then another encoding flag follows:
   bit2 = Sensor parameter
   bit3 = Sensor stat
   bit4 = Frame pointer
-  bit7-bit5 = (reserved)
+  bit5 = Extra value
+  bit7-bit6 = (reserved)
 
 The sensor data is 8-bits each, and the frame pointer is 16-bits. The frame
 pointer cannot be nonzero if the frame offset for the stat is zero, and it
-also cannot exceed the length of the stat's text minus six.
+also cannot exceed the length of the stat's text minus six. The extra value
+is also 16-bits, but it can be any number. In all cases, if the data is not
+present in this file then the value is zero.
 
 The board grid is encoded in the order:
   Under/kind

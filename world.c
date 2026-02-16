@@ -792,6 +792,7 @@ const char*load_board(FILE*fp) {
             r[j].frame=read16(fp);
             if(r[j].frame>stats[i].length || !stats[i].frame) return "Improper frame pointer";
           }
+          if(c&0x20) r[j].extra=read16(fp);
         }
       }
     } else {
@@ -883,7 +884,7 @@ const char*save_board(FILE*fp,int m) {
       if(stats[i].misc3) sf|=0x08;
       if(stats[i].frame) sf|=0x10;
       if(stats[i].mode) sf|=0x40;
-      for(j=0;j<stats[i].count;j++) if(stats[i].xy[j].sensor.kind || stats[i].xy[j].sensor.color || stats[i].xy[j].sensor.param || stats[i].xy[j].sensor.stat || stats[i].xy[j].frame) {
+      for(j=0;j<stats[i].count;j++) if(stats[i].xy[j].sensor.kind || stats[i].xy[j].sensor.color || stats[i].xy[j].sensor.param || stats[i].xy[j].sensor.stat || stats[i].xy[j].frame || stats[i].xy[j].extra) {
         sf|=0x20;
         break;
       }
@@ -929,12 +930,14 @@ const char*save_board(FILE*fp,int m) {
         if(r[j].sensor.param) c|=0x04;
         if(r[j].sensor.stat) c|=0x08;
         if(r[j].frame) c|=0x10;
+        if(r[j].extra) c|=0x20;
         write8(fp,c);
         if(c&0x01) write8(fp,r[j].sensor.kind);
         if(c&0x02) write8(fp,r[j].sensor.color);
         if(c&0x04) write8(fp,r[j].sensor.param);
         if(c&0x08) write8(fp,r[j].sensor.stat);
         if(c&0x10) write16(fp,r[j].frame);
+        if(c&0x20) write16(fp,r[j].extra);
       }
     }
   }

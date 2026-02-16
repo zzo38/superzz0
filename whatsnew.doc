@@ -31,6 +31,8 @@ SCRIPTS
   +  Conditions #INZONE and #PLAYERINZONE to read/write zones.
   +  The #EVENT: condition to check/modify event flags.
   +  The #EDITFONT command to modify a single character of the font.
+  +  Each stat instance now has a 16-bit "extra value", which can be set
+     with the #EXTRA command and read with the (E) numeric expression.
   =  Fix bugs with some commands and conditions.
 
 ASSEMBLY

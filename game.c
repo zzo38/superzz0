@@ -3145,6 +3145,9 @@ static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
     } else if(c=='C' || c=='c') {
       c=s->text[++*ip];
       if(c=='C' || c=='c') ++*ip,w=count_text_choices(); else goto badexp;
+    } else if(c=='E' || c=='e') {
+      ++*ip;
+      w=xy->extra;
     } else if(c=='X' || c=='x') {
       c=s->text[++*ip];
       if(c=='X' || c=='x') ++*ip,w=stats->count?stats->xy->x:0; else w=xy->x;
@@ -4133,6 +4136,8 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               if(c!='o' && c!='O') {script_error(m,xy,"Improper #ESCAPE"); return;}
               c=s->text[ip++];
               if(c=='n' || c=='N') esc=1; else if(c=='f' || c=='F') esc=0; else {script_error(m,xy,"Improper #ESCAPE"); return;}
+            } else if(!strcmp(buf,"EXTRA")) {
+              xy->extra=parse_number(s,xy,&ip);
             } else goto badcommand; break;
           case 'F':
             if(!strcmp(buf,"FACE")) {
