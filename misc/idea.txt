@@ -283,6 +283,8 @@ byte to specify a set of zones to select).
 
 This feature is implemented now, although possibly it may be improved.
 
+*P means it has priority, so it would be called even if it is locked.
+
 *Q would add the message to a queue if it is currently locked; it will be
 called once the subroutine stack is empty.
 

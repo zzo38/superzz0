@@ -284,6 +284,41 @@ character 255. The high bit of each byte corresponds to the left pixel.
 This lump must be exactly 3584 bytes long, otherwise it is an error.
 
 
+=== *.FNT ===
+
+The advanced font format, which uses DER format. This advanced format can
+be used for features that .CHR does not support, such as partial fonts,
+font sizes other than 8x14, character code mapping, animations, etc (not
+all of these features are implemented yet).
+
+This can optionally use the ASN1_IDENTIFIED_DATA to wrap it. Whether or not
+it is wrapped, it is a sequence with fields:
+
+* First character code (integer).
+
+* Number of character codes (positive integer).
+
+* Glyph definitions. This is a implicit typed sequence; see below.
+
+* Character code mapping, which is a set of implicit typed sequences.
+
+* Text direction (enumerated): Currently the only possible value is zero,
+meaning left to right, and the first line is at the top.
+
+Any of them may be null, other than the first two; and if there are not
+enough fields then the rest will be treated as null.
+
+Currently the only kind of glyph definition is type 0, which contains the
+width, and the height, and then a bit string with the raster data (all of
+them are packed together even if it is not a multiple of eight). There can
+be more glyphs than the number of character codes, in which case the rest
+of them can be used for animation, ligatures, etc.
+
+The character code mappings can be:
+
+* Type 0 = One integer being the IBM code page number.
+
+
 === *.HLP ===
 
 A help file.

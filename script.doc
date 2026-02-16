@@ -236,7 +236,9 @@ are not allowed in this case.
 
 #MIXCHOICES
   Randomizes the order of an unbroken sequence of links that ends at the
-  point of this command; no other text lines are allowed in between.
+  point of this command; no other text lines are allowed in between (any
+  text line preceding a choice, and any text lines preceding the text line
+  that is not a choice, will not be mixed).
 
 #MUSIC CANCEL
   Like #MUSIC STOP but also prevents the music from starting again when

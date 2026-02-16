@@ -514,8 +514,28 @@ void unlock_front(void) {
 #endif
 
 static int load_font_advanced(const ASN1_Value*root,Uint8 z) {
-  warnx("load_font_advanced: not implemented yet");
-  return 0;
+  Uint16 fc,nc,v;
+  ASN1_Value a,b;
+  if(root->class!=ASN1_UNIVERSAL || root->type!=ASN1_SEQUENCE || !root->constructed || !root->length) return 0;
+  if(asn1_first_of(&a,root) || a.class!=ASN1_UNIVERSAL || a.type!=ASN1_INTEGER || asn1_decode_number(&a,ASN1_AUTO,&fc) || fc>256) return 0;
+  if(asn1_next_of(&a,root) || a.class!=ASN1_UNIVERSAL || a.type!=ASN1_INTEGER || asn1_decode_number(&a,ASN1_AUTO,&nc) || nc>256 || fc+nc>256) return 0;
+  if(!font) {
+    font=malloc(3584);
+    if(!font) err(1,"Allocation failed");
+    if(fc || nc!=256) memcpy(font,pcfont,3584);
+  }
+  if(asn1_next_of(&a,root) || (a.class==ASN1_UNIVERSAL && a.type==ASN1_NULL)) return 1;
+  if(a.class==ASN1_CONTEXT_SPECIFIC && a.type==0 && a.constructed) {
+    if(asn1_first_of(&b,&a) || b.class!=ASN1_UNIVERSAL || b.type!=ASN1_INTEGER || b.length!=1 || b.data[0]!=8) return 0;
+    if(asn1_next_of(&b,&a) || b.class!=ASN1_UNIVERSAL || b.type!=ASN1_INTEGER || b.length!=1 || b.data[0]!=14) return 0;
+    if(asn1_next_of(&b,&a) || b.class!=ASN1_UNIVERSAL || b.type!=ASN1_BIT_STRING || b.constructed) return 0;
+    if(b.length<14*nc+1 || b.data[0]) return 0;
+    memcpy(font,b.data+14*fc+1,14*nc);
+  } else {
+    warnx("Unknown glyph definition type in font");
+    return 0;
+  }
+  return 1;
 }
 
 int load_font(const char*name,Uint8 z) {
