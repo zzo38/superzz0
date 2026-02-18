@@ -45,6 +45,12 @@ block_color
 brd_edit_status
   Set to 1 (default) to display the editor status line, or 0 to suppress.
 
+cga_colors
+  The default value is 0 which uses the canonical mapping from PC colour
+  numbers to RGB. If set to 1 then a different mapping is used which is
+  based on the voltages of IBM 5153. (If the game contains its own custom
+  palettes, then those custom palettes are not affected by this option.)
+
 confirm_overwrite
   Set to 1 (default) to ask to confirm overwriting an existing save file
   when using the F3 save menu (it never asks if you use F5).

@@ -56,6 +56,8 @@ EDITOR
 
 OTHERS
   +  Experimental "front" mode to communicate with external programs.
+  +  Add an alternate default colour palette based on IBM 5153. (The
+     palette from older versions is still present and is the default.)
   =  More fixes to avoid processing key events multiple times when saving
      or restoring a save game file.
 
