@@ -45,12 +45,6 @@ block_color
 brd_edit_status
   Set to 1 (default) to display the editor status line, or 0 to suppress.
 
-cga_colors
-  The default value is 0 which uses the canonical mapping from PC colour
-  numbers to RGB. If set to 1 then a different mapping is used which is
-  based on the voltages of IBM 5153. (If the game contains its own custom
-  palettes, then those custom palettes are not affected by this option.)
-
 confirm_overwrite
   Set to 1 (default) to ask to confirm overwriting an existing save file
   when using the F3 save menu (it never asks if you use F5).
@@ -455,4 +449,25 @@ should probably have switches to disable some of them.)
 It is possible to specify the same file multiple times with different
 arguments in each case, although plugins are not guaranteed to support
 that use, and this might cause undesired behaviours (and/or errors).
+
+
+=== [Colors] ===
+
+Defines the palette for the editor and system UI (including the F1 menu,
+the save/restore game menu, etc). This palette is also used for any game
+world that does not define its own palettes.
+
+There are two syntaxes in this division. One is the hexadecimal colour
+number followed by = and then the hexadecimal RGB colour (six hex digits).
+The other is * followed a base64 encoding of the sixteen RGB colours, using
+the base64 variant that is used in sixel graphics.
+
+The hexadecimal colour number before = can be "0" to "F", or it can be "20"
+for the screen border, and "21" for the text below the screen border.
+
+Default colours:
+*??????Ai?Ig??Iiii_??i_AiieW?iiiiTTTTTTV~T^|TT^~~~tTT~tV~~~|T~~~~
+
+IBM 5153 colours:
+*??????BC?KO??KRCp???p?BCpFw?pKRCRcxMRcz[RlpMRnNrvCxM{szr{~LM~~~~
 

@@ -121,12 +121,14 @@ static void load_config(char*nam) {
       if(!strcmp(line,"[Options]")) div=1;
       if(!editor && !strcmp(line,"[Joystick]")) div=2;
       if(!editor && config.music_resample && !strcmp(line,"[Emulator]")) div=3;
+      if(!strcmp(line,"[Colors]")) div=4;
       continue;
     }
     switch(div) {
       case 1: set_config(line); break;
       case 2: configure_joystick(0,line); break;
       case 3: if(x=strchr(line,' ')) *x++=0; audio_load_emulator(line,x); break;
+      case 4: configure_colors(line); break;
     }
   }
   fclose(f);

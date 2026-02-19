@@ -438,26 +438,6 @@ static SDL_Color palet[34]={
   {0xA4,0xBD,0xBB},
 };
 
-static const SDL_Color paletcga[16]={
-  // PC (see https://int10h.org/blog/2022/06/ibm-5153-color-true-cga-palette/ for more information)
-  {0x00,0x00,0x00},
-  {0x00,0x00,0xC4},
-  {0x00,0xC4,0x00},
-  {0x00,0xC4,0xC4},
-  {0xC4,0x00,0x00},
-  {0xC4,0x00,0xC4},
-  {0xC4,0x7E,0x00},
-  {0xC4,0xC4,0xC4},
-  {0x4E,0x4E,0x4E},
-  {0x4E,0x4E,0xDC},
-  {0x4E,0xDC,0x4E},
-  {0x4E,0xF3,0xF3},
-  {0xDC,0x4E,0x4E},
-  {0xF3,0x4E,0xF3},
-  {0xF3,0xF3,0x4E},
-  {0xFF,0xFF,0xFF},
-};
-
 static int custom_event_thread(void*unuse) {
   SDL_Event e={};
   Uint8 d[256];
@@ -775,7 +755,6 @@ void init_display(void) {
     if(!joy) errx(1,"SDL error: %s",SDL_GetError());
     SDL_JoystickEventState(SDL_ENABLE);
   }
-  if(config.cga_colors) memcpy(palet,paletcga,16*sizeof(SDL_Color));
   if(config.video_gamma) {
     const char*s=config.video_gamma;
     float r,g,b;
@@ -845,6 +824,42 @@ void init_display(void) {
   memset(v_char,32,80*25);
   memset(v_font,VF_SYSTEM,80*25);
   memset(v_status,0,82);
+}
+
+void configure_colors(const char*t) {
+  Uint32 a,b;
+  char*z;
+  if(*t=='*') {
+    t++;
+    for(a=0;a<16;a++) {
+      if(t[0]<63 || t[0]>126) goto error;
+      if(t[1]<63 || t[1]>126) goto error;
+      if(t[2]<63 || t[2]>126) goto error;
+      if(t[3]<63 || t[3]>126) goto error;
+      b=((t[0]-63)<<18)+((t[1]-63)<<12)+((t[2]-63)<<6)+((t[3]-63)<<0);
+      palet[a]=(SDL_Color){(b>>16)&255,(b>>8)&255,b&255};
+      t+=4;
+    }
+    if(*t) goto error;
+  } else if((*t>='0' && *t<='9') || (*t>='A' && *t<='F') || (*t>='a' && *t<='f')) {
+    a=strtoul(t,(char**)&t,16);
+    if(*t++!='=') goto error;
+    b=strtoul(t,&z,16);
+    if(*z || z!=t+6) goto error;
+    palet[a&0x3F]=(SDL_Color){(b>>16)&255,(b>>8)&255,b&255};
+  } else if(*t=='%' && t[1]=='0') {
+    putchar('*');
+    for(a=0;a<16;a++) {
+      b=(palet[a].r<<16)|(palet[a].g<<8)|(palet[a].b<<0);
+      putchar(((b>>18)&63)+63);
+      putchar(((b>>12)&63)+63);
+      putchar(((b>>6)&63)+63);
+      putchar(((b>>0)&63)+63);
+    }
+    putchar('\n');
+  } else if(*t) {
+    error: errx(1,"Improper configuration in [Colors] division",t);
+  }
 }
 
 void redisplay(void) {

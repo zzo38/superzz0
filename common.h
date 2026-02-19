@@ -90,6 +90,8 @@ void set_palette_vga_multi(Uint8 k,Uint8 n,const Uint8*r,const Uint8*g,const Uin
 void load_fontpal_state(const ASN1_Value*);
 void save_fontpal_state(ASN1_Encoder*);
 
+void configure_colors(const char*text);
+
 // === Joystick ===
 
 #define JL_NORMAL 16
