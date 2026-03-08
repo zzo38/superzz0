@@ -69,9 +69,6 @@ There are many features like MegaZeux has, and some that MegaZeux does not
 have, but also some Super ZZ Zero does not have but might or might not be
 added in future.
 
-Super ZZ Zero does not currently have customizable fonts and palettes,
-although this feature is planned and may be added in future.
-
 Everything needed for a world to work is stored in the world file in Super
 ZZ Zero, unlike in MegaZeux where separate files are used. Some of these
 features (e.g. music files) are not implemented yet, but when (if) they are
@@ -91,7 +88,9 @@ definitions. Text windows can also use screen definitions.
 
 In MegaZeux, you cannot customize much about the viewport other than its
 size and colour. In Super ZZ Zero, the viewport can be defined as a part
-of the screen definition.
+of the screen definition; however, you cannot change the viewport size at
+run time in Super ZZ Zero, unlike MegaZeux (you can still use a different
+viewport size (and shape) for different screens though).
 
 MegaZeux has board overlays, which can be made static or not static, but
 not both at the same time. Super ZZ Zero does not have static overlays but
@@ -143,13 +142,17 @@ means that messages do not need to have a separate subroutine message.
 Super ZZ Zero does not have (nearly) unlimited named counters like MegaZeux
 has. There is up to sixteen named flags (like ZZT), and you can store more
 stuff in program memory and in global status variables (of which you can
-define up to sixteen).
+define up to sixteen). There are other places to store data as well, such
+as in inventory lists (which can be used to make keys like MegaZeux).
 
 Whether or not boards persist when you leave and re-enter can be set per
-board individually, instead of automatically persisting all boards.
+board individually, instead of automatically persisting all boards. This
+can also be changed at run time. (New versions of MegaZeux now have the
+ability to automatically reset boards, which is similar to making them
+not persist.)
 
 Some of the feature requests for MegaZeux are already implemented in Super
-ZZ Zero (and some which are planned to be implemented):
+ZZ Zero, such as:
 
 * Remapping joypad buttons/hats/axes.
 
@@ -175,7 +178,48 @@ cannot determine anything else about boards other than the current board.
 * ZZT-like side bar, outside of the viewport and separate from overlays.
 
 Some feature requests (and some features that are already implemented in
-MegaZeux) are deliberately not implemented in Super ZZ Zero.
+MegaZeux) are deliberately not implemented in Super ZZ Zero, such as:
+
+* External file access. (You cannot use external files for fonts, palettes,
+music, sound effects, etc either; all of this stuff can be included in the
+world file. However, the contents of text windows and message scrollback
+can be manually sent to the printer or to a file by the end user; the game
+author cannot configure these things.)
+
+* IF MUSICON and IF PCSFXON. (The audio state can never affect the
+behaviour of the game in Super ZZ Zero.)
+
+* WAIT PLAY. (The audio state can never affect the behaviour of the game
+in Super ZZ Zero. However, in future there might be added the possibility
+to suspend the entire game until a sound finishes playing, but it will
+still be possible for the user to interrupt this and continue immediately.)
+
+* The game speed (like the MZX_SPEED counter). The user can always change
+this manually at run time and can set it in the user configuration file.
+The game world can set a recommended initial speed, although this can be
+overridden by the end user.
+
+* Random number seeds (RANDOM_SEED0 and RANDOM_SEED1): It is currently
+possible to set these in the debugger, but not by the game world. There
+is also no guarantee that the same algorithm will be used for random
+numbers in later versions of Super ZZ Zero, so being able to change the
+random number seed is not helpful. (Implement your own random number
+generator if you need consistent output.)
+
+* Date/time access is deliberately not available; the game is not supposed
+to depend on the current date/time.
+
+* The set of key codes available to game worlds is deliberately limited.
+(For example, function keys are always used for system functions (such as
+option menu, message scrollback, save/restore game, etc).) (In future, a
+few more might be added to te set of key codes available to game worlds,
+such as home, end, page up, and page down.)
+
+* Saving the game automatically by the game world is not available. The
+game state must be saved by the end user pushing the F3 or F5 key.
+
+* You cannot block restoring save games. It is always possible to restore
+a save game (although you can prevent saving the game).
 
 
 === Comparison with ZZ Zero ===
@@ -183,18 +227,19 @@ MegaZeux) are deliberately not implemented in Super ZZ Zero.
 It is similar in many ways, although there are many differences. Super ZZ
 Zero is an entirely new program and does not use any parts of ZZ Zero.
 
-* Program memory size is now 64K instead of 32K.
+* Program memory size is now 64K instead of 32K. (This is in cells, not in
+bytes; the number of bytes is 128K.)
 
-* Registers are now 32-bits.
+* Registers are now 32-bits (instead of 16-bits). (Program memory cells
+are still only 16-bits, though.)
 
 * Multiple screen layouts can be defined instead of only one.
 
-* Boards can now be bigger than 80x25, and different boards are allowed to
-have different board sizes.
+* Boards can now be bigger than 80x25 (as well as smaller), and different
+boards are allowed to have different board sizes.
 
-* There are no rotation maps, although this feature is planned and may be
-added in a later version of Super ZZ Zero (although it will likely be
-different in some ways, and may also be usable as general "zones").
+* There are now "zones" which can be used like the old rotation maps but
+have many more features.
 
 * Stats are now separate from instances of stats. Stats cannot be added or
 removed at run time, although instances can be created and destroyed (even
@@ -203,7 +248,9 @@ Each stat has its own script which is shared by all instances of that stat
 (although instances can have their own instruction pointers and lock flag).
 
 * The global string table cannot be used for scripts; any board with
-scripts will have them local to the board.
+scripts will have them local to the board. (However, there is one global
+script, and scripts can still be loaded from the global string table as
+well as from script library lumps.)
 
 * There are now 32 attribute bits instead of only 16.
 
@@ -211,7 +258,8 @@ scripts will have them local to the board.
 a script), Stat (any element can be a stat or not, but which ones are stats
 by default in the board editor are defined separately), Permanent (not
 applicable, because board memory is no longer tied to screen layouts),
-Transport (events are now used instead), Protected.
+Transport (events are now used instead), Protected. There is a new bit
+called "Permanent" but it works differently from ZZ Zero.
 
 * The board now has three layers, each of which has four bytes per tile
 instead of only two. Due to having multiple layers, it will not destroy
@@ -220,14 +268,35 @@ is no longer needed (they are stored in the under layer instead).
 
 * Appearance codes now work differently and are more versatile.
 
-* The inventory menu is not implemented yet (but may be done in future).
-
 * The "printing variables" feature of ZZ Zero is not used but it is also
 not necessary; screen layouts and numeric formats are more versatile.
 
 * Many other limits have been increased.
 
 There are many other enhancements compared with ZZ Zero, as well.
+
+
+=== Comparison with OHRRPGCE ===
+
+Like OHRRPGCE, Super ZZ Zero also uses the lumped Hamster archive format to
+store everything that is a part of the game world in one file, rather than
+needing several files like some other game engines do.
+
+Unlike OHRRPGCE, the save game file will store the entire game state,
+rather than only some things, and this cannot be customized.
+
+Maps in Super ZZ Zero can be defined as persistent, even in save games;
+in OHRRPGCE cannot persist if you leave and then enter them again (although
+you can use NPC one-time-use tags, this feature is unnecessary in Super ZZ
+Zero because of room persistence). Persistence can be enabled and disabled
+individually per room, and also modified at run time.
+
+Super ZZ Zero allows multiple inventory lists rather than only one, and
+they can store additional information than only the item and quantity.
+Inventory lists can also include additional information for the entire
+list, such as maximum allowed total weight (item definitions can include
+additional information such as weight), max items per slot (which can also
+be defined per item definition as well), and a few others.
 
 
 === Comparison of file formats ===
@@ -257,7 +326,9 @@ Note [1]: Tags are not required; if they are present, then they may be
 implicit (meaning the type is not recorded) or explicit (in which case
 the tag and type are both recorded).
 
-Note [2]: Only in key/value lists.
+Note [2]: Items in a key/value list can have keys, but this is not quite
+the same as tags in other formats but can sometimes be used for a similar
+purpose than tags in other formats.
 
 Note that MegaZeux Property List is usually compressed because it is in
 a ZIP archive file (although the world properties is not supposed to be
@@ -276,5 +347,6 @@ they can be calculated from the offsets).
 In DER and JSON formats, each node has either a value or child nodes and
 not both. In RELOAD and XML formats, each node can have both a value and
 child nodes (RELOAD requires both but the value may be null and the number
-of child nodes may be zero).
+of child nodes may be zero; XML also requires child nodes although there
+is an abbreviation for a node that does not have any child nodes).
 

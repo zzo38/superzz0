@@ -52,6 +52,7 @@ EDITOR
   +  You can now specify modification of a single character of a font in
      the variable property editor. (This variable property was already
      implemented, but the editor for this feature was previously missing.)
+  +  Menu to manage sound effects and music.
   =  Changed a conflicting keyboard command in the item definition editor.
 
 OTHERS

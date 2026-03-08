@@ -1790,6 +1790,110 @@ static void graphics_global_options(void) {
   unload_general_der();
 }
 
+static void edit_snd(const char*name) {
+  FILE*f=open_lump(name,"r");
+  FILE*g;
+  char b[70]={};
+  Uint8 k=0;
+  Uint8 u=1;
+  Uint8 w=0;
+  Uint16 s=config.audio_rate;
+  if(f && !lump_size) fclose(f),f=0;
+  if(f) {
+    if(fgetc(f)!=4) {
+      error: if(f) fclose(f); alert_text("Unrecognized file format"); return;
+    }
+    u=fgetc(f);
+    fseek(f,3,SEEK_SET); s=read16(f);
+    fclose(f);
+    snprintf(b,70,"Lump size: %ld",(long)lump_size);
+    win_form("Edit sound") {
+      win_picture(2) draw_text(1,0,b,7,-1);
+      win_numeric('S',"Sample rate: ",s,0,65535);
+      win_boolean('z',"Sample rate is hertz",u,1);
+      win_boolean('i',"Low-pass filter",u,2);
+      win_blank();
+      win_command('x',"Execute") break;
+      win_command_esc(0,"Cancel") return;
+    }
+    f=open_lump(name,"r+");
+    if(!f) goto error;
+    fseek(f,1,SEEK_SET); fputc(u,f);
+    fseek(f,3,SEEK_SET); write16(f,s);
+    fclose(f);
+f=open_lump(name,"r"); g=popen("hd | head","w"); copy_stream(f,g,-1); pclose(g); fclose(f);
+  } else {
+    win_form("Import sound") {
+      win_text('F',"File: ",b);
+      win_blank();
+      win_heading("File format:");
+      win_option('N',"Normal",k,0) win_refresh();
+      win_option('P',"Raw PCM",k,1) win_refresh();
+#if 0
+      win_option('V',"Creative Voice",k,2) win_refresh();
+      win_option('W',"RIFF WAVE",k,3) win_refresh();
+#endif
+      win_blank();
+      if(k==1) win_numeric('S',"Sample rate: ",s,0,65535);
+      if(k==1) win_boolean('z',"Sample rate is hertz",u,1);
+      if(k) win_boolean('i',"Low-pass filter",u,2);
+      if(k==1) {
+        win_blank();
+        win_option('8',"8-bits",w,0);
+        win_option('1',"16-bits (small endian)",w,1);
+        win_option('6',"16-bits (big endian)",w,2);
+        win_boolean('g',"Signed",u,128);
+      }
+      win_blank();
+      win_command('x',"Execute") break;
+      win_command_esc(0,"Cancel") return;
+    }
+    if(!*b) return;
+    if(*b=='|') g=popen(b+1,"r"); else g=fopen(b,"r");
+    if(!g) {
+      warn("Cannot open file to import");
+      alert_text("Cannot open file to import");
+      return;
+    }
+    f=open_lump(name,"w");
+    if(!f) { alert_text("Cannot open lump for writing"); goto stop; }
+    if(k) convert_sound_file(g,f,k,s,u,w); else copy_stream(g,f,-1);
+    stop: if(f) fclose(f); if(*b=='|') pclose(g); else fclose(g);
+  }
+}
+
+static void edit_bgm(const char*name) {
+  FILE*f=open_lump(name,"r");
+  FILE*g;
+  Uint8 constructed,class;
+  Uint32 type;
+  size_t length;
+  char b[70]={};
+  if(f && !lump_size) fclose(f),f=0;
+  if(f) return;
+  win_form("Import music") {
+    win_text('F',"File: ",b);
+    win_blank();
+    win_command('x',"Execute") break;
+    win_command_esc(0,"Cancel") return;
+  }
+  if(!*b) return;
+  if(*b=='|') g=popen(b+1,"r"); else g=fopen(b,"r");
+  if(!g) {
+    warn("Cannot open file to import");
+    alert_text("Cannot open file to import");
+    return;
+  }
+  if(asn1_read(g,&constructed,&class,&type,&length,0) || !constructed || !length || class!=ASN1_UNIVERSAL || (type!=ASN1_SEQUENCE && type!=ASN1_IDENTIFIED_DATA)) {
+    alert_text("Improper file format"); goto stop;
+  }
+  f=open_lump(name,"w");
+  if(!f) { alert_text("Cannot open lump for writing"); goto stop; }
+  asn1_write_type(constructed,class,type,f); asn1_write_length(length,f);
+  if(copy_stream(g,f,length)<length) { alert_text("Imported data has wrong size"); goto stop; }
+  stop: if(f) fclose(f); if(*b=='|') pclose(g); else fclose(g);
+}
+
 static void edit_itemdef(ASN1_Value*v0,int num) {
   char title[16];
   char text[16];
@@ -2515,6 +2619,14 @@ int run_editor(void) {
         win_command('P',"Palette") lump_listing_menu("*.PAL","Palettes",edit_palette,"editgr","pal");
         win_blank();
         win_command('G',"Graphics global options...") graphics_global_options();
+        win_blank();
+        win_command_esc(0,"Go back") break;
+      }
+    }
+    win_command('o',"Sound/music...") {
+      win_form("Sound/music") {
+        win_command('S',"Sound") lump_listing_menu("*.SND","Sound",edit_snd,0,0);
+        win_command('M',"Music") lump_listing_menu("*.BGM","Music",edit_bgm,0,0);
         win_blank();
         win_command_esc(0,"Go back") break;
       }

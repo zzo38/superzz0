@@ -55,7 +55,8 @@ first argument to the "create" function, but not used for anything else.
 * create = Called to create a new instance of this emulator. It will return
 a non-null pointer if it is successful. The return value is used as the
 first argument of all of the other functions in this structure; the caller
-will never dereference this pointer, but will check if it is null.
+will never dereference this pointer, but will check if it is null. This
+function will not be called until after musemu_main returns.
 
 * destroy = Called to destroy an instance of this emulator; it will be
 called exactly once for every created one and then the object will not be

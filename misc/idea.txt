@@ -12,65 +12,31 @@ future. The code 0x00 is not valid within the text, so it can be used as a
 prefix for compression codes.
 
 
-=== Custom fonts ===
+=== Wide fonts ===
 
-This is a new idea of a custom font format, different than what was
-mentioned here before. (The .CHR format of MegaZeux is already supported,
-but only for 8x14 fonts with no animations and no other features.) It could
-be a DER-based format with:
+There should be a possibility of wide fonts, which support large character
+sets. A world cannot include more than two wide fonts, one for text screens
+and one for graphical screens (which can be displayed at the same time).
 
-* First character code (integer): For a full font this will be zero; for
-a partial font it can be any number in range 0x00 to 0xFF.
+This would be a lump named WIDE.DER with the same format as the .FNT lumps
+but the range of character codes is different. Some features (such as
+animations) probably would not be supported for wide fonts.
 
-* Number of character codes (integer): For a full font this is 0x100 but
-for a partial font it is less than 0x100. If it is a wide font then this
-number is usually more than 0x100.
+A wide character code takes up two bytes, and the first byte must be in the
+range 0x80 to 0xFF and the second byte must be in the range 0x10 to 0xFF;
+this is treated as a big-endian 16-bit number. You can define which codes
+in the range 0x80 to 0xFF are the first byte of a wide character and which
+ones are single byte characters.
 
-* Text direction (enumerated, optional)
+Characters in a wide font take up two character cells rather than only one.
+The VF_WIDE_L and VF_WIDE_R bits would be used for displaying the wide
+characters, with the left half being the high byte and the right half being
+the low byte of the character code.
 
-* Font data; this field is normally a implicit typed sequence, where the
-type number specifies the type of font data; see below.
-
-The further fields are optional and if one is not present but a later one
-is present, the null should be used in place of the omitted one.
-
-* Character code mappings (set)
-
-* Animations
-
-* Case folding (octet string)
-
-The format of the font data can be:
-
-* Type 0 = A fix pitch font with a width of eight pixels, and one bit per
-pixel. A sequence with a integer being the font height (normally fourteen)
-and then a octet string with the raw raster data of the font.
-
-* Type 1 = (May be used like type 0 but with compressed raster data.)
-
-Character code mappings is a set where most kind of items will be implicit
-typed strings but some will use ordinary types instead. They are:
-
-* Integer = IBM code page number (or extended code page number).
-
-* Object identifier.
-
-* Type 0 = TRON code mapping.
-
-* Type 1 = IANA character set name, as used in "text" MIME types.
-
-* Type 2 = XLFD character set name, which has a single hyphen.
-
-* Type 3 = ISO 2022 escape codes to select the character sets.
-
-There cannot be more than one wide font. Wide characters always have the
-first byte in range 0x80 to 0xFF and the second byte in range 0x10 to 0xFF.
-(These restrictions would apply to Super ZZ Zero, but if other programs use
-this font format they might not have this restriction.)
-
-Also, not everything supported by this format will necessarily be supported
-in Super ZZ Zero, at least at first; some might be ignored and some things
-might not be used in Super ZZ Zero.
+There will also need to be some way to define text on a screen layout or
+board layout as wide text. Text windows and scripts might always use wide
+text, although an alternative can be to have a flag to control this. The
+similar consideration will also be needed for the message line text.
 
 
 === Custom palettes ===
@@ -216,7 +182,25 @@ overridden by the user configuration file.)
 
 * The effect. This can be a implicit typed sequence, or it can be a single
 Set (for multiple simultaneous effects) or Sequence (for multiple effects
-that are done in sequence).
+that are done in sequence). A set or sequence may also contain another set
+or sequence, and a sequence can contain an integer for a delay number of
+frames (but a set cannot, since it would be redundant).
+
+
+=== Screen overlays ===
+
+There are board overlays, although screen overlays are something different.
+There would be switchable screen overlays that can be defined in a screen
+layout, and these can be switched on and off at run time (the current state
+will need to be recorded in the SAVE.DER lump). A screen overlay would be
+defined as a rectangular area on the screen with screen commands in each
+cell like the normal screen definition is.
+
+Transition animations may be available for screen overlays (and can be
+controlled by user configuration like other transition animations).
+
+Screen overlays are not needed when using enhanced graphics, but will
+remain available.
 
 
 === Enhanced graphics ===
@@ -438,6 +422,12 @@ of the arrows, to scroll the view in some editors and some menus. However,
 due to limitations in SDL, this is not implemented yet.
 
 
+=== Portable mode ===
+
+A "portable mode" could be added for the purpose of being distributed with
+the game world file and game engine program together.
+
+
 === Catalog service ===
 
 The catalog service would be a separate program, although there might be
@@ -451,7 +441,9 @@ is ignored otherwise.
 * private_key = The file with the private key. This is only valid if the
 client certificate is specified; if the certificate is specified but the
 key is not specified, then the same file as the certificate is also used
-for the private key.
+for the private key. If the private key is passworded, then it will ask
+for a password when connecting (if readonly_url is set then it will not
+ask for the password for read-only access).
 
 * proxy = The proxy. If not specified, then a proxy is not used.
 
@@ -467,6 +459,12 @@ will otherwise refuse to connect.
 * tls_option = Forces a specific TLS version, ciphers, etc. If this is
 specified but the URL does not use TLS, then it is an error, and it will
 refuse to connect to the server.
+
+* tofu = If set to 1 and the server_certificate specifies a file that
+does not exist, then it will display some certificate information the
+first time it connects and will ask you if it is acceptable; if so, then
+it will write it into the specified file. The tofu setting is ignored if
+the server certificate file already exists.
 
 * unix_socket = You can specify a UNIX socket on the same computer to use
 as the catalog service if you do not want to connect to the internet. In
@@ -530,7 +528,8 @@ operating system.)
 
 * Saving/restoring games by scripts/programs defined in the world file.
 (You can prevent saving the game, but cannot prevent restoring, nor can
-you trigger an event from restoring a save game.)
+you trigger an event from restoring a save game. Partial saves also will
+not be possible; it is all or nothing.)
 
 * Persisting data across different instances of a game. (Data will always
 persist across save/restore games, but if you restart the game and create
@@ -550,5 +549,9 @@ a setting within the world file to specify the default game speed, though.)
 * Large language model.
 
 * Cryptocurrency.
+
+* Ability for game world to query the sound system. (This corresponds to
+the MegaZeux commands: IF MUSICON, IF PCSFXON, WAIT PLAY, and possibly some
+of the counters related to audio.)
 
 (Some of these are not entirely certain, though.)
