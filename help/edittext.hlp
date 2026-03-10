@@ -7,14 +7,17 @@
  ^F   word right
  ^G   delete right
  ^H   delete left
+ @I   add hex colour with <>
  ^J   next line
  @J   join line
  ^KP  send to printer
+ ^KR  read file into text
  ^L   repeat find
  ^M   line break
  @M   insert line below
  ^N   split line
  @N   insert line
+ @O   add hex character with <>
  ^P   add character code
  @P   add character number
  ^QC  end of document

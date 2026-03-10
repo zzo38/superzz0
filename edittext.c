@@ -180,6 +180,37 @@ static int copy_until(Uint8 xc,Uint16 yc,Uint8 k) {
   return xc;
 }
 
+static void do_read_file(Uint16 yc) {
+  char*t=0;
+  size_t s=0;
+  ssize_t n;
+  FILE*f;
+  char name[42]={};
+  ask_text("Read file?",name,41);
+  if(!*name) return;
+  f=(*name=='|'?popen(name+1,"r"):fopen(name,"r"));
+  if(!f) {
+    warn("Cannot open file \"%s\"",name);
+    alert_text("Cannot open file for reading");
+    return;
+  }
+  while((n=getline(&t,&s,f))>0) {
+    if(nchars>=65530 || nchars+n>=65530 || n>=252) {
+      alert_text("Input cannot fit in buffer");
+      break;
+    }
+    line_break(0,yc);
+    realloc_line(yc,n);
+    if(n && t[n-1]=='\n') n--;
+    if(n && t[n-1]=='\r') n--;
+    memcpy(lines[yc].ptr,t,lines[yc].len=n);
+    nchars+=n;
+    yc++;
+  }
+  free(t);
+  if(*name=='|') pclose(f); else fclose(f);
+}
+
 static Uint8*text_editor_1(Uint8*text) {
   char buf[42];
   Line*li;
@@ -288,6 +319,7 @@ static Uint8*text_editor_1(Uint8*text) {
     case_CTRL('G'): case 0x7F: case -SDLK_DELETE: if(xc<lines[yc].len) { memmove(lines[yc].ptr+xc,lines[yc].ptr+xc+1,lines[yc].len-1-xc); --lines[yc].len; --nchars; } break;
     case_CTRL('H'): case -SDLK_BACKSPACE: if(xc) { if(xc<lines[yc].len) memmove(lines[yc].ptr+xc-1,lines[yc].ptr+xc,lines[yc].len-xc); --xc; --lines[yc].len; --nchars; } break;
     case_CTRLQ('I'): case -SDLK_F6: *buf=0; ask_text("Go to line?",buf,8); if(*buf && (i=strtol(buf,0,10))) yc=i-1; goto display;
+    case -SDLK_i: snprintf(buf,10,"<%02X>",ask_color_char(0,0)); goto insbuf;
     case_CTRL('J'): if(yc<nlines) yc++,xc=0; goto display;
     case -SDLK_j: line_join(yc); goto display;
     case_CTRL('K'): prefix=2; break;
@@ -296,11 +328,13 @@ static Uint8*text_editor_1(Uint8*text) {
     case -SDLK_m: line_break(lines[yc].len,yc); xc=0; ++yc; goto display;
     case_CTRL('N'): line_break(xc,yc); goto display;
     case -SDLK_n: line_break(0,yc); xc=0; goto display;
+    case -SDLK_o: snprintf(buf,10,"<%02X>",ask_color_char(1,0)); goto insbuf;
     case_CTRL('P'): xc+=ins_char(yc,xc,askch=ask_color_char(1,askch)); goto display;
     case_CTRLK('P'): case -SDLK_F11: print_document(); goto display;
-    case -SDLK_p: snprintf(buf,10,"%d",askch=ask_color_char(1,askch)); for(i=0;buf[i];i++) xc+=ins_char(yc,xc,buf[i]); goto display;
+    case -SDLK_p: snprintf(buf,10,"%d",askch=ask_color_char(1,askch)); insbuf: for(i=0;buf[i];i++) xc+=ins_char(yc,xc,buf[i]); goto display;
     case_CTRL('Q'): prefix=1; break;
     case_CTRL('R'): case -SDLK_PAGEUP: yc=(yc>23?yc-23:0); scrol=(scrol>23?scrol-23:0); goto display;
+    case_CTRLK('R'): do_read_file(yc); goto display;
     case_CTRLQ('R'): xc=yc=0; goto display;
     case_CTRL('S'): case -SDLK_LEFT: if(xc) --xc; break;
     case_CTRLQ('S'): case -SDLK_HOME: xc=0; break;
