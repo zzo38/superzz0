@@ -53,6 +53,8 @@ C_worldversion=catalog.8
 G_font=feature.0 % G_font.<height>
 G_graphics=feature.1
 G_smzx=feature.2
+G_ver_not_release=feature.3.0
+G_ver_is_release=feature.3.1
 
 % File formats
 F_world=file.0 % (not used directly in world files, due to not directly using DER format)
