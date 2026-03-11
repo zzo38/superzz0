@@ -1750,7 +1750,7 @@ void audio_load_emulator(const char*name,const char*arg) {
   if(e=m(config.music_debug>1?MUSEMU_DEBUG:0,arg,emulator_callback,d)) warnx("Error loading emulator \"%s\": Main function returned error: %s",name,e);
 }
 
-void convert_sound_file(FILE*in,FILE*out,Uint8 k,Uint8 s,Uint8 u,Uint8 w) {
+void convert_sound_file(FILE*in,FILE*out,Uint8 k,Uint16 s,Uint8 u,Uint8 w) {
   int c,d;
   switch(k) {
     case 1: // Raw PCM
@@ -1759,7 +1759,7 @@ void convert_sound_file(FILE*in,FILE*out,Uint8 k,Uint8 s,Uint8 u,Uint8 w) {
       if(w) {
         for(;c!=EOF;c=fgetc(in)) {
           d=fgetc(in); if(d==EOF) goto error;
-          fputc((w==1?c:d),out); fputc((w==1?d:c)^(u&128),out);
+          fputc((w==1?c:d),out); fputc((w==1?d:c)^(128&~u),out);
         }
       } else {
         for(;c!=EOF;c=fgetc(in)) fputc(c^(u&128),out);

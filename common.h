@@ -134,7 +134,7 @@ void audio_load_emulator(const char*name,const char*arg);
 extern char music_name[9];
 extern Uint16 music_song;
 
-void convert_sound_file(FILE*in,FILE*out,Uint8 k,Uint8 s,Uint8 u,Uint8 w);
+void convert_sound_file(FILE*in,FILE*out,Uint8 k,Uint16 s,Uint8 u,Uint8 w);
 
 // === Miscellaneous ===
 

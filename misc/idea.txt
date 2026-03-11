@@ -427,6 +427,11 @@ due to limitations in SDL, this is not implemented yet.
 A "portable mode" could be added for the purpose of being distributed with
 the game world file and game engine program together.
 
+Independently of this (although probably commonly used together with it),
+there might be a preprocessor definition for excluding the editor when
+compiling, such as CONFIG_EXCLUDE_EDITOR. (The default portable mode might
+use both CONFIG_DISABLE_FRONT and CONFIG_EXCLUDE_EDITOR.)
+
 
 === Catalog service ===
 

@@ -1813,7 +1813,7 @@ static void edit_snd(const char*name) {
       win_boolean('z',"Sample rate is hertz",u,1);
       win_boolean('i',"Low-pass filter",u,2);
       win_blank();
-      win_command('x',"Execute") break;
+      win_command('x',"Execute changes") break;
       win_command_esc(0,"Cancel") return;
     }
     f=open_lump(name,"r+");
@@ -1821,7 +1821,6 @@ static void edit_snd(const char*name) {
     fseek(f,1,SEEK_SET); fputc(u,f);
     fseek(f,3,SEEK_SET); write16(f,s);
     fclose(f);
-f=open_lump(name,"r"); g=popen("hd | head","w"); copy_stream(f,g,-1); pclose(g); fclose(f);
   } else {
     win_form("Import sound") {
       win_text('F',"File: ",b);
