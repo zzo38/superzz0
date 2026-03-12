@@ -313,6 +313,18 @@ static uint16_t do_track(char*t,uint8_t chan) {
             if(labels[v]) errx(1,"Label %d already defined",(int)v);
             labels[v]=romsize;
             break;
+          case '=':
+            if(*t<=32 || *t>126) goto bad;
+            if((*t>='0' && *t<='9') || *t=='$') {
+              t=parse_integer(t,&v,1);
+            } else {
+              v=*t++*128;
+              if(*t<=32 || *t>126) goto bad;
+              v+=*t++;
+            }
+            if(v&~0x3FFF) errx(1,"Improper label name");
+            add_lref(v);
+            break;
           case '0' ... '9': case '$':
             t=parse_integer(t,&v,1);
             if(v&~0xFFFF) errx(1,"Immediate value out of range");
@@ -927,10 +939,29 @@ int main(int argc,char**argv) {
     asn1_end(enc);
     // Short call addresses
     asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
-      asn1_encode_integer(enc,labels['!'*128+'N']);
-      asn1_encode_integer(enc,labels['!'*128+'N']);
-      asn1_encode_integer(enc,labels['!'*128+'N']);
-      asn1_encode_integer(enc,labels['!'*128+'L']);
+      if(omit_standard) {
+        uint16_t a=labels['!'*128+'0'];
+        uint16_t b=labels['!'*128+'2'];
+        uint16_t c=labels['!'*128+'4'];
+        uint16_t d=labels['!'*128+'6'];
+        if(a==b && a==c && a==d) {
+          if(a) asn1_encode_integer(enc,a);
+        } else if(c==d) {
+          asn1_encode_integer(enc,a);
+          if(a!=b) asn1_encode_integer(enc,b);
+          asn1_encode_integer(enc,d);
+        } else {
+          asn1_encode_integer(enc,a);
+          asn1_encode_integer(enc,b);
+          asn1_encode_integer(enc,c);
+          asn1_encode_integer(enc,d);
+        }
+      } else {
+        asn1_encode_integer(enc,labels['!'*128+'N']);
+        asn1_encode_integer(enc,labels['!'*128+'N']);
+        asn1_encode_integer(enc,labels['!'*128+'N']);
+        asn1_encode_integer(enc,labels['!'*128+'L']);
+      }
     asn1_end(enc);
     // Real constants
     asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);

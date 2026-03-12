@@ -669,6 +669,10 @@ Super ZZ Zero, it will use this version number to enable such emulation.
 * ...4.0.(height) means that the world uses custom fonts and/or palettes.
 The (height) must be fourteen; other numbers are not currently supported.
 
+* ...4.3.0 means that a non-release version is expected, and ...4.3.1 means
+that a release version is expected. Published world files normally should
+not use non-release versions since the behaviour might not be stable.
+
 All of the further fields are optional. Each one is a implicit typed
 sequence with context-specific class; the type number indicates the
 meaning of the sequence, and they are:

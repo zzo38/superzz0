@@ -47,18 +47,18 @@ ASSEMBLY
   =  Fix bugs with some instructions.
 
 EDITOR
-  +  Push F2 in text editor to copy until a specified character.
+  +  Improvements to text editor.
   +  Font editor now displays numeric values of the raster data.
   +  You can now specify modification of a single character of a font in
      the variable property editor. (This variable property was already
      implemented, but the editor for this feature was previously missing.)
   +  Menu to manage sound effects and music.
-  +  Improvements to text editor.
   =  Changed a conflicting keyboard command in the item definition editor.
 
 OTHERS
   +  Experimental "front" mode to communicate with external programs.
   +  The [Colors] division in the configuration file.
+  +  A few minor improvements in sz0music program.
   =  More fixes to avoid processing key events multiple times when saving
      or restoring a save game file.
 
