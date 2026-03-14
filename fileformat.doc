@@ -433,7 +433,7 @@ The header is (each coordinate, etc are one byte each):
 comes immediately after the header. See the .BRD format specification for
 details about the format of this variable property list.
 
-* Flags.
+* Screen flags.
 
 * The border colour.
 
@@ -488,10 +488,14 @@ The screen data is compressed with the following commands:
 * 160-239 = Follow by the command byte and colour byte, and then 1 to 80
 more bytes being the parameters for that many cells.
 
-* 240-255 = A single cell. If bit0 is set then the command byte follows;
-if bit1 is set then the colour byte follows; if bit2 is set then the
-parameter byte follows. Any omitted bytes are copied from the previous
-cell if bit3 is clear, or are zero if bit3 is set.
+* 240 = (Reserved)
+
+* 241-255 (except 247) = A single cell. If bit0 is set then the command
+byte follows; if bit1 is set then the colour byte follows; if bit2 is set
+then the parameter byte follows. Any omitted bytes are copied from the
+previous cell if bit3 is clear, or are zero if bit3 is set.
+
+* 247 = (Reserved)
 
 
 === *.SND ===

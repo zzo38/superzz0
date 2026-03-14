@@ -1018,6 +1018,10 @@ const char*load_screen(FILE*fp) {
       memset(cur_screen.color+at,fgetc(fp),c);
       fread(cur_screen.parameter+at,1,c,fp);
       at+=c;
+    } else if(c==240) {
+      return "Reserved opcode in screen definition";
+    } else if(c==247) {
+      return "Reserved opcode in screen definition";
     } else {
       if(c<248 && !at) return "Out of bounds access";
       cur_screen.command[at]=(c&1)?fgetc(fp):(c&8)?0:cur_screen.command[at-1];
@@ -1066,7 +1070,7 @@ const char*save_screen(FILE*fp) {
         }
       }
       if(run2==n+1) {
-        if(at+n>=80 && pp[at+n]==pp[at+n-80]) {
+        if(at+n>=80 && pk[at+n]==pk[at+n-80] && pc[at+n]==pc[at+n-80] && pp[at+n]==pp[at+n-80]) {
           if(++run4==4) run2-=4,run3=run4=0;
         } else {
           run4=0;
