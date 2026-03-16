@@ -197,10 +197,15 @@ memory/mem
   address, starting at the specified address and then advancing to the
   right, and the left side of the next row continues where it left off, etc.
 
+mzmexport/mzmex
+  Export a MZM file; if the file name starts with | then it is a pipe from an
+  external shell command. This makes a layer mode MZM file (which may then be
+  converted to other formats by cbgconv).
+
 mzmimport/mzmim
   Import a MZM file; if the file name starts with | then it is a pipe from an
   external shell command. The area to operate in must match the dimensions of
-  the MZM file.
+  the MZM file (if no area is specified, then it is expected to be 80x25).
 
 place/p
   Place copies of the tile selected with the "y" normal command.

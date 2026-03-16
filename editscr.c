@@ -814,6 +814,29 @@ static void cc_memory_step(Uint16 x,Uint16 y,const char*arg) {
   ++cctmp;
 }
 
+static void cc_mzmexport(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  Uint16 x,y;
+  char buf[75];
+  FILE*fp;
+  if(!*arg) return;
+  if(*arg=='|') fp=popen(arg+1,"w"); else fp=fopen(arg,"w");
+  if(fp) {
+    if(x0>x1) x=x0,x0=x1,x1=x;
+    if(y0>y1) y=y0,y0=y1,y1=y;
+    fwrite("MZM2",1,4,fp);
+    fputc(x1+1-x0,fp); fputc(0,fp); fputc(y1+1-y0,fp);
+    fwrite("\0\0\0\0\0\0\x01\0",1,9,fp);
+    for(y=y0;y<=y1;y++) for(x=x0;x<=x1;x++) {
+      fputc(cur_screen.parameter[y*80+x],fp);
+      fputc(cur_screen.color[y*80+x],fp);
+    }
+    if(*arg=='|') pclose(fp); else fclose(fp);
+  } else {
+    snprintf(buf,75,"%m");
+    alert_text(buf);
+  }
+}
+
 static void cc_mzmimport(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   int c,m;
   Uint16 x,y,w,h;
@@ -858,6 +881,21 @@ static void cc_place_step(Uint16 x,Uint16 y,const char*arg) {
   place_at(x,y,cctile);
 }
 
+static void cc_rawexport(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  // This command is only used for testing and is not documented.
+  char buf[75];
+  FILE*fp;
+  if(!*arg) return;
+  if(*arg=='|') fp=popen(arg+1,"w"); else fp=fopen(arg,"w");
+  if(fp) {
+    fwrite(&cur_screen,1,sizeof(Screen),fp);
+    if(*arg=='|') pclose(fp); else fclose(fp);
+  } else {
+    snprintf(buf,75,"%m");
+    alert_text(buf);
+  }
+}
+
 static void cc_status(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   if(*arg=='1') status_on=1;
   if(*arg=='0') status_on=0;
@@ -885,10 +923,14 @@ static const ColonCommand colon_commands[]={
   {"mem",'.',0,cc_memory_begin,cc_memory_step,0},
   {"memory",'.',0,cc_memory_begin,cc_memory_step,0},
   {"mo",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
+  {"mzmex",'%',cc_mzmexport,0,0,0},
+  {"mzmexport",'%',cc_mzmexport,0,0,0},
   {"mzmim",'%',cc_mzmimport,0,0,0},
   {"mzmimport",'%',cc_mzmimport,0,0,0},
   {"p",'.',0,cc_place_begin,cc_place_step,0},
   {"place",'.',0,cc_place_begin,cc_place_step,0},
+  {"rawexport",0,cc_rawexport,0,0,0},
+  {"rex",0,cc_rawexport,0,0,0},
   {"status",0,cc_status,0,0,0},
   {"t",'.',0,0,cc_toggle_step,0},
   {"toggle",'.',0,0,cc_toggle_step,0},

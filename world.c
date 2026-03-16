@@ -972,7 +972,7 @@ const char*save_board(FILE*fp,int m) {
 
 const char*load_screen(FILE*fp) {
   Uint8 vp;
-  Uint8 c;
+  Uint8 x,y,z,c;
   Uint32 at=0;
   int i,n;
   free(cur_screen.varprop.item);
@@ -1021,7 +1021,19 @@ const char*load_screen(FILE*fp) {
     } else if(c==240) {
       return "Reserved opcode in screen definition";
     } else if(c==247) {
-      return "Reserved opcode in screen definition";
+      x=fgetc(fp); y=(x&127)/7; z=(x&127)%7; x>>=7;
+      if(y==18) return "Reserved opcode in screen definition";
+      if((at<80 && z>3) || (!at && (y<3 || z))) return "Out of bounds access";
+      cur_screen.command[at]=(z==0||z==2||z==5)?fgetc(fp):cur_screen.command[at-(z<4?1:80)];
+      cur_screen.color[at]=(z==0||z==1||z==4)?fgetc(fp):cur_screen.color[at-(z<4?1:80)];
+      cur_screen.parameter[at]=y>2?fgetc(fp):cur_screen.parameter[at-(z<4?1:80)]+(x?1:-1);
+      if(!y) y=3;
+      for(i=1;i<y && at+i<80*25;i++) {
+        cur_screen.command[at+i]=cur_screen.command[at];
+        cur_screen.color[at+i]=cur_screen.color[at];
+        cur_screen.parameter[at+i]=cur_screen.parameter[at+i-1]+(x?1:-1);
+      }
+      at+=y;
     } else {
       if(c<248 && !at) return "Out of bounds access";
       cur_screen.command[at]=(c&1)?fgetc(fp):(c&8)?0:cur_screen.command[at-1];
@@ -1039,7 +1051,7 @@ const char*save_screen(FILE*fp) {
   Uint8*pp=cur_screen.parameter;
   Uint8 c;
   Uint32 at=0;
-  Uint8 run0,run1,run2,run3,run4;
+  Uint8 run0,run1,run2,run3,run4,run5,run6;
   int i,n;
   fputc(cur_screen.varprop.count?0x80:0x00,fp);
   fputc(cur_screen.flag,fp);
@@ -1057,7 +1069,7 @@ const char*save_screen(FILE*fp) {
   if(cur_screen.varprop.count) save_varproperties(fp,&cur_screen.varprop);
   // Screen grid
   for(at=0;at<80*25;) {
-    run0=run1=run2=run3=run4=0;
+    run0=run1=run2=run3=run4=0; run5=run6=1;
     for(n=0;n<80 && at+n<80*25;n++) {
       if(run0==n && at && pk[at+n]==pk[at-1] && pc[at+n]==pc[at-1] && pp[at+n]==pp[at-1]) ++run0;
       if(run1==n && at>=80 && pk[at+n]==pk[at+n-80] && pc[at+n]==pc[at+n-80] && pp[at+n]==pp[at+n-80]) ++run1;
@@ -1075,6 +1087,10 @@ const char*save_screen(FILE*fp) {
         } else {
           run4=0;
         }
+      }
+      if(n<17) {
+        if(run5==n && pk[at+n]==pk[at] && pc[at+n]==pc[at] && pp[at+n]==((pp[at+n-1]+1)&255)) ++run5;
+        if(run6==n && pk[at+n]==pk[at] && pc[at+n]==pc[at] && pp[at+n]==((pp[at+n-1]-1)&255)) ++run6;
       }
     }
     if(run3>=run4) run2-=run3; else run2-=run4;
@@ -1102,10 +1118,64 @@ const char*save_screen(FILE*fp) {
     } else if(run0 && run0>=run1) {
       fputc(run0-1,fp);
       at+=run0;
-    } else if(run1) {
+    } else if(run5>1 && run5>run1) {
+      if(at && pk[at]==pk[at-1] && pc[at]==pc[at-1]) c=3;
+      else if(at>=80 && pk[at]==pk[at-80] && pc[at]==pc[at-80]) c=6;
+      else if(at && pk[at]==pk[at-1]) c=1;
+      else if(at && pc[at]==pc[at-1]) c=2;
+      else if(at>=80 && pk[at]==pk[at-80]) c=4;
+      else if(at>=80 && pc[at]==pc[at-80]) c=5;
+      else c=0;
+      if(run5<=3) {
+        if(!c) goto not247;
+        if(c>3 && pp[at]!=pp[at-80]+1) {
+          if(pp[at]==pp[at-1]+1) {
+            if(pk[at]==pk[at-1]) c=1; else if(pc[at]==pc[at-1]) c=2; else if(run5==3) c=0;
+          }
+          if(run6<3) goto not247;
+        }
+        if(run5>run6 && !c) goto not247;
+        if(run5==3 && pp[at]==pp[at-(c>3?80:1)]+1) run5=0;
+        if(run5!=3 && pp[at]!=pp[at-(c>3?80:1)]+1) goto not247;
+      }
+      fputc(247,fp); fputc(c+7*run5+128,fp);
+      if(c==0 || c==2 || c==5) fputc(pk[at],fp);
+      if(c==0 || c==1 || c==4) fputc(pc[at],fp);
+      if(run5>2) fputc(pp[at],fp);
+      at+=run5?:3;
+    } else if(run6>1 && run6>run1) {
+      if(at && pk[at]==pk[at-1] && pc[at]==pc[at-1]) c=3;
+      else if(at>=80 && pk[at]==pk[at-80] && pc[at]==pc[at-80]) c=6;
+      else if(at && pk[at]==pk[at-1]) c=1;
+      else if(at && pc[at]==pc[at-1]) c=2;
+      else if(at>=80 && pk[at]==pk[at-80]) c=4;
+      else if(at>=80 && pc[at]==pc[at-80]) c=5;
+      else c=0;
+      if(run6<=3) {
+        if(!c) goto not247;
+        if(c>3 && pp[at]!=pp[at-80]-1) {
+          if(pp[at]==pp[at-1]-1) {
+            if(pk[at]==pk[at-1]) c=1; else if(pc[at]==pc[at-1]) c=2; else if(run6==3) c=0;
+          }
+          if(run6<3) goto not247;
+        }
+        if(run2>run6 && !c) goto not247;
+        if(run6==3 && pp[at]==pp[at-(c>3?80:1)]-1) run6=0;
+        if(run6!=3 && pp[at]!=pp[at-(c>3?80:1)]-1) goto not247;
+      }
+      fputc(247,fp); fputc(c+7*run6,fp);
+      if(c==0 || c==2 || c==5) fputc(pk[at],fp);
+      if(c==0 || c==1 || c==4) fputc(pc[at],fp);
+      if(run6>2) fputc(pp[at],fp);
+      at+=run6?:3;
+    } else not247: if(run1) {
       fputc(run1+79,fp);
       at+=run1;
     } else {
+      for(n=1;n<run2-3;n++) {
+        if(pp[at+n+1]==pp[at+n]+1 && pp[at+n+2]==pp[at+n]+2 && pp[at+n+3]==pp[at+n]+3) run2=n;
+        if(pp[at+n+1]==pp[at+n]-1 && pp[at+n+2]==pp[at+n]-2 && pp[at+n+3]==pp[at+n]-3) run2=n;
+      }
       fputc(run2+159,fp);
       fputc(pk[at],fp);
       fputc(pc[at],fp);

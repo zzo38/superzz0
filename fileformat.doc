@@ -495,7 +495,30 @@ byte follows; if bit1 is set then the colour byte follows; if bit2 is set
 then the parameter byte follows. Any omitted bytes are copied from the
 previous cell if bit3 is clear, or are zero if bit3 is set.
 
-* 247 = (Reserved)
+* 247 = Used for increasing/decreasing values; see below. This means a
+sequence of cells that the parameter is increasing or decreasing by one
+each time, but the command and colour are same for all of them.
+
+If the code is 247 then it is followed by:
+
+* Flag byte: (128x+7y+z), where x is 0 or 1, y is 0 to 17, and z is 0 to 6.
+The x is 0 for decrementing or 1 for incrementing, and y is the number of
+cells to be encoded (0 means 3 cells).
+
+* The command byte, if z is 0 or 2 or 5. If 1 or 3, it is copied from the
+cell to the left; if 4 or 6, it is copied from the cell above.
+
+* The colour byte, if z is 0 or 1 or 4. If 2 or 3, it is copied from the
+cell to the left; if 5 or 6, it is copied from the cell above.
+
+* The parameter byte, which is only present if y>2, otherwise it is the
+incremented or decremented value from the cell to the left if z<4 or above
+if z>3. If there is more than one cell, the rest are adjusted from the
+previous cells in this sequence.
+
+Value of z     0   1   2   3   4   5   6
+Command        ?   <   ?   <   ^   ?   ^
+Colour         ?   ?   <   <   ?   ^   ^
 
 
 === *.SND ===
