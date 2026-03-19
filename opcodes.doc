@@ -1162,7 +1162,13 @@ numbers are treated as unsigned.
    bit5 = Set for writing or clear for reading
    bit7-bit6 = 0(count), 1(flag), 2(extra)
   Writing anything to "count" will remove all cells from the zone (which
-  will reset the count to zero).
+  will reset the count to zero). The flags are as follows:
+   bit3-bit0 = User flags
+   bit4 = Reverse
+   bit8 = Affect under layer
+   bit9 = Affect main layer
+   bit10 = Affect over layer
+   bit15-bit14 = Movement kind: 0(cyclic) 1(full) 2(normal) 3(pushable)
 
 [0C2 ZROT]
   Perform rotation of ordered zones. Only the low 16-bits of the second
@@ -1170,6 +1176,21 @@ numbers are treated as unsigned.
   set corresponds to one zone (bit0 for zone 16, bit 15 for zone 31),
   which will be affected. The first operand is B for backward or F for
   forward. Only enabled zones are considered, though.
+
+[0C3 ZENU]
+  Enumeration of ordered zones. The first operand contains the zero-based
+  index number into the list, and if successful then the condition flag is
+  true and the X and Y registers will contain the coordinates there,
+  otherwise the condition flag is false and X and Y are unchanged. The
+  second operand is:
+   bit3-bit0 = Select which zone to use (always ordered zones only)
+   bit4 = Insert in zone at this point instead of reading from zone
+   bit5 = Remove from zone after reading
+   bit6 = Increment first operand if successful
+   bit7 = Decrement first operand if successful
+
+[0C4 ZMOV]
+  (TODO)
 
 [0EE CWIN]
   (TODO)

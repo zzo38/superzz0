@@ -579,6 +579,34 @@ static Uint32 zone_info(Uint8 s,Uint32 v) {
   }
 }
 
+static Sint32 zone_enum(Uint8 r,Uint16 z) {
+  OrdZone*o=ozone[z&15];
+  Sint32 w=regs[r];
+  if(!o) {
+    if(!w) {
+      append:
+      zone_add(0,0,(z&15)+16,w?1:0);
+      condflag=1;
+    }
+    return w;
+  }
+  if(o->ncells==0xFFFF && (z&0x10)) return w;
+  if(w<0) return w;
+  if(w>=o->ncells) {
+    if(w==o->ncells && (z&0x10)) goto append;
+    return w;
+  }
+  if(z&0x10) {
+    if(o->ncells==0xFFFF) return w;
+    o=ozone[z&15]=realloc(o,sizeof(OrdZone)+(o->ncells+1)*sizeof(OrdZoneXY));
+    if(!o) err(1,"Allocation failed");
+    memmove(o->xy+w+1,o->xy+w,(o->ncells-w)*sizeof(OrdZoneXY));
+    o->ncells++;
+  }
+  condflag=1;
+  return w;
+}
+
 static void warp_to_board(Uint16 b,char m) {
   FILE*fp;
   const char*e;
@@ -6207,6 +6235,20 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
           case 5: zone_remove(x,y,so); zone_add(x,y,so,1); break;
           case 6: if(!condflag) zone_add(x,y,so,0); break;
           case 7: if(!condflag) zone_add(x,y,so,1); break;
+        }
+        break;
+      case OP_ZENU:
+        condflag=0;
+        if(regs[fo]<0) break;
+        if((so&0x10) && (x<0 || y<0 || x>=board_info.width || y>=board_info.height)) break;
+        t=zone_enum(fo,so);
+        if(condflag) {
+          if(so&0x10) ozone[so&15]->xy[t]=(OrdZoneXY){x,y}; else x=ozone[so&15]->xy[t].x,y=ozone[so&15]->xy[t].y;
+          if(so&0x20) {
+            ozone[so&15]->ncells--;
+            memmove(ozone[so&15]->xy+t,ozone[so&15]->xy+t+1,(ozone[so&15]->ncells-t)*sizeof(OrdZoneXY));
+          }
+          regs[fo]=t+((so>>6)&1)-((so>>7)&1);
         }
         break;
       case OP_ZEX: so=(Uint16)so; goto store;
