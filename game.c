@@ -5587,6 +5587,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_GBF: regs[fo]=board_info.flag&~so; break;
       case OP_GBU: regs[fo]=board_info.userdata&~so; break;
       case OP_GCOU: so&=0xFFFF; so=(so<1?-1:so>maxstat?0:stats[so-1].count); goto store;
+      case OP_GEX: if(rs=get_statxy(so)) regs[fo]=rs->extra; break;
       case OP_GIP: if(rs=get_statxy(so)) regs[fo]=rs->instptr; break;
       case OP_GIVE: status_vars[fo]+=so; break;
       case OP_GM1: so&=0xFFFF; so=(so<1?0:so>maxstat?0:stats[so-1].misc1); goto store;
@@ -5903,6 +5904,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_PEEK: regs[fo]=memory[so&0xFFFF]; break;
       case OP_PEEL: so=memory[so&0xFFFF]; goto lstore;
       case OP_PEER: regs[fo]=memory[(so+regs[fo])&0xFFFF]; break;
+      case OP_PEX: if(rs=get_statxy(so)) rs->extra=regs[fo]; break;
       case OP_PICK:
         condflag=0;
         if(rs=get_statxy(so)) {

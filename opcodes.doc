@@ -1192,6 +1192,14 @@ numbers are treated as unsigned.
 [0C4 ZMOV]
   (TODO)
 
+[0EA GEX]
+  The second operand specifies the stat XY record to use; the extra value
+  of that record is written into the first operand.
+
+[0EB PEX]
+  The second operand specifies the stat XY record to use; the first operand
+  value is copied into the extra value of that record.
+
 [0EE CWIN]
   (TODO)
 

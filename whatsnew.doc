@@ -41,6 +41,8 @@ ASSEMBLY
   +  A new flag for IGIV and ITAK to restrict it to a single slot.
   +  IMOV to move items from one inventory list to another.
   +  CALS and RETS to use a call stack stored in the program memory.
+  +  Each stat instance now has a 16-bit "extra value", which can be set
+     with the PEX instruction and read with the GEX instruction.
   +  ASN.1 operators. (This feature is considered experimental.)
   +  Control flag to automatically stop key repeat when opening and closing
      a text window or item window.
@@ -62,7 +64,7 @@ OTHERS
   +  A few minor improvements in sz0music program.
   +  Improve encoding of .SCR lumps. The meaning of codes 240 and 247 are
      changed, which is technically incompatible but is unlikely to matter
-     unless you writey our own Super ZZ Zero editor, since previous
+     unless you write your own Super ZZ Zero editor, since previous
      versions of Super ZZ Zero never wrote those codes to .SCR lumps.
   =  More fixes to avoid processing key events multiple times when saving
      or restoring a save game file.
