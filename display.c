@@ -392,11 +392,18 @@ typedef struct {
   Uint8 which; // 1=16-colours 2=64-colours 4=128-colours
 } PaletteInfo;
 
+typedef struct {
+  Uint8 lo,hi,speed,delay,control,kind,arg1,arg2;
+  Uint8 raster[0];
+} FontAnim;
+
 static SDL_Surface*scrn;
 static float gamma_r,gamma_g,gamma_b;
 static SDL_Joystick*joy;
 static Uint8 rscancode;
 static PaletteInfo palinf[3];
+static FontAnim**fontanim;
+static Uint8 nfontanim;
 
 static SDL_Color palet[34]={
   // PC
@@ -515,7 +522,9 @@ void unlock_front(void) {
 
 static int load_font_advanced(const ASN1_Value*root,Uint8 z) {
   Uint16 fc,nc,v;
-  ASN1_Value a,b;
+  ASN1_Value a,b,c,d;
+  Uint32 en=0;
+  const Uint8*ex=0;
   if(root->class!=ASN1_UNIVERSAL || root->type!=ASN1_SEQUENCE || !root->constructed || !root->length) return 0;
   if(asn1_first_of(&a,root) || a.class!=ASN1_UNIVERSAL || a.type!=ASN1_INTEGER || asn1_decode_number(&a,ASN1_AUTO,&fc) || fc>256) return 0;
   if(asn1_next_of(&a,root) || a.class!=ASN1_UNIVERSAL || a.type!=ASN1_INTEGER || asn1_decode_number(&a,ASN1_AUTO,&nc) || nc>256 || fc+nc>256) return 0;
@@ -524,16 +533,105 @@ static int load_font_advanced(const ASN1_Value*root,Uint8 z) {
     if(!font) err(1,"Allocation failed");
     if(fc || nc!=256) memcpy(font,pcfont,3584);
   }
+  if(nfontanim && z==LOADFONT_BASE) {
+    FontAnim*an;
+    int i;
+    for(i=0;i<nfontanim;i++) {
+      an=fontanim[i];
+      if(fc<=an->hi && fc+nc-1>=an->lo) {
+        free(an);
+        fontanim[i]=fontanim[--nfontanim];
+      }
+    }
+  }
   if(asn1_next_of(&a,root) || (a.class==ASN1_UNIVERSAL && a.type==ASN1_NULL)) return 1;
   if(a.class==ASN1_CONTEXT_SPECIFIC && a.type==0 && a.constructed) {
     if(asn1_first_of(&b,&a) || b.class!=ASN1_UNIVERSAL || b.type!=ASN1_INTEGER || b.length!=1 || b.data[0]!=8) return 0;
     if(asn1_next_of(&b,&a) || b.class!=ASN1_UNIVERSAL || b.type!=ASN1_INTEGER || b.length!=1 || b.data[0]!=14) return 0;
     if(asn1_next_of(&b,&a) || b.class!=ASN1_UNIVERSAL || b.type!=ASN1_BIT_STRING || b.constructed) return 0;
     if(b.length<14*nc+1 || b.data[0]) return 0;
-    memcpy(font,b.data+14*fc+1,14*nc);
+    memcpy(font+14*fc,b.data+1,14*nc);
+    ex=b.data+14*nc+1; // this points into the "root" memory which is not freed until after this functions returns
+    en=b.length-(14*nc+1);
   } else {
     warnx("Unknown glyph definition type in font");
     return 0;
+  }
+  if(asn1_next_of(&a,root)) return 1;
+  // Ignore character code mapping for now
+  if(asn1_next_of(&a,root)) return 1;
+  // Ignore text direction
+  if(asn1_next_of(&a,root)) return 1;
+  if(config.font_anim && !editor && z==LOADFONT_BASE && a.class==ASN1_UNIVERSAL && a.type==ASN1_SET && a.constructed && a.length) {
+    FontAnim*an=0;
+    Sint32 ax,bx,cx,dx,i,j;
+    if(asn1_first_of(&b,&a)) return 0;
+    do {
+      if(b.class==ASN1_UNIVERSAL && b.type==ASN1_SEQUENCE && b.constructed) {
+        if(asn1_first_of(&c,&b) || c.class!=ASN1_UNIVERSAL || c.type!=ASN1_INTEGER || asn1_decode_number(&c,ASN1_INTEGER,&ax) || ax<0 || ax>=nc) continue;
+        if(asn1_next_of(&c,&b)) continue;
+        if(c.class==ASN1_UNIVERSAL && c.type==ASN1_INTEGER) {
+          if(asn1_decode_number(&c,ASN1_INTEGER,&bx) || bx<1 || ax+bx<=ax || ax+bx>nc) continue;
+          if(asn1_next_of(&c,&b)) continue;
+        } else {
+          bx=1;
+        }
+        if(c.class!=ASN1_CONTEXT_SPECIFIC || !c.constructed) continue;
+        switch(c.type) {
+          case FONTANIM_SHIFT: // arg1=xd, arg2=yd
+            an=calloc(1,sizeof(FontAnim)); if(!an) err(1,"Allocation failed");
+            if(asn1_first_of(&d,&c) || d.class!=ASN1_UNIVERSAL || d.type!=ASN1_INTEGER || !d.length) continue;
+            an->arg1=d.data[d.length-1]&7;
+            if(asn1_next_of(&d,&c) || d.class!=ASN1_UNIVERSAL || d.type!=ASN1_INTEGER || !d.length) continue;
+            an->arg2=13*(d.data[0]>>7); // note: (13*4+256) is divisible by 14
+            for(i=0;i<d.length;i++) an->arg2=(4*an->arg2+d.data[i])%14;
+            if(asn1_next_of(&d,&c)!=ASN1_DONE) continue;
+            break;
+          case FONTANIM_CYCLE: // arg1 and arg2 are not used
+            if(bx<2 || c.length) continue;
+            an=calloc(1,sizeof(FontAnim)); if(!an) err(1,"Allocation failed");
+            break;
+          case FONTANIM_FULL: // arg1=number of frames, arg2=current frame number
+            bx=1;
+            if(asn1_first_of(&d,&c) || d.class!=ASN1_UNIVERSAL || d.type!=ASN1_INTEGER || asn1_decode_number(&d,ASN1_INTEGER,&cx) || cx<0 || cx>=en/14) continue;
+            if(asn1_next_of(&d,&c) || d.class!=ASN1_UNIVERSAL || d.type!=ASN1_INTEGER || asn1_decode_number(&d,ASN1_INTEGER,&dx) || dx<1 || dx>255 || cx+dx-1>en/14) continue;
+            an=calloc(1,sizeof(FontAnim)+28*dx); if(!an) err(1,"Allocation failed");
+            an->arg1=dx; j=0;
+            memcpy(an->raster,font+(ax+fc)*14,14);
+            memcpy(an->raster+14,ex+14*cx,14*(dx-1));
+            if(!asn1_next_of(&d,&c)) {
+              if(d.class!=ASN1_UNIVERSAL || d.type!=ASN1_ENUMERATED || d.length!=1 || d.data[0]>2) continue;
+              if(dx>1 && d.data[0]) {
+                for(i=0,j=dx-d.data[0];i<dx;i++,j--) memcpy(an->raster+14*(i+dx),an->raster+14*j,14);
+                an->arg1+=dx-(d.data[0]&2);
+              }
+            }
+            an=realloc(an,sizeof(FontAnim)+14*an->arg1)?:an;
+            break;
+          default: continue;
+        }
+        an->lo=ax+fc; an->hi=ax+fc+bx-1; an->kind=c.type; an->speed=1;
+        if(an->hi<an->lo) continue;
+        if(!asn1_next_of(&c,&b)) {
+          if(c.class==ASN1_UNIVERSAL && c.type==ASN1_INTEGER && !asn1_decode_number(&c,ASN1_INTEGER,&an->speed)) {
+            i=asn1_next_of(&c,&b); if(i && i!=ASN1_DONE) continue;
+            if(!i && c.class==ASN1_UNIVERSAL && c.type==ASN1_INTEGER && !asn1_decode_number(&c,ASN1_INTEGER,&an->delay)) {
+              i=asn1_next_of(&c,&b); if(i && i!=ASN1_DONE) continue;
+            }
+          }
+          if(c.class==ASN1_CONTEXT_SPECIFIC && !(c.type&~1)) {
+            if(!asn1_first_of(&d,&c) && d.class==ASN1_UNIVERSAL && d.type==ASN1_INTEGER && d.length==1 && d.data[0]<16) an->control=(c.type<<7)+0x40+d.data[0];
+          }
+        }
+        for(i=0;i<nfontanim;i++) if(an->lo<=fontanim[i]->hi && an->hi>=fontanim[i]->lo) {
+          warnx("Conflicting font animations");
+          return 1;
+        }
+        if(!(fontanim=realloc(fontanim,sizeof(FontAnim)*++nfontanim))) err(1,"Allocation failed");
+        //printf("lo=%d hi=%d speed=%d delay=%d control=%d kind=%d arg1=%d arg2=%d\n",an->lo,an->hi,an->speed,an->delay,an->control,an->kind,an->arg1,an->arg2);
+        fontanim[nfontanim-1]=an; an=0;
+      }
+    } while(free(an),an=0,(nfontanim<255 && !asn1_next_of(&b,&a)));
   }
   return 1;
 }
@@ -546,6 +644,9 @@ int load_font(const char*name,Uint8 z) {
   if(!name) {
     free(font);
     font=0;
+    freeanim:
+    for(i=0;i<nfontanim;i++) free(fontanim[i]);
+    free(fontanim); fontanim=0; nfontanim=0;
     return 1;
   }
   for(i=0;i<8;i++) {
@@ -566,7 +667,7 @@ int load_font(const char*name,Uint8 z) {
   }
   fread(font,14,256,f);
   fclose(f);
-  return 1;
+  goto freeanim;
   advanced:
   root=(ASN1_Value){};
   buf[i]='F'; buf[i+1]='N'; buf[i+2]='T';
@@ -967,6 +1068,35 @@ void redisplay(void) {
   }
   SDL_UnlockSurface(scrn);
   SDL_Flip(scrn);
+  if(nfontanim) {
+    FontAnim*q;
+    Uint8 u[14];
+    for(a=0;a<nfontanim;a++) {
+      q=fontanim[a];
+      if(q->control) {
+        if(((memory[MEM_FONT_ANIM]>>(q->control&15))&1)!=(q->control>>7)) continue;
+      }
+      if(++q->delay==q->speed) {
+        q->delay=0;
+        switch(q->kind) {
+          case FONTANIM_SHIFT:
+            for(b=q->lo;b<=q->hi;b++) {
+              memcpy(u,p=font+14*b,14);
+              for(c=0;c<14;c++) p[(c+q->arg2)%14]=(u[c]*0x101)>>q->arg1;
+            }
+            break;
+          case FONTANIM_CYCLE:
+            memcpy(u,font+14*q->lo,14);
+            memmove(font+14*q->lo,font+14*(q->lo+1),14*(q->hi-q->lo));
+            memcpy(font+14*q->hi,u,14);
+            break;
+          case FONTANIM_FULL:
+            memcpy(font+14*q->lo,q->raster+14*(q->arg2=(q->arg2+1)%q->arg1),14);
+            break;
+        }
+      }
+    }
+  }
 }
 
 void display_title(const char*t) {

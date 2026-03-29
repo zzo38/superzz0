@@ -113,6 +113,11 @@ file_list
   by last modified time instead of by name. Add 8 to show hidden files.
   Add 32 if you want the default pattern to be "*" instead of "*.sav".
 
+font_anim
+  Set to 1 to enable font animations (if there are any defined in the
+  world file) or 0 to disable font animations. This only affects animations
+  that are defined in the .FNT lumps in the world file.
+
 full_screen
   Set to 1 for full screen or 0 (default) for windowed. (If no windowing
   system is present, then it would be ignored.)

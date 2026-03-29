@@ -1240,6 +1240,10 @@ static void edit_font(const char*name) {
   static Uint8 clip[14];
   Sint16 nclip=-1;
   char bplay=0;
+  if(adv) {
+    alert_text("Not implemented");
+    return;
+  }
   // Add new font if necessary
   if(f && lump_size) {
     fclose(f);
@@ -2614,7 +2618,7 @@ int run_editor(void) {
       win_form("Graphics") {
         win_help("editgr",0);
         win_command('s',"Font (simple)") lump_listing_menu("*.CHR","Fonts (simple)",edit_font,"editgr","chr");
-        win_command('a',"Font (advanced)") alert_text("Not implemented");
+        win_command('a',"Font (advanced)") lump_listing_menu("*.FNT","Fonts (advanced)",edit_font,"editgr","fnt");
         win_command('P',"Palette") lump_listing_menu("*.PAL","Palettes",edit_palette,"editgr","pal");
         win_blank();
         win_command('G',"Graphics global options...") graphics_global_options();

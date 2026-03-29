@@ -308,6 +308,8 @@ it is wrapped, it is a sequence with fields:
 * Text direction (enumerated): Currently the only possible value is zero,
 meaning left to right, and the first line is at the top.
 
+* Set of animation definitions.
+
 Any of them may be null, other than the first two; and if there are not
 enough fields then the rest will be treated as null.
 
@@ -320,6 +322,48 @@ of them can be used for animation, ligatures, etc.
 The character code mappings can be:
 
 * Type 0 = One integer being the IBM code page number.
+
+Each animation definition is a sequence with the fields:
+
+* First character code, relative to the first character code of this font.
+This is mandatory.
+
+* Number of character codes. This must be at least 1, and the default value
+is also 1.
+
+* The animation effect, which is a implicit typed sequence; see below.
+
+* The speed, where 1 is the fastest speed and 255 is the slowest speed. The
+default value is 1.
+
+* The initial phase, which can only be present if the speed is present (but
+it can be omitted even if the speed is present). The value is from 0 up to
+one less than the speed, and the default value is 0.
+
+* The control condition. This can be a explicit typed integer; type 0 means
+only if the corresponding bit is clear and type 1 means only if the
+corresponding bit is set, and absent or null means always. The integer is
+always in the range 0 (for the low bit) to 15 (for the high bit).
+
+The animation effects are:
+
+* Type 0 = Shift the rasters horizontally and/or vertically. Contains two
+integers, the first for horizontal shift and second for vertical shift.
+
+* Type 1 = Cycle the character glyphs in the range. This does not contain
+any parameters (but it still must be constructed rather than primitive).
+The first character glyph in range is replaced with the second one, the
+second with the third, etc, and the last one is replaced with what was
+the first one.
+
+* Type 2 = The first frame is the original glyph, and the rest of the
+frames come from the extra glyphs. The first integer in this sequence is
+the second frame glyph number relative to the first extra glyph, and the
+second integer is the number of frames (including the first frame). There
+can be an optional third item, which is enumerated, which specifies the
+oscillation mode, where 0 (the default) means one way, 1 means it reverses
+after going one way and the first and last frame are repeated, and 2 is
+like 1 but the first and last frame are not repeated.
 
 
 === *.HLP ===

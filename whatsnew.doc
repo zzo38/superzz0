@@ -23,13 +23,15 @@ GAME
   +  Allow SMZX mode to be usable.
   +  Variable properties to adjust the video mode.
   +  Item definition event flag.
+  +  Partial implementation of advanced fonts (including animated fonts
+     and partial fonts).
   =  Fix a memory leak with loading variable property lists.
 
 SCRIPTS
   +  The #SENT condition to check if a message was successfully sent.
   +  Numeric storage labels.
   +  Conditions #INZONE and #PLAYERINZONE to read/write zones.
-  +  The #EVENT: condition to check/modify event flags.
+  +  The #EVENT: condition to check/modify event flags of items.
   +  The #EDITFONT command to modify a single character of the font.
   +  Each stat instance now has a 16-bit "extra value", which can be set
      with the #EXTRA command and read with the (E) numeric expression.

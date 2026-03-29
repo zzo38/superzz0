@@ -90,6 +90,10 @@ void set_palette_vga_multi(Uint8 k,Uint8 n,const Uint8*r,const Uint8*g,const Uin
 void load_fontpal_state(const ASN1_Value*);
 void save_fontpal_state(ASN1_Encoder*);
 
+#define FONTANIM_SHIFT 0
+#define FONTANIM_CYCLE 1
+#define FONTANIM_FULL 2
+
 void configure_colors(const char*text);
 
 // === Joystick ===
@@ -621,6 +625,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_CALL_STACK 0xB2
 #define MEM_CALL_STATUS 0xB3
 #define MEM_RECEIVED_DATA_EVENT 0xB4
+#define MEM_FONT_ANIM 0xB5
 #define MEM_GLOBAL_DELAY 0xC0
 #define MEM_NEW_DYNAMIC_STAT_EVENT 0xC1
 #define MEM_OVERLAYMEM_ADDRESS 0xC2

@@ -559,4 +559,6 @@ a setting within the world file to specify the default game speed, though.)
 the MegaZeux commands: IF MUSICON, IF PCSFXON, WAIT PLAY, and possibly some
 of the counters related to audio.)
 
+* Vector fonts and outline fonts.
+
 (Some of these are not entirely certain, though.)

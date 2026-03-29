@@ -17,19 +17,20 @@ See oid.ter for a list of OIDs and some other notes.
 
 === Data types ===
 
-The "Displayable text" type means a PC string, TRON string, or General
-string. Some are single-line text, and some are multi-line text; if it
-is multi-line text, then CRLF pairs are allowed, for representing line
-breaks; otherwise, control characters should not be used. CRLF pairs are
-treated as line breaks in multi-line PC strings, but in single-line PC
-strings they are treated as a pair of graphic characters. Character code
-zero (a null character) should not be used at all.
+The "Displayable text" type means a General string or PC string or TRON
+string, with the specifications listed here. Some are single-line text, and
+some are multi-line text; if it is multi-line text, then CRLF pairs are
+allowed, for representing line breaks; otherwise, control characters should
+not be used. CRLF pairs are treated as line breaks in multi-line PC
+strings, but in single-line PC strings they are treated as a pair of
+graphic characters. Character code zero (a null character) should not be
+used at all in any string.
 
 Some Displayable fields are also "bibliographic" fields, and allow the use
-of ISO-IR-67 controls if it is a General string. The first instance of any
-one of the control characters listed below must be preceded by three bytes
-<1B 22 42> to designate the use of these controls. (It is not required to
-be a General string, but if it is not, then you cannot use these controls.)
+of ISO-IR-67 controls. The first instance of any one of the control
+characters listed below must be preceded by three bytes <1B 22 42> to
+designate the use of these controls. (These are not allowed in PC strings
+or in TRON strings.)
 
 <88> and <89> surround a part of a text which is ignored for sorting.
 
@@ -42,6 +43,12 @@ for bibliographic purposes.
 
 <9E> and <9F> surround a part of a text which is to be permuted to the
 front of the element when references and indices are generated.
+
+If DOCS is used to switch to other character encodings (such as TRON-8,
+which uses <1B 25 23 40>), then you can still use the above control
+characters but they must be made as 7-bit controls rather than 8-bit
+controls, meaning <1B> followed by subtracting <40> from the above codes,
+e.g. <1B 48> and <1B 49> for a part of a text which is ignored for sorting.
 
 
 === CATALOG.DER ===

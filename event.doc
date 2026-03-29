@@ -40,6 +40,11 @@ are the first operand register number (0 for A, 7 for H).
 $B4 = Received data event (see below). This event will only be used if the
 "external" configuration setting has been defined as a non-empty string.
 
+$B5 = Controls font animations. Some font animations can be set to only be
+animated when a specific bit in this field is set or clear. Changing this
+will not have any effect until the screen is redrawn (which usually occurs
+once per frame automatically).
+
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
 save the delay, bit9 means to save the walk/face/user flags, and bit13
