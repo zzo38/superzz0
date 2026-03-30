@@ -61,7 +61,7 @@ REGSAV	IS $10 ;x16
 
 ; **** Global parameters ****
 	TA $C4,$0010
-	TA $CB,$0002
+	TA $CB,$0182
 	TA $ED,1
 
 ; **** Keyboard handler ****

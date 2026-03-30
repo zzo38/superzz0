@@ -6686,13 +6686,7 @@ int run_game(void) {
     if(event.type==SDL_KEYDOWN) {
       if(event.key.keysym.unicode>0 && event.key.keysym.unicode<127 && !(event.key.keysym.mod&(KMOD_ALT|KMOD_META))) {
         a=event.key.keysym.unicode;
-        if((a>=32 && a<127) || a==8 || a==9 || a==13) {
-          ka=a;
-          if(event.key.keysym.sym==SDLK_KP2) kd=DIR_S;
-          if(event.key.keysym.sym==SDLK_KP4) kd=DIR_W;
-          if(event.key.keysym.sym==SDLK_KP6) kd=DIR_E;
-          if(event.key.keysym.sym==SDLK_KP8) kd=DIR_N;
-        }
+        if((a>=32 && a<127) || a==8 || a==9 || a==13) ka=a;
       } else {
         switch(event.key.keysym.sym) {
           case SDLK_UP: ka=(event.key.keysym.mod&KMOD_SHIFT)?30:24; kd=DIR_N; break;
@@ -6777,7 +6771,11 @@ int run_game(void) {
   }
   nextturn:
   if(ka) {
-    sendkey: run_program(memory[MEM_KEY_EVENT],ka,kd==DIR_E?1:kd==DIR_W?-1:0,kd==DIR_S?1:kd==DIR_N?-1:0,kd);
+    sendkey:
+    if(memory[MEM_CONTROL]&CONTROL_NUMBER_KEY_DIRECTION) {
+      if(ka=='2') kd=DIR_S; else if(ka=='4') kd=DIR_W; else if(ka=='6') kd=DIR_E; else if(ka=='8') kd=DIR_N;
+    }
+    run_program(memory[MEM_KEY_EVENT],ka,kd==DIR_E?1:kd==DIR_W?-1:0,kd==DIR_S?1:kd==DIR_N?-1:0,kd);
   } else if(autofire) {
     ka=autofire; kd=autofire_dir; goto sendkey;
   }

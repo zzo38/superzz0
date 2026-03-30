@@ -192,6 +192,9 @@ check if it is successfully sent.
 $0080 = Causes it to automatically stop the key repeat when a text window,
 item window, or custom window is opened, and again when it is closed.
 
+$0100 = If this is set then number keys are treated as directions for the
+purpose of key events.
+
 
 === Order of execution ===
 
@@ -472,8 +475,7 @@ $00C8
 
 $00E0
   Keyboard event at the beginning of each frame, if any key is pushed.
-  Number pad are treated as numbers or arrows depending on num lock, but
-  will set the direction even if num lock is on, unlike top row numbers.
+  Number pad are treated as numbers or arrows depending on num lock.
 
   A key code can be a printable ASCII character or one of the following:
     1 to 4 = Debug commands
