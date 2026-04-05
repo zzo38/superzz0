@@ -48,6 +48,7 @@ ASSEMBLY
   +  ASN.1 operators. (This feature is considered experimental.)
   +  Control flag to automatically stop key repeat when opening and closing
      a text window or item window.
+  +  ZMOV to move zones and/or move tiles within zones.
   =  Fix bugs with some instructions.
   *  Numbers on the number pad are no longer automatically treated as
      directions if num lock is on; instead, whether numbers (all numbers,

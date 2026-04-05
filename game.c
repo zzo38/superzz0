@@ -460,7 +460,7 @@ Uint8 in_zone(Uint32 x,Uint32 y,Uint8 z) {
   if(x>=board_info.width || y>=board_info.height) return 0;
   switch(z&=0x7F) {
     case 0x00 ... 0x0F: if((u=uzone[z&15]) && y<=u->maxy && ((1<<(at&7))&u->data[at/8])) r^=1; break;
-    case 0x10 ... 0x1F: if(o=ozone[z&15]) for(at=0;at<o->ncells;at++) if(o->xy[at].x==x && o->xy[at].y==y) r^=1; break;
+    case 0x10 ... 0x1F: if(o=ozone[z&15]) for(at=0;at<o->ncells;at++) if(o->xy[at].x==x && o->xy[at].y==y) return r^1; break;
     case 0x20 ... 0x2F: if((elem_def[b_main[at].kind].attrib&15)==(z&15) || (elem_def[b_under[at].kind].attrib&15)==(z&15)) r^=1; break;
     case 0x30 ... 0x37: if(b_over[at].kind&(1<<(z&7))) r^=1; break;
     case 0x38 ... 0x3F: if((elem_def[b_main[at].kind].attrib|elem_def[b_under[at].kind].attrib)&(A_MISC_A<<(z&7))) r^=1; break;
@@ -517,7 +517,7 @@ void zone_remove(Uint32 x,Uint32 y,Uint8 z) {
     case 0x00 ... 0x0F: if((u=uzone[z&15]) && y<=u->maxy) u->data[at/8]&=~(1<<(at&7)); break;
     case 0x10 ... 0x1F:
       if(o=ozone[z&15]) for(at=0;at<o->ncells;at++) if(o->xy[at].x==x && o->xy[at].y==y) {
-        if(at!=o->ncells-1) memmove(o->xy+at+1,o->xy+at,(o->ncells-at)*sizeof(OrdZoneXY));
+        if(at!=o->ncells-1) memmove(o->xy+at,o->xy+at+1,(o->ncells-at-1)*sizeof(OrdZoneXY));
         o->ncells--;
         break;
       }
@@ -5356,6 +5356,188 @@ static Sint32 count_items(Sint32 t,Uint32 m) {
   return t;
 }
 
+static Uint8 zone_move(Uint32 flag,Uint8 dir) {
+  UnordZone*u=0;
+  OrdZone*o=0;
+  StatXY*q;
+  Tile t,tt;
+  Uint32 i=flag&0xF0;
+  Uint32 c,j,k,x,y;
+  Sint32 xd=(dir==DIR_E?1:dir==DIR_W?-1:0);
+  Sint32 yd=(dir==DIR_S?1:dir==DIR_N?-1:0);
+  if(!i && !(u=uzone[flag&15])) return 1;
+  if(i==0x10 && !(o=ozone[flag&15])) return 1;
+  if(flag&0xFF0000) {
+    c=memory[MEM_ARG_J];
+    if(o) {
+      if(flag&0x800000) {
+        switch(dir) {
+          case DIR_E: for(i=0;i<o->ncells;i++) if(o->xy[i].x==board_info.width-1) return 0; break;
+          case DIR_N: for(i=0;i<o->ncells;i++) if(!o->xy[i].y) return 0; break;
+          case DIR_W: for(i=0;i<o->ncells;i++) if(!o->xy[i].x) return 0; break;
+          case DIR_S: for(i=0;i<o->ncells;i++) if(o->xy[i].y==board_info.height-1) return 0; break;
+        }
+      }
+      if(flag&0x7F0000) {
+        for(i=0;i<o->ncells;i++) if(in_zone(o->xy[i].x+xd,o->xy[i].y+yd,flag^0x80)) {
+          j=o->xy[i].y*board_info.width+o->xy[i].x;
+          k=(o->xy[i].y+yd)*board_info.width+(o->xy[i].x+xd);
+          if((flag&0x010000) && (elem_def[b_under[k].kind].attrib&(A_FLOOR|A_PERMANENT))!=A_FLOOR) return 0;
+          if(flag&0x020000) {
+            if(!(elem_def[b_main[k].kind].attrib&((flag&0x4000?A_CRUSH:0)|A_FLOOR))) return 0;
+            if(elem_def[b_main[k].kind].attrib&A_PERMANENT) return 0;
+          }
+          if((flag&0x040000) && (b_over[k].kind&OVER_SOLID)) return 0;
+          if((flag&0x080000) && in_zone(o->xy[i].x+xd,o->xy[i].y+yd,memory[MEM_ARG_K])) return 0;
+          if(flag&0x100000) {
+            if(!(flag&0x8000)) c=(c&0xFF00)|((elem_def[b_under[j].kind].attrib>>8)&0xFF);
+            if(!(c&(1UL<<(elem_def[b_under[k].kind].attrib&15)))) return 0;
+          }
+          if(flag&0x200000) {
+            if(!(flag&0x8000)) c=(c&0xFF00)|((elem_def[b_main[j].kind].attrib>>8)&0xFF);
+            if(!(c&(1UL<<(elem_def[b_main[k].kind].attrib&15)))) return 0;
+          }
+        }
+      }
+    } else {
+      j=0; k=yd*board_info.width+xd;
+      for(y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++,j++,k++) if(in_zone(x,y,flag)) {
+        if(in_zone(x+xd,y+yd,flag^0x80)) {
+          if((flag&0x010000) && (elem_def[b_under[k].kind].attrib&(A_FLOOR|A_PERMANENT))!=A_FLOOR) return 0;
+          if(flag&0x020000) {
+            if(!(elem_def[b_main[k].kind].attrib&((flag&0x4000?A_CRUSH:0)|A_FLOOR))) return 0;
+            if(elem_def[b_main[k].kind].attrib&A_PERMANENT) return 0;
+          }
+          if((flag&0x040000) && (b_over[k].kind&OVER_SOLID)) return 0;
+          if((flag&0x080000) && in_zone(x+xd,y+yd,memory[MEM_ARG_K])) return 0;
+          if(flag&0x100000) {
+            if(!(flag&0x8000)) c=(c&0xFF00)|((elem_def[b_under[j].kind].attrib>>8)&0xFF);
+            if(!(c&(1UL<<(elem_def[b_under[k].kind].attrib&15)))) return 0;
+          }
+           if(flag&0x200000) {
+           if(!(flag&0x8000)) c=(c&0xFF00)|((elem_def[b_main[j].kind].attrib>>8)&0xFF);
+             if(!(c&(1UL<<(elem_def[b_main[k].kind].attrib&15)))) return 0;
+          }
+        }
+        if(flag&0x800000) {
+          switch(dir) {
+            case DIR_E: if(x==board_info.width-1) return 0; break;
+            case DIR_N: if(!y) return 0; break;
+            case DIR_W: if(!x) return 0; break;
+            case DIR_S: if(y==board_info.height-1) return 0; break;
+          }
+        }
+      }
+    }
+  }
+  if(flag&0x700) {
+    for(y=(dir==DIR_S?board_info.height-1:0);;) {
+      for(x=(dir==DIR_E?board_info.width-1:0);;) {
+        if(!in_zone(x,y,flag)) goto skip;
+        c=(dir==DIR_E?(x<board_info.width-1):dir==DIR_N?(y>0):dir==DIR_W?(x>0):(y<board_info.height-1));
+        j=y*board_info.width+x;
+        k=(y+yd)*board_info.width+x+xd;
+        if(flag&0x100) {
+          t=b_under[j];
+          if(t.stat && (q=find_statxy(b_under+j))) {
+            if(c) q->x=x+xd,q->y=y+yd; else break_tile(j,1,0,0,1);
+          }
+          b_under[j]=(Tile){};
+          if(c) b_under[k]=t;
+        }
+        if(flag&0x200) {
+          t=b_main[j];
+          if(t.stat && (q=find_statxy(b_main+j))) {
+            if(c) q->x=x+xd,q->y=y+yd; else break_tile(j,2,0,0,1);
+          }
+          if(!(flag&0x100)) {
+            if(q=find_statxy(b_under+j)) q->layer++;
+            b_main[j]=b_under[j];
+          } else {
+            b_main[j]=(Tile){};
+          }
+          if(c) {
+            tt=b_main[k];
+            if(!(flag&0x100) && !((flag&0x2000) && !(elem_def[tt.kind].attrib&A_FLOOR)) && !((flag&0x4000) && (elem_def[tt.kind].attrib&A_CRUSH))) {
+              if(q=find_statxy(b_main+k)) q->layer--;
+              b_under[k]=b_main[k];
+            } else {
+              break_tile(k,2,0,0,1);
+            }
+            b_main[k]=t;
+          }
+        }
+        if(flag&0x400) {
+          t=b_over[j];
+          if(t.stat && (q=find_statxy(b_over+j))) {
+            if(c) q->x=x+xd,q->y=y+yd; else break_tile(j,3,0,0,1);
+          }
+          if(c) b_over[k]=t;
+          b_over[j]=(Tile){.kind=(t.kind&OVER_BG_THRU)|(memory[MEM_DEFAULT_OVERLAY]?OVER_VISIBLE:0),.color=memory[MEM_DEFAULT_OVERLAY]>>8,.param=memory[MEM_DEFAULT_OVERLAY],.stat=0};
+        }
+        skip: if(dir==DIR_E?(!x--):(++x==board_info.width)) break;
+      }
+      if(dir==DIR_S?(!y--):(++y==board_info.height)) break;
+    }
+  }
+  if(flag&0x800) {
+    if(o) {
+      for(i=0;i<o->ncells;i++) {
+        x=o->xy[i].x; y=o->xy[i].y;
+        if((!x && dir==DIR_W) || (!y && dir==DIR_N) || (x==board_info.width && dir==DIR_E) || (y==board_info.height && dir==DIR_S)) {
+          memmove(o->xy+i,o->xy+i+1,(o->ncells-i-1)*sizeof(OrdZoneXY));
+          --o->ncells;
+        } else {
+          o->xy[i].x+=xd; o->xy[i].y+=yd;
+        }
+      }
+    } else if(u) {
+      i=flag&0xFF; j=((u->maxy+1L)*board_info.width+7)/8;
+      //TODO: should make the north and south cases more efficient
+      switch(dir) {
+        case DIR_E:
+          for(i=x=0;i<j;i++) {
+            y=u->data[i]>>7; u->data[i]=(u->data[i]<<1)+x; x=y;
+          }
+          for(y=i=0;y<=u->maxy;y++,i+=board_info.width) u->data[i>>3]&=~(1<<(i&7));
+          break;
+        case DIR_N:
+          for(y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++) {
+            if(in_zone(x,y+1,i)) zone_add(x,y,i,0); else zone_remove(x,y,i);
+          }
+          break;
+        case DIR_W:
+          for(i=x=0;i<j;i++) {
+            y=u->data[i]<<7; u->data[i]=(u->data[i]>>1)+x; x=y;
+          }
+          for(y=0,i=board_info.width-1;y<=u->maxy;y++,i+=board_info.width) u->data[i>>3]&=~(1<<(i&7));
+          break;
+        case DIR_S:
+          for(y=board_info.height-1;y;y--) for(x=0;x<board_info.width;x++) {
+            if(in_zone(x,y-1,i)) zone_add(x,y,i,0); else zone_remove(x,y,i);
+          }
+          for(x=0;x<board_info.width;x++) zone_remove(x,0,i);
+          break;
+      }
+    } else if((flag&0x4F8)==0x30) {
+      i=1<<(flag&7);
+      for(y=(dir==DIR_S?board_info.height-1:0);;) {
+        for(x=(dir==DIR_E?board_info.width-1:0);;) {
+          if(dir==DIR_E?(x<board_info.width-1):dir==DIR_N?(y>0):dir==DIR_W?(x>0):(y<board_info.height-1)) {
+            j=y*board_info.width+x;
+            k=(y+yd)*board_info.width+x+xd;
+            b_over[k].kind|=b_over[j].kind&i;
+          }
+          b_over[j].kind&=~i;
+          if(dir==DIR_E?(!x--):(++x==board_info.width)) break;
+        }
+        if(dir==DIR_S?(!y--):(++y==board_info.height)) break;
+      }
+    }
+  }
+  return 1;
+}
+
 static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
   StatXY*rs;
   Uint16 op;
@@ -6255,6 +6437,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         break;
       case OP_ZEX: so=(Uint16)so; goto store;
       case OP_ZINF: regs[fo]=zone_info(so,regs[fo]); break;
+      case OP_ZMOV: condflag=zone_move(so,regs[fo]&3); break;
       case OP_ZROT: for(t=0;t<16;t++) if(so&(1UL<<t)) zone_rotation(t,fo>>2); break;
       case OP_ZSEN:
         if(rs=get_statxy(so)) {

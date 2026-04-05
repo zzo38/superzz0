@@ -355,7 +355,8 @@ numbers are treated as unsigned.
   Set the warp. The first operand is the target board number, and the
   second operand is the address of a subroutine to execute after the warp
   occurs (before anything else). W will be the previous board number, and
-  X,Y,Z will be the same as the current value of X,Y,Z.
+  X,Y,Z will be the same as the current value of X,Y,Z at the time that
+  the WARP instruction is executed.
 
 [045 EXIT]
   The low 2-bits of the second operand tells which direction of board exit
@@ -1139,8 +1140,8 @@ numbers are treated as unsigned.
 [0C0 XYZ]
   Check if the X and Y coordinates are in a specified zone. The second
   operand specifies which zone to check; the condition flag will be true
-  if it is in that zone or false if it is not in that zone. The first
-  operand is as follows:
+  if it is in that zone or false if it is not in that zone (coordinates
+  out of range are never in any zone). The first operand is as follows:
    A = only check
    B = remove from zone
    C = add to zone (prepend)
@@ -1190,7 +1191,31 @@ numbers are treated as unsigned.
    bit7 = Decrement first operand if successful
 
 [0C4 ZMOV]
-  (TODO)
+  Moves the coordinates in a zone and/or the tiles in the zone. The first
+  operand specifies the direction of movement in the low 2-bits (the rest
+  of the bits are ignored). The second operand is:
+   bit7-bit0 = Select zone
+   bit8 = Affect under layer
+   bit9 = Affect main layer
+   bit10 = Affect over layer
+   bit11 = Affect zone coordinates (not valid for all zones)
+   bit12 = (Reserved)
+   bit13 = Destroy non-floors in main layer
+   bit14 = Allow crushing in main layer (avoids blocking if crushable)
+   bit15 = Use low octet of J instead of element definition
+   bit16 = Blocked by non-floor in under layer
+   bit17 = Blocked by non-floor in main layer
+   bit18 = Blocked by solid in over layer
+   bit19 = Blocked by zone specified by K
+   bit20 = Blocked by classes in under layer
+   bit21 = Blocked by classes in main layer
+   bit22 = (Reserved)
+   bit23 = Blocked by edge of board
+   bit31-bit24 = (Reserved)
+  The J register specifies the movement classes if bit20 or bit21 is set,
+  and the K register specifies the zone restriction if bit19 is set. It
+  will set the condition flag if successful, or clear if it fails (it will
+  do this even if nothing is affected; so you can check if it is possible).
 
 [0EA GEX]
   The second operand specifies the stat XY record to use; the extra value

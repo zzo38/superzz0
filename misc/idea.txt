@@ -354,6 +354,77 @@ versions might change the working of the random number generator, and the
 existing random numbers should be saved for use with demo recording and
 for testing). If demo recordings can include assertions, that will help.
 
+Idea of the file format might be:
+
+* The header with an identifier of the file format, followed by one flag
+byte, and then the seven bytes in the !SZ0 lump if the low bit if the flag
+byte is set (which it usually is), and then a DER encoding of extra header
+data (such as the item randomization key).
+
+* The sequence of commands.
+
+The commands can be:
+
+* 0x00 to 0x7F = Key input, which is one frame.
+
+* 0x80 to 0xBF = Wait for 1 to 64 frames.
+
+* 0xC0 = Wait for a number of frames equal to the next byte plus 129.
+
+* 0xC1 to 0xC4 = A random number, from 1 to 4 bytes. This comes immediately
+after the key or wait command, as many times as random numbers are needed.
+The number of random numbers must be correct, and the numbers must be in
+the expected range, otherwise it is an error. Some kind of assertions are
+also allowed between random numbers, but some aren't allowed.
+
+* 0xC5 = End of window.
+
+* 0xC6 = Begin text window.
+
+* 0xC7 = Begin item window.
+
+* 0xC8 = Begin custom window.
+
+* 0xC9 = Annotation in DER format (usually a comment, but may also be other
+things, such as RTC timestamps, markers, etc). Annotations have no effect
+on the behaviour of the game (so they can be removed and any annotations
+will still work), and they are allowed anywhere after the header.
+
+* 0xCA = Change settings which affect input (such as return_cancels).
+
+* 0xCB = Window page up.
+
+* 0xCC = Window page down.
+
+* 0xCD = Window top.
+
+* 0xCE = Window bottom.
+
+* 0xCF = Window cancel.
+
+* 0xD0 = Screen assertion.
+
+* 0xD1 = Memory assertion. This is followed by a 8-bit number, which you
+add one to figure out the number of cells, followed by 16-bit starting
+address, and then the 16-bit data of the specified number of cells. It is
+an error if the contents of the program memory does not match this data.
+
+* 0xD2 = Message text assertion. Follow by one byte length and then the
+text. It is an error if the message text does not match this.
+
+* 0xD3 = Board grid assertion.
+
+* 0xD4 = Other assertions.
+
+* 0xD5 = Other testing functions (e.g. save and restore). The next byte
+tells which function is tested.
+
+* 0xD6 = Set user preferences.
+
+* 0xD7 = Stop. This is always the last command in the file.
+
+* 0xD8 = Cancel message text.
+
 
 === RPG battle mode ===
 
