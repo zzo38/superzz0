@@ -514,7 +514,7 @@ int win_numeric_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 l
   if(s==sizeof(Uint16)) n=*(Uint16*)v;
   if(s==sizeof(Uint32)) n=*(Uint32*)v;
   if(event.type==SDL_KEYDOWN) {
-    if(event.key.keysym.mod&(KMOD_ALT|KMOD_META)) {
+    if(event.key.keysym.mod&KMOD_ALT) {
       if(wm->cur==wm->line) {
         if(n<lo) r=1,n=lo; else if(n>hi) r=1,n=hi;
       }
@@ -559,7 +559,7 @@ int win_boolean_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 b
   if(visible()) draw_text(1,Y,"[?]",0x1F,3);
   draw_label(5,key,label);
   if(event.type==SDL_KEYDOWN) {
-    if(event.key.keysym.mod&(KMOD_ALT|KMOD_META)) {
+    if(event.key.keysym.mod&KMOD_ALT) {
       if(selected_key(key)) wm->ncur=wm->line,r=1;
     } else if(wm->cur==wm->line) {
       if(event.key.keysym.sym==SDLK_DOWN || (event.key.keysym.sym==SDLK_TAB && !(event.key.keysym.mod&KMOD_SHIFT))) {
@@ -600,7 +600,7 @@ int win_command_(win_memo*wm,Uint8 key,const char*label,Uint8 esc) {
     v_char[Y*80+x]='>';
   }
   if(event.type==SDL_KEYDOWN) {
-    if(event.key.keysym.mod&(KMOD_ALT|KMOD_META)) {
+    if(event.key.keysym.mod&KMOD_ALT) {
       if(selected_key(key)) wm->ncur=wm->line,r=1;
     } else if(esc && event.key.keysym.sym==SDLK_ESCAPE) {
       r=1;
@@ -660,7 +660,7 @@ int win_option_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,Uint32 b)
   if(visible()) draw_text(1,Y,"(?)",0x1F,3);
   draw_label(5,key,label);
   if(event.type==SDL_KEYDOWN) {
-    if(event.key.keysym.mod&(KMOD_ALT|KMOD_META)) {
+    if(event.key.keysym.mod&KMOD_ALT) {
       if(selected_key(key)) wm->ncur=wm->line,r=1;
     } else if(wm->cur==wm->line) {
       if(event.key.keysym.sym==SDLK_DOWN || (event.key.keysym.sym==SDLK_TAB && !(event.key.keysym.mod&KMOD_SHIFT))) {
@@ -697,7 +697,7 @@ int win_text_(win_memo*wm,Uint8 key,const char*label,Uint8*v,size_t s,Uint8 q) {
   if(!wm->cur) wm->cur=wm->line;
   x=draw_label(1,key,label);
   if(event.type==SDL_KEYDOWN) {
-    if(event.key.keysym.mod&(KMOD_ALT|KMOD_META)) {
+    if(event.key.keysym.mod&KMOD_ALT) {
       if(selected_key(key)) wm->ncur=wm->line;
     } else if(wm->cur==wm->line) {
       if(event.key.keysym.sym==SDLK_DOWN || (event.key.keysym.sym==SDLK_TAB && !(event.key.keysym.mod&KMOD_SHIFT))) {
@@ -752,7 +752,7 @@ int win_color_char_(win_memo*wm,Uint8 key,const char*label,void*v,size_t s,int m
   if(s==sizeof(Uint16)) n=*(Uint16*)v;
   if(s==sizeof(Uint32)) n=*(Uint32*)v;
   if(event.type==SDL_KEYDOWN) {
-    if(event.key.keysym.mod&(KMOD_ALT|KMOD_META)) {
+    if(event.key.keysym.mod&KMOD_ALT) {
       if(selected_key(key)) wm->ncur=wm->line;
     } else if(wm->cur==wm->line) {
       if(event.key.keysym.sym==SDLK_DOWN || (event.key.keysym.sym==SDLK_TAB && !(event.key.keysym.mod&KMOD_SHIFT))) {
@@ -844,6 +844,6 @@ void win_cursor_(win_memo*wm,int offset) {
 }
 
 void win_help_(win_memo*wm,const char*major,const char*minor) {
-  if(wm==cwin && config.help && event.type==SDL_KEYDOWN && (event.key.keysym.mod&(KMOD_ALT|KMOD_META)) && (event.key.keysym.sym==SDLK_SLASH || event.key.keysym.sym==SDLK_QUESTION)) online_help(major,minor);
+  if(wm==cwin && config.help && event.type==SDL_KEYDOWN && (event.key.keysym.mod&KMOD_ALT) && (event.key.keysym.sym==SDLK_SLASH || event.key.keysym.sym==SDLK_QUESTION)) online_help(major,minor);
 }
 

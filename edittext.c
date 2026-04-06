@@ -300,7 +300,7 @@ static Uint8*text_editor_1(Uint8*text) {
   }
   redisplay();
   do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
-  k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+  k=(!(event.key.keysym.mod&KMOD_ALT)?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
   if(k>0x1FF) k=0; else if(prefix && k>0) k+=prefix*0x1000,prefix=0;
 #define case_CTRL(x) case x-'@'
 #define case_CTRLQ(x) case 0x1000+x-'@': case 0x1000+x: case 0x1000+x+'a'-'A'

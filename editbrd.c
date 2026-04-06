@@ -3001,7 +3001,7 @@ static int gradient_preset_menu(void) {
     draw_text(78,24,buf,0x1F,snprintf(buf,8,"%02d",n));
     redisplay();
     do { if(!next_event()) return 255; } while(event.type!=SDL_KEYDOWN);
-    switch(k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym) {
+    switch(k=(!(event.key.keysym.mod&KMOD_ALT)?event.key.keysym.unicode:0)?:-event.key.keysym.sym) {
       case 0x08: n/=10; break;
       case 0x0D: if(n<=m) return n; break;
       case 0x1B: return 255;
@@ -3405,7 +3405,7 @@ Uint16 edit_board(Uint16 id) {
     if(status_on) estatus();
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
-    k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+    k=(!(event.key.keysym.mod&KMOD_ALT)?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
     if((event.key.keysym.mod&(KMOD_ALT|KMOD_CTRL|KMOD_SHIFT)) && (k==-SDLK_UP || k==-SDLK_DOWN || k==-SDLK_LEFT || k==-SDLK_RIGHT) && shifted_arrows()) continue;
     switch(emode) {
       case 0: case 15: no_mode: switch(k) {
@@ -3615,7 +3615,7 @@ Uint16 edit_board(Uint16 id) {
     if(status_on) estatus_over();
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
-    k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+    k=(!(event.key.keysym.mod&KMOD_ALT)?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
     if((event.key.keysym.mod&(KMOD_ALT|KMOD_CTRL|KMOD_SHIFT)) && (k==-SDLK_UP || k==-SDLK_DOWN || k==-SDLK_LEFT || k==-SDLK_RIGHT) && shifted_arrows()) continue;
     switch(emode) {
       case 0: case '*': no_mode1: switch(k) {
@@ -3768,7 +3768,7 @@ Uint16 edit_board(Uint16 id) {
     if(status_on) estatus_zone();
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
-    k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+    k=(!(event.key.keysym.mod&KMOD_ALT)?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
     switch(emode) {
       case 0: case '*': no_mode2: switch(k) {
         case 0x08: numprefix/=10; break;

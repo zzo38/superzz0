@@ -1149,7 +1149,7 @@ Uint16 edit_screen(Uint16 id) {
     if(status_on) estatus();
     redisplay();
     do { if(!next_event()) goto exit; } while(event.type!=SDL_KEYDOWN);
-    k=(!(event.key.keysym.mod&(KMOD_ALT|KMOD_META))?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
+    k=(!(event.key.keysym.mod&KMOD_ALT)?event.key.keysym.unicode:0)?:-event.key.keysym.sym;
     if((event.key.keysym.mod&(KMOD_ALT|KMOD_CTRL)) && (k==-SDLK_UP || k==-SDLK_DOWN || k==-SDLK_LEFT || k==-SDLK_RIGHT) && shifted_arrows()) continue;
     switch(emode) {
       case 0: case 15: no_mode: switch(k) {
