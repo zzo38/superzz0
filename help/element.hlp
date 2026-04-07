@@ -53,7 +53,8 @@ Transportable: Allows this element to be transported through a transporter.
 
 Permanent: Prevents the tile from being overwritten by several things, such
 as #PUT, #CHANGE, SINK, DROP, and TELE (in the under layer). It also causes
-the tile to be counted as solid for the purpose of ZMOV.
+the tile to be counted as solid for the purpose of ZMOV, and for the change
+of zones to elements with CHA to avoid overwriting it.
 
 Movement classes: Defines which classes of other objects this object is
 normally allowed to move into (for any reason, including pushing, crushing,
@@ -165,6 +166,15 @@ The other events and attributes are not used for this purpose.
 244: Used when an element number is required for an item definition, but
 no item is present in the slot that is being checked. This does not apply
 to the use of the ITEM opcode.
+
+245: Represents a zone. When used with COUN or CHA, where it is limited to
+a single element and single parameter value, then it matches cells in that
+zone (or adds them to that zone when used as a replacement). This only works
+when using COUN or CHA on a single layer; it cannot be used with multiple
+layers at the same time (although the zone may involve different layers
+than the tile does), and cannot be used with CHAX at all. Some script
+commands (such as #CHANGE) are also affected. (Defining the attributes and
+events of this element is not meaningful.)
 
 255: Some functions that use element numbers will use element 255 as the
 default if no other element is specified.

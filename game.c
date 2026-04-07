@@ -452,6 +452,17 @@ static void init_new_board(void) {
   }
 }
 
+static inline Uint8 in_light(Uint32 x,Uint32 y) {
+  Sint32 q=y-stats->xy->y-scroll_y;
+  Uint16 f;
+  if(q>-25 && q<25) {
+    f=memory[memory[MEM_LIGHT]+q+24];
+    q=128+x-stats->xy->x-scroll_x;
+    if(q>=(f>>8) && q<=(f&0xFF)) return 1;
+  }
+  return 0;
+}
+
 Uint8 in_zone(Uint32 x,Uint32 y,Uint8 z) {
   OrdZone*o;
   UnordZone*u;
@@ -466,6 +477,8 @@ Uint8 in_zone(Uint32 x,Uint32 y,Uint8 z) {
     case 0x38 ... 0x3F: if((elem_def[b_main[at].kind].attrib|elem_def[b_under[at].kind].attrib)&(A_MISC_A<<(z&7))) r^=1; break;
     case 0x40 ... 0x4F: if((elem_def[b_main[at].kind].attrib&15)==(z&15) || (elem_def[b_under[at].kind].attrib&15)==(z&15)) r^=1; break;
     case 0x50 ... 0x5F: if((elem_def[(elem_def[b_main[at].kind].attrib&A_FLOOR?b_main:b_under)[at].kind].attrib&15)==(z&15)) r^=1; break;
+    case 0x7E: if(memory[MEM_LIGHT]<65486 && maxstat && stats->count && in_light(x,y)) r^=1; break;
+    case 0x7F: return r^1; break;
   }
   return r;
 }
@@ -1355,7 +1368,7 @@ static void do_change_stat(Uint16 f,Uint8 os,Uint8 lay,Uint32 x,Uint32 y) {
 
 static Sint32 do_change(Uint8 how,Uint8 b,Uint32 a) {
   Sint32 n=0;
-  Uint32 z;
+  Uint32 x,y,z;
   Uint16 f=memory[a&0xFFFF];
   Tile m,mm,r,rm;
   int i,j;
@@ -1369,6 +1382,8 @@ static Sint32 do_change(Uint8 how,Uint8 b,Uint32 a) {
   }
   for(i=0;i<4;i++) m.values[i]|=mm.values[i];
   if(how==2) for(i=0;i<4;i++) r.values[i]|=rm.values[i];
+  if(how && r.kind==245 && !rm.kind && !rm.param) how+=12;
+  if(m.kind==245 && !mm.kind && !mm.param) how+=6;
   z=board_info.width*board_info.height;
   switch(f&7) {
     case 0: return 0;
@@ -1411,7 +1426,7 @@ static Sint32 do_change(Uint8 how,Uint8 b,Uint32 a) {
       for(i=1;i<4;i++) if((b_under[a].values[i]|mm.values[i])!=m.values[i]) goto skip3;
       n++;
       skip3: ;
-    }
+    } break;
     case 4: for(;a<z;a++) {
       if(((elem_def[b_under[a].kind].attrib>>24)|mm.kind)!=m.kind) goto skip4;
       for(i=1;i<4;i++) if((b_under[a].values[i]|mm.values[i])!=m.values[i]) goto skip4;
@@ -1419,6 +1434,28 @@ static Sint32 do_change(Uint8 how,Uint8 b,Uint32 a) {
       for(i=0;i<4;i++) b_under[a].values[i]=r.values[i]^(b_under[a].values[i]&rm.values[i]);
       if(j || r.stat) do_change_stat(f,j,a/(board_info.width*board_info.height)+1,a%board_info.width,(a/board_info.width)%board_info.height);
       skip4: ;
+    } break;
+    case 6: for(y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++) {
+      if((b_under[a].color|mm.color)==m.color && (b_under[a].stat|mm.stat)==m.stat && in_zone(x,y,m.param)) n++;
+      a++;
+    } break;
+    case 7: for(y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++) {
+      if((elem_def[b_under[a].kind].attrib&A_PERMANENT) && b_under[a].kind!=(r.kind^b_under[a].kind&rm.kind)) goto skip7;
+      if((b_under[a].color|mm.color)!=m.color || (b_under[a].stat|mm.stat)!=m.stat || !in_zone(x,y,m.param)) goto skip7;
+      j=b_under[a].stat;
+      for(i=0;i<4;i++) b_under[a].values[i]=r.values[i]^(b_under[a].values[i]&rm.values[i]);
+      if(r.stat==255 && rm.stat==255) goto skip7;
+      if(j || r.stat) do_change_stat(f,j,a/(board_info.width*board_info.height)+1,a%board_info.width,(a/board_info.width)%board_info.height);
+      skip7: a++;
+    } break;
+    case 13: for(y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++) {
+      for(i=0;i<4;i++) if((b_under[a].values[i]|mm.values[i])!=m.values[i]) goto skip13;
+      zone_add(x,y,r.param,1);
+      skip13: a++;
+    } break;
+    case 19: for(y=0;y<board_info.height;y++) for(x=0;x<board_info.width;x++) {
+      if((b_under[a].color|mm.color)==m.color && (b_under[a].stat|mm.stat)==m.stat && in_zone(x,y,m.param)) zone_add(x,y,r.param,1);
+      a++;
     } break;
   }
   return n;
@@ -3402,7 +3439,9 @@ static void change_to_script_kind(Uint32 x,Uint32 y,Uint8 lay,const ScriptKind*s
   Uint32 at=y*board_info.width+x;
   StatXY*o=0;
   if(x>=board_info.width || y>=board_info.height || sk->kmask) return;
-  if(lay==2) {
+  if(sk->kind==245 && !sk->kmask && !sk->pmask) {
+    zone_add(x,y,sk->param,1);
+  } else if(lay==2) {
     // Main
     if(elem_def[b_main[at].kind].attrib&A_PERMANENT) return;
     zc=b_main[at].color;
@@ -3466,6 +3505,7 @@ static void put_script_kind(Uint32 x,Uint32 y,const ScriptKind*sk) {
 static char match_script_kind(Uint32 at,Uint8 lay,const ScriptKind*sk) {
   // Return 1 if match or 0 if not match
   const Tile*t;
+  if(lay>1 && sk->kind==245 && !sk->kmask && !sk->pmask) return in_zone(at%board_info.width,at/board_info.width,sk->param);
   if(lay==2) t=b_main+at; else if(lay==1) t=b_under+at; else return 0;
   if((t->kind|sk->kmask)!=(sk->kind|sk->kmask)) return 0;
   if((t->color|sk->cmask)!=(sk->color|sk->cmask)) return 0;
@@ -4045,6 +4085,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
           } else {
             xy->instptr=ip;
             v=run_program(w+2,(n<<16)+m,xy->x,xy->y,s->speed);
+            xy=s->xy+n;
             if(v&16) xy->instptr=ip=bip;
             if(v&1) stop=1;
             if(v&4) xy->instptr=ip=65535;
@@ -4074,7 +4115,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               become:
               if(!parse_kind(s,xy,&ip,&sk,1)) {script_error(m,xy,"Improper #BECOME"); return;}
               change_to_script_kind(xy->x,xy->y,xy->layer&3,&sk);
-              ip=65535; goto stop;
+              ip=65535; xy=s->xy+n; goto stop;
             } else if(!strcmp(buf,"BIND")) {
               for(i=0;i<maxstat;i++) if(stats[i].length && match_name(stats[i].text,s->text+ip)) {
                 if(xy->x<board_info.width && xy->y<board_info.height && (j=xy->layer&3)) {
@@ -4153,6 +4194,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             } else if(!strcmp(buf,"ERASE")) {
               if(!parse_kind(s,xy,&ip,&sk,0)) {script_error(m,xy,"Improper #ERASE"); return;}
               script_do_erase(&sk);
+              xy=s->xy+n;
             } else if(!strcmp(buf,"ESCAPE")) {
               if(!textfile) {
                 textfile_text=0;
@@ -4282,15 +4324,18 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               if(condflag) {
                 if(i==-1) goto become;
                 if(parse_kind(s,xy,&ip,&sk,1)) put_script_kind(xy->x+(i==DIR_E)-(i==DIR_W),xy->y+(i==DIR_S)-(i==DIR_N),&sk);
+                xy=s->xy+n;
               }
             } else if(!strcmp(buf,"PUTAT")) {
               i=parse_number(s,xy,&ip);
               j=parse_number(s,xy,&ip);
               if(parse_kind(s,xy,&ip,&sk,1)) put_script_kind(i,j,&sk);
+              xy=s->xy+n;
             } else if(!strcmp(buf,"PUTBELOW")) {
               if(xy->layer&2) {
                 if(!parse_kind(s,xy,&ip,&sk,1)) {script_error(m,xy,"Improper #PUTBELOW"); return;}
                 change_to_script_kind(xy->x,xy->y,1,&sk);
+                xy=s->xy+n;
               }
             } else goto badcommand; break;
           case 'R':

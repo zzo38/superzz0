@@ -24,6 +24,10 @@ is the zone number minus sixty-four.
 under layer if the main layer is not a floor, has the class whose number is
 the zone number minus eighty.
 
+þ 126 ($7E) þ The light shape around the player.
+
+þ 127 ($7F) þ This zone automatically contains all cells in the board grid.
+
 þ 128-255 ($80-$8F) þ Any grid cell is in this zone iff it is not in the
 zone with the number of this one minus 128. For example, zone 129 consists
 of all cells that are not in zone 1 and vice versa.
