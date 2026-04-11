@@ -686,9 +686,11 @@ int load_font(const char*name,Uint8 z) {
     if(!load_font_advanced(&root,z)) goto error;
   }
   asn1_free(&root);
+  fclose(f);
   return 1;
   error:
   asn1_free(&root);
+  fclose(f);
   if(!editor) errx(1,"Font '%s' in mode %d has incorrect or unusable data",buf,z);
   alert_text("Invalid font data");
   free(font);
@@ -798,6 +800,7 @@ void set_palette_vga_multi(Uint8 k,Uint8 n,const Uint8*r,const Uint8*g,const Uin
 void load_fontpal_state(const ASN1_Value*v) {
   char name[9];
   ASN1_Value v0,v1;
+  int i;
   if(v->class) goto bad;
   load_font(0,LOADFONT_RESET);
   load_palette(0,LOADPAL_RESET);
@@ -815,12 +818,32 @@ void load_fontpal_state(const ASN1_Value*v) {
       snprintf(name,9,"%*.*s",(int)v1.length,(int)v1.length,v1.data);
       load_palette(name,LOADPAL_BASE);
     } while(!asn1_next_of(&v1,&v0));
+    if(asn1_next_of(&v0,v)) return;
+    if(config.font_anim) {
+      if(v0.class || (v0.type!=ASN1_NULL && v0.type!=ASN1_SEQUENCE)) goto bad;
+      if(v0.type==ASN1_SEQUENCE) {
+        nfontanim=asn1_count(&v0);
+        fontanim=calloc(nfontanim,sizeof(FontAnim*));
+        if(nfontanim && !fontanim) err(1,"Allocation failed");
+        for(i=0;i<nfontanim;i++) {
+          if(i?asn1_next_of(&v1,&v0):asn1_first_of(&v1,&v0)) goto bad;
+          if(v1.type!=ASN1_OCTET_STRING || v1.length<8 || v1.length>0xE08) goto bad;
+          if(v1.data[5]==FONTANIM_FULL && v1.data[6]*14!=v1.length-8) goto bad;
+          fontanim[i]=malloc(sizeof(FontAnim)+v1.length-8);
+          if(!fontanim[i]) err(1,"Allocation failed");
+          fontanim[i][0]=(FontAnim){v1.data[0],v1.data[1],v1.data[2],v1.data[3],v1.data[4],v1.data[5],v1.data[6],v1.data[7]};
+          if(v1.length>8) memcpy(fontanim[i]->raster,v1.data+8,v1.length-8);
+        }
+      }
+    }
   } else if(v->type!=ASN1_NULL) {
     bad: errx(1,"Font/palette state in save game file has unexpected format");
   }
 }
 
 void save_fontpal_state(ASN1_Encoder*enc) {
+  int i;
+  FILE*f;
   if(!font && !palinf[0].name[0] && !palinf[1].name[0] && !palinf[2].name[0]) {
     asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
     return;
@@ -832,6 +855,26 @@ void save_fontpal_state(ASN1_Encoder*enc) {
       if(palinf[1].name[0] && palinf[1].which) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[1].name);
       if(palinf[2].name[0] && palinf[2].which) asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,palinf[2].name);
     asn1_end(enc);
+    if(nfontanim) {
+      asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+        for(i=0;i<nfontanim;i++) {
+          f=asn1_primitive_stream(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING);
+          if(!f) err(1,"Allocation failed");
+          fputc(fontanim[i]->lo,f);
+          fputc(fontanim[i]->hi,f);
+          fputc(fontanim[i]->speed,f);
+          fputc(fontanim[i]->delay,f);
+          fputc(fontanim[i]->control,f);
+          fputc(fontanim[i]->kind,f);
+          fputc(fontanim[i]->arg1,f);
+          fputc(fontanim[i]->arg2,f);
+          if(fontanim[i]->kind==FONTANIM_FULL) fwrite(fontanim[i]->raster,14,fontanim[i]->arg1,f);
+          asn1_end(enc);
+        }
+      asn1_end(enc);
+    } else {
+      asn1_encode_null(enc);
+    }
   asn1_end(enc);
 }
 
