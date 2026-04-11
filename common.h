@@ -684,6 +684,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define CONTROL_SENT 0x0040
 #define CONTROL_WIN_STOP_KEY_REPEAT 0x0080
 #define CONTROL_NUMBER_KEY_DIRECTION 0x0100
+#define CONTROL_OVERLAY_SENSOR 0x0200
 
 extern Uint16 memory[0x10000];
 extern Sint32 regs[8];

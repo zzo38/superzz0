@@ -48,6 +48,8 @@ ASSEMBLY
   +  ASN.1 operators. (This feature is considered experimental.)
   +  Control flag to automatically stop key repeat when opening and closing
      a text window or item window.
+  +  Control flag to cause stats moving in the overlay to remember what
+     used to be in their place using the sensor field.
   =  Fix bugs with some instructions.
   *  Numbers on the number pad are no longer automatically treated as
      directions if num lock is on; instead, whether numbers (all numbers,

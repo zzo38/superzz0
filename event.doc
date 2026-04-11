@@ -195,6 +195,12 @@ item window, or custom window is opened, and again when it is closed.
 $0100 = If this is set then number keys are treated as directions for the
 purpose of key events.
 
+$0200 = Uses the sensor field of the stat instance data of stats in the
+overlay to remember what it was standing on, instead of using the data at
+address $C9. (It still uses $C9 for moving stuff other than stats.) If the
+"background of under layer" attribute of element 240 is set then it will
+change the background colour to the match the tile being walked on.
+
 
 === Order of execution ===
 

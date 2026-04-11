@@ -1675,6 +1675,13 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
     if(!(flag&2)) {
       b_under[to]=b_main[to];
       if(b_under[to].stat && (q=find_statxy(b_under+to))) q->layer--;
+    } else if(b[at].stat && (memory[MEM_CONTROL]&CONTROL_OVERLAY_SENSOR) && qq) {
+      Tile ti=b[to];
+      b[to]=b[at];
+      if(e0&A_UNDER_BGCOLOR) b[to].color=(b[to].color&0x0F)|(ti.color&0xF0);
+      b[at]=qq->sensor;
+      qq->sensor=ti;
+      goto setxy;
     }
     b[to]=b[at];
     if(flag&2) {
@@ -1694,7 +1701,7 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
     }
     if(qq) {
       if(qq->sensor.stat && qq->sensor.kind) move_sensor_stat(qq->sensor.stat,qq->x,qq->y,tx,ty);
-      qq->x=tx; qq->y=ty;
+      setxy: qq->x=tx; qq->y=ty;
     }
     at=to;
   }
