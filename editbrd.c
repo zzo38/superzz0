@@ -1254,7 +1254,7 @@ static void over_cursor_move(Sint32 xd,Sint32 yd) {
     if(!numprefix) numprefix=1;
     while(numprefix-- && xcur+xd>=0 && xcur+xd<board_info.width && ycur+yd>=0 && ycur+yd<board_info.height) {
       if(autocirc) circulate_clipq(-1,&overclip,overclipq);
-      over_place_at(xcur+=xd,ycur+=yd,clip);
+      over_place_at(xcur+=xd,ycur+=yd,overclip);
     }
   }
   numprefix=0;
