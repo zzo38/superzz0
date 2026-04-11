@@ -1678,7 +1678,10 @@ static Uint32 general_move(Uint8 pushing,Uint32 at,Sint32 xx,Sint32 yy,Uint16 fl
     } else if(b[at].stat && (memory[MEM_CONTROL]&CONTROL_OVERLAY_SENSOR) && qq) {
       Tile ti=b[to];
       b[to]=b[at];
-      if(e0&A_UNDER_BGCOLOR) b[to].color=(b[to].color&0x0F)|(ti.color&0xF0);
+      if(memory[MEM_OVERLAY_KEEP_BITS]) {
+        b[to].kind=(b[to].kind&~(memory[MEM_OVERLAY_KEEP_BITS]>>8))|(ti.kind&(memory[MEM_OVERLAY_KEEP_BITS]>>8));
+        b[to].color=(b[to].color&~memory[MEM_OVERLAY_KEEP_BITS])|(ti.color&memory[MEM_OVERLAY_KEEP_BITS]);
+      }
       b[at]=qq->sensor;
       qq->sensor=ti;
       goto setxy;

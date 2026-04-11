@@ -626,6 +626,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_CALL_STATUS 0xB3
 #define MEM_RECEIVED_DATA_EVENT 0xB4
 #define MEM_FONT_ANIM 0xB5
+#define MEM_OVERLAY_KEEP_BITS 0xB6
 #define MEM_GLOBAL_DELAY 0xC0
 #define MEM_NEW_DYNAMIC_STAT_EVENT 0xC1
 #define MEM_OVERLAYMEM_ADDRESS 0xC2

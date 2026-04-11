@@ -158,8 +158,7 @@ this element by default.
 
 240: This element is used for overlay tiles, although not all attributes
 and events are meaningful (and some attributes are overridden by the SOLID
-bit of the overlay tile). The appearance is never used, with one exception
-described in event.doc.
+bit of the overlay tile). The appearance is never used.
 
 241-243: The stat event of these elements is used for independent stats.
 The other events and attributes are not used for this purpose.

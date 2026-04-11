@@ -498,10 +498,21 @@ due to limitations in SDL, this is not implemented yet.
 A "portable mode" could be added for the purpose of being distributed with
 the game world file and game engine program together.
 
-Independently of this (although probably commonly used together with it),
-there might be a preprocessor definition for excluding the editor when
-compiling, such as CONFIG_EXCLUDE_EDITOR. (The default portable mode might
-use both CONFIG_DISABLE_FRONT and CONFIG_EXCLUDE_EDITOR.)
+
+=== Compile configuration ===
+
+CONFIG_BSD_LIBRARY means that it should be compiled to use the BSD library
+instead of the GNU library.
+
+CONFIG_DEFAULT_CONFIG tells a path to a default user configuration file,
+which will be used if there is no .superzz0rc in the home directory. (This
+can be used by distributions to set a default configuration for all users.)
+
+CONFIG_EXCLUDE_EDITOR excludes the editor, as well as many of the debug
+functions (although some features.
+
+CONFIG_INCLUDE_RECORDING includes the code needed for demo recording and
+playback. (It would normally be disabled to improve performance.)
 
 
 === Catalog service ===

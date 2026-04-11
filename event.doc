@@ -45,6 +45,11 @@ animated when a specific bit in this field is set or clear. Changing this
 will not have any effect until the screen is redrawn (which usually occurs
 once per frame automatically).
 
+$B6 = If the control flag $0200 is set, then this controls which bits of
+the colour and flags of overlay tiles are inherited by stats that are
+moving over them. The low nybble is used for colours and the high nybble
+is used for the kind bits.
+
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
 save the delay, bit9 means to save the walk/face/user flags, and bit13
@@ -197,9 +202,7 @@ purpose of key events.
 
 $0200 = Uses the sensor field of the stat instance data of stats in the
 overlay to remember what it was standing on, instead of using the data at
-address $C9. (It still uses $C9 for moving stuff other than stats.) If the
-"background of under layer" attribute of element 240 is set then it will
-change the background colour to the match the tile being walked on.
+address $C9. (It still uses $C9 for moving stuff other than stats.)
 
 
 === Order of execution ===
