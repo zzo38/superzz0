@@ -1382,11 +1382,11 @@ static Sint32 do_change(Uint8 how,Uint8 b,Uint32 a) {
   }
   for(i=0;i<4;i++) m.values[i]|=mm.values[i];
   if(how==2) for(i=0;i<4;i++) r.values[i]|=rm.values[i];
-  if(how && r.kind==245 && !rm.kind && !rm.param) how+=12;
-  if(m.kind==245 && !mm.kind && !mm.param) how+=6;
+  if(how && r.kind==245 && !rm.kind && !rm.param && (f&7)!=4) how+=12;
+  if(m.kind==245 && !mm.kind && !mm.param && (f&7)!=4) how+=6;
   z=board_info.width*board_info.height;
   switch(f&7) {
-    case 0: return 0;
+    case 0: if(how!=19 && how!=6) return 0;
     case 1: a=0; break;
     case 2: a=z; z+=z; break;
     case 3: a=0; z+=z; break;
