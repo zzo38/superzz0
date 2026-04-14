@@ -187,6 +187,8 @@ P          Add cell to zone (reverse)
 , .        Previous/next zone
 < >        Go to northwest/southeast corner of board
 
+!-zone;Zones
+
 :area;Area buffer
 The area buffer stores tiles including their relative position to the
 origin, which is the cursor position, when the area is saved as well as

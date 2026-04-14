@@ -67,6 +67,9 @@ $text
 A label acts as a subroutine if the label name where it is defined is
 followed by an asterisk, and then optionally any combination of:
 
+* E = Saves the extra value of this stat instance, which will be restored
+when returning from this subroutine.
+
 * L = Locks the object when the message is received, and unlocks it when
 returning from the subroutine. If it was already locked when the message
 is received (which is normally only possible if it is sent by the same

@@ -1866,6 +1866,7 @@ static void frame_push(Stat*s,StatXY*r,Uint8 c,Uint16 p) {
     1 = Restore label
     2 = Go to frame
     3 = Set delay
+    4 = Extra value
   */
   Uint8*t=s->text;
   Sint32 k;
@@ -1933,6 +1934,7 @@ static int frame_return(Stat*s,StatXY*r,int d) {
         }
         r->delay=k&0xFFFF;
         return 0;
+      case 4: r->extra=k&0xFFFF; break;
       default: errx(1,"Improper script frame");
     }
   } else {
@@ -1952,6 +1954,7 @@ static Uint8 send_message_to(Stat*s,StatXY*r,Sint32 f,const char*e) {
   if(e && *e++=='*') {
     h=0x01;
     while(*e && *e!='\n' && *e!='=') switch(*e++) {
+      case 'e': case 'E': h|=0x08; break;
       case 'l': case 'L': h|=0x02; break;
       case 'z': case 'Z': h|=0x04; break;
     }
@@ -1974,6 +1977,7 @@ static Uint8 send_message_to(Stat*s,StatXY*r,Sint32 f,const char*e) {
         frame_push(s,r,1,k);
       }
     }
+    if(h&0x08) frame_push(s,r,4,r->extra);
     r->delay=0;
   } else if(memory[MEM_CONTROL]&CONTROL_DELAY0_SEND) {
     r->delay=0;
