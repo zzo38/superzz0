@@ -255,25 +255,12 @@ then be used for further extended opcodes. (Perhaps, those that are going
 to be less common, or need an additional operand, might use these.)
 
 
-=== Zones ===
-
-These zones are meant to be like a combination of the rotation zones in
-ZZ Zero and the zones in OHRRPGCE. The number of zones per board probably
-does not have to be very large; eight might be sufficient (allowing one
-byte to specify a set of zones to select).
-
-
 === Script subroutines ===
 
 This feature is implemented now, although possibly it may be improved.
 
-*P means it has priority, so it would be called even if it is locked.
-
 *Q would add the message to a queue if it is currently locked; it will be
 called once the subroutine stack is empty.
-
-*S would cause a received message to be received by the first unlocked
-instance rather than all of them.
 
 *V would cause the numeric storage of the label (see the below section) to
 be used as a semaphore. It is decremented when the subroutine is called,

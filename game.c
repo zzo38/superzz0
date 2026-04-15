@@ -1868,6 +1868,7 @@ static void frame_push(Stat*s,StatXY*r,Uint8 c,Uint16 p) {
     3 = Set delay
     4 = Extra value
   */
+  static const Uint8 dots[]="................";
   Uint8*t=s->text;
   Sint32 k;
   if(!s->frame) {
@@ -1878,14 +1879,14 @@ static void frame_push(Stat*s,StatXY*r,Uint8 c,Uint16 p) {
     if(!t) err(1,"Allocation failed");
     if(global_text==s->text) global_text=t,global_length=s->length+16;
     s->text=t;
-    memcpy(t+s->length,s->frame?"................":"\n''.............",17);
+    memcpy(t+s->length,s->frame?dots:(const Uint8*)"\n''.............",17);
     if(!s->frame) s->frame=s->length+3;
     s->length+=16;
   }
   if(!r->frame) r->frame=s->frame;
-  if(!t[r->frame] || memcmp(t+r->frame,"......",c>31?3:1)) {
+  if(!t[r->frame] || (c!='X' && r->frame==s->frame) || memcmp(t+r->frame,dots,c>31?3:1)) {
     // Find a free space
-    for(k=s->frame;k<s->length;k++) if(memcmp(t+k,"......",c>31?6:4)) goto found;
+    for(k=s->frame;k<s->length;k++) if(!memcmp(t+k,dots,c>31?6:4)) goto found;
     r->frame=s->length;
     goto allocate;
     found:
@@ -1940,6 +1941,7 @@ static int frame_return(Stat*s,StatXY*r,int d) {
   } else {
     switch(t[r->frame-1]) {
       case 'C': t[--r->frame]='.'; return 1;
+      case 'E': t[--r->frame]='.'; r->instptr=65535; return d;
       case 'U': t[--r->frame]='.'; r->layer&=0x7F; break;
       case 'X': t[r->frame-1]='.'; r->frame=0; return d;
       default: errx(1,"Improper script frame");
@@ -1948,17 +1950,23 @@ static int frame_return(Stat*s,StatXY*r,int d) {
   goto again;
 }
 
-static Uint8 send_message_to(Stat*s,StatXY*r,Sint32 f,const char*e) {
-  Uint8 h=0;
-  Sint32 k;
-  if(e && *e++=='*') {
-    h=0x01;
-    while(*e && *e!='\n' && *e!='=') switch(*e++) {
-      case 'e': case 'E': h|=0x08; break;
-      case 'l': case 'L': h|=0x02; break;
-      case 'z': case 'Z': h|=0x04; break;
-    }
+static Uint8 frame_options(void) {
+  Uint8 h;
+  const char*e=end_of_label;
+  if(!e || *e++!='*') return 0;
+  h=1;
+  while(*e && *e!='\n' && *e!='=') switch(*e++) {
+    case 'e': case 'E': h|=0x08; break;
+    case 'l': case 'L': h|=0x02; break;
+    case 'p': case 'P': h|=0x10; break;
+    case 's': case 'S': h|=0x20; break;
+    case 'z': case 'Z': h|=0x04; break;
   }
+  return h;
+}
+
+static Uint8 send_message_to(Stat*s,StatXY*r,Sint32 f,Uint8 h) {
+  Sint32 k;
   if(h) {
     if(r->instptr==65535) {
       if(r->frame && r->frame!=s->frame) frame_push(s,r,'E',0);
@@ -1988,6 +1996,7 @@ static Uint8 send_message_to(Stat*s,StatXY*r,Sint32 f,const char*e) {
 }
 
 static void send_message(Uint32 n,const char*label,Uint8 ignlock) {
+  Uint8 h=0;
   const char*p;
   const char*q=strchr(label,':');
   StatXY*r;
@@ -2001,14 +2010,15 @@ static void send_message(Uint32 n,const char*label,Uint8 ignlock) {
       if(p && !match_name(s->text,p)) continue;
       f=find_label(s=stats+n,label);
       if(f!=-1) {
-        for(m=0;m<s->count;m++) if(!(s->xy[m].layer&0xA0) && send_message_to(s,s->xy+m,f,end_of_label) && (f=find_label(s,label))==-1) break;
+        h=frame_options();
+        for(m=0;m<s->count;m++) if(!(s->xy[m].layer&(h&0x10?0x20:0xA0)) && send_message_to(s,s->xy+m,f,h) && ((h&0x20) || (f=find_label(s,label))==-1)) break;
       }
     }
   } else if(r=get_statxy(n)) {
     if(r->layer&0x20) return;
     if(*label=='*') ignlock=0,++label; else if((r->layer&0x80) && !ignlock) return;
     f=find_label(s=stats+(n&0xFF)-1,label);
-    if(f!=-1) send_message_to(s,r,f,end_of_label);
+    if(f!=-1) send_message_to(s,r,f,frame_options());
   }
 }
 
@@ -2022,7 +2032,7 @@ static void send_message_at(Uint8 lay,Uint32 x,Uint32 y,const char*label,Uint8 i
   if(o=find_statxy(t)) {
     if(ignlock && (o->layer&0x80)) return;
     f=find_label(stats+t->stat-1,label);
-    if(f!=-1) send_message_to(stats+t->stat-1,o,f,end_of_label);
+    if(f!=-1) send_message_to(stats+t->stat-1,o,f,frame_options());
   }
 }
 
@@ -4363,6 +4373,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               buf[v]=0;
               xy->instptr=65535;
               if(frame_return(s,xy,v)) {
+                xy=s->xy+n;
                 if(v) send_message((n<<16)+m,buf,1);
                 ip=xy->instptr;
                 if(ip!=65535) goto begin;

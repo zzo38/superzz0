@@ -76,6 +76,12 @@ is received (which is normally only possible if it is sent by the same
 object), then it will remain locked after it returns (although it can be
 unlocked by the script normally, in which case it remains unlocked).
 
+* P = Ignores locks if the message is being sent to all instances rather
+than only a specific instance.
+
+* S = When sending to multiple instances, it will only send to the first
+one instead of all of them.
+
 * Z = Zaps the label when the message is received, and restores it when
 returning from the subroutine. Only that specific instance of that label
 is restored, unlike the #RESTORE command. (It is possible to restore that

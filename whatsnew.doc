@@ -35,7 +35,9 @@ SCRIPTS
   +  The #EDITFONT command to modify a single character of the font.
   +  Each stat instance now has a 16-bit "extra value", which can be set
      with the #EXTRA command and read with the (E) numeric expression.
+  +  New subroutine specifications.
   =  Fix bugs with some commands and conditions.
+  =  Fix bugs with script frames and script subroutines.
 
 ASSEMBLY
   +  New instructions for dealing with zones.
