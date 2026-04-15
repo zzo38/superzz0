@@ -1075,6 +1075,8 @@ void update_screen(void) {
 StatXY*add_statxy(int n) {
   Stat*s=stats+n-1;
   StatXY*r;
+  if(!editor && v_status[1] && v_status[1]!=32) errx(1,"Cannot add stat instances at this time");
+  if(s->count>=0xFFFE) errx(1,"Too many stat instances");
   s->xy=realloc(s->xy,++s->count*sizeof(StatXY));
   if(!s->xy) errx(1,"Allocation failed");
   r=s->xy+s->count-1;
