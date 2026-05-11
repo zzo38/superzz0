@@ -98,7 +98,7 @@ static int do_font_palette(const ASN1_Value*v) {
   if(a.type==ASN1_VISIBLE_STRING && a.length>0) {
     memcpy(m,a.data,a.length);
     m[a.length]=0;
-    if(!load_font(m,LOADFONT_BASE)) return 1;
+    if(!load_font(m,LOADFONT_BASE|LOADFONT_CHARMAP)) return 1;
   } else if(a.type!=ASN1_NULL) {
     return 1;
   }

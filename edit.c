@@ -1793,6 +1793,7 @@ static void graphics_global_options(void) {
   if(bit&3) add_general_oid(bit&1?MANDATORY:OPTIONAL,ASN1_RELATIVE_OID,"\x04\x00\x0E",3);
   save_general_der();
   unload_general_der();
+  if(*mfont) load_font(mfont,LOADFONT_BASE|LOADFONT_CHARMAP);
 }
 
 static void edit_snd(const char*name) {

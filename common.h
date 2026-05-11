@@ -82,7 +82,9 @@ void set_palette_vga_multi(Uint8 k,Uint8 n,const Uint8*r,const Uint8*g,const Uin
 #define LOADFONT_WIDE 1
 #define LOADFONT_EGS_BASE 2
 #define LOADFONT_EGS_WIDE 3
-#define LOADFONT_RESET 255
+#define LOADFONT_RESET 15
+#define LOADFONT_MASK 15
+#define LOADFONT_CHARMAP 16
 
 #define LOADPAL_BASE 0
 #define LOADPAL_RESET 255

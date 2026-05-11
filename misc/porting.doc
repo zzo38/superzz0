@@ -55,6 +55,27 @@ selections and clipboard but only support Unicode. For non-Unicode text,
 it will be necessary to use the X window functions directly.)
 
 
+=== BSD ===
+
+Working on BSD is probably less difficult than DOS and Windows and other
+systems since it is a UNIX system, although there are differences between
+BSD and GNU and Linux.
+
+The GNU functions and Linux functions used will need to be found and to be
+changed to BSD functions. Lists of some of these are below, but they are
+probably incomplete.
+
+GNU functions:
+
+* fopencookie is used; I think on BSD you would use funopen instead.
+
+Linux functions:
+
+* /proc/self/exe is used by the editor to call the executable in the game
+play mode; I think on BSD you would use /proc/curproc/file instead but I
+do not have BSD and cannot test this.
+
+
 === DOS ===
 
 DOS has 8.3 case-insensitive file names. This should not be a problem with

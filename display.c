@@ -533,7 +533,7 @@ static int load_font_advanced(const ASN1_Value*root,Uint8 z) {
     if(!font) err(1,"Allocation failed");
     if(fc || nc!=256) memcpy(font,pcfont,3584);
   }
-  if(nfontanim && z==LOADFONT_BASE) {
+  if(nfontanim && (z&LOADFONT_MASK)==LOADFONT_BASE) {
     FontAnim*an;
     int i;
     for(i=0;i<nfontanim;i++) {
@@ -562,7 +562,7 @@ static int load_font_advanced(const ASN1_Value*root,Uint8 z) {
   if(asn1_next_of(&a,root)) return 1;
   // Ignore text direction
   if(asn1_next_of(&a,root)) return 1;
-  if(config.font_anim && !editor && z==LOADFONT_BASE && a.class==ASN1_UNIVERSAL && a.type==ASN1_SET && a.constructed && a.length) {
+  if(config.font_anim && !editor && (z&LOADFONT_MASK)==LOADFONT_BASE && a.class==ASN1_UNIVERSAL && a.type==ASN1_SET && a.constructed && a.length) {
     FontAnim*an=0;
     Sint32 ax,bx,cx,dx,i,j;
     if(asn1_first_of(&b,&a)) return 0;
