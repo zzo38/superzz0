@@ -19,6 +19,7 @@ static Emulator*emulator;
 static Uint8 nemulator;
 
 #define DRUM_NOTE 0x7F00
+#define LOOP_NOTE 0x7EFE
 #define WAVE_NOTE 0x7EFF
 #define NOTE_MASK 0x1FF
 #define OVERTONE 128
@@ -749,10 +750,15 @@ static void audiocb(void*userdata,Uint8*stream,int len) {
       if(qfirst==qlast) {
         priority=0;
       } else {
+        next:
         cfreq=queue[qfirst].note;
         cpos=0;
         cmax=queue[qfirst].len;
         qfirst=(qfirst+1)&MAXQUEUE_MASK;
+        if(cfreq==LOOP_NOTE) {
+          qfirst=cmax;
+          goto next;
+        }
         pha=0.0;
       }
     }
@@ -1070,12 +1076,13 @@ static Uint32 find_wave(const char*m) {
 }
 
 void audio_set_sfx(const char*m) {
-  Sint8 scale[8]={9,11,0,2,4,5,7};
+  static const Sint8 scale[8]={9,11,0,2,4,5,7};
   Uint8 c;
   Uint32 n,d;
   Uint16 pr;
   Uint16 oct=3*12;
   Uint32 dur=whole_note/32;
+  Sint32 loo=-1;
   float f;
   if(muted) return;
   SDL_LockAudio();
@@ -1086,11 +1093,17 @@ void audio_set_sfx(const char*m) {
       SDL_UnlockAudio();
       return;
     }
+    if((c=*m)&0x40) {
+      if(c>='a' && c<='z') c+='A'-'a';
+      m++;
+    }
     n=0;
     while(*m>='0' && *m<='9') n=10*n+*m++-'0';
-    if(n<priority || (n==priority && (n&1))) goto end;
-    priority=n;
-    qfirst=qlast=0;
+    if(c!='I' && (n<priority || (n==priority && (n&1)))) goto end;
+    if(c!='Q' || !priority) {
+      priority=n;
+      qfirst=qlast=0;
+    }
   } else {
     if(!priority) priority=64;
   }
@@ -1174,9 +1187,16 @@ void audio_set_sfx(const char*m) {
         while(*m && *m!='\n' && *m!=')') m++;
         if(d<nwavesound) goto noted2;
         break;
+      // Loop
+      case 'J': loo=qlast; break;
     }
   }
   end:
+  if(loo!=-1 && loo!=qlast && ((qlast+1)&MAXQUEUE_MASK)!=qfirst) {
+    queue[qlast].note=LOOP_NOTE;
+    queue[qlast].len=loo;
+    qlast=(qlast+1)&MAXQUEUE_MASK;
+  }
   if(cfreq==-1 && qfirst!=qlast) {
     cfreq=queue[qfirst].note;
     cpos=0;

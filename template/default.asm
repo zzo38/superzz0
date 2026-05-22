@@ -57,6 +57,7 @@ INITPY	IS $01
 FACING	IS $02
 FOREST	IS $03
 NWAITS	IS $04
+ENERGS	IS $05
 REGSAV	IS $10 ;x16
 
 ; **** Global parameters ****
@@ -223,6 +224,11 @@ MOVEPL1	XOR A,A
 	ROB E,1
 	JF E,1F
 	INC A,%R,,$F0
+	LET C,%I,,ENERGS
+	SUB C,%SP,,#E
+	JNZ C,1F
+	SPOK A,ENERGS
+	SFX A,"@I30S.<C<A#GF#FD#CZ<CX"
 1H	GSXY B,1
 	PTMC A,0
 	; Check light
@@ -471,6 +477,8 @@ COLOR	DATA "black","blue","green","cyan","red","purple","yellow","white"
 ; **** Energizer ****
 	EV T,_ENERGIZER
 	VSET E,75
+	SFX A,"@40S.<CD#EJFF'FD#CC'D#EFF'FD#CC'D#E"
+	SPOK B,ENERGS
 	KILM D,0
 
 ; **** Pushable objects ****

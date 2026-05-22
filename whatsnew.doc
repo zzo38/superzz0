@@ -25,6 +25,9 @@ GAME
   +  Item definition event flag.
   +  Partial implementation of advanced fonts (including animated fonts
      and partial fonts).
+  +  Sound effects with #PLAY and SFX can now be looped.
+  +  Sound effects with #PLAY and SFX can now specify forced interrupt
+     and forced queue regardless of priority.
   =  Fix a memory leak with loading variable property lists.
 
 SCRIPTS
@@ -67,6 +70,9 @@ EDITOR
   +  Export MZM in screen editor.
   =  Changed a conflicting keyboard command in the item definition editor.
   =  The overlay draw mode works correctly now.
+
+TEMPLATE
+  +  Sound effect for energizer.
 
 OTHERS
   +  Experimental "front" mode to communicate with external programs.

@@ -708,6 +708,10 @@ H
 I
   Same as L8.
 
+J
+  Causes the rest of the sound effect string to be played in a loop,
+  until it is interrupted by F2 or by another sound effect.
+
 K
   Allows specifying a note using the overtone scale. Follow by a number
   being the overtone number; if you want to also specify a length, then
@@ -770,6 +774,13 @@ Z
   If the priority is not specified, then it is queued. The priority of
   queued sounds is 64 (but explicitly setting priority to 64 will override
   the sound instead of queueing).
+
+@I
+  Same as @ but always interrupts an existing sound regardless of priority.
+
+@Q
+  Same as @ but always queues the sound, and only sets the priority if a
+  sound is not already playing.
 
 Any command HIKQSTWZ, or L or a letter A to G, or percussion notes, can be
 followed by a dot to multiply the final note length by 1.5; for commands

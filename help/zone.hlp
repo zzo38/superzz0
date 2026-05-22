@@ -28,7 +28,7 @@ the zone number minus eighty.
 
 þ 127 ($7F) þ This zone automatically contains all cells in the board grid.
 
-þ 128-255 ($80-$8F) þ Any grid cell is in this zone iff it is not in the
+þ 128-255 ($80-$FF) þ Any grid cell is in this zone iff it is not in the
 zone with the number of this one minus 128. For example, zone 129 consists
 of all cells that are not in zone 1 and vice versa.
 
