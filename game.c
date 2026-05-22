@@ -6583,7 +6583,7 @@ static int system_menu(void) {
   draw_text(x+12,y," Super ZZ Zero ",0x1B,-1);
   // 012345678901234567890123456789012345
   // =F1== Menu         =F7== Q. Restore
-  // =F2== Sound: ___   =F8== 
+  // =F2== Sound: ___   =F8== Spec. Option
   // =F3== Save         =F9== Messages
   // =F4== Restore      =F10= Quit
   // =F5== Q. Save      =F11= Print
@@ -6606,7 +6606,7 @@ static int system_menu(void) {
   draw_text(x+2,y+5," F5  ",0x30,-1); if(sav) draw_text(x+8,y+5,"Q. Save",0x1F,-1);
   draw_text(x+2,y+6," F6  ",0x70,-1); if(config.debug) draw_text(x+8,y+6,"Debug",0x1F,-1);
   draw_text(x+21,y+1," F7  ",0x30,-1); draw_text(x+27,y+1,"Q. Restore",0x1F,-1);
-  draw_text(x+21,y+2," F8  ",0x70,-1);
+  draw_text(x+21,y+2," F8  ",0x70,-1); if(nspecopt) draw_text(x+27,y+2,"Spec. Option",0x1F,-1);
   draw_text(x+21,y+3," F9  ",0x30,-1); draw_text(x+27,y+3,"Messages",0x1F,-1);
   draw_text(x+21,y+4," F10 ",0x70,-1); draw_text(x+27,y+4,"Quit",0x1F,-1);
   draw_text(x+21,y+5," F11 ",0x30,-1); if(config.printer_type) draw_text(x+27,y+5,"Print",0x1F,-1);
@@ -6634,6 +6634,7 @@ static int system_menu(void) {
     case SDLK_F2: if(mu<2) mu^=1; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
     case SDLK_F3: case SDLK_F4: case SDLK_F5: case SDLK_F7: case SDLK_F9: case SDLK_F10: case SDLK_INSERT: return 1;
     case SDLK_F6: if(config.debug) return 1; break;
+    case SDLK_F8: special_option_menu(); goto redraw0;
     case SDLK_F12: *v_status=playstate=(playstate==PLAYSTATE_NORMAL?PLAYSTATE_FAST:PLAYSTATE_NORMAL); break;
     case SDLK_PAUSE: *v_status=playstate=(playstate==PLAYSTATE_PAUSED?PLAYSTATE_NORMAL:PLAYSTATE_PAUSED); break;
     case SDLK_DELETE: vtexttime=nvtextbuf=*vtextbuf=0; goto redraw0;
@@ -6969,6 +6970,7 @@ int run_game(void) {
           case SDLK_F5: k_f5: if(allow_saving()) save_state(); goto resume;
           case SDLK_F6: if(config.debug) debug_menu(); a=0; goto resume;
           case SDLK_F7: k_f7: load_state(); goto resume;
+          case SDLK_F8: special_option_menu(); event.type=SDL_NOEVENT; goto resume;
           case SDLK_F9: k_f9: set_timer(0); v_status[1]=24; message_scrollback(); a=0; goto resume;
           case SDLK_F10: return 0;
           case SDLK_F12: k_f12:

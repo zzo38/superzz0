@@ -471,6 +471,12 @@ const char*init_world(void) {
       if(e) return e;
     }
   }
+  // "OPTION.DER"
+  if(!editor && (fp=open_lump("OPTION.DER","r"))) {
+    const char*e=load_special_options(fp);
+    fclose(fp);
+    if(e) return e;
+  }
   // done
   return 0;
 }

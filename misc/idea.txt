@@ -135,7 +135,8 @@ be used to enable or disable this feature.
 The format of the high scores could be specified in GENERAL.DER, which can
 specify things to be included in high score entries and how they will be
 sorted and classified; they are not necessarily limited to only the score,
-but also such things as difficulty level, achievements, etc.
+but also such things as difficulty level, achievements, etc. (I might make
+a new lump called HISCORE.DER or SCORE.DER instead.)
 
 There can be a opcode called HISC to write new entries into the high score
 file (reading from the high scores is deliberately not possible).

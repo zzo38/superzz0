@@ -79,6 +79,8 @@ OTHERS
   =  More fixes to avoid processing key events multiple times when saving
      or restoring a save game file.
   =  Fix a bug with writing the ELEMENT lump.
+  *  SIGQUIT (usually ^\ in the terminal) is now forced to use the default
+     action (to terminate the program) without being intercepted by SDL.
 
 
 === Version 0.7.0 (2025-11-04) ===

@@ -789,6 +789,40 @@ extern Uint8 ndynastr;
 extern VarProperty pvarproperty;
 extern ASN1_Value asn1reg[4];
 
+// === Special option menu ===
+
+typedef struct {
+  Uint32 key;
+  Uint16 value,flag;
+} SpecialOption;
+
+extern Uint16 nspecopt;
+extern SpecialOption*specopt;
+
+// SpecialOption:key
+// (the relative OID excluding the first byte (always 0x08), padded with <80 00 00 00>)
+#define SPECI_VACANT 0x80808080
+#define SPECI_UNKNOWN 0x80808081
+
+// SpecialOption:flag
+#define SPECF_LOCKED 0x0001
+#define SPECF_SAVE 0x2000
+#define SPECF_VARIABLE 0x4000
+#define SPECF_LOCKABLE 0x8000
+
+// Types of special option menu
+#define SPECT_MENU 0
+#define SPECT_OPTION 1
+#define SPECT_HELP 2
+#define SPECT_GOTOPAGE 3
+#define SPECT_CANCEL 4
+#define SPECT_SOUND 5
+#define SPECT_PAGEBREAK 254
+#define SPECT_INVALID 255
+
+void special_option_menu(void);
+const char*load_special_options(FILE*f);
+
 // === File access (Hamster archives) ===
 
 extern char*world_name;

@@ -986,6 +986,84 @@ the division is made).
 * NF_BOARD_NAME_EXT 'N' = The last half of the board name.
 
 
+=== OPTION.DER ===
+
+The definition of the special option menu. (This is optional; if it is not
+present, then there is no special option menu.)
+
+The top level is a implicit type sequence which is one of the following
+things; they are also allowed in other contexts, and the letters indicate
+what contexts they are allowed, where T means top level.
+
+[0 IT] A menu. Its fields are:
+
+* The screen number for this menu, which is a integer.
+
+* The sequence of menu items.
+
+A menu may have additional fields, which can be integers and/or sequences;
+each sequence represents a page (the first page is zero), and the integers
+are the screen numbers for all following pages until another integer.
+
+A menu item is a sequence with fields:
+
+* The key code, which is a Printable string, which must contain exactly
+one character, which is a digit 0 to 9 or a uppercase letter A to Z. This
+can be omitted for a menu item that is only for display.
+
+* The screen position, which is a integer from 0 to 1999. This may be
+omitted if it is not displayed on the screen. Either this one and the
+next one must be both present or must be both absent.
+
+* The field width, which is a integer from 0 to 80. This may be omitted
+if it is not displayed on the screen.
+
+* The effect of the menu item, which is one of these kind of items, like
+those in the top level but the context is I instead of T.
+
+[1 IT] A special option definition. Its fields are:
+
+* Optional PC string being the option title.
+
+* The option number, which is a integer from 0 to 32767. (This must be
+unique for the entire world file.)
+
+* A sequence of OIDs (which can be relative), being the predefined OIDs
+for options. If there is more than one, the first one that is usable has
+priority. It may be empty.
+
+* A bit string with the flags that are applicable for this option.
+
+* The screen number for editing this option.
+
+* The specification of the type and range. If it is a implicit type 0
+sequence, then it contains two integers being minimum and maximum. If
+it is a implicit type 1 sequence, then see below.
+
+* The default value, which is a integer.
+
+[2 IT] A help file. The fields (both required) are the screen number (a
+integer) and the lump name (a Visible string, without the .HLP suffix).
+
+[3 I] Go to another page within the same menu. The only field is a integer
+which is the zero-based page number.
+
+[4 I] No fields; means to cancel the menu.
+
+[5 IT] Sound test; the only field is a Visible string.
+
+A implicit type 1 sequence in the option definition is used for enumerated
+options, and it is not a sequence with fields but is a implicit sequence
+of sequences each of which has the fields:
+
+* Printable string with a single digit 0 to 9 or uppercase letter A to Z,
+being the key code.
+
+* The numeric value of this option, which is a integer.
+
+* The text of this option, which is a PC string.
+
+
 === PACK ===
 
 Not currently used. In future, might be used for storing the .asm file and

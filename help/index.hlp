@@ -25,6 +25,7 @@ $ศอออออออออออออออออผ
 !-screen;Screen elements
 !-sclib;Script library
 !-slist;Screen list
+!-specoptm;Special option menu
 !-stvar;Status variables
 !-edittext;Text editor
 !-varprop;Variable property lists

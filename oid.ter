@@ -17,6 +17,7 @@ feature=base.4 % Features specified in GENERAL.DER
 x509ext=base.5 % X.509 extension
 file=base.6 % File format
 sound=base.7 % Sound card
+specopt=base.8 % Special options
 
 % Hash algorithms
 nist=2.16.840.1.101.3.4.2 % OID for SHA-2 and SHA-3 hashes; this OID is for NIST
@@ -70,3 +71,4 @@ S_mt32=sound.5 % Roland MT-32
 S_sid=sound.6 % MOS Technology SID
 S_genmidi=sound.7 % General MIDI
 S_esfm=sound.8 % ESS Technology ES1688 AudioDrive ESFM
+

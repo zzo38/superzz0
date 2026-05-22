@@ -9,6 +9,9 @@ exit
 Uint8**screennames;
 Uint16 maxscreen;
 
+static char oidbuf[75];
+static FILE*oidfile;
+
 #define N_GENERAL_PARTS 3
 static ASN1_Value general_der;
 static ASN1_Value*general_parts;
@@ -1129,23 +1132,21 @@ static void edit_default_setting_override(void) {
 }
 
 static void oid_sets_callback(Uint16 n,int y,void*f) {
-  char b[78];
   int c=general_oids[n].class;
   int e;
   rewind(f);
   if(e=asn1_print_decimal_oid(general_oids+n,general_oids[n].type,f)) fputc(e,f);
   fprintf(f,"%72s","");
   fflush(f);
-  rewind(f);
-  fread(b,1,72,f);
-  draw_text(1,y,b,(c==MANDATORY?14:c==OPTIONAL?11:8),72);
+  draw_text(1,y,oidbuf,(c==MANDATORY?14:c==OPTIONAL?11:8),72);
 }
 
 static void edit_oid_sets(void) {
   int n=0;
   int e;
   char b[75]={};
-  FILE*f=fmemopen(b,72,"r+b");
+  FILE*f=oidfile;
+  if(!f) f=oidfile=fmemopen(oidbuf,74,"r+b");
   win_form("OID sets") {
     win_help("editadv","oid");
     win_list(n_general_oids,f,oid_sets_callback,n) {
@@ -1199,7 +1200,6 @@ static void edit_oid_sets(void) {
     win_blank();
     win_command_esc(0,"Exit") break;
   }
-  fclose(f);
 }
 
 static int copy_board(Uint16 inb,Uint16 outb) {
@@ -2402,6 +2402,630 @@ static void edit_items_inventory(void) {
   }
 }
 
+typedef struct SpMenu {
+  struct SpItem*item;
+  Uint16 nitem;
+} SpMenu;
+
+typedef struct SpChoice {
+  Uint8 text[60];
+  Uint8 key;
+  Uint16 value;
+} SpChoice;
+
+typedef struct SpOption {
+  Uint8 title[60];
+  Uint16 number,value,screen,flag,mini,maxi,noid;
+  SpChoice*choice;
+  ASN1_Value*oid;
+  Uint8 type,nchoice;
+} SpOption;
+
+typedef struct SpHelp {
+  Uint16 screen;
+  Uint8 lump[9];
+} SpHelp;
+
+typedef struct SpObj {
+  Uint8 type;
+  union {
+    SpMenu menu;
+    SpOption option;
+    SpHelp help;
+    Uint16 gotopage;
+    Uint8 sound[60];
+    Uint16 screen;
+  };
+} SpObj;
+
+typedef struct SpItem {
+  Uint8 key,x,y,width;
+  SpObj effect;
+} SpItem;
+
+static SpItem*sp_add_item(SpMenu*m,Uint16 n) {
+  SpItem*x;
+  m->item=realloc(m->item,(++m->nitem)*sizeof(SpItem));
+  if(!m->item) err(1,"Allocation failed");
+  if(n<m->nitem-1) memmove(m->item+n+1,m->item+n,(m->nitem-n-1)*sizeof(SpItem));
+  memset(x=m->item+n,0,sizeof(SpItem));
+  x->effect.type=SPECT_INVALID;
+  return x;
+}
+
+static ASN1_Value*sp_add_oid(SpOption*m,Uint16 n) {
+  ASN1_Value*x;
+  m->oid=realloc(m->oid,(++m->noid)*sizeof(ASN1_Value));
+  if(!m->oid) err(1,"Allocation failed");
+  if(n<m->noid-1) memmove(m->oid+n+1,m->oid+n,(m->noid-n-1)*sizeof(ASN1_Value));
+  memset(x=m->oid+n,0,sizeof(ASN1_Value));
+  return x;
+}
+
+static SpChoice*sp_add_choice(SpOption*m,Uint16 n) {
+  SpChoice*x;
+  m->choice=realloc(m->choice,(++m->nchoice)*sizeof(SpChoice));
+  if(!m->choice) err(1,"Allocation failed");
+  if(n<m->nchoice-1) memmove(m->choice+n+1,m->choice+n,(m->nchoice-n-1)*sizeof(SpChoice));
+  memset(x=m->choice+n,0,sizeof(ASN1_Value));
+  return x;
+}
+
+static void free_special_option(SpObj*obj) {
+  int i;
+  if(obj->type==SPECT_MENU) {
+    for(i=0;i<obj->menu.nitem;i++) free_special_option(&obj->menu.item[i].effect);
+    free(obj->menu.item);
+  } else if(obj->type==SPECT_OPTION) {
+    for(i=0;i<obj->option.noid;i++) asn1_free(obj->option.oid+i);
+    free(obj->option.oid);
+    free(obj->option.choice);
+  }
+  obj->type=SPECT_INVALID;
+}
+
+static void read_special_option(const ASN1_Value*v0,SpObj*obj) {
+  int i,s;
+  ASN1_Value v1,v2,v3;
+  SpItem*x;
+  SpChoice*y;
+  memset(obj,0,sizeof(SpObj));
+  switch(obj->type=v0->type) {
+    case SPECT_MENU:
+      if(!asn1_first_of(&v1,v0)) {
+        s=0;
+        do {
+          if(!v1.class && v1.type==ASN1_INTEGER) {
+            asn1_decode_number(&v1,ASN1_INTEGER,&s);
+          } else if(!v1.class && v1.type==ASN1_SEQUENCE) {
+            x=sp_add_item(&obj->menu,obj->menu.nitem);
+            x->effect.type=SPECT_PAGEBREAK;
+            x->effect.screen=s;
+            if(!asn1_first_of(&v2,&v1)) do {
+              if(!v2.class && v2.type==ASN1_SEQUENCE && !asn1_first_of(&v3,&v2)) {
+                x=sp_add_item(&obj->menu,obj->menu.nitem);
+                if(!v3.class && v3.type==ASN1_PRINTABLE_STRING && v3.length==1) {
+                  x->key=v3.data[0]; if(asn1_next_of(&v3,&v2)) break;
+                }
+                if(!v3.class && v3.type==ASN1_INTEGER) {
+                  asn1_decode_number(&v3,ASN1_INTEGER,&i);
+                  x->x=i%80; x->y=i/80;
+                  if(asn1_next_of(&v3,&v2) || v3.class || v3.type!=ASN1_INTEGER) break;
+                  asn1_decode_number(&v3,ASN1_INTEGER,&x->width);
+                  if(asn1_next_of(&v3,&v2)) break;
+                }
+                read_special_option(&v3,&x->effect);
+              }
+            } while(obj->menu.nitem<0x7FFF && !asn1_next_of(&v2,&v1));
+          }
+        } while(obj->menu.nitem<0x7FFF && !asn1_next_of(&v1,v0));
+      }
+      break;
+    case SPECT_OPTION:
+      if(asn1_first_of(&v1,v0)) goto bad;
+      if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_PC_STRING && v1.length<60) {
+        memcpy(&obj->option.title,v1.data,v1.length); obj->option.title[v1.length]=0;
+        if(asn1_next_of(&v1,v0)) goto bad;
+      }
+      if(v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&obj->option.number)) goto bad;
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_SEQUENCE) goto bad;
+      if(!asn1_first_of(&v2,&v1)) {
+        do {
+          if(v2.class!=ASN1_UNIVERSAL || (v2.type!=ASN1_OID && v2.type!=ASN1_RELATIVE_OID)) continue;
+          asn1_copy(&v2,sp_add_oid(&obj->option,obj->option.noid));
+        } while(obj->option.noid<0x7FFF && !asn1_next_of(&v2,&v1));
+      }
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_BIT_STRING) goto bad1;
+      if(v1.length>1) obj->option.flag|=v1.data[1]<<8;
+      if(v1.length>2) obj->option.flag|=v1.data[2];
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&obj->option.screen)) goto bad1;
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_CONTEXT_SPECIFIC || !v1.constructed) goto bad1;
+      obj->option.type=v1.type;
+      if(v1.type==0) {
+        if(asn1_first_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&obj->option.mini)) goto bad1;
+        if(asn1_next_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&obj->option.maxi)) goto bad1;
+        if(asn1_next_of(&v2,&v1)!=ASN1_DONE) goto bad1;
+      } else if(v1.type=1) {
+        if(!asn1_first_of(&v2,&v1)) {
+          do {
+            if(asn1_first_of(&v3,&v2) || v3.class!=ASN1_UNIVERSAL || v3.type!=ASN1_PRINTABLE_STRING || v3.length!=1) goto bad1;
+            y=sp_add_choice(&obj->option,obj->option.nchoice);
+            y->key=v3.data[0];
+            if(asn1_next_of(&v3,&v2) || v3.class!=ASN1_UNIVERSAL || v3.type!=ASN1_INTEGER || asn1_decode_number(&v3,ASN1_INTEGER,&y->value)) goto bad1;
+            if(asn1_next_of(&v3,&v2) || v3.class!=ASN1_UNIVERSAL || v3.type!=ASN1_PC_STRING || v3.length>59) goto bad1;
+            memcpy(&y->text,v3.data,v3.length); y->text[v3.length]=0;
+          } while(obj->option.nchoice<23 && !asn1_next_of(&v2,&v1));
+        }
+      } else goto bad1;
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&obj->option.value)) goto bad1;
+      break;
+    case SPECT_HELP:
+      if(asn1_first_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&obj->help.screen)) goto bad;
+      if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_VISIBLE_STRING || v1.length>8) goto bad;
+      memcpy(obj->help.lump,v1.data,v1.length);
+      obj->help.lump[v1.length]=0;
+      break;
+    case SPECT_GOTOPAGE:
+      if(asn1_first_of(&v1,v0) || asn1_decode_number(&v1,ASN1_AUTO,&obj->gotopage)) goto bad;
+      break;
+    case SPECT_SOUND:
+      if(asn1_first_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_VISIBLE_STRING || v1.length>59) goto bad;
+      memcpy(obj->sound,v1.data,v1.length);
+      obj->sound[v1.length]=0;
+      break;
+    bad1: free_special_option(obj); bad: obj->type=SPECT_INVALID;
+  }
+}
+
+static void write_special_option(ASN1_Encoder*enc,SpObj*obj) {
+  Uint8 m[3];
+  int i,s;
+  if(obj->type==SPECT_INVALID) return;
+  asn1_construct(enc,ASN1_CONTEXT_SPECIFIC,obj->type,0);
+  switch(obj->type) {
+    case SPECT_MENU:
+      for(s=-1,i=0;i<obj->menu.nitem;i++) {
+        if(obj->menu.item[i].effect.type==SPECT_PAGEBREAK) {
+          if(i) asn1_end(enc);
+          if(s!=obj->menu.item[i].effect.screen) {
+            s=obj->menu.item[i].effect.screen;
+            asn1_encode_integer(enc,s);
+          }
+          asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+        } else if(obj->menu.item[i].effect.type!=SPECT_INVALID) {
+          if(obj->menu.item[i].effect.type!=SPECT_INVALID) {
+            asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+              if(obj->menu.item[i].key) asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_PRINTABLE_STRING,&(obj->menu.item[i].key),1);
+              if(obj->menu.item[i].width) {
+                asn1_encode_integer(enc,obj->menu.item[i].y*80+obj->menu.item[i].x);
+                asn1_encode_integer(enc,obj->menu.item[i].width);
+              }
+              write_special_option(enc,&(obj->menu.item[i].effect));
+            asn1_end(enc);
+          }
+        }
+      }
+      if(obj->menu.nitem) asn1_end(enc);
+      break;
+    case SPECT_OPTION:
+      if(obj->option.title[0]) asn1_encode_c_string(enc,ASN1_PC_STRING,obj->option.title);
+      asn1_encode_integer(enc,obj->option.number);
+      asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+        for(i=0;i<obj->option.noid;i++) if(obj->option.oid[i].type) asn1_encode(enc,obj->option.oid+i);
+      asn1_end(enc);
+      m[0]=0; m[1]=obj->option.flag>>8; m[2]=obj->option.flag;
+      asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_BIT_STRING,m,m[2]?3:m[1]?2:1);
+      asn1_encode_integer(enc,obj->option.screen);
+      asn1_construct(enc,ASN1_CONTEXT_SPECIFIC,obj->option.type,0);
+        if(obj->option.type) {
+          for(i=0;i<obj->option.nchoice;i++) {
+            asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+              asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_PRINTABLE_STRING,&obj->option.choice[i].key,1);
+              asn1_encode_integer(enc,obj->option.choice[i].value);
+              asn1_encode_c_string(enc,ASN1_PC_STRING,obj->option.choice[i].text);
+            asn1_end(enc);
+          }
+        } else {
+          asn1_encode_integer(enc,obj->option.mini);
+          asn1_encode_integer(enc,obj->option.maxi);
+        }
+      asn1_end(enc);
+      asn1_encode_integer(enc,obj->option.value);
+      break;
+    case SPECT_HELP:
+      asn1_encode_integer(enc,obj->help.screen);
+      asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,obj->help.lump);
+      break;
+    case SPECT_GOTOPAGE: asn1_encode_integer(enc,obj->gotopage); break;
+    case SPECT_SOUND: asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,obj->sound); break;
+  }
+  asn1_end(enc);
+}
+
+static void edit_special_option_1(SpObj*obj,SpObj*container,int level);
+
+static SpItem*spclip;
+
+static int edit_special_option_1_menu(SpMenu*men,SpObj*container,int level) {
+  static const char*const tc[6]={"Menu","Option","Help","Go to page","Cancel","Sound"};
+  char buf[80];
+  SpItem*ite;
+  Uint16 pn=0;
+  Uint8 x=0;
+  Uint16 y=0;
+  Uint16 s=0;
+  Uint16 z;
+  redraw:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25); memset(v_char,32,80*25); memset(v_color,7,80*25);
+  if(y<s) s=y; else if(men->nitem<=23) s=0; else if(y>s+22) s=y-22;
+  for(pn=0,z=1;z<s;z++) if(men->item[z].effect.type==SPECT_PAGEBREAK) ++pn;
+  for(z=0;z<23 && s+z<=men->nitem;z++) {
+    ite=men->item+s+z;
+    v_char[z*80]=(s+z==y?16:250); v_color[z*80]=(s+z==y?14:8);
+    if(s+z==men->nitem) {
+      draw_text(2,z,"\xCD\xCD END \xCD\xCD",6,-1);
+    } else if(ite->effect.type==SPECT_PAGEBREAK) {
+      draw_text(2,z,buf,6,snprintf(buf,78,"\xCD\xCD PAGE %d \xCD SCREEN %d \xCD\xCD",pn++,ite->effect.screen));
+    } else {
+      draw_text(2,z,buf,10,snprintf(buf,78,"<%c> (%2u,%2u)[%2u]",ite->key?:250,ite->x,ite->y,ite->width));
+      if(ite->effect.type<6) draw_text(19,z,tc[ite->effect.type],14,-1);
+      switch(ite->effect.type) {
+        case SPECT_OPTION: draw_text(26,z,buf,2,snprintf(buf,40,"#%u",ite->effect.option.number)); break;
+        case SPECT_HELP: draw_text(25,z,buf,2,snprintf(buf,40,"(%s)",ite->effect.help.lump)); break;
+      }
+      if(s+z==y) switch(x) {
+        case 0: v_color[z*80+3]=0x2F; break;
+        case 1: v_color[z*80+7]=v_color[z*80+8]=0x2F; break;
+        case 2: v_color[z*80+10]=v_color[z*80+11]=0x2F; break;
+        case 3: v_color[z*80+14]=v_color[z*80+15]=0x2F; break;
+      }
+    }
+  }
+  if(s) v_char[79]=0x1E,v_color[79]=0x0D;
+  if(z==23) v_char[1759]=0x1F,v_color[1759]=0x0D;
+  if(y) draw_text(0,23,"<SHIFT+\x18\x19> Exchange",7,-1);
+  if(y<men->nitem) {
+    ite=men->item+y;
+    draw_text(22,23,"<RET> Edit",7,-1);
+    if(ite->effect.type!=SPECT_PAGEBREAK) draw_text(35,23,x?"<0-9/BKSP> Numeric Entry":"<0-9/A-Z> Key Code   <BKSP> No Key",7,-1);
+  } else ite=0;
+  draw_text(0,24,"<\x18\x19\x1A\x1B> Cursor   <INS> Insert   <DEL> Delete   <F1> Break   <ALT+P> Destroy Menu",7,-1);
+  v_char[1999]=level+'0'; v_color[1999]=8;
+  redisplay();
+  for(;;) {
+    do { if(!next_event()) return 0; } while(event.type!=SDL_KEYDOWN);
+    if(event.key.keysym.mod&KMOD_CTRL) continue;
+    switch(event.key.keysym.sym) {
+      case SDLK_ESCAPE: return 0;
+      case SDLK_LEFT: if(x) x--; goto redraw;
+      case SDLK_RIGHT: if(x<3) x++; goto redraw;
+      case SDLK_UP:
+        if(!y) break;
+        y--;
+        if(ite && y && (event.key.keysym.mod&KMOD_SHIFT)) {
+          SpItem q=*ite; men->item[y+1]=men->item[y]; men->item[y]=q;
+        }
+        goto redraw;
+      case SDLK_DOWN:
+        if(y==men->nitem) break;
+        y++;
+        if(ite && y>1 && y<men->nitem && (event.key.keysym.mod&KMOD_SHIFT)) {
+          SpItem q=*ite; men->item[y-1]=men->item[y]; men->item[y]=q;
+        }
+        goto redraw;
+      case SDLK_HOME: y=x=s=0; goto redraw;
+      case SDLK_END: y=men->nitem-1; goto redraw;
+      case SDLK_DELETE:
+        if(!y || !ite) break;
+        if(event.key.keysym.mod&KMOD_SHIFT) {
+          if(spclip) break;
+          spclip=malloc(sizeof(SpItem));
+          if(!spclip) err(1,"Allocation failed");
+          memcpy(spclip,ite,sizeof(SpItem));
+        } else {
+          free_special_option(&ite->effect);
+        }
+        memmove(men->item+y,men->item+y+1,(men->nitem-y-1)*sizeof(SpItem));
+        --men->nitem;
+        goto redraw;
+      case SDLK_INSERT: case SDLK_F1:
+        if(men->nitem>9999 || !y) break;
+        if(event.key.keysym.mod&KMOD_SHIFT) {
+          if(!spclip) break;
+          *sp_add_item(men,y)=*spclip;
+          free(spclip); spclip=0;
+        } else {
+          ite=sp_add_item(men,y);
+          if(event.key.keysym.sym==SDLK_F1) ite->effect.type=SPECT_PAGEBREAK;
+          edit_special_option_1(&ite->effect,container,level+1);
+        }
+        goto redraw;
+      case SDLK_RETURN: if(ite) edit_special_option_1(&ite->effect,container,level+1); goto redraw;
+      case SDLK_0 ... SDLK_9:
+        if(!ite) break;
+        if(x==0) ite->key=event.key.keysym.sym;
+        z=event.key.keysym.sym-'0';
+        if(x==1) ite->x=(10*ite->x+z)%100;
+        if(x==2) ite->y=(10*ite->y+z)%100;
+        if(x==3) ite->width=(10*ite->width+z)%100;
+        goto redraw;
+      case SDLK_a ... SDLK_z:
+        if(event.key.keysym.mod&KMOD_ALT) {
+          if(event.key.keysym.sym==SDLK_p) return 1; else break;
+        }
+        if(x || !ite) break;
+        ite->key=event.key.keysym.sym+'A'-'a';
+        goto redraw;
+      case SDLK_BACKSPACE:
+        if(!ite) break;
+        if(x==0) ite->key=0;
+        if(x==1) ite->x/=10;
+        if(x==2) ite->y/=10;
+        if(x==3) ite->width/=10;
+        goto redraw;
+      case SDLK_SLASH: case SDLK_QUESTION: online_help("specoptm","me"); goto redraw;
+    }
+  }
+}
+
+static void edit_special_option_1_choices(SpOption*obj,SpObj*container,int level) {
+  char buf[16];
+  SpChoice*cho;
+  Uint8 y=0;
+  int i;
+  redraw:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25); memset(v_char,32,80*25); memset(v_color,7,80*25);
+  for(i=0;i<23;i++) {
+    v_char[i*80]=(i==y?16:250); v_color[i*80]=(i==y?14:8);
+    if(i<obj->nchoice) {
+      cho=obj->choice+i;
+      v_char[i*80+2]=cho->key; v_color[i*80+2]=0x6F;
+      draw_text(4,i,buf,10,snprintf(buf,15,"%5u",cho->value));
+      draw_text(10,i,cho->text,15,-1);
+    } else if(i==obj->nchoice) {
+      draw_text(2,i,"\xCD\xCD END \xCD\xCD",6,-1);
+    }
+  }
+  if(y<obj->nchoice) cho=obj->choice+y; else cho=0;
+  draw_text(0,23,"<0-9/A-Z> Key   <SP> Value   <RET> Text",7,-1);
+  draw_text(0,24,"<\x18\x19> Cursor   <F1> Add   <INS> Insert   <DEL> Delete   <ESC> Quit",7,-1);
+  redisplay();
+  for(;;) {
+    do { if(!next_event()) return; } while(event.type!=SDL_KEYDOWN);
+    if(event.key.keysym.mod&KMOD_CTRL) continue;
+    switch(i=event.key.keysym.sym) {
+      case SDLK_ESCAPE: return;
+      case SDLK_UP: if(y) y--; goto redraw;
+      case SDLK_DOWN: if(y<obj->nchoice) y++; goto redraw;
+      case SDLK_HOME: y=0; goto redraw;
+      case SDLK_END: y=obj->nchoice; goto redraw;
+      case SDLK_0 ... SDLK_9: if(cho) cho->key=i; goto redraw;
+      case SDLK_a ... SDLK_z: if(cho) cho->key=i+'A'-'a'; goto redraw;
+      case SDLK_SPACE:
+        if(cho) {
+          snprintf(buf,15,"%u",cho->value);
+          ask_text("Value?",buf,6);
+          if(*buf) cho->value=strtol(buf,0,10);
+        }
+        goto redraw;
+      case SDLK_RETURN:
+        if(cho) ask_text("Text?",cho->text,60);
+        goto redraw;
+      case SDLK_F1: if(obj->nchoice==23) break; y=obj->nchoice; /* fall through */
+      case SDLK_INSERT: if(obj->nchoice<23) sp_add_choice(obj,y)->key=y+'A'; goto redraw;
+      case SDLK_DELETE:
+        if(!cho) break;
+        memmove(obj->choice+y,obj->choice+y+1,(obj->nchoice-y-1)*sizeof(SpChoice));
+        --obj->nchoice;
+        goto redraw;
+    }
+  }
+}
+
+static void option_oids_callback(Uint16 n,int y,void*u) {
+  const ASN1_Value*v=u;
+  rewind(oidfile);
+  asn1_print_decimal_oid(v+n,ASN1_AUTO,oidfile);
+  fprintf(oidfile,"%72s","");
+  fflush(oidfile);
+  draw_text(1,y,oidbuf,14,72);
+}
+
+static void edit_special_option_1(SpObj*obj,SpObj*container,int level) {
+  char buf[32];
+  int i;
+  top: switch(obj->type) {
+    case SPECT_MENU:
+      if(!obj->menu.nitem) sp_add_item(&obj->menu,0)->effect.type=SPECT_PAGEBREAK;
+      if(edit_special_option_1_menu(&obj->menu,obj,level)) goto chtype;
+      break;
+    case SPECT_OPTION:
+      win_form("Special option menu editor") {
+        win_help("specoptm","od");
+        win_heading("Option");
+        win_text('T',"Title: ",obj->option.title);
+        win_numeric('I',"Info number: ",obj->option.number,0,32767);
+        win_numeric('D',"Default value: ",obj->option.value,0,0xFFFF);
+        win_numeric('S',"Screen: ",obj->option.screen,0,0xFFFF);
+        win_boolean('L',"Lockable",obj->option.flag,SPECF_LOCKABLE);
+        win_boolean('V',"Variable",obj->option.flag,SPECF_VARIABLE);
+        win_boolean('a',"Save",obj->option.flag,SPECF_SAVE);
+        snprintf(buf,32,"Edit OIDs (%d)",obj->option.noid);
+        win_command('O',buf) {
+          if(!oidfile) oidfile=fmemopen(oidbuf,74,"r+b");
+          win_form("Special option menu editor - OIDs") {
+            win_list(obj->option.noid,obj->option.oid,option_oids_callback,i) {
+              rewind(oidfile);
+              asn1_print_decimal_oid(obj->option.oid+i,ASN1_AUTO,oidfile);
+              fputc(0,oidfile);
+              fflush(oidfile);
+              win_form("Special option menu editor - OIDs") {
+                win_text('O',"OID: ",oidbuf);
+                win_command('U',"Update") if(*oidbuf) {
+                  asn1_free(obj->option.oid+i);
+                  updoid:
+                  if(asn1_make_oid(oidbuf,obj->option.oid+i)) alert_text("Invalid OID");
+                  break;
+                }
+                win_command('I',"Insert") if(*oidbuf) {
+                  sp_add_oid(&obj->option,i);
+                  goto updoid;
+                }
+                win_command('D',"Delete") {
+                  asn1_free(obj->option.oid+i);
+                  --obj->option.noid;
+                  if(i<obj->option.noid) memmove(obj->option.oid+i,obj->option.oid+i+1,(obj->option.noid-i)*sizeof(ASN1_Value));
+                  break;
+                }
+                win_command_esc(0,"No change") break;
+              }
+            }
+            if(obj->option.noid<9999) win_command('A',"Add...") {
+              *oidbuf=0;
+              ask_text("New OID:",oidbuf,72);
+              if(*oidbuf && asn1_make_oid(oidbuf,sp_add_oid(&obj->option,obj->option.noid))) --obj->option.noid;
+            }
+            win_blank();
+            win_command_esc(0,"Done") break;
+          }
+        }
+        win_blank();
+        win_heading("Option type:");
+        win_option('u',"Numeric",obj->option.type,0) win_refresh();
+        win_option('E',"Enumerated",obj->option.type,1) win_refresh();
+        win_blank();
+        if(obj->option.type==0) {
+          win_numeric('n',"Minimum: ",obj->option.mini,0,0xFFFF);
+          win_numeric('m',"Maximum: ",obj->option.maxi,0,0xFFFF);
+        }
+        if(obj->option.type==1) {
+          snprintf(buf,32,"Edit choices (%d)",obj->option.nchoice);
+          win_command('c',buf) {
+            edit_special_option_1_choices(&obj->option,container,level);
+            event.type=SDL_NOEVENT;
+            win_refresh();
+          }
+        }
+        win_blank();
+        win_command('p',"Change type") goto chtype;
+        win_command_esc(0,"Done") break;
+      }
+      break;
+    case SPECT_HELP:
+      win_form("Special option menu editor") {
+        win_help("specoptm","he");
+        win_heading("Help");
+        win_numeric('S',"Screen: ",obj->help.screen,0,0xFFFF);
+        win_text_restrict('u',"Lump name: ",obj->help.lump);
+        win_blank();
+        win_command('p',"Change type") goto chtype;
+        win_command_esc(0,"Done") break;
+      }
+      break;
+    case SPECT_SOUND:
+      win_form("Special option menu editor") {
+        win_help("specoptm","so");
+        win_heading("Sound");
+        win_text('S',"Sound: ",obj->sound) {
+          if(i=strlen(obj->sound)) {
+            if(i==1 && obj->sound[0]==32) obj->sound[0]=0;
+            else if(obj->sound[i-1]<32 || obj->sound[i-1]>126) obj->sound[i-1]=0;
+            else if(obj->sound[i-1]>='a' && obj->sound[i-1]<='z') obj->sound[i-1]+='A'-'a';
+            win_refresh();
+          }
+        }
+        win_blank();
+        win_command('p',"Change type") goto chtype;
+        win_command_esc(0,"Done") break;
+      }
+      break;
+    case SPECT_CANCEL:
+      win_form("Special option menu editor") {
+        win_help("specoptm","can");
+        win_heading("Cancel");
+        win_blank();
+        win_command('p',"Change type") goto chtype;
+        win_command_esc(0,"Done") break;
+      }
+      break;
+    case SPECT_GOTOPAGE:
+      win_form("Special option menu editor") {
+        win_help("specoptm","go");
+        win_heading("Go to page");
+        win_numeric('n',"Page number (zero-based): ",obj->gotopage,0,255);
+        win_blank();
+        win_command('p',"Change type") goto chtype;
+        win_command_esc(0,"Done") break;
+      }
+      break;
+    case SPECT_PAGEBREAK:
+      win_form("Special option menu editor") {
+        win_help("specoptm","pb");
+        win_heading("Page break");
+        win_numeric('S',"Screen: ",obj->screen,0,0xFFFF);
+        win_blank();
+        if(!container || container->type!=SPECT_MENU || obj!=&container->menu.item->effect) win_command('p',"Change type") goto chtype;
+        win_command_esc(0,"Done") break;
+      }
+      break;
+    default: chtype:
+      i=obj->type;
+      win_form("Special option menu editor - Change type") {
+        win_help("specoptm",0);
+        win_option('N',"None",i,SPECT_INVALID);
+        win_blank();
+        win_option('M',"Menu",i,SPECT_MENU);
+        win_option('O',"Option",i,SPECT_OPTION);
+        win_option('H',"Help",i,SPECT_HELP);
+        win_option('S',"Sound",i,SPECT_SOUND);
+        if(container && container->type==SPECT_MENU) {
+          win_blank();
+          win_option('C',"Cancel menu",i,SPECT_CANCEL);
+          win_option('G',"Go to page",i,SPECT_GOTOPAGE);
+          win_option('P',"Page break",i,SPECT_PAGEBREAK);
+        }
+        win_blank();
+        win_command('x',"Execute") {
+          free_special_option(obj);
+          if(i==SPECT_INVALID) return;
+          memset(obj,0,sizeof(SpObj));
+          obj->type=i;
+          goto top;
+        }
+        win_command_esc(0,"Cancel") break;
+      }
+      if(obj->type!=SPECT_INVALID) goto top;
+  }
+  win_refresh(); event.type=SDL_NOEVENT;
+}
+
+static void edit_special_option_menu(void) {
+  FILE*fp=open_lump("OPTION.DER","r");
+  ASN1_Encoder*enc;
+  ASN1_Value root={};
+  SpObj obj={.type=SPECT_INVALID};
+  if(fp) {
+    if(lump_size && asn1_read_item(fp,&root,0)) {
+      asn1_free(&root);
+      alert_text("Error loading OPTION.DER");
+      root=(ASN1_Value){};
+    }
+    fclose(fp);
+  }
+  if(root.class==ASN1_CONTEXT_SPECIFIC) read_special_option(&root,&obj);
+  asn1_free(&root);
+  edit_special_option_1(&obj,0,0);
+  fp=open_lump("OPTION.DER","w");
+  if(obj.type!=SPECT_INVALID) {
+    enc=asn1_create_encoder(fp);
+    if(!enc) err(1,"Allocation failed");
+    write_special_option(enc,&obj);
+    asn1_finish_encoder(enc);
+  }
+  fclose(fp);
+  free_special_option(&obj);
+}
+
 int run_editor(void) {
   int i,n,lo,hi;
   char c,b;
@@ -2646,6 +3270,7 @@ int run_editor(void) {
         win_boolean('4',"40 columns",start_mode,0x0002);
         win_command('J',"Joystick configuration...") edit_joystick();
         win_command('D',"Default setting override...") edit_default_setting_override();
+        win_command('S',"Special option menu...") edit_special_option_menu();
         win_command('.',"Advanced...") {
           win_form("Advanced editor") {
             win_help("editadv",0);

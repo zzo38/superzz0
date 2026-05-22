@@ -1,0 +1,131 @@
+@Special option menu
+You can optionally define a special option menu. This will be available
+during the game by pushing the F8 key.
+
+You can define the action to perform when pushing F8, which is normally a
+menu, although it can also be a help file or a single option. (If it is a
+menu, then the menu can contain these actions as well as submenus.)
+
+The possible actions which can be performed are:
+!me;Menu
+!od;Option
+!he;Help
+!so;Sound
+
+Inside of a menu, the following additional actions are available:
+!can;Cancel menu
+!go;Go to page
+!pb;Page break
+
+:me;Menu definition
+A menu has one or more pages, with a screen number for each one. Each page
+has any number of menu items.
+
+Key codes for menu items must be unique within each page, and must be a
+letter A to Z or a digit 0 to 9. Those are the keys on the keyboard which
+will be used to activate those menu items.
+
+:od;Option definition
+The info number is from 0 to 32767. This number must be different from all
+other info numbers within the world file, and it is recommended to use
+numbers consecutively starting from zero (although they are not required
+to be in numerical order).
+
+There are two kind of options, being numeric and enumerated. If it is
+numeric, then you can specify the valid range. If it is enumerated, then
+you can specify each possible value, with its name and its numeric value.
+In either case, the value must be in range 0 to 65535, and you must also
+specify the default value.
+
+You must also specify a screen number for the option. This screen number is
+the screen for setting the value of the option.
+!wn;Screen for numeric option
+!wo;Screen for enumerated option
+
+You can optionally define OIDs for an option. These can be used to share
+options between game worlds (if the user defines the values by OIDs in the
+user configuration file), and/or to have meanings that are common between
+multiple game worlds (such as many kind of accessibility settings). If
+there is more than one, then the first usable one counts. Enter ... at the
+beginning for a relative OID (most will probably be relative).
+!oid;OIDs
+
+The flags are:
+
+þ Lockable þ If selected, then this option is locked after the first time
+it is read by the program in the game world; at this point, the user cannot
+make any more changes to this option. If it is not selected, then it can be
+changed by the user at any time.
+
+þ Variable þ Allows the value to potentially vary automatically during the
+game, if any of the OIDs are applicable for this use. If not selected, then
+the OIDs can only be used to program the initial value.
+
+þ Save þ Causes the value to be stored in save games. It always stores the
+value in save games if it is locked (see above), and the user configuration
+can override this setting.
+
+:wn;Screen for numeric option
+The screen for a numeric option uses backgrounds and numbers; others are
+not used. The title can be displayed in the message area, if it is present.
+The only numbers used in a numeric option screen are:
+
+þ Line number þ The minimum value
+þ Line count þ The maximum value
+þ Context-specific þ The current value
+
+The only numeric formats that are available are decimal and commas.
+
+The number keys, as well as up/down arrows, and plus/minus, backspace,
+delete, can be used to adjust the value, followed by return or escape.
+
+:wo;Screen for enumerated option
+This screen works like a text window, but cannot be scrollable, and some
+of the other features of text windows are also unavailable.
+
+The valid screen elements are: backgrounds, text windows, cursor indicator.
+
+The selected item colour is also used for the currently selected value, and
+the fixed item colour is used if this option is currently locked.
+
+:oid;OIDs
+If you want to define your own OIDs, you must first register a OID for
+yourself; you can ask the maintainer of Super ZZ Zero for a OID and then
+you can define your own OIDs that use that one as a prefix. (For example,
+if 2.999.1 is assigned to you, then you may use 2.999.1.14.0 as a OID.
+However, the OIDs which will be assigned will start with "...1."; this is
+just an example that it doesn't do that.) (It is also possible to get OIDs
+in other ways, such by converting UUIDs to the 2.25 OID arc, or getting a
+OID from other registration authorities, but using the Super ZZ Zero OID
+arc as described above will result in a more compact encoding because it
+is possible to use relative OIDs.) You should avoid using the same full
+OID for multiple purposes.
+
+(There are no OIDs currently defined for this purpose.)
+
+:he;Help
+Specify the screen number to use for the text window that displays the help
+file, and also specify the name of the help lump (excluding .HLP).
+
+:so;Sound
+This can be used for making a sound test menu.
+
+Specify the sound in the same format as the #PLAY command. It will always
+override an existing sound regardless of priority.
+
+:can;Cancel menu
+No parameters need to be specified. This will cancel the menu. (The escape
+key will also cancel the menu, so this is not strictly required.)
+
+:go;Go to page
+Specify the zero-based page number within the menu. (The page up and page
+down keys can also be used to access different pages within a menu, so this
+is not strictly required.)
+
+:pb;Page break
+Specify the screen number for the page after this break. (There must be a
+page break at the beginning of each menu, which cannot be deleted, nor can
+its type be changed.)
+
+See the section about menu defintions for more information.
+!me;Menu definition

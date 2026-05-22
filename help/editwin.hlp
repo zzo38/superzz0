@@ -23,7 +23,7 @@ The possible commands and their uses depends on the window type:
 
 If the parameter is character code 0 then it will use the default character
 in the screen. Character code 255 also has some special meanings for some
-commands; see the descriptions above.
+commands; see the descriptions below.
 
 :t;Command codes for text windows
 

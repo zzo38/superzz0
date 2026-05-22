@@ -53,6 +53,11 @@ prevent the default setting override from working, so it is not guaranteed
 to use the override settings specified in the world file.
 !-override;Default setting override editor
 
+þ Special option menu: Defininition of the special option menu, which can
+be accessed during the game by pushing F8. (It is not required to define a
+special option menu; the standard options will still work without this.)
+!-specoptm;Special option menu
+
 þ Advanced: Advanced functions which you might not need, such as editing
 mandatory and optional OID sets directly.
 !-editadv;Advanced editor

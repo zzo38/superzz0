@@ -7,6 +7,7 @@ exit
 #include <math.h>
 #ifndef CONFIG_DISABLE_FRONT
 #include <errno.h>
+#include <signal.h>
 #include <sys/select.h>
 #endif
 
@@ -883,6 +884,7 @@ void init_display(void) {
   if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO)) errx(1,"SDL error: %s",SDL_GetError());
   atexit(SDL_Quit);
   scrn=SDL_SetVideoMode(config.show_status?648:640,config.show_status?372:350,8,SDL_SWSURFACE|(config.full_screen?SDL_FULLSCREEN:0));
+  signal(SIGQUIT,SIG_DFL);
   if(!scrn) errx(1,"SDL error: %s",SDL_GetError());
   if(config.joy_name || config.joy_index>=0) {
     if(SDL_InitSubSystem(SDL_INIT_JOYSTICK)) errx(1,"SDL error: %s",SDL_GetError());
