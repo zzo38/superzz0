@@ -822,6 +822,12 @@ extern SpecialOption*specopt;
 
 void special_option_menu(void);
 const char*load_special_options(FILE*f);
+void config_special_options(char*line);
+void end_config_special_options(void);
+Uint16 spec_auto_value(Uint32 key);
+void special_option_debug(void);
+
+void show_help_file(void); // defined in game.c
 
 // === File access (Hamster archives) ===
 

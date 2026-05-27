@@ -2797,6 +2797,7 @@ static void edit_special_option_1_choices(SpOption*obj,SpObj*container,int level
       case SDLK_ESCAPE: return;
       case SDLK_UP: if(y) y--; goto redraw;
       case SDLK_DOWN: if(y<obj->nchoice) y++; goto redraw;
+      case SDLK_TAB: y=(y+1)%obj->nchoice; goto redraw;
       case SDLK_HOME: y=0; goto redraw;
       case SDLK_END: y=obj->nchoice; goto redraw;
       case SDLK_0 ... SDLK_9: if(cho) cho->key=i; goto redraw;

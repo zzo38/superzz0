@@ -233,6 +233,13 @@ save_dir
   ".sz0" with ".save" and use that directory, and will automatically create
   that directory if it does not already exist.
 
+save_special_options
+  Whether or not to save special options in the save game file. If this is
+  -1 then it only saves locked options. If 0 then it saves locked options
+  as well as those marked as saveable in the game world file. If 1 then all
+  options are saved, except variable options that are not explicitly set
+  (you can set variable_special_options=0 to avoid this exception).
+
 scr_edit_status
   Set to 1 (default) to display the editor status line, or 0 to suppress.
 
@@ -292,6 +299,13 @@ time_format
 
 time_utc
   Set to 1 to display date/time as UTC, or 0 (default) for local time.
+
+variable_special_options
+  Set to 1 (the default setting) to allow the values of special options
+  to vary at run time if they have not been explicitly set. If set to 0
+  then the values are not allowed to automatically vary at run time.
+  (Anything defined in the [Special] division also won't automatically
+  vary at run time if the values in that division are valid.)
 
 version_auto
   Set to 1 (the default value) to automatically update the Super ZZ Zero
@@ -475,4 +489,14 @@ Default colours:
 
 IBM 5153 colours:
 *??????BC?KO??KRCp???p?BCpFw?pKRCRcxMRcz[RlpMRnNrvCxM{szr{~LM~~~~
+
+
+=== [Special] ===
+
+Defines the default values for special options. Each line consists of the
+option number or OID, followed by a equal sign and the value.
+
+Note that option numbers are specific to the world file, and might not have
+the same meanings in different world files; use OIDs if you need to share
+meanings between world files.
 

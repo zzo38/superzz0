@@ -21,6 +21,16 @@ Inside of a menu, the following additional actions are available:
 A menu has one or more pages, with a screen number for each one. Each page
 has any number of menu items.
 
+The screen of a menu can only use the following tiles: background, text,
+and numeric (context-specific). Text and numeric are only used in the
+positions within the field according to the menu item. For numeric tiles,
+only decimal and comma formats can be used.
+
+Window definitions can also be used. The "fixed item" colour is used for
+locked fields, and the "key item" colour is used for variable fields, and
+the "normal item" colour is used for any other fields (if these colours
+are not set, then the secondary colour of the screen grid is used).
+
 Key codes for menu items must be unique within each page, and must be a
 letter A to Z or a digit 0 to 9. Those are the keys on the keyboard which
 will be used to activate those menu items.
@@ -79,14 +89,27 @@ The only numeric formats that are available are decimal and commas.
 The number keys, as well as up/down arrows, and plus/minus, backspace,
 delete, can be used to adjust the value, followed by return or escape.
 
+The fixed item colour is used if this option is locked, and the vacant
+item colour is used if an invalid number has been entered (which is only
+possible if the number keys and backspace are used; you must enter a valid
+number before it can be accepted).
+
 :wo;Screen for enumerated option
 This screen works like a text window, but cannot be scrollable, and some
-of the other features of text windows are also unavailable.
+of the other features of text windows are also unavailable. Like with
+numeric options, the title can be displayed in the message area if present.
 
-The valid screen elements are: backgrounds, text windows, cursor indicator.
+The valid screen elements are: backgrounds, text windows, cursor indicator,
+and numbers as follows: line number, line count, and context-specific (the
+value of the selected option).
+
+The only numeric formats that are available are decimal and commas.
 
 The selected item colour is also used for the currently selected value, and
 the fixed item colour is used if this option is currently locked.
+
+You can use up/down arrows, return, escape, and letters/numbers to select
+the choices in the menu.
 
 :oid;OIDs
 If you want to define your own OIDs, you must first register a OID for

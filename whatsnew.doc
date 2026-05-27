@@ -28,6 +28,7 @@ GAME
   +  Sound effects with #PLAY and SFX can now be looped.
   +  Sound effects with #PLAY and SFX can now specify forced interrupt
      and forced queue regardless of priority.
+  +  Special option menu (can be defined by the game world file).
   =  Fix a memory leak with loading variable property lists.
 
 SCRIPTS
@@ -55,6 +56,8 @@ ASSEMBLY
      a text window or item window.
   +  Control flag to cause stats moving in the overlay to remember what
      used to be in their place using the sensor field.
+  +  INFO can now be used to read (and lock, if applicable) the value of
+     special options that are defined in the special option menu.
   =  Fix bugs with some instructions.
   *  Numbers on the number pad are no longer automatically treated as
      directions if num lock is on; instead, whether numbers (all numbers,

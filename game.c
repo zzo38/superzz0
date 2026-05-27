@@ -2313,7 +2313,7 @@ static char show_text_window(Uint32 xyn,char help) {
         if(c=='=' || c=='\n' || !c) break;
       }
       textbuf[ntextbuf=b]=0;
-    } else {
+    } else if(!help) {
       ntextbuf=*textbuf=0;
     }
     tcursor=0;
@@ -2473,12 +2473,12 @@ static char show_text_window(Uint32 xyn,char help) {
       }
     }
     v_status[1]=32;
-    set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:playstate==PLAYSTATE_NORMAL?config.speed:0);
+    if(help!=2) set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:playstate==PLAYSTATE_NORMAL?config.speed:0);
     fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
     if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
     fclose(fp);
     work_varproperties(&cur_screen.varprop);
-    work_varproperties(&board_info.varprop);
+    if(help!=2) work_varproperties(&board_info.varprop);
     if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
   }
   free(textfile_text);
@@ -2487,6 +2487,10 @@ static char show_text_window(Uint32 xyn,char help) {
   textfile_size=0;
   repeating=0;
   return r;
+}
+
+void show_help_file(void) {
+  if(load_help_file(textbuf)) show_text_window(0,2);
 }
 
 typedef struct {
@@ -4571,8 +4575,12 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
 }
 
 static Sint32 request_info(Sint32 m) {
-  if(m>=0) return 0; // not implemented
-  switch(-m) {
+  if(m>=0) {
+    if(m>=nspecopt || specopt[m].key==SPECI_VACANT) return 0;
+    if(specopt[m].flag&SPECF_VARIABLE) specopt[m].value=spec_auto_value(specopt[m].key);
+    if(specopt[m].flag&SPECF_LOCKABLE) specopt[m].flag=(specopt[m].flag&~SPECF_VARIABLE)|SPECF_LOCKED|SPECF_SAVE;
+    return specopt[m].value;
+  } else switch(-m) {
     case 1: return cur_screen_id;
     case 2: return cur_screen.soft_edge[DIR_E]+1-cur_screen.soft_edge[DIR_W];
     case 3: return cur_screen.hard_edge[DIR_E]+1-cur_screen.hard_edge[DIR_W];
@@ -6887,6 +6895,7 @@ static void debug_menu(void) {
       }
       debug_log(a,b,0,0,0,0,0);
     }
+    if(nspecopt) win_command('o',"Special option...") special_option_debug();
     win_command_esc(0,"Cancel") break;
   }
   repeating=0;

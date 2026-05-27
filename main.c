@@ -1,5 +1,5 @@
 #if 0
-gcc $CFLAGS -o ~/bin/superzz0 -Wno-unused-result main.c asn1.o audio.o display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o printer.o resample.o savegame.o special.c window.o world.o -lm `sdl-config --cflags --libs`
+gcc $CFLAGS -o ~/bin/superzz0 -Wno-unused-result main.c asn1.o audio.o display.o edit.o editbrd.o editscr.o edittext.o game.o lumped.o printer.o resample.o savegame.o special.o window.o world.o -lm `sdl-config --cflags --libs`
 exit
 #endif
 
@@ -122,6 +122,7 @@ static void load_config(char*nam) {
       if(!editor && !strcmp(line,"[Joystick]")) div=2;
       if(!editor && config.music_resample && !strcmp(line,"[Emulator]")) div=3;
       if(!strcmp(line,"[Colors]")) div=4;
+      if(!editor && !strcmp(line,"[Special]")) div=5;
       continue;
     }
     switch(div) {
@@ -129,6 +130,7 @@ static void load_config(char*nam) {
       case 2: configure_joystick(0,line); break;
       case 3: if(x=strchr(line,' ')) *x++=0; audio_load_emulator(line,x); break;
       case 4: configure_colors(line); break;
+      case 5: config_special_options(line); break;
     }
   }
   fclose(f);

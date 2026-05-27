@@ -1314,14 +1314,18 @@ numbers are treated as unsigned.
 [113 INFO]
   Request information. The second operand is the type of information, which
   is one of the numbers below. The result is written to the first operand.
-  -1 = Current screen number
-  -2 = Distance between soft edges (east/west)
-  -3 = Distance between hard edges (east/west)
-  -4 = Distance between soft edges (north/south)
-  -5 = Distance between hard edges (north/south)
-  -6 = Maximum board number
-  -7 = Maximum stat number for this board
-  -8 = Length of text buffer
+  If the second operand is not negative, then it is a special option number
+  and will read the special option value; if that special option is defined
+  as lockable then this will cause that value to be locked, so that the
+  value can no longer change for the rest of the game.
+   -1 = Current screen number
+   -2 = Distance between soft edges (east/west)
+   -3 = Distance between hard edges (east/west)
+   -4 = Distance between soft edges (north/south)
+   -5 = Distance between hard edges (north/south)
+   -6 = Maximum board number
+   -7 = Maximum stat number for this board
+   -8 = Length of text buffer
 
 [114 LAST]
   Sets the first operand to the last stat XY record (in the format of SIXY)

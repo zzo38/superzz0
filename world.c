@@ -197,6 +197,13 @@ const char*init_world(void) {
     if((i^1)&0xF1) return "Wrong file type";
   }
   item_random_key=time(0)^42;
+  // "OPTION.DER"
+  if(!editor && (fp=open_lump("OPTION.DER","r"))) {
+    const char*e=load_special_options(fp);
+    fclose(fp);
+    if(e) return e;
+  }
+  end_config_special_options();
   // "MEMORY"
   if(!editor) {
     fp=open_lump("MEMORY","r");
@@ -470,12 +477,6 @@ const char*init_world(void) {
       if(fp) fclose(fp);
       if(e) return e;
     }
-  }
-  // "OPTION.DER"
-  if(!editor && (fp=open_lump("OPTION.DER","r"))) {
-    const char*e=load_special_options(fp);
-    fclose(fp);
-    if(e) return e;
   }
   // done
   return 0;

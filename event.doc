@@ -384,7 +384,9 @@ $00A4 (#)
 
 $00B0 (#)
   This event is used for overriding the behaviour of windows if the "use
-  window key event" flag is set for that window definition.
+  window key event" flag is set for that window definition. (This event
+  does not apply to special option menus, including help windows that are
+  called by special option menus.)
 
   W = ASCII code of key pushed (same as for $00E0 event)
   Y = Cursor position (zero-based)
