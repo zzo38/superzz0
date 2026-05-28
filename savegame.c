@@ -395,6 +395,20 @@ void save_state(void) {
     asn1_end(enc);
     asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,&v_mode,1);
     if(nitemdefs) save_itemdef_flags(enc,IDF_EVENT); else asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    if(nspecopt) {
+      asn1_construct(enc,ASN1_UNIVERSAL,ASN1_KEY_VALUE_LIST,0);
+        u=SPECF_LOCKED|(config.save_special_options<0?0:SPECF_SAVE);
+        for(i=0;i<nspecopt;i++) if(specopt[i].key!=SPECI_VACANT && (specopt[i].flag&u) && (specopt[i].flag&(SPECF_VARIABLE|SPECF_SAVE|SPECF_LOCKED))!=SPECF_VARIABLE) {
+          asn1_encode_integer(enc,i);
+          asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+            asn1_encode_integer(enc,specopt[i].value);
+            asn1_encode_integer(enc,specopt[i].flag);
+          asn1_end(enc);
+        }
+      asn1_end(enc);
+    } else {
+      asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
+    }
   asn1_end(enc);
   asn1_finish_encoder(enc);
   fclose(fp);
@@ -448,6 +462,19 @@ static void load_itemdef_flags(ASN1_Value*v,Uint32 m) {
   for(i=0;i<nitemdefs;i++) {
     if((128>>(i&7))&v->data[i/8+1]) itemdefs[i].flag|=m; else itemdefs[i].flag&=~m;
   }
+}
+
+static void load_saved_specopt(const ASN1_Value*v) {
+  ASN1_Value v1,v2;
+  int i;
+  for(i=0;i<nspecopt;i++) specopt[i].flag&=~SPECF_LOCKED;
+  if(v->class!=ASN1_UNIVERSAL || v->type!=ASN1_KEY_VALUE_LIST) bad: errx(1,"Invalid data in save game file: Error in SAVE.DER lump");
+  if(!asn1_first_of(&v1,v)) do {
+    if(v1.type!=ASN1_INTEGER || v1.class!=ASN1_UNIVERSAL || asn1_decode_number(&v1,ASN1_INTEGER,&i) || i<0 || i>=nspecopt) goto bad;
+    if(asn1_next_of(&v1,v) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_SEQUENCE) goto bad;
+    if(asn1_first_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&specopt[i].value)) goto bad;
+    if(asn1_next_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&specopt[i].flag)) goto bad;
+  } while(!asn1_next_of(&v1,v));
 }
 
 static void load_saveder(FILE*fp,char*useglobalscript) {
@@ -524,6 +551,8 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
   if(v1.type==ASN1_OCTET_STRING && v1.length==1) v_mode=v1.data[0]; else if(v1.type!=ASN1_NULL) goto bad;
   if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j || v1.class!=ASN1_UNIVERSAL) goto bad;
   if(v1.type!=ASN1_NULL) load_itemdef_flags(&v1,IDF_EVENT);
+  if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j || v1.class!=ASN1_UNIVERSAL) goto bad;
+  if(v1.type!=ASN1_NULL) load_saved_specopt(&v1);
   // End
   done: asn1_free(&v0);
 }

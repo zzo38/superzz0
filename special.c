@@ -151,6 +151,7 @@ static void draw_menu_field(const ASN1_Value*v0,int at,int len,const WindowInfo*
               v_color[b+at]=c?:((cur_screen.command[b+at]&0x0F)|(v_color[b+at]&0xF0));
             }
           }
+          if(c) for(;b<len;b++) v_color[b+at]=c;
         }
         return;
       } while(!asn1_next_of(&v2,&v1));
@@ -461,7 +462,6 @@ void special_option_menu(void) {
   event.type=SDL_NOEVENT;
   if((v_status[1] && v_status[1]!=32) || !nspecopt) return;
   set_timer(0);
-  fp=open_lump("OPTION.DER","r");
   if(fp=open_lump("OPTION.DER","r")) {
     scrb=board_info.screen;
     v_status[1]=21;
