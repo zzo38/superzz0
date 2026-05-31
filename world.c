@@ -1241,9 +1241,10 @@ void work_varproperties(VarPropertyList*vp) {
         vp->count-=2;
       }
       break;
-    case 0x01:
+    case 0x01: case 0x02:
       j=(editor?VIDEO_SMZX|VIDEO_FLASHY:VIDEO_SMZX|VIDEO_80COLUMNS|VIDEO_FLASHY|VIDEO_EGS|VIDEO_MONO);
       v_mode=(v_mode&~j)|(p->data[0]&j);
+      v_colormask=(p->type==0x01?(v_mode&VIDEO_SMZX?0x80:0x30):(p->data[1]<0x30?0x30:p->data[1]));
       break;
     case 0x04:
       if(!editor) {

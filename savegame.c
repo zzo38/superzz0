@@ -480,6 +480,7 @@ static void load_saved_specopt(const ASN1_Value*v) {
 static void load_saveder(FILE*fp,char*useglobalscript) {
   ASN1_Value v0,v1,v2;
   int i,j;
+  v_colormask=0;
   if(asn1_read_item(fp,&v0,0) || v0.class) bad: errx(1,"Invalid data in save game file: Error in SAVE.DER lump");
   if(asn1_first_of(&v1,&v0) || v1.class || (v1.type!=ASN1_RELATIVE_OID && v1.type!=ASN1_OID)) goto bad;
   if(asn1_next_of(&v1,&v0) || asn1_decode_number(&v1,ASN1_AUTO,&cur_board_id)) goto bad;
@@ -555,6 +556,7 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
   if(v1.type!=ASN1_NULL) load_saved_specopt(&v1);
   // End
   done: asn1_free(&v0);
+  if(!v_colormask) v_colormask=(v_mode&VIDEO_SMZX?0x80:0x30);
 }
 
 void load_state(void) {

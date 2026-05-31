@@ -4205,6 +4205,9 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               if(xy->x<board_info.width && xy->y<board_info.height && (j=xy->layer&3)) {
                 (j==1?b_under:j==2?b_main:b_over)[xy->y*board_info.width+xy->x].color=parse_number(s,xy,&ip);
               }
+            } else if(!strcmp(buf,"COLORMASK")) {
+              v_colormask=parse_number(s,xy,&ip);
+              if(v_colormask<0x30) v_colormask=(v_mode&VIDEO_SMZX?0x80:0x30);
             } else if(!strcmp(buf,"CYCLE")) {
               s->speed=parse_number(s,xy,&ip);
             } else goto badcommand; break;

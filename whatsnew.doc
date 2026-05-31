@@ -29,6 +29,8 @@ GAME
   +  Sound effects with #PLAY and SFX can now specify forced interrupt
      and forced queue regardless of priority.
   +  Special option menu (can be defined by the game world file).
+  +  Video colour mask setting. This can be used to switch between rows of
+     a palette at run time and/or for some special effects.
   =  Fix a memory leak with loading variable property lists.
 
 SCRIPTS
@@ -40,6 +42,7 @@ SCRIPTS
   +  Each stat instance now has a 16-bit "extra value", which can be set
      with the #EXTRA command and read with the (E) numeric expression.
   +  New subroutine specifications.
+  +  The #COLORMASK command to set the video colour mask.
   =  Fix bugs with some commands and conditions.
   =  Fix bugs with script frames and script subroutines.
 

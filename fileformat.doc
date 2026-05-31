@@ -96,6 +96,8 @@ The possible types are:
 * 0x01 = Set the video mode. Bit0 is set for 80 columns and bit7 is set
 for SMZX mode.
 
+* 0x02 = Like 0x01 but also sets the video colour mask.
+
 * 0x04 = Set scroll position; the data is two unsigned 16-bit numbers,
 first the X scroll and then the Y scroll, of the board coordinates that
 will be placed at the view center.

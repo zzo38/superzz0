@@ -44,7 +44,7 @@ extern Uint8 sv_color[80*25];
 extern Uint8 sv_char[80*25];
 extern Uint8 sv_font[80*25];
 extern Uint8 v_status[82];
-extern Uint8 v_xcur,v_ycur,v_mode;
+extern Uint8 v_xcur,v_ycur,v_mode,v_colormask;
 extern SDL_Event event;
 extern Uint8 repeating;
 

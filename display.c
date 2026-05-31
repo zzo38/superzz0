@@ -383,6 +383,7 @@ Uint8 v_status[82];
 Uint8 v_xcur=128;
 Uint8 v_ycur=128;
 Uint8 v_mode=VIDEO_80COLUMNS;
+Uint8 v_colormask=0x30;
 SDL_Event event;
 JoyStatus*joystat;
 Uint8 repeating;
@@ -837,6 +838,8 @@ void load_fontpal_state(const ASN1_Value*v) {
         }
       }
     }
+    if(asn1_next_of(&v0,v)) return;
+    if(asn1_decode_number(&v0,ASN1_AUTO,&v_colormask)) goto bad;
   } else if(v->type!=ASN1_NULL) {
     bad: errx(1,"Font/palette state in save game file has unexpected format");
   }
@@ -876,6 +879,7 @@ void save_fontpal_state(ASN1_Encoder*enc) {
     } else {
       asn1_encode_null(enc);
     }
+    asn1_encode_integer(enc,v_colormask);
   asn1_end(enc);
 }
 
@@ -1027,7 +1031,7 @@ void redisplay(void) {
               for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
             } else {
               if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
-              for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=(15&(v_color[z+x]>>(c&128?0:4)))+0x30,c<<=1;
+              for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=(15&(v_color[z+x]>>(c&128?0:4)))|v_colormask,c<<=1;
             }
           }
           p+=r;
@@ -1043,7 +1047,7 @@ void redisplay(void) {
               for(b=0;b<8;b++) p[b+(x<<3)]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
             } else {
               if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
-              for(b=0;b<8;b++) p[b+(x<<3)]=(15&(v_color[z+x]>>(c&128?0:4)))+0x30,c<<=1;
+              for(b=0;b<8;b++) p[b+(x<<3)]=(15&(v_color[z+x]>>(c&128?0:4)))|v_colormask,c<<=1;
             }
           }
           p+=r;
@@ -1062,8 +1066,9 @@ void redisplay(void) {
               if(font) d=font[14*v_char[z+x]+a+1]; else d=pcfont[14*v_char[z+x]+a+1];
               if(!(v_font[z+x]&VF_ALTERNATE)) {
                 m=v_color[z+x]; m|=((m>>4)|(m<<4))<<8; m|=m<<16;
-                for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+1+(x<<4)]=p[b+b+1+r+(x<<4)]=p[b+b+r+(x<<4)]=(m>>(c&128?(d&128?12:8):(d&128?0:4)))|0x80,c<<=1,d<<=1;
+                for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+1+(x<<4)]=p[b+b+1+r+(x<<4)]=p[b+b+r+(x<<4)]=(m>>(c&128?(d&128?12:8):(d&128?0:4)))|v_colormask,c<<=1,d<<=1;
               } else {
+                // Alternate SMZX 40-columns is not implemented yet
               }
             }
           }
@@ -1082,7 +1087,7 @@ void redisplay(void) {
               if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
               if(!(v_font[z+x]&VF_ALTERNATE)) {
                 m=v_color[z+x]; m|=((m>>4)|(m<<4))<<8; m|=m<<16;
-                for(b=0;b<8;b+=2) p[b+(x<<3)]=p[b+1+(x<<3)]=(m>>"\x04\x00\x08\x0C"[(c>>6)&3])|0x80,c<<=2;
+                for(b=0;b<8;b+=2) p[b+(x<<3)]=p[b+1+(x<<3)]=(m>>"\x04\x00\x08\x0C"[(c>>6)&3])|v_colormask,c<<=2;
               } else {
                 for(b=0;b<8;b+=2) p[b+(x<<3)]=p[b+1+(x<<3)]=((c>>2)&0x30)|0x40|((v_color[z+x]>>((c>>4)&4))&0x0F),c<<=2;
               }

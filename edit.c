@@ -86,7 +86,7 @@ void edit_varprop(VarPropertyList*vp) {
   char text[81];
   char name[9];
   Uint8 cur=0;
-  int i,j,k,x,y;
+  int i,j,k,x,y,z;
   draw0:
   v_ycur=127;
   memset(v_char,0x20,80*25);
@@ -106,6 +106,7 @@ void edit_varprop(VarPropertyList*vp) {
       switch(j=vp->item[k].type) {
         case 0x00: draw_text(1,i+2,"Once",7,-1); break;
         case 0x01: draw_text(1,i+2,text,7,snprintf(text,80,"Set video mode: $%02X",vp->item[k].data[0])); break;
+        case 0x02: draw_text(1,i+2,text,7,snprintf(text,80,"Set video mode: $%02X/$%02X",vp->item[k].data[0],vp->item[k].data[1])); break;
         case 0x04: draw_text(1,i+2,text,7,snprintf(text,80,"Scroll to (%d,%d)",vp->item[k].data[0]|(vp->item[k].data[1]<<8),vp->item[k].data[2]|(vp->item[k].data[3]<<8))); break;
         case 0x11 ... 0x18: draw_text(1,i+2,text,7,snprintf(text,80,"Font: %*.*s",j&15,j&15,vp->item[k].data)); break;
         case 0x1F: draw_text(1,i+2,text,7,snprintf(text,80,"Edit font character %d",vp->item[k].data[0])); break;
@@ -155,7 +156,8 @@ void edit_varprop(VarPropertyList*vp) {
         *name=0; x=y=0;
         switch(vp->item[cur].type) {
           case 0x00: i=4; break;
-          case 0x01: i=8; x=vp->item[cur].data[0]; break;
+          case 0x01: i=8; x=vp->item[cur].data[0]; y=0; break;
+          case 0x02: i=8; x=vp->item[cur].data[0]; y=vp->item[cur].data[1]; z=y&15; y>>=4; break;
           case 0x04: i=3; x=vp->item[cur].data[0]|(vp->item[cur].data[1]<<8); y=vp->item[cur].data[2]|(vp->item[cur].data[3]<<8); break;
           case 0x11 ... 0x18: i=1; snprintf(name,9,"%s",vp->item[cur].data); break;
           case 0x1F: i=9; break;
@@ -227,6 +229,9 @@ void edit_varprop(VarPropertyList*vp) {
           if(i==8) {
             win_boolean('8',"80 columns",x,VIDEO_80COLUMNS);
             win_boolean('X',"SMZX",x,VIDEO_SMZX);
+            win_heading("Color mask:");
+            win_numeric(':',"Row: ",y,0,15);
+            win_numeric('m',"Column: ",z,0,15);
           }
           if(i==9) {
             win_numeric('e',"Character code: ",vp->item[cur].data[0],0,255);
@@ -266,7 +271,7 @@ void edit_varprop(VarPropertyList*vp) {
               vp->item[cur].data[2]=x>>8;
             }
             break;
-          case 8: vp->item[cur].type=0x01; vp->item[cur].data[0]=x; break;
+          case 8: vp->item[cur].type=(y>2?0x02:0x01); vp->item[cur].data[0]=x; vp->item[cur].data[1]=(y<<4)|z; break;
           case 9: vp->item[cur].type=0x1F; break;
         }
         goto draw0;
@@ -1593,8 +1598,10 @@ static void edit_palette(const char*name) {
   v_status[1]='p';
   if(kind==1) {
     v_mode=VIDEO_80COLUMNS;
+    v_colormask=0x30;
   } else {
     v_mode=VIDEO_80COLUMNS|VIDEO_SMZX;
+    v_colormask=0x80;
     if(!font) font=malloc(0xE00);
     if(!font) err(1,"Allocation failed");
     memset(font+0,0x00,14);
@@ -1734,6 +1741,7 @@ static void edit_palette(const char*name) {
   v_ycur=127;
   v_status[1]=0;
   v_mode=VIDEO_80COLUMNS;
+  v_colormask=0x30;
   f=open_lump(name,"w");
   if(!f) errx(1,"Unexpected error when opening palette for writing");
   for(i=lo,j=0;i<=hi && !j;i++) j=red[i]%0x15+grn[i]%0x15+blu[i]%0x15;

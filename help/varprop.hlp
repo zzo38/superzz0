@@ -13,7 +13,14 @@ font editor screen.
 
 þ Video mode: Sets the video mode for this board or screen. In this way,
 you can have some screens using 80 columns or 40 columns and some might
-use SMZX mode while others do not.
+use SMZX mode while others do not. You can also set the video colour mask.
+For non-SMZX mode, row 3 means the palette with 16 colours, 4 to 7 are the
+rows of the palette with 64 colours, and 8 to 15 are with 128 colours; the
+column number is a OR mask for the colour code. For SMZX mode, the row and
+column are both OR masks but the row should be at least 8 (if it is less
+than 8 then it is able to use the other palettes as well). The row must be
+at least 3, otherwise the default value is used (8 for SMZX mode or 3 for
+other modes).
 
 þ Scroll: Set the initial scroll position, by specifying the board
 coordinates of the view center. This is only meaningful in boards and not

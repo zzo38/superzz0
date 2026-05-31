@@ -159,6 +159,13 @@ are not allowed in this case.
 #COLOR number
   Set this object's tile colour.
 
+#COLORMASK number
+  Set the video colour mask. The number is a 8-bit number, and should
+  normally be hexadecimal since it is more useful that way (it is not
+  required), and must be in range $30 to $FF or zero; the high nybble is
+  the row and the low nybble is the column. If it is zero then it will be
+  reset to the default setting.
+
 #CYCLE number
   Change the speed of this stat.
 
