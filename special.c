@@ -549,6 +549,7 @@ static const char*load_special_option_1(const ASN1_Value*v) {
     if(n) {
       if(asn1_next_of(&v1,v) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&o->value)) goto err;
       o->key=SPECI_UNKNOWN;
+      o->flag&=~SPECF_VARIABLE;
     }
   }
   return 0;
@@ -611,9 +612,9 @@ static void spec_debug_callback(Uint16 n,int y,void*uz) {
   draw_text(29,y,"\xFA\xFA\xFA\xFA\xFA",5,5);
   n=specopt[n].flag;
   if(n&SPECF_LOCKABLE) v_char[y*80+29]='L';
-  if(n&SPECF_VARIABLE) v_char[y*80+29]='V';
-  if(n&SPECF_SAVE) v_char[y*80+29]='S';
-  if(n&SPECF_LOCKED) v_char[y*80+29]=10;
+  if(n&SPECF_VARIABLE) v_char[y*80+30]='V';
+  if(n&SPECF_SAVE) v_char[y*80+31]='S';
+  if(n&SPECF_LOCKED) v_char[y*80+32]=10;
 }
 
 void special_option_debug(void) {

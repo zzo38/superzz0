@@ -4,6 +4,11 @@ includes notes about possible new or changed user configuration options.
 The SDL data types are used in many files, but the SDL functions should be
 used only in audio.c and display.c; they may be changed to not use SDL.
 
+In some cases it might help to add the changes into this repository, and
+in some cases it might be better for someone to maintain a separate
+repository for these changes; it is also possible to do some of both, in
+case that can help for some kind of changes.
+
 
 === SDL2, SDL3, etc ===
 
@@ -485,3 +490,83 @@ stdin if the full path is not used; however, softpatching is useful).
 
 Some of the above is probably wrong; someone who is more familiar with the
 programming and usage of RetroArch might know better than I do about it.
+
+
+=== Flatpak ===
+
+I think Flatpak has many problems, but nevertheless someone may wish to
+port this program to Flatpak for the benefit of people who do use Flatpak.
+
+It expects a applicaion icon, but this program does not have one.
+
+It also uses D-Bus, but I think that D-Bus has many problems, so I do not
+use it in my programs, instead preferring other methods which do not use
+and expect Unicode, and do not have the other problems of D-Bus.
+
+Super ZZ Zero does not use XDG directories, although the program could be
+modified to support this as a conditional compilation option, or a fork
+that can be maintained if needed.
+
+Audio permission is not required, although it should be specified as a
+permission that it optionally uses.
+
+For editing, the sz0asm and sz0music programs will also be helpful, but
+those are command-line programs and there is no use to have icons and
+desktop files and message bus etc for those.
+
+File system access is used for:
+
+* User configuration file (normally ~/.superzz0rc but a version for use
+with Flatpak might use the XDG configuration directory instead). This is
+only read and not written by Super ZZ Zero.
+
+* World files, which are read-only for the game but writable in the editor.
+(Only the world file specified as the command-line argument is accessed.)
+
+* Save game files, which are only those specified by the user, in the user
+configuration file and/or by the F3 and F4 menus. (These could be changed
+to use portals, similar to what is described above for some of the other
+ports to other systems.)
+
+(In future, there might also be a high score file, which will also need to
+be accessible unless the user disables the high score file.)
+
+However, there is also the use of popen with commands specified by the user
+at run time and in configuration file. The program can work without these
+features, although then some features will be unavailable (such as the
+ability to import/export parts of the world in the editor; you can still
+use external programs to do this, though).
+
+Also, the Super ZZ Zero editor will call itself using /proc/self/exe and I
+don't know whether or not that works with Flatpak.
+
+There is also sound card emulation, which are dynamic libraries loaded by
+the user configuration file (and these dynamic libraries might do their own
+file system access and other access). This feature is not required, but it
+can be helpful if full functionality is desired.
+
+There are a few ways of handing sound card emulation. One of these would be
+to include all of them inside of the application package, so that they are
+the only ones available, and the user configuration file will only select
+them if multiple implementations are available and to configure them.
+
+
+=== ScummVM ===
+
+In case someone wanted to add the Super ZZ Zero game play only (without the
+editor) into ScummVM.
+
+ScummVM has its own sound card emulation, so these can be mapped to the
+OIDs used by Super ZZ Zero, making that part of the Super ZZ Zero user
+configuration file unnecessary. (This includes support for MIDI; in the
+case of MIDI, it would also sometimes be possible to use MIDI mapping.)
+
+Settings of Super ZZ Zero could be made into the engine-specific settings
+of ScummVM, although some settings are not needed because the general
+settings of ScummVM would be applicable instead, such as many of the audio
+settings (sample rate, buffer size, etc).
+
+Additionally, the settings specified by the [Special] division are specific
+to each game that uses them (not all of them do), although the specific
+game itself will include a menu for changing these settings, if applicable.
+
