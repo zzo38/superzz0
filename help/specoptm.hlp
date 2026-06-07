@@ -21,6 +21,20 @@ Inside of a menu, the following additional actions are available:
 A menu has one or more pages, with a screen number for each one. Each page
 has any number of menu items.
 
+In the menu editor, there is the display: <X> (00,00)[00] where <X> means
+the key code, (00,00) are the X and Y coordinates within the screen where
+it should be displayed, and [00] is the field width. If it is displayed,
+then the value of that menu item is displayed there, and the screen must
+use text/numbers at that position to be able to display it, as explained
+below. Specify 0 as the field width to not display it. After that, will
+be displayed › if it is auto-cancel or ú if not. Auto-cancel means that
+selecting that menu item will automatically cancel this menu in addition
+to the other effects; it is redundant if the type of menu item is cancel.
+
+Key codes for menu items must be unique within each page, and must be a
+letter A to Z or a digit 0 to 9. Those are the keys on the keyboard which
+will be used to activate those menu items.
+
 The screen of a menu can only use the following tiles: background, text,
 and numeric (context-specific). Text and numeric are only used in the
 positions within the field according to the menu item. For numeric tiles,
@@ -30,10 +44,6 @@ Window definitions can also be used. The "fixed item" colour is used for
 locked fields, and the "key item" colour is used for variable fields, and
 the "normal item" colour is used for any other fields (if these colours
 are not set, then the secondary colour of the screen grid is used).
-
-Key codes for menu items must be unique within each page, and must be a
-letter A to Z or a digit 0 to 9. Those are the keys on the keyboard which
-will be used to activate those menu items.
 
 :od;Option definition
 The info number is from 0 to 32767. This number must be different from all

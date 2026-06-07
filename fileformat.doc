@@ -1023,6 +1023,9 @@ if it is not displayed on the screen.
 * The effect of the menu item, which is one of these kind of items, like
 those in the top level but the context is I instead of T.
 
+* Optional boolean; if present and true, means to cancel the menu after
+doing the effect of this menu item (redundant for a type 4 item).
+
 [1 IT] A special option definition. Its fields are:
 
 * Optional PC string being the option title.

@@ -2447,7 +2447,7 @@ typedef struct SpObj {
 } SpObj;
 
 typedef struct SpItem {
-  Uint8 key,x,y,width;
+  Uint8 key,x,y,width,cancel;
   SpObj effect;
 } SpItem;
 
@@ -2523,6 +2523,7 @@ static void read_special_option(const ASN1_Value*v0,SpObj*obj) {
                   if(asn1_next_of(&v3,&v2)) break;
                 }
                 read_special_option(&v3,&x->effect);
+                if(!asn1_next_of(&v3,&v2) && v3.class==ASN1_UNIVERSAL && v3.type==ASN1_BOOLEAN && v3.length && v3.data[0]) x->cancel=1;
               }
             } while(obj->menu.nitem<0x7FFF && !asn1_next_of(&v2,&v1));
           }
@@ -2609,6 +2610,7 @@ static void write_special_option(ASN1_Encoder*enc,SpObj*obj) {
                 asn1_encode_integer(enc,obj->menu.item[i].width);
               }
               write_special_option(enc,&(obj->menu.item[i].effect));
+              if(obj->menu.item[i].cancel) asn1_encode_boolean(enc,1);
             asn1_end(enc);
           }
         }
@@ -2675,17 +2677,18 @@ static int edit_special_option_1_menu(SpMenu*men,SpObj*container,int level) {
     } else if(ite->effect.type==SPECT_PAGEBREAK) {
       draw_text(2,z,buf,6,snprintf(buf,78,"\xCD\xCD PAGE %d \xCD SCREEN %d \xCD\xCD",pn++,ite->effect.screen));
     } else {
-      draw_text(2,z,buf,10,snprintf(buf,78,"<%c> (%2u,%2u)[%2u]",ite->key?:250,ite->x,ite->y,ite->width));
-      if(ite->effect.type<6) draw_text(19,z,tc[ite->effect.type],14,-1);
+      draw_text(2,z,buf,10,snprintf(buf,78,"<%c> (%2u,%2u)[%2u] %c",ite->key?:250,ite->x,ite->y,ite->width,ite->cancel?0x9B:0xFA));
+      if(ite->effect.type<6) draw_text(21,z,tc[ite->effect.type],14,-1);
       switch(ite->effect.type) {
-        case SPECT_OPTION: draw_text(26,z,buf,2,snprintf(buf,40,"#%u",ite->effect.option.number)); break;
-        case SPECT_HELP: draw_text(25,z,buf,2,snprintf(buf,40,"(%s)",ite->effect.help.lump)); break;
+        case SPECT_OPTION: draw_text(28,z,buf,2,snprintf(buf,40,"#%u",ite->effect.option.number)); break;
+        case SPECT_HELP: draw_text(27,z,buf,2,snprintf(buf,40,"(%s)",ite->effect.help.lump)); break;
       }
       if(s+z==y) switch(x) {
         case 0: v_color[z*80+3]=0x2F; break;
         case 1: v_color[z*80+7]=v_color[z*80+8]=0x2F; break;
         case 2: v_color[z*80+10]=v_color[z*80+11]=0x2F; break;
         case 3: v_color[z*80+14]=v_color[z*80+15]=0x2F; break;
+        case 4: v_color[z*80+18]=0x2F; break;
       }
     }
   }
@@ -2695,7 +2698,7 @@ static int edit_special_option_1_menu(SpMenu*men,SpObj*container,int level) {
   if(y<men->nitem) {
     ite=men->item+y;
     draw_text(22,23,"<RET> Edit",7,-1);
-    if(ite->effect.type!=SPECT_PAGEBREAK) draw_text(35,23,x?"<0-9/BKSP> Numeric Entry":"<0-9/A-Z> Key Code   <BKSP> No Key",7,-1);
+    if(ite->effect.type!=SPECT_PAGEBREAK) draw_text(35,23,x==4?"<BKSP> Toggle Auto Cancel":x?"<0-9/BKSP> Numeric Entry":"<0-9/A-Z> Key Code   <BKSP> No Key",7,-1);
   } else ite=0;
   draw_text(0,24,"<\x18\x19\x1A\x1B> Cursor   <INS> Insert   <DEL> Delete   <F1> Break   <ALT+P> Destroy Menu",7,-1);
   v_char[1999]=level+'0'; v_color[1999]=8;
@@ -2706,7 +2709,7 @@ static int edit_special_option_1_menu(SpMenu*men,SpObj*container,int level) {
     switch(event.key.keysym.sym) {
       case SDLK_ESCAPE: return 0;
       case SDLK_LEFT: if(x) x--; goto redraw;
-      case SDLK_RIGHT: if(x<3) x++; goto redraw;
+      case SDLK_RIGHT: if(x<4) x++; goto redraw;
       case SDLK_UP:
         if(!y) break;
         y--;
@@ -2770,6 +2773,7 @@ static int edit_special_option_1_menu(SpMenu*men,SpObj*container,int level) {
         if(x==1) ite->x/=10;
         if(x==2) ite->y/=10;
         if(x==3) ite->width/=10;
+        if(x==4) ite->cancel^=1;
         goto redraw;
       case SDLK_SLASH: case SDLK_QUESTION: online_help("specoptm","me"); goto redraw;
     }

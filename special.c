@@ -239,6 +239,7 @@ static void show1menu(const ASN1_Value*v0) {
           re=do1menu(&v2);
           if(re==-2) goto stop;
           if(re>=0 && re<npag) page=re;
+          if(re==-1 && !asn1_next_of(&v2,&v1) && v2.class==ASN1_UNIVERSAL && v2.type==ASN1_BOOLEAN && v2.length && v2.data[0]) goto stop;
         }
         goto page;
       }
