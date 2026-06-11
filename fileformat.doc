@@ -767,6 +767,12 @@ or null (to not override it), and if there are not enough then the rest
 are assumed to be null. In order, they correspond to: speed, speed_fast,
 message_timer, menu_x, menu_y, game_key_repeat (enumerated).
 
+* 3 = Settings for PC sound effects. Contains real numbers (for the
+convenience of editing, they are not necessarily in canonical form), in
+the order: whole note duration, percussion rate, base note frequency, base
+overtone frequency, base undertone frequency. The base note frequency may
+also be a sequence of twelve numbers for custom tuning.
+
 The octet strings in the joystick mappings are made as a sequence of the
 mappings for levels 0 to 15; there can be less than sixteen mappings in
 which case the rest are null. Each byte will be one of:

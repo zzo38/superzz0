@@ -246,7 +246,6 @@ const char*init_world(void) {
   for(i=0;i<4;i++) asn1reg[i]=(ASN1_Value){.type=ASN1_NULL};
   // "GENERAL.DER"
   if(fp=open_lump("GENERAL.DER","r")) {
-    // (Note: This is not really tested properly yet)
     ASN1_Value a1,a2,a3,a4;
     ASN1_Iterator i1,i2,i3;
     if(asn1_read_item(fp,&a1,0)) {
@@ -314,6 +313,9 @@ const char*init_world(void) {
         break;
       case 2: // Override option
         if(!editor && config.override_option && do_override_option(&a2)) return "Override option is incorrect";
+        break;
+      case 3: // PC sound
+        if(!editor && config.audio_rate && world_configure_audio(&a2)) return "Error in PC sound settings in world file";
         break;
     }
     // Done

@@ -132,7 +132,7 @@ static SDL_AudioSpec spec;
 
 static Uint16 volume=12288;
 static Uint8 muted=255;
-static Uint32 whole_note;
+static Uint32 whole_note,drum_whole_note;
 
 static Sint32 cfreq=-1;
 static Uint32 cpos=0;
@@ -724,11 +724,11 @@ static void audiocb(void*userdata,Uint8*stream,int len) {
     } else if(cfreq>=DRUM_NOTE) {
       x=sqrt(fil);
       while(pos<len && cpos<cmax) {
-        if((cpos*577ULL)/whole_note>=16 || !drum_const_table[(cfreq&15)*16+(cpos*577ULL)/whole_note]) {
+        if((cpos*577ULL)/drum_whole_note>=16 || !drum_const_table[(cfreq&15)*16+(cpos*577ULL)/drum_whole_note]) {
           cfreq=0;
           break;
         }
-        pha+=drum_table[(cfreq&15)*16+(cpos*577ULL)/whole_note];
+        pha+=drum_table[(cfreq&15)*16+(cpos*577ULL)/drum_whole_note];
         if(pha>=1.0) pha-=1.0;
         prf=(1.0-x)*(pha<0.5?-1.0:1.0)+x*prf;
         if(pha<0.1) prf*=-1.0;
@@ -1023,10 +1023,12 @@ void audio_init(void) {
   int i;
   if(!config.audio_buffer || !config.audio_rate || (SDL_WasInit(SDL_INIT_AUDIO)&SDL_INIT_AUDIO)) return;
   // Initialize tables
-  whole_note=config.audio_rate*1.81;
-  for(i=0;i<128;i++) note_table[i]=32.0*pow(2.0,i/12.0)/(float)config.audio_rate;
-  for(i=OVERTONE;i<UNDERTONE;i++) note_table[i]=(32.0*(i+2-OVERTONE))/(float)config.audio_rate;
-  for(i=UNDERTONE;i<=NOTE_MASK;i++) note_table[i]=(2048.0/(i+2-UNDERTONE))/(float)config.audio_rate;
+  if(!whole_note) {
+    drum_whole_note=whole_note=config.audio_rate*1.81;
+    for(i=0;i<128;i++) note_table[i]=32.0*pow(2.0,i/12.0)/(float)config.audio_rate;
+    for(i=OVERTONE;i<UNDERTONE;i++) note_table[i]=(32.0*(i+2-OVERTONE))/(float)config.audio_rate;
+    for(i=UNDERTONE;i<=NOTE_MASK;i++) note_table[i]=(2048.0/(i+2-UNDERTONE))/(float)config.audio_rate;
+  }
   for(i=0;i<256;i++) drum_table[i]=drum_const_table[i]/(float)config.audio_rate;
   // Initialize SDL audio
   spec.freq=config.audio_rate;
@@ -1046,6 +1048,34 @@ void audio_init(void) {
   muted=0;
   if(volume=config.audio_volume) SDL_PauseAudio(0);
   if(config.wave_sound && !editor) loadwaves();
+}
+
+int world_configure_audio(const ASN1_Value*v0) {
+  ASN1_Value v1,v2;
+  double f;
+  int i;
+  if(asn1_first_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_double(&v1,ASN1_REAL,&f) || !(f>0.0)) return 1;
+  whole_note=((Uint32)(config.audio_rate*f))?:1;
+  if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_double(&v1,ASN1_REAL,&f) || !(f>0.0)) return 1;
+  drum_whole_note=((Uint32)(config.audio_rate*f))?:1;
+  if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL) return 1;
+  if(v1.type==ASN1_REAL) {
+    if(asn1_decode_double(&v1,ASN1_REAL,&f) || !(f>0.0)) return 1;
+    for(i=0;i<128;i++) note_table[i]=f*pow(2.0,i/12.0)/(float)config.audio_rate;
+  } else if(v1.type==ASN1_SEQUENCE) {
+    for(i=0;i<12;i++) {
+      if((i?asn1_next_of(&v2,&v1):asn1_first_of(&v2,&v1)) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_REAL || asn1_decode_double(&v2,ASN1_REAL,&f) || !(f>0.0)) return 1;
+      note_table[i]=f/(float)config.audio_rate;
+    }
+    for(i=12;i<128;i++) note_table[i]=2.0*note_table[i-12];
+  } else {
+    return 1;
+  }
+  if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_double(&v1,ASN1_REAL,&f) || !(f>0.0)) return 1;
+  for(i=OVERTONE;i<UNDERTONE;i++) note_table[i]=(f*(i+2-OVERTONE))/(float)config.audio_rate;
+  if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_REAL || asn1_decode_double(&v1,ASN1_REAL,&f) || !(f>0.0)) return 1;
+  for(i=UNDERTONE;i<=NOTE_MASK;i++) note_table[i]=(f/(i+2-UNDERTONE))/(float)config.audio_rate;
+  return 0;
 }
 
 void audio_set_volume(Uint16 vol,Uint8 mut) {

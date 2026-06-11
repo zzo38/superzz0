@@ -136,6 +136,7 @@ Sint32 audio_get_volume(void); // volume + (0x000000=on, 0x010000=mute, 0xFF0000
 void audio_set_sfx(const char*m);
 void audio_set_music(const char*name,Uint16 song); // name=0 to cancel music, name="" for same lump
 void audio_load_emulator(const char*name,const char*arg);
+int world_configure_audio(const ASN1_Value*v);
 
 extern char music_name[9];
 extern Uint16 music_song;

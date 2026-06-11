@@ -42,6 +42,7 @@ P superzz0-release/help/
 ./items.hlp items.hlp
 ./numform.hlp numform.hlp
 ./override.hlp override.hlp
+./pcsopt.hlp pcsopt.hlp
 ./sclib.hlp sclib.hlp
 ./screen.hlp screen.hlp
 ./slist.hlp slist.hlp

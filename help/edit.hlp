@@ -58,6 +58,10 @@ be accessed during the game by pushing F8. (It is not required to define a
 special option menu; the standard options will still work without this.)
 !-specoptm;Special option menu
 
+þ PC sound options: Define options for the PC sound effects, which will
+override the default values.
+!-pcsopt;PC sound options
+
 þ Advanced: Advanced functions which you might not need, such as editing
 mandatory and optional OID sets directly.
 !-editadv;Advanced editor

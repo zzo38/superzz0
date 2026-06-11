@@ -12,7 +12,7 @@ Uint16 maxscreen;
 static char oidbuf[75];
 static FILE*oidfile;
 
-#define N_GENERAL_PARTS 3
+#define N_GENERAL_PARTS 4
 static ASN1_Value general_der;
 static ASN1_Value*general_parts;
 static Uint32 n_general_oids;
@@ -3039,6 +3039,102 @@ static void edit_special_option_menu(void) {
   free_special_option(&obj);
 }
 
+static int r_decimal(const ASN1_Value*v,char*w) {
+  double f;
+  if(v->class!=ASN1_UNIVERSAL || v->type!=ASN1_REAL) return (v->class!=ASN1_UNIVERSAL || v->type!=ASN1_NULL);
+  if(!v->length) { w[0]='0'; w[1]=0; return 0; }
+  if(v->data[0]>0 && v->data[0]<4 && v->length<20) {
+    memcpy(w,v->data+1,v->length-1);
+    w[v->length-1]=0;
+  } else {
+    if(asn1_decode_double(v,ASN1_REAL,&f)) return 1;
+    snprintf(w,21,"%.20G",f);
+  }
+  return 0;
+}
+
+static void w_decimal(ASN1_Encoder*e,char*b,const char*w) {
+  int n=strlen(w);
+  int i;
+  if(!n) {
+    asn1_encode_null(e);
+    return;
+  }
+  memcpy(b+1,w,n);
+  *b=1;
+  for(i=0;i<n;i++) if(w[i]=='.') *b=2; else if(w[i]=='e' || w[i]=='E') *b=3;
+  asn1_primitive(e,ASN1_UNIVERSAL,ASN1_REAL,b,n+1);
+}
+
+static void edit_pc_sound_option(void) {
+  Uint8 buf[40];
+  char wholedur[21]="1.81";
+  char percrate[21]="1.81";
+  char overfreq[21]="32";
+  char underfreq[21]="2048";
+  struct { char text[21]; } scalefreq[12]={{"32"}};
+  Uint8 scm=1;
+  int i;
+  ASN1_Value*v0=general_parts+3;
+  ASN1_Value v1,v2;
+  if(v0->class) {
+    if(asn1_first_of(&v1,v0) || r_decimal(&v1,wholedur)) goto bad;
+    if(asn1_next_of(&v1,v0) || r_decimal(&v1,percrate)) goto bad;
+    if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL) goto bad;
+    if(v1.type==ASN1_SEQUENCE) {
+      scm=12;
+      if(asn1_first_of(&v2,&v1)) goto bad;
+      for(i=0;i<12;i++) if((i && asn1_next_of(&v2,&v1)) || r_decimal(&v2,scalefreq[i].text)) goto bad;
+    } else {
+      if(r_decimal(&v1,scalefreq->text)) goto bad;
+    }
+    if(asn1_next_of(&v1,v0) || r_decimal(&v1,overfreq)) goto bad;
+    if(asn1_next_of(&v1,v0) || r_decimal(&v1,underfreq)) goto bad;
+  }
+  if(0) bad: alert_text("Invalid data in GENERAL.DER lump");
+  win_form("PC sound effect options") {
+    win_boolean('n',"Enable these settings",v0->class,2);
+    win_blank();
+    win_text('W',"Whole note duration: ",wholedur);
+    win_text('P',"Percussion rate: ",percrate);
+    win_text('O',"Overtone base frequency: ",overfreq);
+    win_text('U',"Undertone base frequency: ",underfreq);
+    win_blank();
+    win_heading("Scale mode:");
+    win_option('1',"12-TET",scm,1) win_refresh();
+    win_option('m',"Custom",scm,12) win_refresh();
+    buf[2]=' '; buf[3]=0;
+    for(i=0;i<scm;i++) {
+      buf[0]="CCDDEFFGGAAB"[i]; buf[1]=" # #  # # # "[i];
+      win_text(buf[1]=='#'?0:buf[0],buf,scalefreq[i].text);
+    }
+    win_blank();
+    win_command_esc(0,"Done") break;
+  }
+  i=v0->class&2;
+  asn1_free(v0);
+  if(i) {
+    ASN1_Encoder*enc=asn1_start_encoding_value(v0);
+    if(!enc) err(1,"Allocation failed");
+    asn1_construct(enc,ASN1_CONTEXT_SPECIFIC,3,0);
+      w_decimal(enc,buf,wholedur);
+      w_decimal(enc,buf,percrate);
+      if(scm==12) {
+        asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+          for(i=0;i<12;i++) w_decimal(enc,buf,scalefreq[i].text);
+        asn1_end(enc);
+      } else {
+        w_decimal(enc,buf,scalefreq->text);
+      }
+      w_decimal(enc,buf,overfreq);
+      w_decimal(enc,buf,underfreq);
+    asn1_end(enc);
+    if(asn1_finish_encoder(enc)) err(1,"Allocation failed");
+  } else {
+    v0->class=0;
+  }
+}
+
 int run_editor(void) {
   int i,n,lo,hi;
   char c,b;
@@ -3284,6 +3380,7 @@ int run_editor(void) {
         win_command('J',"Joystick configuration...") edit_joystick();
         win_command('D',"Default setting override...") edit_default_setting_override();
         win_command('S',"Special option menu...") edit_special_option_menu();
+        win_command('C',"PC sound options...") edit_pc_sound_option();
         win_command('.',"Advanced...") {
           win_form("Advanced editor") {
             win_help("editadv",0);
