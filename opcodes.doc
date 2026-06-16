@@ -1326,6 +1326,7 @@ numbers are treated as unsigned.
    -6 = Maximum board number
    -7 = Maximum stat number for this board
    -8 = Length of text buffer
+   -9 = Number of accumulated lines of text (not displayed yet)
 
 [114 LAST]
   Sets the first operand to the last stat XY record (in the format of SIXY)
@@ -1382,6 +1383,24 @@ numbers are treated as unsigned.
   operand is the layer/lock flag to use, the W register stores the stat
   number, the X and Y registers are the values to use for X and Y for the
   new instance, and the first operand is the added instance.
+
+[118 FELT]
+  Iterates over the lines of text that are to be displayed in a text window
+  which have been accumulated by a script. You cannot display text windows
+  during this time, and this will also use up the text, so that it will not
+  be displayed afterward either. This must be used during a script in order
+  to be effective.
+
+  The second argument is the address of a subroutine which is called for
+  each line of text. W and X and Z are copied from the caller, and Y is
+  the Y from the caller plus the zero-based line number, and K is the
+  line type (0 or '!' or '$'). The text buffer is the copy of the text of
+  the line, except that a initial $ or ! is omitted. J is the key code for
+  a ! line that has one, or 0 otherwise. If the return value is zero then
+  it will continue with the next iteration, otherwise it will stop.
+
+  The first argument is only written to if the subroutine that is called
+  returns nonzero, in which case that stops the iteration.
 
 [120 GIVE]
   The first operand tells which status variable to access, where A-H are

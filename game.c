@@ -2053,10 +2053,46 @@ static void add_message_text(void) {
   if(++nscrback==config.message_scrollback) nscrback=0;
 }
 
+static Sint32 for_each_line_of_text(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
+  Uint8*s;
+  Uint8*t;
+  Uint32 n;
+  Sint32 r;
+  if(!textfile || (v_status[1] && v_status[1]!=232)) return 0;
+  v_status[1]=232;
+  fclose(textfile);
+  if(!textfile_text) err(1,"Allocation failed");
+  tnlines=textfile_size/TEXTREC;
+  s=t=textfile_text;
+  textfile=0;
+  textfile_text=0;
+  textfile_size=0;
+  for(n=0;n<tnlines;n++) {
+    memory[MEM_ARG_J]=memory[MEM_ARG_K]=0;
+    if(*t) {
+      if(t[1]=='!' || t[1]=='$') {
+        memory[MEM_ARG_K]=t[1];
+        if(*t>3 && t[1]=='!' && t[2]=='<' && t[4]=='>') memory[MEM_ARG_J]=t[3];
+        ntextbuf=*t-1; memcpy(textbuf,t+2,*t-1); textbuf[ntextbuf]=0;
+      } else {
+        ntextbuf=*t; memcpy(textbuf,t+1,*t); textbuf[ntextbuf]=0;
+      }
+    } else {
+      ntextbuf=*textbuf=0;
+    }
+    if(r=run_program(pc,w,x,y,z)) break;
+    t+=TEXTREC; y++;
+  }
+  free(s);
+  v_status[1]=0;
+  return r;
+}
+
 static char load_help_file(const Uint8*name) {
   FILE*fp;
   char buf[82];
   int i,c;
+  if(textfile) fclose(textfile);
   free(textfile_text);
   textfile=0;
   textfile_text=0;
@@ -2095,6 +2131,7 @@ static char load_help_file(const Uint8*name) {
   fclose(fp);
   fputc(0,textfile);
   fclose(textfile);
+  textfile=0;
   if(!textfile_text) errx(1,"Allocation failed");
   tnlines=textfile_size/TEXTREC;
   return 1;
@@ -2297,6 +2334,7 @@ static char show_text_window(Uint32 xyn,char help) {
     if(!textfile) return 0;
     fputc(0,textfile);
     fclose(textfile);
+    textfile=0;
   }
   if(!textfile_text) errx(1,"Allocation failed");
   tnlines=textfile_size/TEXTREC;
@@ -4592,6 +4630,7 @@ static Sint32 request_info(Sint32 m) {
     case 6: return maxboard;
     case 7: return maxstat;
     case 8: return ntextbuf;
+    case 9: if(!textfile) return 0; fflush(textfile); return textfile_size/TEXTREC;
     default: return 0;
   }
 }
@@ -5818,6 +5857,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_EXCH: t=memory[so&0xFFFF]|(regs[fo]&~0xFFFF); memory[so&0xFFFF]=regs[fo]; regs[fo]=t; break;
       case OP_EXIT: condflag=(regs[fo]=board_info.exits[so&3])?1:0; break;
       case OP_FDEC: --so; if(!condflag) goto store; break;
+      case OP_FELT: if(so=for_each_line_of_text(so,w,x,y,z)) goto store; break;
       case OP_FINC: ++so; if(!condflag) goto store; break;
       case OP_FLET: if(!condflag) goto store; break;
       case OP_FLOA:

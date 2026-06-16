@@ -63,6 +63,8 @@ ASSEMBLY
      used to be in their place using the sensor field.
   +  INFO can now be used to read (and lock, if applicable) the value of
      special options that are defined in the special option menu.
+  +  FELT to read the lines of text written by a script, in order to handle
+     them by yourself instead of using a text window.
   =  Fix bugs with some instructions.
   *  Numbers on the number pad are no longer automatically treated as
      directions if num lock is on; instead, whether numbers (all numbers,
