@@ -32,7 +32,7 @@ sha3-256=nist.8
 sha3-384=nist.9
 sha3-512=nist.10
 sha1=1.3.14.3.2.26
-md5=1.2.840.113549.2.5 % deprecated
+md5=1.2.840.113549.2.5 % (MD5 should be avoided if possible)
 blake2=1.3.6.1.4.1.1722.12.2 % blake2.<1 for BLAKE2b or 2 for BLAKE2s>.<number of hash bits divided by 32>
 
 % Authors
@@ -56,6 +56,7 @@ G_graphics=feature.1
 G_smzx=feature.2
 G_ver_not_release=feature.3.0
 G_ver_is_release=feature.3.1
+G_vcmask=feature.4 % (video colour mask)
 
 % File formats
 F_world=file.0 % (not used directly in world files, due to not directly using DER format)

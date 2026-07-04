@@ -224,10 +224,6 @@ flags of stats can be used to display them as sprites in a separate layer,
 and the board view component will be able to specify a sprite offset,
 which will allow sprites to be displayed partially in front of walls.
 
-Other possibility is SMZX mode like MegaZeux does (this can be used as an
-optional mode for the text grid layer; when combined with 40-columns mode
-then it might be a vertical SMZX mode).
-
 Some worlds might support enhanced graphics as an optional feature.
 (It can be specified as mandatory or optional in GENERAL.DER.)
 
@@ -474,6 +470,19 @@ displayed when running with a released version (non-released versions will
 not display the warning message for this case).
 
 
+=== Audio lumps separation ===
+
+It might be worth for it to be possible to have the .BGM and .SND lumps in
+a separate file than the world file, so that you can reduce the required
+disk space and network transfer if you do not want them. The game will
+still work without them, and the PC sound effects will play even if you
+used Y in a PC sound effect to suppress them when wave sounds are played
+(since it only suppresses PC sounds if the wave sounds are loaded).
+
+Since the file format is concatenable, if they are separated then you can
+recombine them just by concatenation and it will work.
+
+
 === Scroll lock ===
 
 An idea is to have a setting for the scroll lock key to affect the function
@@ -621,7 +630,7 @@ a setting within the world file to specify the default game speed, though.)
 
 * Multiplayer mode.
 
-* Large language model.
+* Large language model (and similar generative AI systems).
 
 * Cryptocurrency.
 

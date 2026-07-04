@@ -78,8 +78,11 @@ EDITOR
      implemented, but the editor for this feature was previously missing.)
   +  Menu to manage sound effects and music.
   +  Export MZM in screen editor.
+  +  Commands a s S in screen editor to set parameters of screen tiles.
   =  Changed a conflicting keyboard command in the item definition editor.
   =  The overlay draw mode works correctly now.
+  =  Display screen tiles in the editor with the world-specific fonts and
+     colours instead of using the system fonts and colours.
 
 TEMPLATE
   +  Sound effect for energizer.

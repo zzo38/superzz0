@@ -30,6 +30,7 @@ ALT+W      Window info
 ALT+Y      Variable property list
 ALT+Z      Maximum numeric prefix
 SPACE      Toggle mark
+a          Both s and p together
 c          Select drawing colour
 C          Change colour of tile at cursor
 d          Delete tile at cursor
@@ -42,6 +43,8 @@ n          Find next mark
 N          Find previous mark
 p          Place tile
 r          Reverse background/foreground colour
+s          Select drawing parameter
+S          Change parameter at cursor
 t          Text entry
 u          Unmark all
 v          Block mode

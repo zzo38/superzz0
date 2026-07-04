@@ -815,8 +815,9 @@ with a meaning defined by Super ZZ Zero, and the next 16-bits are for
 user-defined flags.
 
 The rest of the fields are optional; they must be in the specified order
-but any ones can be omitted. Each is a implicit typed sequence, with the
-context-specific class and with the specified type number:
+but any ones can be omitted. Each is a explicit typed value (or a implicit
+typed sequence if there is more than one), with the context-specific class
+and with the specified type number:
 
 * 0 = A unsigned 32-bit integer which is the weight of the item. If not
 specified, then it will be zero.

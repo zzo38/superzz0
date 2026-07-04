@@ -1064,6 +1064,7 @@ static void ask_colon_command(void) {
 static void update_e_screen(void) {
   Uint32 at;
   Uint8 com,col,par,x,y;
+  memset(v_font,viewmode?VF_SYSTEM:0,80*25);
   for(at=x=y=0;at<80*25;at++,x++) {
     if(x==80) x=0,++y;
     com=cur_screen.command[at];
@@ -1107,6 +1108,7 @@ static void show_selection(void) {
 static void estatus(void) {
   char buf[80];
   int y=(ycur>12?0:24);
+  memset(v_font+y*80,VF_SYSTEM,80);
   memset(v_color+y*80,0x11,80);
   draw_text(0,y,buf,0x1A,snprintf(buf,80,"%5d",scr_id));
   draw_text(7,y,"<\xFE>",0x17,3);
@@ -1133,6 +1135,15 @@ static int shifted_arrows(void) {
     case 'm': set_mark(xcur,ycur,3); return 0;
     default: return 1;
   }
+}
+
+static Uint8 change_parameter(Uint8 p,Uint8 c) {
+  switch(c&0xF0) {
+    case SC_BACKGROUND: case SC_BOARD: case SC_INDICATOR: case SC_TEXT:
+    case SC_BITS_0_LO ... 0xFF: chr: return ask_color_char(1,p);
+    case SC_ITEM: if(c==SC_ITEM_PLACEHOLDER || c>=SC_ITEM_FLAGS) goto chr; break;
+  }
+  return p;
 }
 
 Uint16 edit_screen(Uint16 id) {
@@ -1169,6 +1180,7 @@ Uint16 edit_screen(Uint16 id) {
         case -SDLK_y: edit_varprop(&cur_screen.varprop); work_varproperties(&cur_screen.varprop); break;
         case -SDLK_z: numprefix=0xFFFF; break;
         case ' ': set_mark(xcur,ycur,1); break;
+        case 'a': clip.par=change_parameter(clip.par,clip.com); place_at(xcur,ycur,clip); break;
         case 'c': case 0x03: clip.col=ask_color_char(0,clip.col); break;
         case 'C': cur_screen.color[ycur*80+xcur]=ask_color_char(0,cur_screen.color[ycur*80+xcur]); break;
         case 'd': case 0x7F: place_at(xcur,ycur,(ScTile){SC_BACKGROUND,0,0,0}); break;
@@ -1187,6 +1199,8 @@ Uint16 edit_screen(Uint16 id) {
         case 'N': find_next_marked(-(numprefix?:1)); numprefix=0; break;
         case 'p': place_at(xcur,ycur,clip); break;
         case 'r': clip.col=(clip.col<<4)|(clip.col>>4); break;
+        case 's': clip.par=change_parameter(clip.par,clip.com); break;
+        case 'S': cur_screen.parameter[ycur*80+xcur]=change_parameter(cur_screen.parameter[ycur*80+xcur],cur_screen.command[ycur*80+xcur]); break;
         case 't': emode='t'; xcur2=xcur; break;
         case 'u': unmark: if(emode!=15) emode=0; memset(markgrid,0,250); break;
         case 'v': xcur2=xcur; ycur2=ycur; emode='v'; break;

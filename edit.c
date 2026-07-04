@@ -173,6 +173,7 @@ void edit_varprop(VarPropertyList*vp) {
           default: i=0;
         }
         win_form("Variable Property Edit") {
+          win_help("varprop",0);
           win_option('F',"Font",i,1) win_refresh();
           win_option('c',"Edit font character",i,9) win_refresh();
           win_option('P',"Palette",i,2) win_refresh();
