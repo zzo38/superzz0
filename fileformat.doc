@@ -305,12 +305,21 @@ it is wrapped, it is a sequence with fields:
 
 * Glyph definitions. This is a implicit typed sequence; see below.
 
-* Character code mapping, which is a set of implicit typed sequences.
+* Character code mapping, which is a set of implicit typed sequences and/or
+implicit typed octet strings.
 
 * Text direction (enumerated): Currently the only possible value is zero,
 meaning left to right, and the first line is at the top.
 
 * Set of animation definitions.
+
+* Case folding, which is a octet string. This is only valid for a font with
+character codes 0 to 255 exactly (this might change in future). The format
+is: 0x00 to 0x7F means 1 to 128 codes that are case folded to themself,
+0x80 to 0xBF means 1 to 64 codes that are case folded to the codes that are
+specified by that many following bytes, and 0xC0 to 0xFF means 1 to 64
+codes that are case folded by adding a offset (modulo 256) which is the
+single next byte that follows.
 
 Any of them may be null, other than the first two; and if there are not
 enough fields then the rest will be treated as null.
@@ -321,9 +330,51 @@ them are packed together even if it is not a multiple of eight). There can
 be more glyphs than the number of character codes, in which case the rest
 of them can be used for animation, ligatures, etc.
 
-The character code mappings can be:
+The character code mappings can be (o=octet string, s=sequence):
 
-* Type 0 = One integer being the IBM code page number.
+* Type 0 (s) = One integer being the IBM code page number.
+
+* Type 1 (o) = The ISO 2022 escape sequences for designating the G0 and G1
+sets that correspond to this font (both G0 and G1 are optional). Some DOCS
+codes might also be valid (but are not required).
+
+* Type 2 (s) = One integer being TRON plane number (0x21 for the first
+TRON plane). Optionally second can be a bit string indicating the zones,
+where: (0) zone A, (1) zone B, (2) zone C, (3) zone D.
+
+* Type 3 (s) = Mosaics. First is a PC string indicating the kind of mosaics
+(e.g. "solid mosaics 2x3"; it can also be blank), and second and third are
+integers being the horizontal and vertical number of pieces, and fourth is
+a octet string with the character codes of the pieces, indexed by the bits
+of the mosaics where the top left is the lowest bit and then the one to the
+left of that is the next bit, etc, and the bottom left is the highest bit.
+Before the octet string can be a optional bit string, where a bit is clear
+if that combination is not available in this font.
+
+* Type 4 (o) = The CHARSET_REGISTRY and CHARSET_ENCODING parts of the XLFD
+name of the font, including a hyphen in between. Subsetting is also allowed
+but is not expected or required.
+
+* Type 5 (s) = Line drawing. This works like type 3, but the second and
+third indicating the divisions of mosaics is not used; and is replaced with
+a bit string with eight bits, where a bit is set iff that direction is used
+where the directions are in order, starting from pointing to the right and
+going counterclockwise in forty-five degrees of each step; and then after
+that bit string is a integer telling how many variants of pieces of lines
+are present (not including the absence of a line).
+
+* Type 6 (o) = TRON code mapping for a character set with single-byte
+characters. The format is like TRON-8, but there is a implied initial <FE>
+which is not present, and the control codes have special meanings. The code
+<7F> means that the code is valid but not mapped, and <FF> means that the
+code is not used at all. Codes <00> to <20> means 1 to 33 more TRON codes
+based on the previous one; if the previous is the special codes <7F> or
+<FF> then it repeats that but otherwise it is that many next codes in the
+"linear" order (e.g. 0x217D, 0x217E, 0x2221, 0x2222, etc). There must be
+the same number of codes in here that there are in this font.
+
+(Not all of them are necessarily supported by Super ZZ Zero, but might be
+useful in other programs.)
 
 Each animation definition is a sequence with the fields:
 

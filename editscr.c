@@ -19,6 +19,9 @@ static Uint8 emode;
 static Uint8 markgrid[250];
 static Uint8 viewmode;
 
+static ScTile*areabuf;
+static Uint8 area_xoffset,area_yoffset;
+
 void set_screen_name(Uint16 id,const char*name) {
   if(maxscreen<id) {
     screennames=realloc(screennames,(id+1)*sizeof(Uint8*));
@@ -1146,6 +1149,47 @@ static Uint8 change_parameter(Uint8 p,Uint8 c) {
   return p;
 }
 
+static void area_save(Uint8 how) {
+  Sint16 x,y,z,x0,y0,x1,y1;
+  if(markgrid || !how) {
+    if(how) {
+      x0=y0=0; x1=79; y1=24;
+    } else {
+      x0=(xcur<xcur2?xcur:xcur2);
+      y0=(ycur<ycur2?ycur:ycur2);
+      x1=(xcur>xcur2?xcur:xcur2);
+      y1=(ycur>ycur2?ycur:ycur2);
+    }
+    area_xoffset=xcur;
+    area_yoffset=ycur;
+    if(areabuf) memset(areabuf,0,80*25); else areabuf=calloc(80*25,sizeof(ScTile));
+    if(!areabuf) err(1,"Allocation failed");
+    for(x=x0;x<=x1;x++) for(y=y0;y<=y1;y++) if(!how || (markgrid[(x>>3)+y*10]&(1<<(x&7)))) {
+      z=y*80+x;
+      areabuf[z]=(ScTile){cur_screen.command[z],cur_screen.color[z],cur_screen.parameter[z],1};
+    }
+  } else {
+    free(areabuf);
+    areabuf=0;
+  }
+}
+
+static void area_place(void) {
+  ScTile*p;
+  Sint16 x,y,z;
+  if(!areabuf) return;
+  for(z=0;z<2000;z++) {
+    if(markgrid && (markgrid[z>>3]&(1<<(z&7)))) continue;
+    y=z/80+area_yoffset-ycur; x=z%80+area_xoffset-xcur;
+    if(x<0 || x>=80 || y<0 || y>=80) continue;
+    p=areabuf+(y*80+x);
+    if(!p->ext) continue;
+    cur_screen.command[z]=p->com;
+    cur_screen.color[z]=p->col;
+    cur_screen.parameter[z]=p->par;
+  }
+}
+
 Uint16 edit_screen(Uint16 id) {
   int i;
   Sint32 k;
@@ -1171,6 +1215,7 @@ Uint16 edit_screen(Uint16 id) {
         case 0x1A: xcur=cur_screen.view_x; ycur=cur_screen.view_y; break;
         case 0x1B: if(numprefix) numprefix=0; else if(emode) emode=0; else goto exit; break;
         case '0' ... '9': if((i=numprefix*10+k-'0')<65536) numprefix=i; break;
+        case -SDLK_a: area_place(); break;
         case -SDLK_i: edit_screen_info(); break;
         case -SDLK_l: cur_screen.message_l=xcur; break;
         case -SDLK_m: cur_screen.message_x=xcur; cur_screen.message_y=ycur; break;
@@ -1216,6 +1261,8 @@ Uint16 edit_screen(Uint16 id) {
         case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editscr",0); break;
       } break;
       case 'm': switch(k) {
+        case 'a': area_save(1); goto unmark;
+        case 'A': area_save(1); emode=0; break;
         case 'c': do_colon_command("&color"); goto unmark;
         case 'C': do_colon_command("&color"); emode=0; break;
         case 'p': do_colon_command("&place"); goto unmark;
@@ -1236,6 +1283,7 @@ Uint16 edit_screen(Uint16 id) {
       case 'v': switch(k) {
         case -SDLK_h: set_edges(cur_screen.hard_edge); emode=0; break;
         case -SDLK_s: set_edges(cur_screen.soft_edge); emode=0; break;
+        case 'a': area_save(0); emode=0; break;
         case 'c': do_colon_command("<:>unmark"); emode=0; break;
         case 'i': case ' ': do_colon_command("<:>toggle"); emode=0; break;
         case 'm': do_colon_command("<:>mark"); emode='m'; break;

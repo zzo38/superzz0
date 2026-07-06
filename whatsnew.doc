@@ -78,6 +78,7 @@ EDITOR
      implemented, but the editor for this feature was previously missing.)
   +  Menu to manage sound effects and music.
   +  Export MZM in screen editor.
+  +  Implement area buffer in screen editor.
   +  Commands a s S in screen editor to set parameters of screen tiles.
   =  Changed a conflicting keyboard command in the item definition editor.
   =  The overlay draw mode works correctly now.

@@ -21,6 +21,7 @@ TAB        Toggle normal/draw mode
 ^Q         Reset font/palette
 ^V         Toggle view mode
 0-9        Numeric prefix
+ALT+A      Place from area buffer
 ALT+I      Screen info
 ALT+L      Set message left edge
 ALT+M      Set message center position
@@ -60,6 +61,8 @@ Draw mode will cause it to automatically place (like the "p" command)
 as you move the cursor; normal mode doesn't do that.
 
 :mass;Mass mode
+a          Store in area buffer (discard marks)
+A          Store in area buffer (keep marks)
 c          Set colour of all marked (discard marks)
 C          Set colour of all marked (keep marks)
 p          Place at all marked (discard marks)
@@ -78,6 +81,7 @@ Block mode is used for selecting a rectangular block.
 
 SPACE      Toggle marks in selected block; leave block mode
 RETURN     Mark selected block and cancel
+a          Store in area buffer; leave block mode
 b          Draw thin border; leave block mode
 B          Draw thick border; leave block mode
 m          Mark selected block and switch to mass mode
