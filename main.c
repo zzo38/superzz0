@@ -91,6 +91,9 @@ static void set_config(const char*s) {
   }
 }
 
+#ifndef CONFIG_SUPERZZ0RC_NAME
+#define CONFIG_SUPERZZ0RC_NAME ".superzz0rc"
+#endif
 static void load_config(char*nam) {
   char div=1;
   char*x;
@@ -105,11 +108,14 @@ static void load_config(char*nam) {
   } else {
     char*e=getenv("HOME");
     if(!e) return;
-    nam=malloc(n=strlen(e)+14);
+    nam=malloc(n=strlen(e)+sizeof(CONFIG_SUPERZZ0RC_NAME)+4);
     if(!nam) err(1,"Allocation failed");
-    snprintf(nam,n,"%s/.superzz0rc",e);
+    snprintf(nam,n,"%s/" CONFIG_SUPERZZ0RC_NAME,e);
     f=fopen(nam,"r");
     free(nam);
+#ifdef CONFIG_GLOBAL_SUPERZZ0RC_NAME
+    if(!f) f=fopen(CONFIG_GLOBAL_SUPERZZ0RC_NAME,"r");
+#endif
     if(!f) return;
   }
   while(getline(&line,&linesize,f)>0) {
@@ -153,7 +159,7 @@ static void init_front(void) {
     close(fd[1]); close(fd[2]);
     dup2(fd[0],0); dup2(fd[3],1);
     execl("/bin/sh","/bin/sh","-c",config.external,(char*)0);
-    err(1,"Cannot execute");
+    warn("Cannot execute");
     _exit(1);
   }
 }

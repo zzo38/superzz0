@@ -27,13 +27,31 @@ the sz0version program for handling version numbers. For assembler (asm.c)
 must be compiled separately. The programs for handling the catalog service
 are not written yet, but they will also be compiled separately.
 
-In display.c you can add some preprocessor definitions to control the
-compilation (they can be used in other files as well, although they are
-ineffective in other files):
+You can add some preprocessor definitions to control the compilation:
 
-  CONFIG_DISABLE_FRONT = Disables the "front" mode with external programs.
-  CONFIG_DISABLE_X11_FUNCTIONS = Disables all uses of X11 functions.
-  CONFIG_USE_DEPRECATED_X11_FUNCTION = Use XKeycodeToKeysym function.
+* CONFIG_DISABLE_FRONT = Disables the "front" mode with external programs.
+
+* CONFIG_DISABLE_X11_FUNCTIONS = Disables all uses of X11 functions. Use
+this if it is compiled for a system without X windows.
+
+* CONFIG_GLOBAL_SUPERZZ0RC_NAME = The default global user configuration
+file, which is loaded if the user's own .superzz0rc file does not exist.
+This should be a absolute path and file name, so it should start with a
+slash. The intention of this is for customization in package distributions.
+If this is not defined, then the built-in default settings are used.
+
+* CONFIG_SUPERZZ0RC_NAME = Name of the user configuration file; it is not
+allowed to contain any percentage signs. If this is not defined, then
+".superzz0rc" is used by default. It is always relative to the directory
+specified by the HOME environment variable. (The intention of this is
+in case of forks that someone wants to run both the original and a
+forked version on the same computer and wants to use a different user
+configuration file for each one. Currently (at the time of this writing),
+this file name is only mentioned once in the program, but this is done in
+case it is later needs to be mentioned multiple times, it can work even
+with only one change rather than all of them.)
+
+* CONFIG_USE_DEPRECATED_X11_FUNCTION = Use XKeycodeToKeysym function.
 
 (In future, more preprocessor definitions to control compilation might
 also be defined, and will also be documented here.)
