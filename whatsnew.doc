@@ -72,6 +72,7 @@ ASSEMBLY
 
 EDITOR
   +  Improvements to text editor.
+  +  Improvements to font editor.
   +  Font editor now displays numeric values of the raster data.
   +  You can now specify modification of a single character of a font in
      the variable property editor. (This variable property was already

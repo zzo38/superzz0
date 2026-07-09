@@ -5,6 +5,7 @@ move the cursor in the right window and space to toggle the pixel.
 
 !ed;Editing characters
 !me;Memory
+!sk;Mask
 !ma;Macros
 !ba;Batch mode
 
@@ -47,6 +48,15 @@ operation on it with the memory.
 Push P to overwrite the current glyph with a copy of the memory.
 
 Push Z to exchange the current glyph with the memory.
+
+:sk;Mask
+The mask can be used to mask out some scanlines from some operations.
+
+Push R to reset the mask, and push T to toggle the mask on the current line.
+You can also push E to invert the mask so that any unmasked lines are now
+masked and vice-versa. It will show Ø to indicate lines that are masked out.
+
+The mask is not effective in batch mode, except macros.
 
 :ma;Macros
 You can record a macro, which is a sequence of operations; you can record up

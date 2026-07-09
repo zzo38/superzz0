@@ -1234,7 +1234,7 @@ static void edit_font(const char*name) {
   char b[70]={};
   int i=0;
   int j,k;
-  Uint8 x,y;
+  Uint8 x,y,z;
   Uint8 cch=0;
   char mode=0;
   char draw=0;
@@ -1247,6 +1247,7 @@ static void edit_font(const char*name) {
   static Uint8 clip[14];
   Sint16 nclip=-1;
   char bplay=0;
+  Uint16 mask=0x3FFF;
   if(adv) {
     alert_text("Not implemented");
     return;
@@ -1321,6 +1322,11 @@ static void edit_font(const char*name) {
     draw_text(0,20,"<SHIFT+\x18\x19\x1A\x1B> Shift",7,-1);
     draw_text(0,21,"<SPACE> Plot",7,-1);
     draw_text(0,22,"<TAB> Draw",7,-1);
+    draw_text(20,14,"<Q> Unfill Left",7,-1);
+    draw_text(20,15,"<W> Fill Left",7,-1);
+    draw_text(20,16,"<E> Invert Mask",7,-1);
+    draw_text(20,17,"<R> Reset Mask",7,-1);
+    draw_text(20,18,"<T> Toggle Mask",7,-1);
     draw_text(20,19,"<I> Inverse",7,-1);
     draw_text(20,20,"<F> Flip",7,-1);
     draw_text(20,21,"<M> Mirror",7,-1);
@@ -1360,7 +1366,8 @@ static void edit_font(const char*name) {
   if(play<nmacro) {
     switch(macro[play++]) {
       MM(1)MM(2)MM(3)MM(4)MM(5)MM(6)MM(7)MM(8)MM(9)MM(10)MM(11)MM(12)MM(13)MM(14)MM(15)
-      MM(16)MM(17)MM(18)MM(19)MM(20)MM(21)MM(22)MM(23)MM(24)MM(25)
+      MM(16)MM(17)MM(18)MM(19)MM(20)MM(21)MM(22)MM(23)MM(24)MM(25)MM(26)MM(27)MM(28)
+      MM(29)MM(30)MM(31)
       case 49 ... 58: event.key.keysym.sym=macro[play-1]; goto M49;
     }
   } else if(bplay) {
@@ -1384,6 +1391,7 @@ static void edit_font(const char*name) {
     for(i=0;i<256;i++) v_color[(i>>4)*80+(i&15)+161]=(i==cch?0x1E:0x06)+(batch[i>>3]&(1<<(i&7))?0x21:0x00);
   }
   if(!mode) for(i=0;i<14;i++) {
+    v_char[i*80+201]=mask&(1<<i)?0xB3:0xD8;
     for(j=0;j<8;j++) {
       v_color[i*80+202+j*2]=v_color[i*80+203+j*2]=(x==j && y==i)?0x1B:0x07;
       v_char[i*80+202+j*2]=v_char[i*80+203+j*2]=(font[cch*14+i]&(128>>j))?177:250;
@@ -1403,7 +1411,7 @@ static void edit_font(const char*name) {
       if(event.key.keysym.mod&KMOD_ALT) {
         M(2); cch--;
       } else if(event.key.keysym.mod&KMOD_SHIFT) {
-        M(3); for(i=0;i<14;i++) font[14*cch+i]=(font[14*cch+i]<<1)|(font[14*cch+i]>>7);
+        M(3); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]=(font[14*cch+i]<<1)|(font[14*cch+i]>>7);
       } else {
         M(4); x=(x-1)&7;
       }
@@ -1412,7 +1420,7 @@ static void edit_font(const char*name) {
       if(event.key.keysym.mod&KMOD_ALT) {
         M(5); cch++;
       } else if(event.key.keysym.mod&KMOD_SHIFT) {
-        M(6); for(i=0;i<14;i++) font[14*cch+i]=(font[14*cch+i]<<7)|(font[14*cch+i]>>1);
+        M(6); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]=(font[14*cch+i]<<7)|(font[14*cch+i]>>1);
       } else {
         M(7); x=(x+1)&7;
       }
@@ -1421,9 +1429,17 @@ static void edit_font(const char*name) {
       if(event.key.keysym.mod&KMOD_ALT) {
         M(8); cch-=16;
       } else if(event.key.keysym.mod&KMOD_SHIFT) {
-        M(9); i=font[14*cch];
-        memmove(font+14*cch,font+14*cch+1,13);
-        font[14*cch+13]=i;
+        M(9);
+        for(j=13,k=0;j>=0;j--) if(mask&(1<<j)) {
+          z=font[14*cch+j];
+          if(k) font[14*cch+j]=i;
+          i=z;
+          k=1;
+        }
+        for(j=13;j>=0;j--) if(mask&(1<<j)) {
+          font[14*cch+j]=i;
+          break;
+        }
       } else {
         M(10); y=(y+13)%14;
       }
@@ -1432,31 +1448,45 @@ static void edit_font(const char*name) {
       if(event.key.keysym.mod&KMOD_ALT) {
         M(11); cch+=16;
       } else if(event.key.keysym.mod&KMOD_SHIFT) {
-        M(12); i=font[14*cch+13];
-        memmove(font+14*cch+1,font+14*cch,13);
-        font[14*cch]=i;
+        M(12);
+        for(j=k=0;j<14;j++) if(mask&(1<<j)) {
+          z=font[14*cch+j];
+          if(k) font[14*cch+j]=i;
+          i=z;
+          k=1;
+        }
+        for(j=0;j<14;j++) if(mask&(1<<j)) {
+          font[14*cch+j]=i;
+          break;
+        }
       } else {
         M(13); y=(y+1)%14;
       }
       break;
-    case SDLK_DELETE: case SDLK_BACKSPACE: M(14); memset(font+14*cch,0,14); break;
+    case SDLK_DELETE: M(14); memset(font+14*cch,0,14); break;
+    case SDLK_BACKSPACE: M(29); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]=0; break;
     case SDLK_INSERT: M(15); memcpy(font+14*cch,pcfont+14*cch,14); break;
     case SDLK_TAB: M(16); draw^=1; break;
-    case SDLK_a: M(17); for(i=0;i<14;i++) font[14*cch+i]&=clip[i]; break;
+    case SDLK_a: M(17); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]&=clip[i]; break;
     case SDLK_b: mode=1; rec=draw=0; goto draw0;
+    case SDLK_e: M(28); mask^=0x3FFF; break;
     case SDLK_f: M(18); for(i=0;i<7;i++) j=font[14*cch+i],font[14*cch+i]=font[14*cch+13-i],font[14*cch+13-i]=j; break;
     case SDLK_g:
       b[0]=b[1]=b[2]=0;
       ask_text("Go to:",b,2);
       if(*b) cch=(b[1]?strtol(b,0,16):*b);
       goto draw0;
-    case SDLK_i: M(19); for(i=0;i<14;i++) font[14*cch+i]^=-1; break;
-    case SDLK_m: M(20); for(i=0;i<14;i++) font[14*cch+i]=((font[14*cch+i]*0x0202020202ULL)&0x010884422010ULL)%0x3FF; break;
-    case SDLK_o: M(21); for(i=0;i<14;i++) font[14*cch+i]|=clip[i]; break;
-    case SDLK_p: M(22); memcpy(font+14*cch,clip,14); break;
-    case SDLK_x: M(23); for(i=0;i<14;i++) font[14*cch+i]^=clip[i]; break;
-    case SDLK_y: M(24); memcpy(clip,font+14*cch,14); nclip=cch; break;
-    case SDLK_z: M(25); if((nclip&~255) || nclip==cch) break; memcpy(b,font+14*nclip,14); memcpy(font+14*nclip,font+14*cch,14); memcpy(font+14*cch,b,14); break;
+    case SDLK_i: M(19); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]^=-1; break;
+    case SDLK_m: M(20); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]=((font[14*cch+i]*0x0202020202ULL)&0x010884422010ULL)%0x3FF; break;
+    case SDLK_o: M(21); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]|=clip[i]; break;
+    case SDLK_p: M(22); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]=clip[i]; break;
+    case SDLK_q: M(30); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]&=font[14*cch+i]+(128>>x); break;
+    case SDLK_r: M(26); mask=0x3FFF; break;
+    case SDLK_t: M(27); mask^=1<<y; break;
+    case SDLK_w: M(31); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]|=font[14*cch+i]-(128>>x); break;
+    case SDLK_x: M(23); for(i=0;i<14;i++) if(mask&(1<<i)) font[14*cch+i]^=clip[i]; break;
+    case SDLK_y: M(24); nclip=cch; for(i=0;i<14;i++) if(mask&(1<<i)) clip[i]=font[14*cch+i]; break;
+    case SDLK_z: M(25); if((nclip&~255) || nclip==cch) break; for(i=0;i<14;i++) if(mask&(1<<i)) z=font[14*nclip+i],font[14*nclip+i]=font[14*cch+i],font[14*cch+i]=z; break;
     case SDLK_1 ... SDLK_9:
       if(rec && nmacro<128) macro[nmacro++]=event.key.keysym.sym; M49:
       memcpy(clip,pcfont+14*(Uint8)"\xB0\xB1\xB2\xDB\xDC\xDD\xDE\xDF\xFE"[event.key.keysym.sym-SDLK_1],14); nclip=-1;
