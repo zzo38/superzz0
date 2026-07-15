@@ -2959,6 +2959,9 @@ static Uint16 show_item_window(Uint32 opt) {
               }
               continue;
             }
+            if(inv->flag&INV_SPECIAL) switch((j=itemdefs[inv->item[i].item-1].special)&0xF0) {
+              case ISPECIAL_EXCLUSIVE_BITS: memory[MEM_ITEM_EXCLUSIVE_BITS]&=~(1<<(j&15)); break;
+            }
             inv->item[i]=(ItemSlot){};
             hide:
             list[tcursor].name=0;
@@ -3737,6 +3740,11 @@ static char parse_condition(Stat*s,StatXY*xy,Uint16*ip) {
           }
         }
       }
+    } else if(!strncmp(buf+1,"ITEMEXCLUSIVE:",14)) {
+      *ip=bip+15;
+      z0=parse_number(s,xy,ip);
+      if(!condflag) goto bad;
+      if(!(z0&~15)) v=(memory[MEM_ITEM_EXCLUSIVE_BITS]>>z0)&1;
     } else {
       bad: script_error(s+1-stats,xy,"Improper condition");
     }
@@ -5096,6 +5104,7 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
           }
         }
         break;
+      case ISPECIAL_EXCLUSIVE_BITS: how|=32; break;
       default: how&=~32;
     }
   }
@@ -5118,6 +5127,7 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
       if(how&64?i!=inv->cursor:(slot->flag&(ISF_IGNORE|ISF_MARK))) continue;
       if(step==2) {
         if(slot->item || slot->flag) continue;
+        if((how&32) && (idef->special&0xF0)==ISPECIAL_EXCLUSIVE_BITS && (memory[MEM_ITEM_EXCLUSIVE_BITS]&(1<<(idef->special&15)))) continue;
       } else {
         if(slot->item!=(item&0xFFFF)) continue;
         if(slot->quantity>=heap) goto un;
@@ -5178,6 +5188,7 @@ static Sint32 give_item(Uint32 item,Uint32 qty,Uint16 how) {
   }
   if((how&34)==32) switch(itemdefs[(item&0xFFFF)-1].special&0xF0) {
     case ISPECIAL_STATUS: case ISPECIAL_STATUS_NONZERO: status_vars[itemdefs[(item&0xFFFF)-1].special&15]+=spect; break;
+    case ISPECIAL_EXCLUSIVE_BITS: memory[MEM_ITEM_EXCLUSIVE_BITS]|=1<<(itemdefs[(item&0xFFFF)-1].special&15); break;
   }
   condflag=1;
   done:
@@ -5215,6 +5226,7 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
           return qty;
         }
         break;
+      case ISPECIAL_EXCLUSIVE_BITS: how|=32; break;
       default: how&=~32;
     }
   }
@@ -5297,6 +5309,7 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
           j=(slot->quantity<qty?slot->quantity:qty);
           if(qty>=tot && j>qty-tot) j=qty-tot;
           tot+=j;
+          if((how&32) && (itemdefs[(item&0xFFFF)-1].special&0xF0)==ISPECIAL_EXCLUSIVE_BITS && slot->quantity!=j) how&=~32;
           if(!(how&2)) {
             slot->quantity-=j;
             slot->flag&=~ISF_MARK;
@@ -5310,6 +5323,7 @@ static Sint32 take_item(Uint32 item,Uint32 qty,Uint16 how) {
     }
     if((how&34)==32) switch(itemdefs[(item&0xFFFF)-1].special&0xF0) {
       case ISPECIAL_STATUS: case ISPECIAL_STATUS_NONZERO: status_vars[itemdefs[(item&0xFFFF)-1].special&15]-=spect; break;
+      case ISPECIAL_EXCLUSIVE_BITS: memory[MEM_ITEM_EXCLUSIVE_BITS]&=~(1<<(itemdefs[(item&0xFFFF)-1].special&15)); break;
     }
   }
   done:

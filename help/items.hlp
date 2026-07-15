@@ -161,6 +161,8 @@ the item in this slot. This does not prevent moving, discarding, etc, but
 you can apply other flags to control such things. This also causes it to be
 ignored when calculating encumbrance, and it prevents this slot from being
 used when giving or taking items unless you deliberately specify this flag.
+Note that some special uses should not use this flag; this flag is for if
+the special uses are applied as described above instead of working normally.
 
 þ Custom flags: Flags that you can define for your own use.
 
@@ -256,3 +258,10 @@ the value of that variable to zero.
 in inventory lists if the value is zero. If it is discarded, it will still
 be in the inventory but will be hidden; the value is set to zero anyways.
 
+þ Exclusive bits: Giving or taking a item in a inventory list that enables
+special uses will set or clear this bit in one of the program memory cells
+that is meant for this purpose. It only does this when adding or removing
+a slot, and if the bit is already set when trying to give such an item then
+the item cannot be given; in this way, several items can be made to be
+mutually exclusive, and you can check the presence of any of them by one
+bit in the program memory. (See also $A6 in event.doc.)

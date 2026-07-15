@@ -324,6 +324,86 @@ be changed. Some of the things that must be changed include:
 * Line joining
 
 
+=== Entity component system ===
+
+One possible enhancement would be entity component system. You can then
+define your own components with fields that you can attach to your own
+entities and to the built-in entities, which allows you to add your own
+kind of additional data to some things.
+
+There might be types of entities:
+
+* Static entity
+
+* Normal entity
+
+* Board entity
+
+* Stat entity
+
+* Stat instance entity
+
+* Item definition entity
+
+* Item slot entity
+
+* Hero entity
+
+* Slice entity
+
+* Picture entity
+
+(This list might be changed in future before being implemented, and some
+of them might not be implemented at first but will be implemented later.)
+
+Only normal entities can be created and destroyed at run time by yourself
+(the other kinds automatically exist or not exist depending on the game
+state, and cannot be created nor destroyed).
+
+The entity might be represented as a 32-bit ID number, where the high
+8-bits specify the type of entity.
+
+A component can be defined with your own fields (a component can have any
+number of fields including zero), and the possible field types might be:
+
+* Integer: 8-bits or 16-bits or 32-bits, and signed or unsigned.
+
+* Array of integers: Having a fixed length and fixed integer type.
+
+* Short string: Having a fixed length from 1 to 80, defined as a part of
+the field definition.
+
+* Long string: A dynamically allocated string up to 64K. The size does not
+need to be defined as a part of the field definition.
+
+* Constant string: Pointer to a fixed string in the fixed string memory,
+which is read-only at run time, although you can copy the pointer of an
+existing fixed string to any component value of the correct type.
+
+* Entity reference: Reference to another entity, which may be null. You
+can also specify what happens if the referenced entity is destroyed, which
+can be: do nothing, delete this component, destroy the entity that has this
+component, or change the value of this field to null.
+
+* Key: Only allowed up to once per component definition and only as the
+first field if it is present. Like a entity reference, but cannot be null,
+and multiple instances of this component on the same entity is allowed as
+long as the keys are different.
+
+It might also be helpful to have multiple types of components, such as:
+
+* Fixed component (cannot be added, removed, or changed at run time, which
+reduces the time and disk space needed for save games and might also
+improve other efficiency, but not available for all types of entities)
+
+* Standard component (can be added, removed, and changed at run time)
+
+* Index component (used to order by values of fields of other components)
+
+System might or might not be needed, although it might be helpful for many
+possible uses. Iterations and queries would be possible anyways, though.
+
+
 === Regression testing and demo recording ===
 
 Some way to do regression testing, sort of like Free Hero Mesh. Note that
@@ -630,7 +710,7 @@ a setting within the world file to specify the default game speed, though.)
 
 * Multiplayer mode.
 
-* Large language model (and similar generative AI systems).
+* Large language model and generative AI.
 
 * Cryptocurrency.
 

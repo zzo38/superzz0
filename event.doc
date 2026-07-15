@@ -23,6 +23,11 @@ $A4 = Name item event (see below).
 
 $A5 = Screen number to use for item windows.
 
+$A6 = The exclusive bits for items with the "exclusive bits" special use.
+A bit which is set indicates the presence of such an item. If you set or
+clear these bits by yourself then it will affect whether or not the item
+can be given (even if you already have that item).
+
 $B0 = Window keyboard event (see below).
 
 $B1 = A value which can be read by music programs in .BGM lumps. This can

@@ -623,6 +623,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_TAKE_ITEM_EVENT 0xA3
 #define MEM_NAME_ITEM_EVENT 0xA4
 #define MEM_ITEM_SCREEN 0xA5
+#define MEM_ITEM_EXCLUSIVE_BITS 0xA6
 #define MEM_WINDOW_KEY_EVENT 0xB0
 #define MEM_MUSIC_EXTRA 0xB1
 #define MEM_CALL_STACK 0xB2
@@ -724,6 +725,7 @@ extern Uint16 nitemdefs;
 #define ISPECIAL_NONE 0x00
 #define ISPECIAL_STATUS 0x10 // add number of status variable 0 to 15
 #define ISPECIAL_STATUS_NONZERO 0x20 // add number of status variable 0 to 15
+#define ISPECIAL_EXCLUSIVE_BITS 0x30 // add bit position number 0 to 15
 
 typedef struct {
   Uint32 quantity,ext0;

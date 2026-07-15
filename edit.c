@@ -2041,6 +2041,7 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
     }
     win_command('i',"Special uses...") {
       char k[2]={(d.special&15)+'A'+(d.special&8?10:0)};
+      Uint8 j;
       i=d.special&0xF0;
       if(!i) *k=0;
       win_form("Item definition edit - Special uses") {
@@ -2049,9 +2050,13 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
         win_option('N',"None",i,ISPECIAL_NONE) win_refresh();
         win_option('v',"Status variable",i,ISPECIAL_STATUS) win_refresh();
         win_option('z',"Status variable (nonzero)",i,ISPECIAL_STATUS_NONZERO) win_refresh();
+        win_option('x',"Exclusive bits",i,ISPECIAL_EXCLUSIVE_BITS) win_refresh();
         if(i==ISPECIAL_STATUS || i==ISPECIAL_STATUS_NONZERO) {
           win_blank();
           win_text_restrict('W',"Which variable: ",k);
+        } else if(i==ISPECIAL_EXCLUSIVE_BITS) {
+          win_blank();
+          win_numeric('B',"Bit position: ",j,0,15);
         }
         win_blank(); win_command_esc(0,"Done") break;
       }
@@ -2060,6 +2065,7 @@ static void edit_itemdef(ASN1_Value*v0,int num) {
           if(*k>='A' & *k<='H') d.special=i+*k-'A';
           if(*k>='S' & *k<='Z') d.special=i+*k+8-'S';
           break;
+        case ISPECIAL_EXCLUSIVE_BITS: d.special=i+j; break;
         default: d.special=i;
       }
     }

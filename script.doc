@@ -451,6 +451,10 @@ number@
   help/zone.hlp for a list of the zone numbers.) You can use #SET and
   #CLEAR with some zone numbers, but with others it does not work.
 
+#ITEMEXCLUSIVE:number
+  The item exclusive bits. If you have any appropriate item that has those
+  item exclusive bits then this condition will be true.
+
 #LOCKED
   True if this object is locked from receiving messages.
 
