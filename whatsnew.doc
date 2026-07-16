@@ -56,7 +56,8 @@ ASSEMBLY
   +  CALS and RETS to use a call stack stored in the program memory.
   +  Each stat instance now has a 16-bit "extra value", which can be set
      with the PEX instruction and read with the GEX instruction.
-  +  ASN.1 operators. (This feature is considered experimental.)
+  +  ASN.1 operators. (This feature is considered experimental. It might be
+     changed or removed in future.)
   +  Control flag to automatically stop key repeat when opening and closing
      a text window or item window.
   +  Control flag to cause stats moving in the overlay to remember what

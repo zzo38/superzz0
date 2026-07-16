@@ -358,10 +358,37 @@ of them might not be implemented at first but will be implemented later.)
 
 Only normal entities can be created and destroyed at run time by yourself
 (the other kinds automatically exist or not exist depending on the game
-state, and cannot be created nor destroyed).
+state, and cannot be created nor destroyed). Any entities other than normal
+and static entities will have the ID of something else in the game engine
+(for example, item definition entities have the item definition IDs), but
+the ID of normal and static entities have no inherent meaning.
 
 The entity might be represented as a 32-bit ID number, where the high
-8-bits specify the type of entity.
+8-bits specify the type of entity. (Maybe it is not enough, since we might
+also want generation numbers, priority numbers, and the ability for an
+entity to be temporarily disabled. However, if the entity exceeds 32-bits
+then that makes the handling in the VM codes more difficulty since the
+registers in the VM codes are 32-bits.)
+
+If a 64-bit entity number is used then one possible format might be:
+
+* Bit23-bit0 = Sequence number if a normal entity; others will use the ID
+number of whatever it is based on.
+
+* Bit47-bit24 = Generation number if a normal entity; otherwise it is
+something to do with whatever entity type it is. Since these bits are
+higher than the sequence number, the entities of the same priority and
+same type will be in the proper order.
+
+* Bit52-bit48 = Entity type. This is never zero, therefore, if the entire
+entity number is zero then it means null.
+
+* Bit58-bit53 = Reserved. (These bits might be moved around if we decide
+that they should be higher or lower than other bits.)
+
+* Bit63-bit59 = Priority number. The number is biased so that negative
+numbers are possible and they will be in the proper order. These bits
+must be the highest bits.
 
 A component can be defined with your own fields (a component can have any
 number of fields including zero), and the possible field types might be:
@@ -400,8 +427,28 @@ improve other efficiency, but not available for all types of entities)
 
 * Index component (used to order by values of fields of other components)
 
-System might or might not be needed, although it might be helpful for many
-possible uses. Iterations and queries would be possible anyways, though.
+Components can be applied to any type of entities, including applying the
+same components to multiple types of entities.
+
+Some components may optionally have default values, including defaults
+based on other components. The default values are not used for iteration
+(so queries and systems based on that component will ignore it), but if
+you try to read a component of a entity that does not have that component
+and that component has a default value, then it can be read.
+
+Another possible thing to have would be triggers for when a component is
+added or removed or changed (or an entity that has a specific component
+is destroyed), which might add or change another component or the value
+of something outside of ECS, that can then be used by a system or other
+thing that does something with them later.
+
+When specifying the existing entities and which components each entity
+has and their values, the same or similar format can be used on disk for
+all types of components (although entities are not stored explicitly,
+except normal entities, and (in world files) static entities), even if
+the format in memory is different for each type of components. This can
+allow types of components to be changed in the editor without needing to
+add all of the components again.
 
 
 === Regression testing and demo recording ===
