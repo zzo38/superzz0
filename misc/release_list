@@ -37,6 +37,7 @@ P superzz0-release/help/
 ./edittext.hlp edittext.hlp
 ./editwin.hlp editwin.hlp
 ./element.hlp element.hlp
+./font.hlp font.hlp
 ./gradient.hlp gradient.hlp
 ./index.hlp index.hlp
 ./items.hlp items.hlp
