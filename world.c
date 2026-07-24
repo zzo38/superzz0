@@ -1280,6 +1280,9 @@ void work_varproperties(VarPropertyList*vp) {
         if(!*music_name || (p->data[0]>>6)==3 || ((p->data[0]&0xC0) && (((p->data[0]&0x80) && s!=music_song) || strcmp(music_name,p->data+k)))) audio_set_music(p->data+k,s);
       }
       break;
+    case 0x50 ... 0x5E:
+      /* No effect */
+      break;
     default:
       if(!editor) errx(1,"Improper variable property list");
   }

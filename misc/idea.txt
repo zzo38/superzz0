@@ -363,32 +363,13 @@ and static entities will have the ID of something else in the game engine
 (for example, item definition entities have the item definition IDs), but
 the ID of normal and static entities have no inherent meaning.
 
-The entity might be represented as a 32-bit ID number, where the high
-8-bits specify the type of entity. (Maybe it is not enough, since we might
-also want generation numbers, priority numbers, and the ability for an
-entity to be temporarily disabled. However, if the entity exceeds 32-bits
-then that makes the handling in the VM codes more difficulty since the
-registers in the VM codes are 32-bits.)
-
-If a 64-bit entity number is used then one possible format might be:
-
-* Bit23-bit0 = Sequence number if a normal entity; others will use the ID
-number of whatever it is based on.
-
-* Bit47-bit24 = Generation number if a normal entity; otherwise it is
-something to do with whatever entity type it is. Since these bits are
-higher than the sequence number, the entities of the same priority and
-same type will be in the proper order.
-
-* Bit52-bit48 = Entity type. This is never zero, therefore, if the entire
-entity number is zero then it means null.
-
-* Bit58-bit53 = Reserved. (These bits might be moved around if we decide
-that they should be higher or lower than other bits.)
-
-* Bit63-bit59 = Priority number. The number is biased so that negative
-numbers are possible and they will be in the proper order. These bits
-must be the highest bits.
+The entity ID might be a unsigned 32-bit number, where both zero and all
+bits set are invalid. The lowest bits (the field with most of the bits)
+might be a sequence number which is ascending (or some other meaning for
+entities other than normal entities), and then the middle bits for the type
+of entity and the highest bits for the priority of the entity (although
+this would make it difficult to change the priority of existing entities).
+Zero is not a valid entity and all bits set is also not a valid entity.
 
 A component can be defined with your own fields (a component can have any
 number of fields including zero), and the possible field types might be:

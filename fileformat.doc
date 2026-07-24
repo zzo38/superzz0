@@ -13,6 +13,14 @@ will only encode it that way; when decoding, it will work with either the
 overlong encoding or the correct encoding, so you can use an external
 program to alter the contents of that lump and it will still work.
 
+With the exception of the .BGM and .FNT lumps, the application types used
+in some of the DER lumps are:
+
+* Application type 0 implicit octet string = Can be a length of zero, one,
+or two bytes. If zero, then it means transparent. If one, then it is the
+Z-index to be drawn at. If two, then the first byte is the Z-index and the
+second byte is the colour to use.
+
 
 === !SZ0 ===
 
@@ -123,6 +131,8 @@ isn't already loaded, 2=if the specified .BGM lump isn't already loaded or
 if the current song number is different from the specified song number,
 3=always. After the first byte (and the next two for the 16-bit song number
 if applicable), will be the lump name excluding the .BGM suffix.
+
+* 0x50 to 0x5E = User-defined. Consists of up to seven 16-bit numbers.
 
 Each stat (the first stat number is stat 1) is as follows:
 

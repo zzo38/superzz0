@@ -15,6 +15,12 @@ The time zone for the dates in this file is Pacific (British Columbia).
 === Version ??? ===
 
 GAME
+  +  There is now a user-defined variable property.
+
+
+=== Version 0.8.0 (2026-07-15) ===
+
+GAME
   +  Optional special uses for item definitions and inventory slots.
   +  Music can now have instruments with delay line and special effects.
   +  Dynamic music (although sz0music currently lacks the way to use this).

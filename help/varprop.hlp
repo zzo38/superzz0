@@ -39,6 +39,11 @@ entered. You can specify the criteria for doing so.
 or screen is entered. (This does not affect sound effects, and does not
 affect any sounds played by SFX and #PLAY.)
 
+þ User-defined: No inherent meaning. You can use this for your own uses,
+with the PROP instruction (property types 0x50 to 0x5E). The value of this
+variable property can be up to seven unsigned 16-bit numbers. This is only
+meaningful for boards and not for screens.
+
 þ Once: The previous variable property only applies once. This is only
 meaningful for boards, and only if it persists; if the board does not
 persist then it will not remember that it had already been done once.

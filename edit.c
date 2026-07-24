@@ -118,6 +118,7 @@ void edit_varprop(VarPropertyList*vp) {
           if(x==0x3F) y=3,x=vp->item[k].data[1]|(vp->item[k].data[2]<<8);
           draw_text(1,i+2,text,7,snprintf(text,80,"Music: %*.*s #%d",(j-y)&15,(j-y)&15,vp->item[k].data+y,x));
           break;
+        case 0x50 ... 0x5E: draw_text(1,i+2,"User-defined",7,-1); break;
         default: draw_text(1,i+2,"???",12,3);
       }
     } else if(k==vp->count) {
@@ -170,6 +171,7 @@ void edit_varprop(VarPropertyList*vp) {
             snprintf(name,9,"%s",vp->item[cur].data+y);
             y=vp->item[cur].data[0]>>6;
             break;
+          case 0x50 ... 0x5E: i=10; x=(vp->item[cur].type&14)>>1; break;
           default: i=0;
         }
         win_form("Variable Property Edit") {
@@ -182,6 +184,7 @@ void edit_varprop(VarPropertyList*vp) {
           win_option('W',"Window field specification",i,5) win_refresh();
           win_option('i',"Music",i,7) win_refresh();
           win_option('a',"Cancel music",i,6) win_refresh();
+          win_option('d',"User-defined",i,10) win_refresh();
           win_option('O',"Once",i,4) win_refresh();
           win_blank();
           if(i==1 || i==2 || i==7) win_text_restrict('u',"Lump name: ",name);
@@ -246,6 +249,17 @@ void edit_varprop(VarPropertyList*vp) {
               }
             }
           }
+          if(i==10) {
+            win_numeric('m',"How many: ",x,0,7) win_refresh();
+            text[1]=':'; text[2]=' '; text[3]=0;
+            for(j=0;j<x;j++) {
+              y=vp->item[cur].data[j+j]+(vp->item[cur].data[j+j+1]<<8);
+              win_numeric(*text=j+'1',text,y,0,0xFFFF) {
+                vp->item[cur].data[j+j]=y;
+                vp->item[cur].data[j+j+1]=y>>8;
+              }
+            }
+          }
           win_blank();
           win_command_esc(0,"Done") break;
         }
@@ -274,6 +288,7 @@ void edit_varprop(VarPropertyList*vp) {
             break;
           case 8: vp->item[cur].type=(y>2?0x02:0x01); vp->item[cur].data[0]=x; vp->item[cur].data[1]=(y<<4)|z; break;
           case 9: vp->item[cur].type=0x1F; break;
+          case 10: vp->item[cur].type=x+x+0x50; break;
         }
         goto draw0;
       case SDLK_ESCAPE: return;
