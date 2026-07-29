@@ -5,7 +5,9 @@ exit
 
 /*
  Implementation of AA tree (not necessarily complete); might later be used
- (possibly with some modifications) as a part of implementation of ECS.
+ (possibly with some modifications) as a part of implementation of ECS. (A
+ different implementation not using this is another possibility.)
+
  (This program also includes testing funcion.)
 */
 
@@ -116,14 +118,19 @@ static void t_deleteall(Tree*t) {
   free(t);
 }
 
+static void t_deleterange(Tree*t,const Uint8*lo,const Uint8*hi,size_t klen,size_t mlen) {
+  // Not implemented yet
+}
+
 static Tree*t_find(Tree*t,const Uint8*key,size_t klen) {
   int i;
   while(t && (i=memcmp(key,t->data,klen))) t=(i<0?t->left:t->right);
   return t;
 }
 
-static Tree*t_initcount(Uint32 count,size_t mlen) {
-  
+static Tree*t_init(Uint32 count,size_t mlen) {
+  // This function is supposed to make a tree with no data, which has the
+  // specified number of nodes and is balanced, but is not implemented yet.
 }
 
 static Tree*tc_first(Cursor*c) {
@@ -198,8 +205,54 @@ static Tree*tc_next(Cursor*c) {
   return c->link[c->index];
 }
 
-static int tc_nextrange(Cursor*c,const Uint8*lo,const Uint8*hi,size_t klen) {
-  
+static Tree*tc_skip(Cursor*c,const Uint8*key,size_t klen,char*more) {
+  Tree*t;
+  Uint32 p=c->path;
+  int i;
+  int n=c->index;
+  int m=-1;
+  if(!(t=c->link[n])) goto end;
+  if(!memcmp(key,t->data,klen)) {
+    if(more) *more=1;
+    return t;
+  }
+  retry:
+  if(t=t->right) {
+    p|=(0x80000000UL>>n);
+    while((c->link[n]=t) && (i=memcmp(key,t->data,klen))) {
+      if(i<0) {
+        m=n;
+        t=t->left;
+      } else {
+        p|=(0x80000000UL>>n);
+        t=t->right;
+      }
+      n++;
+    }
+    if(!t && m>=0) {
+      n=m;
+      p&=~((0x80000000UL>>n)-1);
+    }
+  } else {
+    if(!n--) {
+      end:
+      if(more) *more=0;
+      return 0;
+    }
+    p+=(0x80000000UL>>n);
+    if(!p) return 0;
+    n=31-__builtin_ctz(p);
+    p&=c->path;
+    if(t=c->link[n]) {
+      i=memcmp(key,t->data,klen);
+      if(i<0) goto end;
+      if(i>0) goto retry;
+    }
+  }
+  if(more) *more=1;
+  c->index=n;
+  c->path=p;
+  return t;
 }
 
 static Cursor*tc_open(Tree*t) {
