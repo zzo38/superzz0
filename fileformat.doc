@@ -530,6 +530,22 @@ The format for VGA is each colour has three bytes, in order red, green,
 blue, each value being in range zero to sixty-three.
 
 
+=== *.ROP ===
+
+Backdrop pictures. It is a sequence with fields:
+
+* Optional integer being the width. If omitted, then the width is 640.
+
+* Picture data (required), which can be a bit string if it is compressed
+or a octet string if it is not compressed (one byte per pixel). It can be
+a octet string with only one byte if it is a solid colour.
+
+* Up to three optional Visible strings being palette names to use to
+display this picture (excluding the .PAL suffix).
+
+* Z data (optional), which has the same format as the picture data.
+
+
 === *.SCR ===
 
 Screen definitions.

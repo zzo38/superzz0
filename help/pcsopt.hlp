@@ -1,0 +1,28 @@
+@PC sound effect options
+All numbers in this menu are floating point numbers that can have optional
+fractional parts, and you may use "e" or "E" preceding an exponent part,
+which is the base ten exponent. All of these numbers must be positive, and
+cannot be zero or negative.
+
+þ Whole note duration: The duration of a whole note in seconds. The default
+value is 1.81 seconds.
+
+þ Percussion rate: Determines how fast percussion notes are played; does
+not affect the duration of the note. Higher numbers are faster. The default
+value is 1.81, to match the default value of the whole note duration, but
+the units are different for this value.
+
+þ Base overtone frequency: The base frequency for notes in the overtone
+scale in hertz. The default is 32 hertz.
+
+þ Base undertone frequency: The base frequency for notes in the undertone
+scale in hertz. The default is 2048 hertz.
+
+You can also set the frequency for normal notes, in the scale of twelve
+notes (from C to B). You cannot change the names of the notes, nor set
+different frequencies for enharmonic notes. There are two ways of doing
+this, either by setting the frequency of the lowest note and having the
+rest handled automatically by 12-TET, or by setting the frequency of each
+note of the scale individually in which case higher octaves are handled
+automatically by doubling the frequency of the previous octave.
+

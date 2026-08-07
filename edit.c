@@ -1797,6 +1797,48 @@ static void edit_palette(const char*name) {
   fclose(f);
 }
 
+static void edit_backdrop(const char*name) {
+  char b[70]={};
+  FILE*f=open_lump(name,"r");
+  FILE*g;
+  if(f && lump_size) {
+    display:
+    fclose(f);
+    set_backdrop(name,1);
+    v_mode=VIDEO_EGS;
+    v_status[1]='p';
+    memset(v_font,0,80*25);
+    redisplay();
+    while(next_event() && event.type!=SDL_KEYDOWN);
+    set_backdrop(0,0);
+    v_mode=VIDEO_80COLUMNS;
+    v_status[1]=0;
+  } else {
+    if(f) fclose(f);
+    win_form("Import backdrop") {
+      win_help("editgr","rop");
+      win_text('F',"File: ",b);
+      win_blank();
+      win_command('x',"Execute") if(*b) {
+        f=open_lump(name,"w");
+        if(!f) errx(1,"Error opening lump %s for writing",name);
+        if(g=(*b=='|')?popen(b+1,"r"):fopen(b,"r")) {
+          copy_stream(g,f,-1);
+          if(*b=='|') pclose(g); else fclose(g);
+          goto display;
+        } else {
+          warn("Error importing backdrop");
+          alert_text("Error importing backdrop");
+        }
+        break;
+      }
+      win_command_esc(0,"Cancel") break;
+    }
+  }
+  win_refresh();
+  event.type=SDL_NOEVENT;
+}
+
 static void graphics_global_options(void) {
   ASN1_Encoder*enc;
   ASN1_Value v={};
@@ -3407,6 +3449,7 @@ int run_editor(void) {
         win_command('s',"Font (simple)") lump_listing_menu("*.CHR","Fonts (simple)",edit_font,"editgr","chr");
         win_command('a',"Font (advanced)") lump_listing_menu("*.FNT","Fonts (advanced)",edit_font,"editgr","fnt");
         win_command('P',"Palette") lump_listing_menu("*.PAL","Palettes",edit_palette,"editgr","pal");
+        win_command('B',"Backdrop") lump_listing_menu("*.ROP","Backdrops",edit_backdrop,"editgr","rop");
         win_blank();
         win_command('G',"Graphics global options...") graphics_global_options();
         win_blank();

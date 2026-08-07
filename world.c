@@ -1465,3 +1465,227 @@ const char*randomize_itemdefs(Uint8 rev) {
   return e;
 }
 
+static const ASN1_Value*bit_v;
+static Uint32 bit_p;
+
+static inline Uint8 bit_read(void) {
+  Uint8 c=bit_v->data[bit_p>>3]&(128>>(bit_p&7));
+  bit_p++;
+  return c?1:0;
+}
+
+static inline Uint8 bit_eof(void) {
+  Uint32 p=bit_p>>3;
+  return (p>=bit_v->length || (p==bit_v->length-1 && (bit_p&7)>=8-bit_v->data[0]));
+}
+
+typedef struct {
+  Sint16 t0[260];
+  Sint16 t1[260];
+  Uint16 len[260];
+  Uint16 p;
+  Uint8 v,rle;
+} Huff;
+
+static Sint16 read_huffman_tree(Huff*h,Uint16 n) {
+  Sint16 r;
+  if(h->p==260) errx(1,"Too many nodes in Huffman tree in backdrop data");
+  if(bit_eof()) errx(1,"Unexpected end of bit string in backdrop data");
+  if(bit_read()) {
+    // 1**
+    r=h->p++;
+    h->t0[r]=read_huffman_tree(h,n+1);
+    h->t1[r]=read_huffman_tree(h,n+1);
+    return ~r;
+  } else {
+    if(bit_read()) {
+      if(bit_read()) {
+        if(bit_read()) {
+          // 0111__
+          r=bit_read()<<1; r|=bit_read();
+          h->rle|=1<<r;
+          h->len[r+256]=n;
+          return r+256;
+        } else {
+          // 0110________
+          r=0;
+          b8: r|=bit_read()<<7;
+          b7: r|=bit_read()<<6;
+          b6: r|=bit_read()<<5;
+          b5: r|=bit_read()<<4;
+          b4: r|=bit_read()<<3;
+          b3: r|=bit_read()<<2;
+          b2: r|=bit_read()<<1;
+          b1: r|=bit_read()<<0;
+        }
+      } else {
+        // 010____
+        r=h->v&0xF0; goto b4;
+      }
+    } else {
+      if(bit_read()) {
+        // 001_______
+        r=h->v&0x80; goto b7;
+      } else {
+        // 000______
+        r=h->v&0xC0; goto b6;
+      }
+    }
+    h->len[r]=n;
+    return h->v=r;
+  }
+}
+
+static Uint32 rle_number(Uint8 b) {
+  Uint32 n=0;
+  Uint8 k=0;
+  Uint8 m,v;
+  do {
+    for(v=1,m=0;m<b;m++) if(bit_read()) v+=1<<m;
+    n+=((Uint32)v)<<k;
+    k+=b;
+  } while(bit_read());
+  return n;
+}
+
+static Uint32 unhuff_backdrop(Uint8*output,Uint16 width) {
+  Huff h={{},{},{},0,0x40,0};
+  Uint8 fil[31]; // filters
+  Uint8 nfil=0;
+  Uint8 rleb;
+  Uint32 t=0; // total number of pixels
+  Uint32 u;
+  Sint16 b;
+  while(bit_read()) {
+    if(bit_eof()) errx(1,"Unexpected end of bit string in backdrop data");
+    if(nfil==31) errx(1,"Too many filters in backdrop data");
+    fil[nfil]=bit_read();
+    if(bit_read()) fil[nfil]+=2;
+    if(bit_read()) fil[nfil]+=4;
+    nfil++;
+  }
+  if(read_huffman_tree(&h,0)>=0) errx(1,"Improper Huffman tree in backdrop data");
+  if(h.rle) {
+    rleb=bit_read()<<1; rleb|=bit_read();
+    if(!rleb) rleb=4;
+  }
+  while(!bit_eof()) {
+    if(t==640*350) errx(1,"Improper data size in backdrop");
+    for(b=-1;b<0;) b=(bit_read()?h.t1[~b]:h.t0[~b]);
+    if(b<256) {
+      output[t++]=b;
+    } else if(b==256) {
+      b=output[t-1];
+      u=rle_number(rleb)+(h.len[256]+rleb+1)/h.len[b];
+      while(u-- && t!=640*350) output[t++]=b;
+    } else if(b==257) {
+      u=rle_number(rleb);
+      while(u-- && t!=640*350) output[t]=output[t-width],t++;
+    }
+  }
+  while(nfil--) switch(fil[nfil]) {
+    case 1: // Reverse
+      for(u=0;u<t/2;u++) b=output[u],output[u]=output[t-u-1],output[t-u-1]=b;
+      break;
+    case 2: // XOR vertical
+      for(u=width;u<t;u++) output[u]^=output[u-width];
+      break;
+    case 3: // XOR horizontal
+      for(u=1;u<t;u++) output[u]^=output[u-1];
+      break;
+    default: errx(1,"Unrecognized filter in backdrop data");
+  }
+  return t;
+}
+
+static const char*decode_backdrop(Uint8*output,const ASN1_Value*input,Uint16 width) {
+  Uint32 t,x,y;
+  if(input->type==ASN1_OCTET_STRING) {
+    t=input->length;
+    if(t>width*350L) {
+      return "Improper data size in backdrop";
+    } else if(t==1) {
+      memset(output,input->data[0],640*350);
+      return 0;
+    } else {
+      memcpy(output+y,input->data,t);
+    }
+  } else if(input->type==ASN1_BIT_STRING) {
+    bit_v=input; bit_p=8;
+    t=unhuff_backdrop(output,width);
+    if(!t) return "Backdrop data is empty";
+  } else {
+    return "Incorrect ASN.1 type in backdrop";
+  }
+  if(t!=640*350) {
+    for(y=0;y<640*350;y+=t) {
+      x=640*350-y; if(x>t) x=t;
+      memcpy(output+y,output,x);
+    }
+  }
+  if(width!=640) {
+    for(y=349;y;y--) memmove(output+y*640,output+(width*y)%t,width);
+    for(y=0;y<350;y++) for(x=width;x<640;x+=width) {
+      t=640-x; if(t>width) t=width;
+      memcpy(output+y*640+x,output+y*640,t);
+    }
+  }
+  return 0;
+}
+
+const char*set_backdrop(const char*name,char usepal) {
+  Uint8 buf[16];
+  const char*er=0;
+  FILE*f;
+  ASN1_Value v0,v1;
+  int i;
+  Uint16 wid=640;
+  free(backdrop_p); free(backdrop_z);
+  backdrop_p=0; backdrop_z=0;
+  if(!name || !*name) {
+    return 0;
+  }
+  snprintf(backdrop_name,9,"%s",name);
+  for(i=0;name[i] && i<8;i++) {
+    if(name[i]=='.' || name[i]<33) break;
+    buf[i]=name[i];
+  }
+  buf[i]='.'; buf[i+1]='R'; buf[i+2]='O'; buf[i+3]='P'; buf[i+4]=0;
+  f=open_lump(buf,"r");
+  if(!f) return "Backdrop not found";
+  if(asn1_read_item(f,&v0,0)) {
+    fclose(f);
+    return "ASN.1 error in backdrop lump";
+  }
+  fclose(f);
+  if(v0.class!=ASN1_UNIVERSAL || v0.type!=ASN1_SEQUENCE) {
+    asn1type: er="Incorrect ASN.1 type in backdrop"; goto stop;
+  }
+  if(asn1_first_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL) goto asn1type;
+  if(v1.type==ASN1_INTEGER) {
+    if(asn1_decode_number(&v1,ASN1_INTEGER,&wid) || wid<1 || wid>640) { er="Improper width in backdrop"; goto stop; }
+    if(asn1_next_of(&v1,&v0) || v1.class!=ASN1_UNIVERSAL) goto asn1type;
+  }
+  if(v1.constructed || !v1.length) goto asn1type;
+  backdrop_p=calloc(640,350);
+  backdrop_z=calloc(640,350);
+  if(!backdrop_p || !backdrop_z) err(1,"Allocation failed");
+  if(er=decode_backdrop(backdrop_p,&v1,wid)) goto stop;
+  if(asn1_next_of(&v1,&v0)) goto stop;
+  while(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_VISIBLE_STRING && v1.length>0 && v1.length<=8) {
+    memcpy(buf,v1.data,v1.length);
+    buf[v1.length]=0;
+    load_palette(buf,LOADPAL_BASE);
+    if(asn1_next_of(&v1,&v0)) goto stop;
+  }
+  if(v1.class!=ASN1_UNIVERSAL) goto asn1type;
+  if(er=decode_backdrop(backdrop_z,&v1,wid)) goto stop;
+  if(!asn1_next_of(&v1,&v0)) er="Too many fields in backdrop data";
+  stop:
+  asn1_free(&v0);
+  if(er) {
+    free(backdrop_p); free(backdrop_z);
+    backdrop_p=0; backdrop_z=0;
+  }
+  return er;
+}

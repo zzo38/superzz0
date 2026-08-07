@@ -6,6 +6,7 @@ be used, so using this menu is not mandatory for making a game world.
 !chr;Font (simple)
 !fnt;Font (advanced)
 !pal;Palette
+!rop;Backdrop
 
 !glo;Global options
 
@@ -27,6 +28,19 @@ colours for the foreground and another for the background.
 
 Palettes with 64 or 128 colours are used for SMZX mode and graphical mode,
 and are not meaningful otherwise.
+
+:rop;Backdrop
+A backdrop is a 640x350 indexed colour picture, which can also include
+Z-index data. In graphical mode, you can optionally display a backdrop
+instead of the text layer.
+
+Backdrops cannot be created using the Super ZZ Zero editor; you must use an
+external program. However, you can import and preview backdrops.
+
+Backdrops may specify palettes to be loaded when loading the backdrop, so
+that it will be displayed with the correct colours. If the palettes are not
+specified inside of the backdrop file, then they must be loaded by the use
+of the #LOADPAL command or the variable property list.
 
 :glo;Global options
 The graphics global options contains the following settings:
@@ -84,3 +98,6 @@ Alternate SMZX mode uses a palette with 64 colours. The high 2-bits of the
 palette index are according to the bits of the character raster, and of
 those two bits, the lower one selects which nybble of the tile colour will
 be used as the low 4-bits of the palette index.
+
+SMZX mode cannot be combined with graphical mode, although the colours that
+are usable in SMZX mode can also be used in graphical mode.

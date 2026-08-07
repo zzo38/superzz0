@@ -388,6 +388,9 @@ SDL_Event event;
 JoyStatus*joystat;
 Uint8 repeating;
 Uint8*font;
+Uint8*backdrop_p;
+Uint8*backdrop_z;
+Uint8 backdrop_name[9];
 
 typedef struct {
   Uint8 name[9];
@@ -399,6 +402,11 @@ typedef struct {
   Uint8 raster[0];
 } FontAnim;
 
+typedef struct {
+  Uint8 height,origin,dir;
+  Uint8 raster[0];
+} GraphicFont;
+
 static SDL_Surface*scrn;
 static float gamma_r,gamma_g,gamma_b;
 static SDL_Joystick*joy;
@@ -406,6 +414,8 @@ static Uint8 rscancode;
 static PaletteInfo palinf[3];
 static FontAnim**fontanim;
 static Uint8 nfontanim;
+static Uint8*pbuffer;
+static Uint8*zbuffer;
 
 static SDL_Color palet[34]={
   // PC
@@ -1012,11 +1022,80 @@ void configure_colors(const char*t) {
   }
 }
 
+static int g_clip(const SDL_Rect*in0,const SDL_Rect*in1,SDL_Rect*out) {
+  // Return 0 if OK or 1 if it does not intersect
+  Sint16 x0h=in0->x+in0->w;
+  Sint16 y0h=in0->y+in0->h;
+  Sint16 x1h=in1->x+in1->w;
+  Sint16 y1h=in1->y+in1->h;
+  out->x=(in0->x>in1->x?in0->x:in1->x);
+  out->y=(in0->y>in1->y?in0->y:in1->y);
+  out->w=(x0h<x1h?x0h:x1h);
+  out->h=(y0h<y1h?y0h:y1h);
+  if(out->w<out->x || out->h<out->y) return 1;
+  out->w-=out->x; out->h-=out->y;
+  return 0;
+}
+
+static void g_draw_line(Uint16 x,Uint16 y,Uint16 n,Uint32 a,Uint32 b,Uint8 c,Uint8 z) {
+  Uint8*p;
+  Uint8*q;
+  p=pbuffer+scrn->pitch*y+x;
+  q=zbuffer+640*y+x;
+  for(x=0;x<n;x++) {
+    if(*q<(z|1)) *q=z,*p=c;
+    p+=a; q+=b;
+  }
+}
+
+static void g_draw_box(const SDL_Rect*clip,const SDL_Rect*rect,Uint8 bc,Uint8 bz,Uint8 fc,Uint8 fz,Uint8 opacity) {
+  // bc=border colour, bz=border Z-index, fc=fill colour, fc=fill Z-index, opacity=(0 solid, 1 translucent)
+  Uint8*p;
+  Uint8*q;
+  SDL_Rect r;
+  int x,y;
+  if(g_clip(clip,rect,&r)) return;
+  if(bc) {
+    if(r.x==rect->x) g_draw_line(r.x,r.y,r.h,scrn->pitch,640,bc,bz);
+    if(r.x+r.w==rect->x+rect->w) g_draw_line(r.x+r.w-1,r.y,r.h,scrn->pitch,640,bc,bz);
+    if(r.y==rect->y) g_draw_line(r.x,r.y,r.w,1,1,bc,bz);
+    if(r.y+r.h==rect->y+rect->h) g_draw_line(r.x,r.y+r.h-1,r.w,1,1,bc,bz);
+  }
+  if(fc && r.w && r.h) {
+    if(r.x==rect->x) r.x++,r.w--;
+    if(r.y==rect->y) r.y++,r.h--;
+    if(r.x+r.w==rect->x+rect->w) r.w--;
+    if(r.y+r.h==rect->y+rect->h) r.h--;
+    p=pbuffer+scrn->pitch*r.y+r.x;
+    q=zbuffer+640*r.y+r.x;
+    for(y=0;y<r.h;y++) {
+      for(x=y&opacity;x<r.w;x+=opacity+1) if(q[x]<(fz|1)) q[x]=fz,p[x]=fc;
+      p+=scrn->pitch; q+=640;
+    }
+  }
+}
+
+static void g_draw_picture() {
+  //TODO
+}
+
+static void g_draw_text() {
+  //TODO
+}
+
 void redisplay(void) {
   Uint8*p;
+  Uint8*q;
   Uint32 m;
   int a,b,c,d,r,x,y,z;
   if(!scrn) return;
+  if(v_mode&VIDEO_EGS) {
+    if(!zbuffer) {
+      zbuffer=malloc(224000);
+      if(!zbuffer) err(1,"Error allocating Z buffer");
+    }
+    q=zbuffer;
+  }
   SDL_FillRect(scrn,0,32);
   SDL_LockSurface(scrn);
   r=scrn->pitch;
@@ -1097,6 +1176,58 @@ void redisplay(void) {
         }
       }
       break;
+    case VIDEO_EGS:
+      if(backdrop_p) goto backdrop;
+      for(z=y=0;y<25;y++,z+=80) {
+        for(a=0;a<14;a++) {
+          for(x=0;x<40;x++) {
+            if(v_font[z+x]&VF_SYSTEM) {
+              c=pcfont[14*v_char[z+x]+a];
+              for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
+            } else {
+              if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
+              for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=(15&(v_color[z+x]>>(c&128?0:4)))|v_colormask,c<<=1;
+            }
+          }
+          p+=r;
+          q+=640;
+        }
+      }
+      goto graphics;
+    case VIDEO_80COLUMNS+VIDEO_EGS:
+      if(backdrop_p) {
+        backdrop:
+        memcpy(zbuffer,backdrop_z,224000);
+        q=backdrop_p;
+        for(y=0;y<350;y++) {
+          memcpy(p,q,640);
+          p+=r;
+          q+=640;
+        }
+        p=scrn->pixels+(config.show_status?4*r+4:0);
+        q=zbuffer;
+        goto graphics;
+      }
+      for(z=y=0;y<25;y++,z+=80) {
+        for(a=0;a<14;a++) {
+          for(x=0;x<80;x++) {
+            if(font && !(v_font[z+x]&VF_SYSTEM)) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
+            d=(v_font[z+x]&VF_SYSTEM)?0:0x30;
+            for(b=0;b<8;b++) {
+              p[b+(x<<3)]=(15&(v_color[z+x]>>(c&128?0:4)))|d;
+              q[b+(x<<3)]=(v_font[z+x]&VF_FRONT)?255:c&128?8:(v_color[z+x]&0xF0?4:0);
+              c<<=1;
+            }
+          }
+          p+=r;
+          q+=640;
+        }
+      }
+    graphics:
+      pbuffer=scrn->pixels+(config.show_status?4*r+4:0);
+      //TODO: draw slices
+      break;
+    default: v_mode&=VIDEO_80COLUMNS;
   }
   if(v_xcur<80 && v_ycur<25) {
     a=(v_mode&VIDEO_80COLUMNS?8:16);

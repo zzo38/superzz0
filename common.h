@@ -98,6 +98,14 @@ void save_fontpal_state(ASN1_Encoder*);
 
 void configure_colors(const char*text);
 
+// === Graphics ===
+
+extern Uint8*backdrop_p;
+extern Uint8*backdrop_z;
+extern Uint8 backdrop_name[9];
+
+const char*set_backdrop(const char*name,char usepal);
+
 // === Joystick ===
 
 #define JL_NORMAL 16
