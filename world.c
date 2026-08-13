@@ -1551,10 +1551,11 @@ static Uint32 rle_number(Uint8 b) {
 static Uint32 unhuff_backdrop(Uint8*output,Uint16 width) {
   Huff h={{},{},{},0,0x40,0};
   Uint8 fil[31]; // filters
+  Uint8 va[256];
   Uint8 nfil=0;
   Uint8 rleb;
   Uint32 t=0; // total number of pixels
-  Uint32 u;
+  Uint32 u,v,y;
   Sint16 b;
   while(bit_read()) {
     if(bit_eof()) errx(1,"Unexpected end of bit string in backdrop data");
@@ -1569,10 +1570,12 @@ static Uint32 unhuff_backdrop(Uint8*output,Uint16 width) {
     rleb=bit_read()<<1; rleb|=bit_read();
     if(!rleb) rleb=4;
   }
+  for(b=0;b<256;b++) va[b]=b;
   while(!bit_eof()) {
     if(t==640*350) errx(1,"Improper data size in backdrop");
     for(b=-1;b<0;) b=(bit_read()?h.t1[~b]:h.t0[~b]);
     if(b<256) {
+      if(t>=width && b!=output[t-width]) va[output[t-width]]=b;
       output[t++]=b;
     } else if(b==256) {
       b=output[t-1];
@@ -1580,7 +1583,15 @@ static Uint32 unhuff_backdrop(Uint8*output,Uint16 width) {
       while(u-- && t!=640*350) output[t++]=b;
     } else if(b==257) {
       u=rle_number(rleb);
+      if(h.len[257]+rleb+1>=h.len[output[t-width]]) u++;
       while(u-- && t!=640*350) output[t]=output[t-width],t++;
+    } else if(b==258) {
+      v=rle_number(rleb)+1; u=rle_number(rleb)+1;
+      if(v>=width) v++;
+      while(u-- && t!=640*350) output[t]=output[t-v],t++;
+    } else if(b==259) {
+      u=rle_number(1)+1;
+      while(u-- && t!=640*350) output[t]=va[output[t-width]],t++;
     }
   }
   while(nfil--) switch(fil[nfil]) {
@@ -1592,6 +1603,13 @@ static Uint32 unhuff_backdrop(Uint8*output,Uint16 width) {
       break;
     case 3: // XOR horizontal
       for(u=1;u<t;u++) output[u]^=output[u-1];
+      break;
+    case 6: // LOCO-I prediction
+      for(u=1;u<t;u++) {
+        b=output[u%width?u-1:u-width]; v=output[u>=width?u-width:u-1]; y=output[u>=width+1?u-width-1:u-1];
+        if(y>=b && y>=v) v=(b<v?b:v); else if(y<=b && y<=v) v=(b>v?b:v); else v=b+v-y;
+        output[u]+=v;
+      }
       break;
     default: errx(1,"Unrecognized filter in backdrop data");
   }

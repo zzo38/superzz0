@@ -119,6 +119,8 @@ void edit_varprop(VarPropertyList*vp) {
           draw_text(1,i+2,text,7,snprintf(text,80,"Music: %*.*s #%d",(j-y)&15,(j-y)&15,vp->item[k].data+y,x));
           break;
         case 0x50 ... 0x5E: draw_text(1,i+2,"User-defined",7,-1); break;
+        case 0x60: draw_text(1,i+2,"Cancel backdrop",7,-1); break;
+        case 0x61 ... 0x68: draw_text(1,i+2,text,7,snprintf(text,80,"Backdrop: %*.*s",j&15,j&15,vp->item[k].data)); break;
         default: draw_text(1,i+2,"???",12,3);
       }
     } else if(k==vp->count) {
@@ -172,6 +174,8 @@ void edit_varprop(VarPropertyList*vp) {
             y=vp->item[cur].data[0]>>6;
             break;
           case 0x50 ... 0x5E: i=10; x=(vp->item[cur].type&14)>>1; break;
+          case 0x60: i=12; break;
+          case 0x61 ... 0x68: i=11; snprintf(name,9,"%s",vp->item[cur].data); break;
           default: i=0;
         }
         win_form("Variable Property Edit") {
@@ -184,10 +188,12 @@ void edit_varprop(VarPropertyList*vp) {
           win_option('W',"Window field specification",i,5) win_refresh();
           win_option('i',"Music",i,7) win_refresh();
           win_option('a',"Cancel music",i,6) win_refresh();
+          win_option('k',"Backdrop",i,11) win_refresh();
+          win_option('l',"Cancel backdrop",i,12) win_refresh();
           win_option('d',"User-defined",i,10) win_refresh();
           win_option('O',"Once",i,4) win_refresh();
           win_blank();
-          if(i==1 || i==2 || i==7) win_text_restrict('u',"Lump name: ",name);
+          if(i==1 || i==2 || i==7 || i==11) win_text_restrict('u',"Lump name: ",name);
           if(i==3) {
             win_numeric('X',"X: ",x,0,0xFFFF);
             win_numeric('Y',"Y: ",y,0,0xFFFF);
@@ -289,6 +295,10 @@ void edit_varprop(VarPropertyList*vp) {
           case 8: vp->item[cur].type=(y>2?0x02:0x01); vp->item[cur].data[0]=x; vp->item[cur].data[1]=(y<<4)|z; break;
           case 9: vp->item[cur].type=0x1F; break;
           case 10: vp->item[cur].type=x+x+0x50; break;
+          case 11:
+            vp->item[cur].type=0x60+snprintf(vp->item[cur].data,9,"%s",name);
+            break;
+          case 12: vp->item[cur].type=0x60; break;
         }
         goto draw0;
       case SDLK_ESCAPE: return;
@@ -798,6 +808,7 @@ static void lump_listing_menu(const char*fname,const char*text0,void(*call0)(con
   free(list);
   list_lumps(fname,&list,&count);
   draw0:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
   memset(v_char,32,80*25);
   memset(v_color+80,0x07,80*24);
   memset(v_color,0x30,80);
@@ -1574,7 +1585,7 @@ static void edit_font(const char*name) {
 
 static void edit_palette(const char*name) {
   FILE*f=open_lump(name,"r");
-  char b[64];
+  char b[70];
   Uint8 kind=1; // 1(16),2(64),4(128)
   Uint8 red[256];
   Uint8 grn[256];
@@ -1586,6 +1597,7 @@ static void edit_palette(const char*name) {
   Uint8 lo=0x00;
   Uint8 hi=0x0F;
   Uint8 pre=177;
+  load:
   if(f) {
     if(lump_size) {
       i=fgetc(f); rewind(f);
@@ -1616,14 +1628,31 @@ static void edit_palette(const char*name) {
     }
     fclose(f);
   } else {
+    *b=0;
     win_form("New palette") {
+      win_help("editgr","pal");
       win_heading("Palette type:");
-      win_option('1',"16 colors",kind,1);
-      win_option('4',"64 colors",kind,2);
-      win_option('8',"128 colors",kind,4);
+      win_option('1',"16 colors",kind,1) win_refresh();
+      win_option('4',"64 colors",kind,2) win_refresh();
+      win_option('8',"128 colors",kind,4) win_refresh();
+      win_option('I',"Import",kind,0) win_refresh();
+      if(!kind) win_text('F',"File: ",b);
       win_blank();
       win_command('O',"OK") break;
       win_command_esc(0,"Cancel") return;
+    }
+    if(!kind) {
+      FILE*g=(*b=='|')?popen(b+1,"r"):fopen(b,"r");
+      if(g && (f=open_lump(name,"w"))) {
+        copy_stream(g,f,-1);
+        if(*b=='|') pclose(g); else fclose(g);
+        fclose(f);
+        f=open_lump(name,"r");
+        goto load;
+      } else {
+        warn("Error importing palette");
+        return;
+      }
     }
     lo="\x00\x40\x80"[kind>>1]; hi="\x0F\x7F\xFF"[kind>>1];
     if(kind==1) for(i=0;i<16;i++) red[i]=(i&4?0x2A:0)+(i&8?0x15:0),grn[i]=(i&2?0x2A:0)+(i&8?0x15:0),blu[i]=(i&1?0x2A:0)+(i&8?0x15:0);
@@ -1798,13 +1827,17 @@ static void edit_palette(const char*name) {
 }
 
 static void edit_backdrop(const char*name) {
+  const char*e;
   char b[70]={};
   FILE*f=open_lump(name,"r");
   FILE*g;
   if(f && lump_size) {
     display:
     fclose(f);
-    set_backdrop(name,1);
+    if(e=set_backdrop(name,1)) {
+      alert_text(e);
+      return;
+    }
     v_mode=VIDEO_EGS;
     v_status[1]='p';
     memset(v_font,0,80*25);

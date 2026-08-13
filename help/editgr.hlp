@@ -29,6 +29,9 @@ colours for the foreground and another for the background.
 Palettes with 64 or 128 colours are used for SMZX mode and graphical mode,
 and are not meaningful otherwise.
 
+When you create a new palette, you can also import it from a file. See the
+fileformat.doc format for a description of the expected file format.
+
 :rop;Backdrop
 A backdrop is a 640x350 indexed colour picture, which can also include
 Z-index data. In graphical mode, you can optionally display a backdrop

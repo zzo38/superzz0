@@ -134,6 +134,11 @@ if applicable), will be the lump name excluding the .BGM suffix.
 
 * 0x50 to 0x5E = User-defined. Consists of up to seven 16-bit numbers.
 
+* 0x60 = Unload backdrop.
+
+* 0x61 to 0x68 = Load backdrop; the data is the lump name excluding the
+.ROP suffix.
+
 Each stat (the first stat number is stat 1) is as follows:
 
 * Flag (8-bits; only present if bit9 of encoding flags is set)

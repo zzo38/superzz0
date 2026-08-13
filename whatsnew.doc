@@ -17,6 +17,11 @@ The time zone for the dates in this file is Pacific (British Columbia).
 GAME
   +  There is now a user-defined variable property.
 
+EDITOR
+  +  Palette import is possible within the editor.
+  =  Corrections in the display of some menus, so that video modes and the
+     font attributes of character cells are reset correctly.
+
 
 === Version 0.8.0 (2026-07-15) ===
 

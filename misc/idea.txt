@@ -331,45 +331,37 @@ define your own components with fields that you can attach to your own
 entities and to the built-in entities, which allows you to add your own
 kind of additional data to some things.
 
-There might be types of entities:
+A entity ID is a 32-bit number, which is neither 0 nor -1. The high five
+bits are the priority, which is usually going to be sixteen. The high half
+might use the ranges when the priority is masked out (although in many
+cases the priority will be fixed at sixteen):
 
-* Static entity
+* 000: Not used.
 
-* Normal entity
+* 010: Hero entities.
 
-* Board entity
+* 020: Item definition entities.
 
-* Stat entity
+* 02C: Inventory entities.
 
-* Stat instance entity
+* 030-037: Item slot entities.
 
-* Item definition entity
+* 100: Stat entities and board entities. These entities will be saved and
+restored with the board state. Entity numbers 0x81000001 to 0x810000FF are
+stat entities and the others are board entities for the current board.
 
-* Item slot entity
+* 101-1FF: Stat instance entities. These entities are automatically
+renumbered (and/or destroyed) when stat instances are deleted, and will be
+saved and restored with the board state.
 
-* Hero entity
+* 300-7FF: Normal entities (except all bits set with priority 31).
 
-* Slice entity
+(Other ranges are reserved)
 
-* Picture entity
-
-(This list might be changed in future before being implemented, and some
-of them might not be implemented at first but will be implemented later.)
-
-Only normal entities can be created and destroyed at run time by yourself
-(the other kinds automatically exist or not exist depending on the game
-state, and cannot be created nor destroyed). Any entities other than normal
-and static entities will have the ID of something else in the game engine
-(for example, item definition entities have the item definition IDs), but
-the ID of normal and static entities have no inherent meaning.
-
-The entity ID might be a unsigned 32-bit number, where both zero and all
-bits set are invalid. The lowest bits (the field with most of the bits)
-might be a sequence number which is ascending (or some other meaning for
-entities other than normal entities), and then the middle bits for the type
-of entity and the highest bits for the priority of the entity (although
-this would make it difficult to change the priority of existing entities).
-Zero is not a valid entity and all bits set is also not a valid entity.
+A global variable keeps track of the most recently created normal entity. A
+new entity will have the same number (other than the priority) if the new
+entity's priority is a greater number than the last one, or will be the
+next number if the new entity's priority is less or equal than the last.
 
 A component can be defined with your own fields (a component can have any
 number of fields including zero), and the possible field types might be:
@@ -378,58 +370,29 @@ number of fields including zero), and the possible field types might be:
 
 * Array of integers: Having a fixed length and fixed integer type.
 
-* Short string: Having a fixed length from 1 to 80, defined as a part of
-the field definition.
+* Short string: Having a fixed length from 1 to 80, with the length defined
+as a part of the field definition.
 
-* Long string: A dynamically allocated string up to 64K. The size does not
-need to be defined as a part of the field definition.
-
-* Constant string: Pointer to a fixed string in the fixed string memory,
-which is read-only at run time, although you can copy the pointer of an
-existing fixed string to any component value of the correct type.
+* Constant string: Pointer to a fixed string (up to 64K) in the fixed
+string memory. Only allowed in read-only components.
 
 * Entity reference: Reference to another entity, which may be null. You
 can also specify what happens if the referenced entity is destroyed, which
 can be: do nothing, delete this component, destroy the entity that has this
-component, or change the value of this field to null.
+component, or change the value of this field to null. If this field is in a
+read-only component, then it is only allowed to reference a indestructible
+entity or null; in other components, it can be any reference.
 
 * Key: Only allowed up to once per component definition and only as the
 first field if it is present. Like a entity reference, but cannot be null,
 and multiple instances of this component on the same entity is allowed as
 long as the keys are different.
 
-It might also be helpful to have multiple types of components, such as:
-
-* Fixed component (cannot be added, removed, or changed at run time, which
-reduces the time and disk space needed for save games and might also
-improve other efficiency, but not available for all types of entities)
-
-* Standard component (can be added, removed, and changed at run time)
-
-* Index component (used to order by values of fields of other components)
-
-Components can be applied to any type of entities, including applying the
-same components to multiple types of entities.
-
 Some components may optionally have default values, including defaults
 based on other components. The default values are not used for iteration
 (so queries and systems based on that component will ignore it), but if
 you try to read a component of a entity that does not have that component
 and that component has a default value, then it can be read.
-
-Another possible thing to have would be triggers for when a component is
-added or removed or changed (or an entity that has a specific component
-is destroyed), which might add or change another component or the value
-of something outside of ECS, that can then be used by a system or other
-thing that does something with them later.
-
-When specifying the existing entities and which components each entity
-has and their values, the same or similar format can be used on disk for
-all types of components (although entities are not stored explicitly,
-except normal entities, and (in world files) static entities), even if
-the format in memory is different for each type of components. This can
-allow types of components to be changed in the editor without needing to
-add all of the components again.
 
 
 === Regression testing and demo recording ===
