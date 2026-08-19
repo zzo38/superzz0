@@ -6,6 +6,7 @@ C /home/user/bin
 P superzz0-release/bin/
 ./superzz0 superzz0
 ./sz0asm sz0asm
+./sz0backdrop sz0backdrop
 ./sz0music sz0music
 ./har har
 C /home/user/superzz0

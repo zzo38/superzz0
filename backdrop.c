@@ -30,7 +30,7 @@ static uint8_t zkind=0;
 static uint8_t picrlebits=1;
 static uint8_t zrlebits=1;
 static uint8_t picuncomp,zuncomp;
-static uint8_t showinfo,testmode;
+static uint8_t showinfo,testmode,usealpha;
 static unsigned int piclz77,zlz77;
 static unsigned int minlz77=2;
 static uint32_t picrleguess,picupguess,picvaguess,zrleguess,zupguess,zvaguess;
@@ -314,6 +314,7 @@ static void load_picture(const char*name) {
     for(n=t=0;t<s;t++) {
       fread(buf,1,8,f);
       rgb.r=buf[0]>>2; rgb.g=buf[2]>>2; rgb.b=buf[4]>>2;
+      if(usealpha) zbuffer[t]=buf[6];
       for(i=0;i<n;i++) if(rgb.r==palette[i].r && rgb.g==palette[i].g && rgb.b==palette[i].b) break;
       if(i==n) {
         if(n==256) errx(1,"Too many colours");
@@ -323,6 +324,7 @@ static void load_picture(const char*name) {
       picture[t]=i;
     }
     pkind=KIND_NORMAL;
+    if(usealpha) zkind=KIND_NORMAL;
   } else {
     errx(1,"Unrecognized file format");
   }
@@ -586,9 +588,38 @@ static void apply_filter(uint8_t*p,uint8_t k) {
   //make_mcount(p); t=0; for(x=0;x<256;x++) t=(1234567*t+mcount[x])^5; fprintf(stderr,"%08lX\n",(unsigned long)t);
 }
 
+static int compare_palette(const void*a,const void*b) {
+  uint8_t ix=*(const uint8_t*)a;
+  uint8_t iy=*(const uint8_t*)b;
+  RGB x=palette[ix];
+  RGB y=palette[iy];
+  if(!x.use || !y.use) return x.use?1:-1;
+  switch(*optarg) {
+    case '1': return x.r+x.g+x.b-y.r-y.g-y.b;
+    case '2': return (x.r-y.r)*299+(x.g-y.g)*587+(x.b-y.b)*114;
+    default: errx(1,"Improper palette ordering mode");
+  }
+}
+
+static void order_palette(void) {
+  uint8_t ord[256];
+  uint8_t rev[256];
+  RGB rgb[256];
+  uint32_t i;
+  for(i=0;i<256;i++) ord[i]=i;
+  qsort(ord,256,1,compare_palette);
+  memcpy(rgb,palette,256*sizeof(RGB));
+  for(i=0;i<256;i++) {
+    palette[i]=rgb[ord[i]];
+    rev[ord[i]]=i;
+  }
+  for(i=0;i<width*height;i++) picture[i]=rev[picture[i]];
+}
+
 int main(int argc,char**argv) {
   int c;
-  while((c=getopt(argc,argv,"+B:E:F:I:J:K:M:O:P:R:S:TUY:a:b:e:f:i:j:k:m:n:o:p:r:s:uvw:y:z:"))>0) switch(c) {
+  while((c=getopt(argc,argv,"+AB:E:F:I:J:K:M:O:P:R:S:TUY:a:b:e:f:i:j:k:m:n:o:p:r:s:t:uvw:y:z:"))>0) switch(c) {
+    case 'A': usealpha=1; break;
     case 'B': zrlebits=strtol(optarg,0,10); break;
     case 'E': zeffort=strtol(optarg,0,10); break;
     case 'F': set_filter(optarg,zfilter); break;
@@ -616,6 +647,7 @@ int main(int argc,char**argv) {
     case 'p': load_picture(optarg); break;
     case 'r': pkind=KIND_NORMAL; load_raw(optarg,picture); break;
     case 's': pkind=KIND_SOLID; memset(picture,strtol(optarg,0,16),640*350); break;
+    case 't': order_palette(); break;
     case 'u': picuncomp=1; break;
     case 'v': showinfo=1; break;
     case 'w': width=strtol(optarg,0,10); if(width<1 || width>640 || pkind==KIND_NORMAL || zkind) errx(1,"Improper width"); break;
