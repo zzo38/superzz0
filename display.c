@@ -1206,6 +1206,20 @@ void redisplay(void) {
         }
         p=scrn->pixels+(config.show_status?4*r+4:0);
         q=zbuffer;
+        for(z=y=0;y<25;y++,z+=80) {
+          for(a=0;a<14;a++) {
+            for(x=0;x<80;x++) if(v_font[z+x]==VF_FRONT+VF_SYSTEM) {
+              c=pcfont[14*v_char[z+x]+a];
+              for(b=0;b<8;b++) {
+                p[b+(x<<3)]=15&(v_color[z+x]>>(c&128?0:4));
+                q[b+(x<<3)]=255;
+                c<<=1;
+              }
+            }
+            p+=r;
+            q+=640;
+          }
+        }
         goto graphics;
       }
       for(z=y=0;y<25;y++,z+=80) {

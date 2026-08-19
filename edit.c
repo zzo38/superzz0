@@ -239,6 +239,7 @@ void edit_varprop(VarPropertyList*vp) {
           if(i==8) {
             win_boolean('8',"80 columns",x,VIDEO_80COLUMNS);
             win_boolean('X',"SMZX",x,VIDEO_SMZX);
+            win_boolean('h',"Graphics",x,VIDEO_EGS);
             win_heading("Color mask:");
             win_numeric(':',"Row: ",y,0,15);
             win_numeric('m',"Column: ",z,0,15);

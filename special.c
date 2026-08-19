@@ -456,6 +456,7 @@ void special_option_menu(void) {
   Uint8 sbuf[81];
   Uint8 snbuf,mode;
   Uint8 mname[9];
+  Uint8 bname[9];
   Uint16 msong,scrid,scrb;
   ASN1_Value root={};
   ASN1_Value state={};
@@ -474,6 +475,7 @@ void special_option_menu(void) {
     mode=v_mode;
     memcpy(mname,music_name,9);
     msong=music_song;
+    memcpy(bname,backdrop_name,9);
     enc=asn1_start_encoding_value(&state);
     if(!enc) err(1,"Allocation failed");
     save_fontpal_state(enc);
@@ -481,6 +483,7 @@ void special_option_menu(void) {
     board_info.screen=scrb;
     asn1_free(&root);
     v_mode=mode;
+    set_backdrop(bname,0);
     load_fontpal_state(&state);
     asn1_free(&state);
     if(msong!=music_song || memcmp(mname,music_name,9)) audio_set_music(mname,msong);

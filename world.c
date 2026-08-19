@@ -1283,6 +1283,10 @@ void work_varproperties(VarPropertyList*vp) {
     case 0x50 ... 0x5E:
       /* No effect */
       break;
+    case 0x60 ... 0x6E:
+      p->data[p->type&15]=0;
+      if(!editor) set_backdrop(p->data,1);
+      break;
     default:
       if(!editor) errx(1,"Improper variable property list");
   }
@@ -1661,6 +1665,7 @@ const char*set_backdrop(const char*name,char usepal) {
   free(backdrop_p); free(backdrop_z);
   backdrop_p=0; backdrop_z=0;
   if(!name || !*name) {
+    *backdrop_name=0;
     return 0;
   }
   snprintf(backdrop_name,9,"%s",name);

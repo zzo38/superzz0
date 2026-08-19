@@ -99,7 +99,7 @@ int ask_save_file(char issave) {
   } else {
     *entry=xc=0;
   }
-  v_mode|=VIDEO_80COLUMNS;
+  v_mode=VIDEO_80COLUMNS;
   list:
   yc=ys=0;
   free(items);
@@ -409,6 +409,7 @@ void save_state(void) {
     } else {
       asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_NULL,0,0);
     }
+    asn1_encode_c_string(enc,ASN1_VISIBLE_STRING,backdrop_name);
   asn1_end(enc);
   asn1_finish_encoder(enc);
   fclose(fp);
@@ -554,6 +555,13 @@ static void load_saveder(FILE*fp,char*useglobalscript) {
   if(v1.type!=ASN1_NULL) load_itemdef_flags(&v1,IDF_EVENT);
   if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j || v1.class!=ASN1_UNIVERSAL) goto bad;
   if(v1.type!=ASN1_NULL) load_saved_specopt(&v1);
+  if((j=asn1_next_of(&v1,&v0))==ASN1_DONE) goto done; else if(j || v1.class!=ASN1_UNIVERSAL) goto bad;
+  if(v1.type==ASN1_NULL || v1.type==ASN1_VISIBLE_STRING) {
+    char m[9]={};
+    if(v1.length<0 || v1.length>8) goto bad;
+    memcpy(m,v1.data,v1.length);
+    set_backdrop(m,0);
+  } else goto bad;
   // End
   done: asn1_free(&v0);
   if(!v_colormask) v_colormask=(v_mode&VIDEO_SMZX?0x80:0x30);
