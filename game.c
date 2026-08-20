@@ -3895,6 +3895,31 @@ static char parse_name(Stat*s,StatXY*xy,Uint16*ip) {
   return ntextbuf?1:0;
 }
 
+static void script_set_backdrop(Stat*s,StatXY*xy,Uint16*ip) {
+  parse_name(s,xy,ip);
+  if(!strcmp(textbuf,"HIDE")) {
+    set_backdrop(0,0);
+  } else if(!strcmp(textbuf,"SHOW")) {
+    parse_name(s,xy,ip);
+    if(strcmp(backdrop_name,textbuf)) set_backdrop(textbuf,1);
+  } else if(!strcmp(textbuf,"SET")) {
+    int i;
+    VarProperty*v;
+    parse_name(s,xy,ip);
+    if(strcmp(backdrop_name,textbuf)) set_backdrop(textbuf,1);
+    for(i=0;i<board_info.varprop.count;i++) if((board_info.varprop.item[i].type>>4)==6) break;
+    if(i==board_info.varprop.count) return;
+    v=board_info.varprop.item+i;
+    if(ntextbuf>8) textbuf[ntextbuf=8]=0;
+    v->type=ntextbuf+i+0x60;
+    memcpy(v->data+i,textbuf,9);
+  } else if(!strcmp(textbuf,"CANCEL")) {
+    int i;
+    set_backdrop(0,0);
+    for(i=0;i<board_info.varprop.count;i++) if((board_info.varprop.item[i].type>>4)==6) board_info.varprop.item[i].type=0x60;
+  }
+}
+
 static void script_set_music(Stat*s,StatXY*xy,Uint16*ip) {
   Uint16 w;
   parse_name(s,xy,ip);
@@ -4187,7 +4212,9 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
               }
             } else goto badcommand; break;
           case 'B':
-            if(!strcmp(buf,"BECOME")) {
+            if(!strcmp(buf,"BACKDROP")) {
+              script_set_backdrop(s,xy,&ip);
+            } else if(!strcmp(buf,"BECOME")) {
               become:
               if(!parse_kind(s,xy,&ip,&sk,1)) {script_error(m,xy,"Improper #BECOME"); return;}
               change_to_script_kind(xy->x,xy->y,xy->layer&3,&sk);

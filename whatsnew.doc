@@ -16,6 +16,10 @@ The time zone for the dates in this file is Pacific (British Columbia).
 
 GAME
   +  There is now a user-defined variable property.
+  +  Graphical video mode.
+
+SCRIPTS
+  +  #BACKDROP command to display backdrops.
 
 EDITOR
   +  Palette import is possible within the editor.

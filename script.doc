@@ -134,6 +134,26 @@ are not allowed in this case.
   the 1-based choice number (1 for the first one, 2 for the second one,
   etc). (If preceded by #MIXCHOICES then it will choose one at random.)
 
+#BACKDROP CANCEL
+  Hides the backdrop, and also changes any backdrop entries in the variable
+  property list of the current board to cancel it so that it will not be
+  displayed again when entering this board if is set to persist.
+
+#BACKDROP HIDE
+  Hides the backdrop. Does not affect the variable property list.
+
+#BACKDROP SET name
+  Shows the specified backdrop like #BACKDROP SHOW but also changes the
+  variable property list of the current board so that it will be shown
+  again when entering this board if it persists. In order for this to be
+  valid, the variable property list of the current board must already
+  contain a backdrop command or a cancel backdrop command.
+
+#BACKDROP SHOW name
+  Shows the specified backdrop (it will not actually be displayed unless
+  the graphical video mode is enabled). Does not affect the variable
+  property list.
+
 #BECOME kind
   Changes this object into the specified kind.
 
