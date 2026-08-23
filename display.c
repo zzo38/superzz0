@@ -1022,7 +1022,7 @@ void configure_colors(const char*t) {
   }
 }
 
-static int g_clip(const SDL_Rect*in0,const SDL_Rect*in1,SDL_Rect*out) {
+int g_clip(const SDL_Rect*in0,const SDL_Rect*in1,SDL_Rect*out) {
   // Return 0 if OK or 1 if it does not intersect
   Sint16 x0h=in0->x+in0->w;
   Sint16 y0h=in0->y+in0->h;
@@ -1037,7 +1037,7 @@ static int g_clip(const SDL_Rect*in0,const SDL_Rect*in1,SDL_Rect*out) {
   return 0;
 }
 
-static void g_draw_line(Uint16 x,Uint16 y,Uint16 n,Uint32 a,Uint32 b,Uint8 c,Uint8 z) {
+void g_draw_line(Uint16 x,Uint16 y,Uint16 n,Uint32 a,Uint32 b,Uint8 c,Uint8 z) {
   Uint8*p;
   Uint8*q;
   p=pbuffer+scrn->pitch*y+x;
@@ -1048,7 +1048,7 @@ static void g_draw_line(Uint16 x,Uint16 y,Uint16 n,Uint32 a,Uint32 b,Uint8 c,Uin
   }
 }
 
-static void g_draw_box(const SDL_Rect*clip,const SDL_Rect*rect,Uint8 bc,Uint8 bz,Uint8 fc,Uint8 fz,Uint8 opacity) {
+void g_draw_box(const SDL_Rect*clip,const SDL_Rect*rect,Uint8 bc,Uint8 bz,Uint8 fc,Uint8 fz,Uint8 opacity) {
   // bc=border colour, bz=border Z-index, fc=fill colour, fc=fill Z-index, opacity=(0 solid, 1 translucent)
   Uint8*p;
   Uint8*q;
@@ -1075,11 +1075,11 @@ static void g_draw_box(const SDL_Rect*clip,const SDL_Rect*rect,Uint8 bc,Uint8 bz
   }
 }
 
-static void g_draw_picture() {
+void g_draw_picture() {
   //TODO
 }
 
-static void g_draw_text() {
+void g_draw_text() {
   //TODO
 }
 

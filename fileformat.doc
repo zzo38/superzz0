@@ -19,7 +19,8 @@ in some of the DER lumps are:
 * Application type 0 implicit octet string = Can be a length of zero, one,
 or two bytes. If zero, then it means transparent. If one, then it is the
 Z-index to be drawn at. If two, then the first byte is the Z-index and the
-second byte is the colour to use.
+second byte is the colour to use. In some contexts, there can be an
+optional third byte which is 0xFF if translucent or 0x00 if opaque.
 
 
 === !SZ0 ===

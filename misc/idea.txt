@@ -532,15 +532,6 @@ stdin and then the text is replaced by the stdout from that program.
 disable this feature, and might be disabled by default.
 
 
-=== Versions ===
-
-There is also the consideration of working with non-released versions. One
-idea is that non-released versions would add something into the optional
-set in GENERAL.DER to mention this, and then a warning message will be
-displayed when running with a released version (non-released versions will
-not display the warning message for this case).
-
-
 === Audio lumps separation ===
 
 It might be worth for it to be possible to have the .BGM and .SND lumps in
@@ -552,6 +543,20 @@ used Y in a PC sound effect to suppress them when wave sounds are played
 
 Since the file format is concatenable, if they are separated then you can
 recombine them just by concatenation and it will work.
+
+
+=== Audio/video time synchronization ===
+
+It might be useful to have a feature (which can be disabled by the end
+user) to be able to display something and wait for the duration of a sound
+effect or a part of a BG music before continuing. This would not affect the
+behaviour of the game and only delay it, and an indicator can be displayed
+in the indicators area during this delay; you can also push a key to skip
+this delay and set in the configuration file to skip this delay. This would
+be independent of the game speed.
+
+There could be a new configuration option called "audio_wait" to globally
+enable or disable this feature.
 
 
 === Scroll lock ===
