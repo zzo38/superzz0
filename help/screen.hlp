@@ -14,6 +14,9 @@ they should be shown. Whichever is not shown will display whatever was
 previously shown on the display (this can be used for popup menus that only
 take up a part of the screen).
 
+(Transparent cells in the main screen will show the default defined in the
+program memory if defined, or will be treated as opaque otherwise.)
+
 In the F1 menu, "Opaque" means both, "Shadow" means the colour only, and
 "Transparent" means neither.
 

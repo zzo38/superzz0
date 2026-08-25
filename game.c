@@ -1006,8 +1006,8 @@ void update_screen(void) {
     chr=cur_screen.parameter[i];
     switch(cmd&0xF0) {
       case SC_BACKGROUND:
-        if(cmd&1) v_char[i]=chr;
-        if(cmd&2) v_color[i]=col;
+        if(cmd&1) v_char[i]=chr; else v_char[i]=(memory[MEM_DEFAULT_BACKGROUND]?:chr);
+        if(cmd&2) v_color[i]=col; else v_color[i]=(memory[MEM_DEFAULT_BACKGROUND]?memory[MEM_DEFAULT_BACKGROUND]>>8:col);
         break;
       case SC_BOARD:
         draw_tile((i%80)+scroll_x,(i/80)+scroll_y,i,cmd&0x0F);
@@ -1030,7 +1030,7 @@ void update_screen(void) {
           case SC_SPEC_WIDTH: v=board_info.width; break;
           case SC_SPEC_HEIGHT: v=board_info.height; break;
           case SC_SPEC_USERDATA: v=board_info.userdata; break;
-          default: continue; // not applicable in this context (e.g. some that are only for text windows), so ignore it
+          default: v=0; // not applicable in this context
         }
         v_char[i]=digit_of(v,chr);
         v_color[i]=col;
@@ -1055,13 +1055,11 @@ void update_screen(void) {
           case SC_IND_USER1: v_char[i]=board_info.flag&BF_USER1?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[1]:0; break;
           case SC_IND_USER2: v_char[i]=board_info.flag&BF_USER2?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[2]:0; break;
           case SC_IND_USER3: v_char[i]=board_info.flag&BF_USER3?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[3]:0; break;
+          default: v_char[i]=0; break;
         }
         break;
-      case SC_TEXT:
-        // Used only for text windows
-        break;
       case SC_ITEM:
-        if(cmd==SC_ITEM_ELEMENT) display_item_element_cell(i,col,chr>>5,chr&0x1F);
+        if(cmd==SC_ITEM_ELEMENT) display_item_element_cell(i,col,chr>>5,chr&0x1F); else v_color[i]=v_char[i]=0;
         break;
       case SC_BITS_0_LO ... SC_BITS_3_HI:
         v_color[i]=col;
@@ -2602,6 +2600,7 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
           case SC_SPEC_HEIGHT: v=board_info.height; break;
           case SC_SPEC_USERDATA: v=board_info.userdata; break;
           case SC_SPEC_CONTEXT_SPECIFIC: if(on) v=fv; else {chr=0; goto plain;} break;
+          default: v=0;
         }
         v_char[i]=digit_of(v,chr);
         v_color[i]=col;

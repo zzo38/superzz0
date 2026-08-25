@@ -55,6 +55,12 @@ the colour and flags of overlay tiles are inherited by stats that are
 moving over them. The low nybble is used for colours and the high nybble
 is used for the kind bits.
 
+$B7 = The background colour (high 8-bits) and character (low 8-bits) to
+use for transparent cells in a screen definition when there is no other
+screen behind it. If this is zero, then the screen definition itself is
+used. This has no effect in text windows, item windows, etc, and is only
+effective for the main game display.
+
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
 save the delay, bit9 means to save the walk/face/user flags, and bit13

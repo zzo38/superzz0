@@ -19,9 +19,14 @@ GAME
   +  Graphical video mode.
   +  Some additional uses for special option definitions.
   =  Minor bug fixes in special options.
+  *  Fix it so that the entire screen is redrawn in the main game state.
 
 SCRIPTS
   +  #BACKDROP command to display backdrops.
+
+ASSEMBLY
+  +  Memory cell $B7 to define default background data behind the main
+     screen, in case it is defined as transparent.
 
 EDITOR
   +  Palette import is possible within the editor.
