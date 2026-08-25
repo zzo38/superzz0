@@ -134,7 +134,20 @@ arc as described above will result in a more compact encoding because it
 is possible to use relative OIDs.) You should avoid using the same full
 OID for multiple purposes.
 
-(There are no OIDs currently defined for this purpose.)
+These OIDs can be used in the user configuration file to override the
+initial value for this option all worlds that use the same OID; see the
+section in config.doc about the [Special] division for more information.
+
+There are also some built-in OIDs which will cause some special handling
+if they are used. Specifying such a OID will either cause the value to be
+set initially according to the meaning of the OID or will cause the value
+to vary automatically during the game if the setting changes, depending on
+the "Variable" flag of the option definition.
+
+þ ...8.0 þ The value is 1 if font animations are enabled or 0 if disabled.
+
+þ ...8.1 þ The value is 1 if audio is enabled and is on, or is 0 if audio
+is muted or unavailable.
 
 :he;Help
 Specify the screen number to use for the text window that displays the help

@@ -17,11 +17,22 @@ static SpConfig*spconf;
 static Uint16 nspconf;
 
 Uint16 spec_auto_value(Uint32 key) {
-  return 0;
+  switch(key) {
+    case SPECI_FONTANIM: return config.font_anim?1:0;
+    case SPECI_AUDIO: if(!config.audio_rate || !config.audio_buffer) return 0; else return audio_get_volume()<0x10000?1:0;
+    default: return 0;
+  }
 }
 
 static Uint8 spec_possible_value(Uint32 key,Uint16 nv,const Uint16*val) {
-  return 0;
+  int i,j;
+  switch(key) {
+    case SPECI_FONTANIM: case SPECI_AUDIO:
+      if(!nv) return (val[1] && !val[0]);
+      for(i=j=0;i<nv;i++) if(val[i]<2) j|=1<<val[i];
+      return (j==3);
+    default: return 0;
+  }
 }
 
 static Uint8 spec_possible(const ASN1_Value*oids,Uint16 nv,const Uint16*val,SpecialOption*obj) {
@@ -56,9 +67,9 @@ static Uint8 spec_possible(const ASN1_Value*oids,Uint16 nv,const Uint16*val,Spec
     }
     if(v.class==ASN1_UNIVERSAL && v.type==ASN1_RELATIVE_OID && v.length>1 && v.length<6 && v.data[0]==8) {
       key=v.data[1]<<24;
-      if(v.length>2) key|=v.data[2]<<16;
-      if(v.length>3) key|=v.data[3]<<8;
-      if(v.length>4) key|=v.data[4]<<0;
+      if(v.length>2) key|=v.data[2]<<16; else if(v.length==2) key|=0x800000;
+      if(v.length>3) key|=v.data[3]<<8; else if(v.length==3) key|=0x8000;
+      if(v.length>4) key|=v.data[4]<<0; else if(v.length==4) key|=0x80;
       if(spec_possible_value(key,nv,val)) {
         obj->value=spec_auto_value(obj->key=key);
         return 0;
@@ -121,7 +132,7 @@ static void draw_menu_field(const ASN1_Value*v0,int at,int len,const WindowInfo*
   ASN1_Value v1,v2,v3;
   int end=at+len;
   int b;
-  Uint16 m,n;
+  Uint16 m,n,x;
   Uint8 c=0;
   switch(v0->type) {
     case SPECT_OPTION:
@@ -134,16 +145,18 @@ static void draw_menu_field(const ASN1_Value*v0,int at,int len,const WindowInfo*
       if(asn1_next_of(&v1,v0) || v1.class!=ASN1_CONTEXT_SPECIFIC) break;
       if(specopt[n].flag&SPECF_LOCKED) c=wind->wcolor[WC_FIXED_ITEM];
       if(!c) if(specopt[n].flag&SPECF_VARIABLE) c=wind->wcolor[WC_KEY_ITEM];
+      x=specopt[n].value;
+      if(specopt[n].flag&SPECF_VARIABLE) x=spec_auto_value(specopt[n].key);
       for(b=at;b<end;b++) {
         if(cur_screen.command[b]==SC_SPEC_CONTEXT_SPECIFIC) {
-          v_char[b]=draw_digit(specopt[n].value,cur_screen.parameter[b]);
+          v_char[b]=draw_digit(x,cur_screen.parameter[b]);
           if(c) v_color[b]=c;
         }
       }
       if(v1.type==1 && !asn1_first_of(&v2,&v1)) do {
         if(v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_SEQUENCE || asn1_first_of(&v3,&v2)) continue;
         if(v3.class==ASN1_UNIVERSAL && v3.type==ASN1_PRINTABLE_STRING && asn1_next_of(&v3,&v2)) continue;
-        if(v3.class!=ASN1_UNIVERSAL || v3.type!=ASN1_INTEGER || asn1_decode_number(&v3,ASN1_INTEGER,&m) || m!=specopt[n].value || asn1_next_of(&v3,&v2)) continue;
+        if(v3.class!=ASN1_UNIVERSAL || v3.type!=ASN1_INTEGER || asn1_decode_number(&v3,ASN1_INTEGER,&m) || m!=x || asn1_next_of(&v3,&v2)) continue;
         if(v3.class==ASN1_UNIVERSAL && v3.type==ASN1_PC_STRING) {
           for(b=0;b<v3.length && b<len;b++) {
             if((cur_screen.command[b+at]&0xF0)==SC_TEXT) {
@@ -622,12 +635,17 @@ static void spec_debug_callback(Uint16 n,int y,void*uz) {
 }
 
 void special_option_debug(void) {
+  char buf[40];
   int n;
   win_form("Special option debug") {
     win_list(nspecopt,0,spec_debug_callback,n) {
+      if(specopt[n].flag&SPECF_VARIABLE) snprintf(buf,40,"Effective value: %d",spec_auto_value(specopt[n].key));
       win_form("Special option debug") {
-        win_numeric('V',"Value: ",specopt[n].value,0,0xFFFF);
+        win_numeric('u',"Value: ",specopt[n].value,0,0xFFFF);
+        win_boolean('V',"Variable",specopt[n].flag,SPECF_VARIABLE) snprintf(buf,40,"Effective value: %d",spec_auto_value(specopt[n].key));
+        win_boolean('k',"Locked",specopt[n].flag,SPECF_LOCKED);
         win_command_esc(0,"Set") break;
+        if(specopt[n].flag&SPECF_VARIABLE) win_heading(buf);
       }
     }
     win_blank();

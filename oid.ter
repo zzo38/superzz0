@@ -73,3 +73,6 @@ S_sid=sound.6 % MOS Technology SID
 S_genmidi=sound.7 % General MIDI
 S_esfm=sound.8 % ESS Technology ES1688 AudioDrive ESFM
 
+% Special options
+O_fontanim=specopt.0
+O_audio=specopt.1

@@ -425,7 +425,10 @@ int main(int argc,char**argv) {
     alert_text("Warning: This file should use a newer version of Super ZZ Zero");
   }
   config.version_warn=0;
-  if(config.audio_buffer && !editor) audio_init();
+  if(config.audio_buffer && !editor) {
+    audio_init();
+    if(nspecopt) for(i=0;i<nspecopt;i++) if(specopt[i].key==SPECI_AUDIO) specopt[i].value=spec_auto_value(SPECI_AUDIO);
+  }
 #ifndef CONFIG_DISABLE_FRONT
   if(extern_out) v_status[77]='*';
 #endif

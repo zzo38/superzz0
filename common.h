@@ -814,6 +814,8 @@ extern SpecialOption*specopt;
 // (the relative OID excluding the first byte (always 0x08), padded with <80 00 00 00>)
 #define SPECI_VACANT 0x80808080
 #define SPECI_UNKNOWN 0x80808081
+#define SPECI_FONTANIM 0x00800000
+#define SPECI_AUDIO 0x01800000
 
 // SpecialOption:flag
 #define SPECF_LOCKED 0x0001
