@@ -980,14 +980,21 @@ const char*save_board(FILE*fp,int m) {
 }
 
 const char*load_screen(FILE*fp) {
+  Uint8 pw=80;
   Uint8 vp;
   Uint8 x,y,z,c;
+  Uint16 s;
   Uint32 at=0;
+  Panel*pan;
   int i,n;
   free(cur_screen.varprop.item);
   memset(&cur_screen,0,sizeof(Screen));
   vp=fgetc(fp);
   if(vp&0x7F) return "Unrecognized file format";
+  for(i=0;i<cur_screen.npanels;i++) free(cur_screen.panels[i].data);
+  free(cur_screen.panels);
+  cur_screen.panels=0;
+  cur_screen.npanels=0;
   cur_screen.flag=fgetc(fp);
   cur_screen.border_color=fgetc(fp);
   fread(cur_screen.border,1,4,fp);
@@ -1013,11 +1020,14 @@ const char*load_screen(FILE*fp) {
       at+=c;
     } else if(c<160) {
       c-=79;
-      if(at<80 || at+c>80*25) return "Out of bounds access";
+      if(at<pw || at+c>80*25) {
+        if(!at) { pw=c; continue; }
+        return "Out of bounds access";
+      }
       for(i=0;i<c;i++) {
-        cur_screen.command[at+i]=cur_screen.command[at+i-80];
-        cur_screen.color[at+i]=cur_screen.color[at+i-80];
-        cur_screen.parameter[at+i]=cur_screen.parameter[at+i-80];
+        cur_screen.command[at+i]=cur_screen.command[at+i-pw];
+        cur_screen.color[at+i]=cur_screen.color[at+i-pw];
+        cur_screen.parameter[at+i]=cur_screen.parameter[at+i-pw];
       }
       at+=c;
     } else if(c<240) {
@@ -1028,13 +1038,36 @@ const char*load_screen(FILE*fp) {
       fread(cur_screen.parameter+at,1,c,fp);
       at+=c;
     } else if(c==240) {
-      return "Reserved opcode in screen definition";
+      x=fgetc(fp); if(x>=80) return "Reserved opcode in screen definition";
+      y=fgetc(fp); s=read16(fp);
+      if(!at) return "Invalid panel definition";
+      if((y&31)>=25) return "Incorrect coordinate in panel definition";
+      if(cur_screen.npanels==32) return "Too many panels";
+      i=pw*((y>>5)+1);
+      if(at%i) return "Invalid panel definition";
+      if(at/i+(y&31)>25 || x+pw>80) return "Invalid panel definition";
+      cur_screen.panels=realloc(cur_screen.panels,(cur_screen.npanels+1)*sizeof(Panel));
+      if(!cur_screen.panels) err(1,"Allocation failed");
+      pan=cur_screen.panels+cur_screen.npanels++;
+      pan->sel=s;
+      pan->x=x;
+      pan->y=y&31;
+      pan->cur=0;
+      pan->count=(y>>5)+2;
+      pan->w=pw;
+      pan->h=at/i;
+      pan->data=malloc((at+pw*pan->h)*3);
+      if(!pan->data) err(1,"Allocation failed");
+      memcpy(pan->data+pw*pan->h,cur_screen.command,at);
+      memcpy(pan->data+pw*pan->h*2+at,cur_screen.color,at);
+      memcpy(pan->data+pw*pan->h*3+at*2,cur_screen.parameter,at);
+      at=0; pw=80;
     } else if(c==247) {
       x=fgetc(fp); y=(x&127)/7; z=(x&127)%7; x>>=7;
       if(y==18) return "Reserved opcode in screen definition";
-      if((at<80 && z>3) || (!at && (y<3 || z))) return "Out of bounds access";
-      cur_screen.command[at]=(z==0||z==2||z==5)?fgetc(fp):cur_screen.command[at-(z<4?1:80)];
-      cur_screen.color[at]=(z==0||z==1||z==4)?fgetc(fp):cur_screen.color[at-(z<4?1:80)];
+      if((at<pw && z>3) || (!at && (y<3 || z))) return "Out of bounds access";
+      cur_screen.command[at]=(z==0||z==2||z==5)?fgetc(fp):cur_screen.command[at-(z<4?1:pw)];
+      cur_screen.color[at]=(z==0||z==1||z==4)?fgetc(fp):cur_screen.color[at-(z<4?1:pw)];
       cur_screen.parameter[at]=y>2?fgetc(fp):cur_screen.parameter[at-(z<4?1:80)]+(x?1:-1);
       if(!y) y=3;
       for(i=1;i<y && at+i<80*25;i++) {
@@ -1051,13 +1084,36 @@ const char*load_screen(FILE*fp) {
       at++;
     }
   }
+  for(i=0;i<cur_screen.npanels;i++) {
+    pan=cur_screen.panels+i;
+    for(n=0;n<cur_screen.npanels;n++) if(i!=n) {
+      x=cur_screen.panels[n].x; y=cur_screen.panels[n].y;
+      z=cur_screen.panels[n].w; c=cur_screen.panels[n].h;
+      if(((pan->x>=x && pan->x<x+z) || (pan->x+pan->w-1>=x && pan->x+pan->w-1<x+z)) && ((pan->y>=y && pan->y<y+c) || (pan->y+pan->h-1>=y && pan->y+pan->h-1<y+c))) {
+        for(i=0;i<cur_screen.npanels;i++) free(cur_screen.panels[i].data);
+        free(cur_screen.panels);
+        cur_screen.panels=0;
+        cur_screen.npanels=0;
+        return "Overlapping panels in screen definition";
+      }
+    }
+    for(y=0;y<pan->h;y++) {
+      memcpy(pan->data+pan->w*y,cur_screen.command+80*(y+pan->y)+pan->x,pan->w);
+      memcpy(pan->data+pan->w*y+pan->w*pan->h*pan->count,cur_screen.color+80*(y+pan->y)+pan->x,pan->w);
+      memcpy(pan->data+pan->w*y+pan->w*pan->h*pan->count*2,cur_screen.parameter+80*(y+pan->y)+pan->x,pan->w);
+    }
+  }
   return 0;
 }
 
 const char*save_screen(FILE*fp) {
+  Panel*pan=0;
+  Uint16 wh=80*25;
+  Uint8 pw=80;
   Uint8*pk=cur_screen.command;
   Uint8*pc=cur_screen.color;
   Uint8*pp=cur_screen.parameter;
+  Uint8 np=0;
   Uint8 c;
   Uint32 at=0;
   Uint8 run0,run1,run2,run3,run4,run5,run6;
@@ -1077,11 +1133,30 @@ const char*save_screen(FILE*fp) {
   // Variable property list
   if(cur_screen.varprop.count) save_varproperties(fp,&cur_screen.varprop);
   // Screen grid
-  for(at=0;at<80*25;) {
+  if(cur_screen.npanels) {
+    nextpanel:
+    if(np!=cur_screen.npanels) {
+      pan=cur_screen.panels+np;
+      pw=pan->w;
+      if(pw!=80) fputc(pw+79,fp);
+      wh=pan->w*pan->h*(pan->count-1);
+      pk=pan->data+pan->w*pan->h;
+      pc=pk+pan->w*pan->h+wh;
+      pp=pc+pan->w*pan->h+wh;
+    } else {
+      pan=0;
+      pw=80;
+      wh=80*25;
+      pk=cur_screen.command;
+      pc=cur_screen.color;
+      pp=cur_screen.parameter;
+    }
+  }
+  for(at=0;at<wh;) {
     run0=run1=run2=run3=run4=0; run5=run6=1;
-    for(n=0;n<80 && at+n<80*25;n++) {
+    for(n=0;n<80 && at+n<wh;n++) {
       if(run0==n && at && pk[at+n]==pk[at-1] && pc[at+n]==pc[at-1] && pp[at+n]==pp[at-1]) ++run0;
-      if(run1==n && at>=80 && pk[at+n]==pk[at+n-80] && pc[at+n]==pc[at+n-80] && pp[at+n]==pp[at+n-80]) ++run1;
+      if(run1==n && at>=pw && pk[at+n]==pk[at+n-pw] && pc[at+n]==pc[at+n-pw] && pp[at+n]==pp[at+n-pw]) ++run1;
       if(run2==n && pk[at+n]==pk[at] && pc[at+n]==pc[at]) {
         ++run2;
         if((at+n) && pp[at+n]==pp[at+n-1]) {
@@ -1091,7 +1166,7 @@ const char*save_screen(FILE*fp) {
         }
       }
       if(run2==n+1) {
-        if(at+n>=80 && pk[at+n]==pk[at+n-80] && pc[at+n]==pc[at+n-80] && pp[at+n]==pp[at+n-80]) {
+        if(at+n>=pw && pk[at+n]==pk[at+n-pw] && pc[at+n]==pc[at+n-pw] && pp[at+n]==pp[at+n-pw]) {
           if(++run4==4) run2-=4,run3=run4=0;
         } else {
           run4=0;
@@ -1129,11 +1204,11 @@ const char*save_screen(FILE*fp) {
       at+=run0;
     } else if(run5>1 && run5>run1) {
       if(at && pk[at]==pk[at-1] && pc[at]==pc[at-1]) c=3;
-      else if(at>=80 && pk[at]==pk[at-80] && pc[at]==pc[at-80]) c=6;
+      else if(at>=pw && pk[at]==pk[at-pw] && pc[at]==pc[at-pw]) c=6;
       else if(at && pk[at]==pk[at-1]) c=1;
       else if(at && pc[at]==pc[at-1]) c=2;
-      else if(at>=80 && pk[at]==pk[at-80]) c=4;
-      else if(at>=80 && pc[at]==pc[at-80]) c=5;
+      else if(at>=pw && pk[at]==pk[at-pw]) c=4;
+      else if(at>=pw && pc[at]==pc[at-pw]) c=5;
       else c=0;
       if(run5<=3) {
         if(!c) goto not247;
@@ -1144,8 +1219,8 @@ const char*save_screen(FILE*fp) {
           if(run6<3) goto not247;
         }
         if(run5>run6 && !c) goto not247;
-        if(run5==3 && pp[at]==pp[at-(c>3?80:1)]+1) run5=0;
-        if(run5!=3 && pp[at]!=pp[at-(c>3?80:1)]+1) goto not247;
+        if(run5==3 && pp[at]==pp[at-(c>3?pw:1)]+1) run5=0;
+        if(run5!=3 && pp[at]!=pp[at-(c>3?pw:1)]+1) goto not247;
       }
       fputc(247,fp); fputc(c+7*run5+128,fp);
       if(c==0 || c==2 || c==5) fputc(pk[at],fp);
@@ -1154,23 +1229,23 @@ const char*save_screen(FILE*fp) {
       at+=run5?:3;
     } else if(run6>1 && run6>run1) {
       if(at && pk[at]==pk[at-1] && pc[at]==pc[at-1]) c=3;
-      else if(at>=80 && pk[at]==pk[at-80] && pc[at]==pc[at-80]) c=6;
+      else if(at>=pw && pk[at]==pk[at-pw] && pc[at]==pc[at-pw]) c=6;
       else if(at && pk[at]==pk[at-1]) c=1;
       else if(at && pc[at]==pc[at-1]) c=2;
-      else if(at>=80 && pk[at]==pk[at-80]) c=4;
-      else if(at>=80 && pc[at]==pc[at-80]) c=5;
+      else if(at>=pw && pk[at]==pk[at-pw]) c=4;
+      else if(at>=pw && pc[at]==pc[at-pw]) c=5;
       else c=0;
       if(run6<=3) {
         if(!c) goto not247;
-        if(c>3 && pp[at]!=pp[at-80]-1) {
+        if(c>3 && pp[at]!=pp[at-pw]-1) {
           if(pp[at]==pp[at-1]-1) {
             if(pk[at]==pk[at-1]) c=1; else if(pc[at]==pc[at-1]) c=2; else if(run6==3) c=0;
           }
           if(run6<3) goto not247;
         }
         if(run2>run6 && !c) goto not247;
-        if(run6==3 && pp[at]==pp[at-(c>3?80:1)]-1) run6=0;
-        if(run6!=3 && pp[at]!=pp[at-(c>3?80:1)]-1) goto not247;
+        if(run6==3 && pp[at]==pp[at-(c>3?pw:1)]-1) run6=0;
+        if(run6!=3 && pp[at]!=pp[at-(c>3?pw:1)]-1) goto not247;
       }
       fputc(247,fp); fputc(c+7*run6,fp);
       if(c==0 || c==2 || c==5) fputc(pk[at],fp);
@@ -1191,6 +1266,13 @@ const char*save_screen(FILE*fp) {
       fwrite(pp+at,1,run2,fp);
       at+=run2;
     }
+  }
+  if(pan) {
+    fputc(240,fp);
+    fputc(pan->x,fp); fputc(pan->y+((pan->count-2)<<5),fp);
+    write16(fp,pan->sel);
+    np++;
+    goto nextpanel;
   }
   return 0;
 }

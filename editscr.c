@@ -18,6 +18,7 @@ static Uint16 numprefix;
 static Uint8 emode;
 static Uint8 markgrid[250];
 static Uint8 viewmode;
+static Uint8*panelgrid;
 
 static ScTile*areabuf;
 static Uint8 area_xoffset,area_yoffset;
@@ -39,9 +40,17 @@ void set_screen_name(Uint16 id,const char*name) {
 static void goto_screen(Uint16 id) {
   FILE*fp=open_lump_by_number(id,"SCR","r");
   const char*e;
+  Panel*pan;
+  int i,j;
+  if(!panelgrid && !(panelgrid=malloc(80*25))) err(1,"Allocation failed");
+  memset(panelgrid,0,80*25);
   if(fp) {
     if(e=load_screen(fp)) alert_text(e);
     fclose(fp);
+    for(i=0;i<cur_screen.npanels;i++) {
+      pan=cur_screen.panels+i;
+      for(j=0;j<pan->h;j++) memset(panelgrid+pan->x+80*(j+pan->y),i+1,pan->w);
+    }
   } else {
     memset(&cur_screen,0,sizeof(Screen));
     cur_screen.view_x=40;
@@ -49,6 +58,10 @@ static void goto_screen(Uint16 id) {
     cur_screen.message_r=79;
     cur_screen.soft_edge[DIR_E]=cur_screen.hard_edge[DIR_E]=79;
     cur_screen.soft_edge[DIR_S]=cur_screen.hard_edge[DIR_S]=24;
+    for(i=0;i<cur_screen.npanels;i++) free(cur_screen.panels[i].data);
+    free(cur_screen.panels);
+    cur_screen.panels=0;
+    cur_screen.npanels=0;
   }
   scr_id=id;
   scroll_x=scroll_y=0;
@@ -455,6 +468,129 @@ static void edit_tile(void) {
   }
 }
 
+static void delete_panel(Uint8 n) {
+  int i;
+  Panel*pan=cur_screen.panels+n-1;
+  for(i=0;i<80*25;i++) {
+    if(panelgrid[i]==n) panelgrid[i]=0; else if(panelgrid[i]>n) panelgrid[i]--;
+  }
+  free(pan->data);
+  cur_screen.npanels--;
+  for(i=n-1;i<cur_screen.npanels;i++) cur_screen.panels[i]=cur_screen.panels[i+1];
+}
+
+static void cycle_panels(Sint8 dir) {
+  int i=panelgrid[ycur*80+xcur];
+  int m,y;
+  Panel*pan;
+  if(!i) return;
+  pan=cur_screen.panels+i-1;
+  m=(pan->cur+dir+pan->count)%pan->count;
+  for(y=0;y<pan->h;y++) {
+    memcpy(pan->data+y*pan->w+pan->cur*pan->w*pan->h,cur_screen.command+(y+pan->y)*80+pan->x,pan->w);
+    memcpy(pan->data+y*pan->w+(pan->cur+pan->count)*pan->w*pan->h,cur_screen.color+(y+pan->y)*80+pan->x,pan->w);
+    memcpy(pan->data+y*pan->w+(pan->cur+2*pan->count)*pan->w*pan->h,cur_screen.parameter+(y+pan->y)*80+pan->x,pan->w);
+    memcpy(cur_screen.command+(y+pan->y)*80+pan->x,pan->data+y*pan->w+m*pan->w*pan->h,pan->w);
+    memcpy(cur_screen.color+(y+pan->y)*80+pan->x,pan->data+y*pan->w+(m+pan->count)*pan->w*pan->h,pan->w);
+    memcpy(cur_screen.parameter+(y+pan->y)*80+pan->x,pan->data+y*pan->w+(m+2*pan->count)*pan->w*pan->h,pan->w);
+  }
+  pan->cur=m;
+}
+
+static void edit_panel(char adding) {
+  char buf[40];
+  Panel pan={};
+  int ss=0;
+  int sn=0;
+  int sm=0;
+  Sint16 x0=xcur;
+  Sint16 y0=ycur;
+  Sint16 x1=xcur2;
+  Sint16 y1=ycur2;
+  Sint16 x,y,z;
+  if(adding) {
+    if(cur_screen.npanels==32) {
+      alert_text("Too many panels");
+      return;
+    }
+    if(x0>x1) z=x0,x0=x1,x1=z;
+    if(y0>y1) z=y0,y0=y1,y1=z;
+    for(y=y0;y<=y1;y++) for(x=x0;x<=x1;x++) if(panelgrid[y*80+x]) {
+      alert_text("Overlapping panel");
+      return;
+    }
+    pan.x=x0; pan.y=y0; pan.w=x1+1-x0; pan.h=y1+1-y0; pan.count=2;
+  } else {
+    z=panelgrid[ycur*80+xcur];
+    if(!z) return;
+    pan=cur_screen.panels[z-1];
+    if(pan.sel<0x8000) {
+      ss=0; sn=pan.sel;
+    } else if(pan.sel<0x8100) {
+      ss=1; sn=pan.sel&15; sm=((pan.sel>>4)&3)+1;
+    } else {
+      alert_text("Invalid parameters; will be reset");
+      ss=sn=sm=0;
+    }
+  }
+  win_form(adding?"Add panel":"Edit panel") {
+    if(adding) {
+      win_numeric('N',"Number of selections: ",pan.count,2,9);
+    } else {
+      snprintf(buf,40,"Number of selections: %c",pan.count+'0');
+      win_heading(buf);
+    }
+    win_blank();
+    win_heading("Selection source:");
+    win_option('o',"Special options",ss,0) win_refresh();
+    win_option('m',"Panel selection memory",ss,1) win_refresh();
+    win_blank();
+    switch(ss) {
+      case 0:
+        win_numeric('I',"Info number: ",sn,0,32767);
+        break;
+      case 1:
+        win_numeric('i',"Bit position: ",sn,0,15);
+        win_numeric('t',"How many bits: ",sm,1,4);
+        break;
+    }
+    win_blank();
+    win_command('x',"Execute") {
+      if((pan.count-1)*pan.w*pan.h>=80*25) {
+        alert_text("Total number of cells in panel is too big");
+      } else {
+        if(pan.count>=2 && pan.count<=9) switch(ss) {
+          case 0: if(!(sn&~0x7FFF)) goto ok; break;
+          case 1: if(sn>=0 && sn<=15 && sm>=1 && sm<=4) goto ok; break;
+        }
+        alert_text("Invalid parameters");
+      }
+    }
+    win_command_esc(0,"Cancel") return;
+  }
+  ok:
+  switch(ss) {
+    case 0: pan.sel=sn; break;
+    case 1: pan.sel=sn+((sm-1)<<4)+0x8000; break;
+  }
+  if(!adding) {
+    cur_screen.panels[z-1]=pan;
+    return;
+  }
+  z=cur_screen.npanels++;
+  pan.data=malloc(pan.count*3*pan.w*pan.h);
+  if(!pan.data) err(1,"Allocation failed");
+  cur_screen.panels=realloc(cur_screen.panels,cur_screen.npanels*sizeof(Panel));
+  if(!cur_screen.panels) err(1,"Allocation failed");
+  cur_screen.panels[z]=pan;
+  for(y=y0;y<=y1;y++) for(x=x0;x<=x1;x++) panelgrid[y*80+x]=z+1;
+  for(y=0;y<pan.h;y++) for(x=0;x<pan.count;x++) {
+    memcpy(pan.data+y*pan.w+x*pan.w*pan.h,cur_screen.command+(y+y0)*80+x0,pan.w);
+    memcpy(pan.data+y*pan.w+(x+pan.count)*pan.w*pan.h,cur_screen.color+(y+y0)*80+x0,pan.w);
+    memcpy(pan.data+y*pan.w+(x+2*pan.count)*pan.w*pan.h,cur_screen.parameter+(y+y0)*80+x0,pan.w);
+  }
+}
+
 static Uint8 set_mark(Uint8 x,Uint8 y,Uint8 mask) {
   Uint8*g;
   if(x>=80 || y>=25) return 0;
@@ -468,8 +604,30 @@ static Uint8 set_mark(Uint8 x,Uint8 y,Uint8 mask) {
   }
 }
 
+static void reset_panels(void) {
+  int i,j,k,m,n,y;
+  Panel*pan;
+  for(n=0;n<cur_screen.npanels;n++) {
+    pan=cur_screen.panels+n;
+    m=pan->y*80+pan->x;
+    k=pan->w*pan->h*pan->count;
+    j=pan->w*pan->h*pan->cur;
+    for(i=0,y=0;y<pan->h;y++) {
+      memcpy(pan->data+i+j,cur_screen.command+y*80+m,pan->w);
+      memcpy(pan->data+i+j+k,cur_screen.color+y*80+m,pan->w);
+      memcpy(pan->data+i+j+k+k,cur_screen.parameter+y*80+m,pan->w);
+      memcpy(cur_screen.command+y*80+m,pan->data+i,pan->w);
+      memcpy(cur_screen.color+y*80+m,pan->data+i+k,pan->w);
+      memcpy(cur_screen.parameter+y*80+m,pan->data+i+k+k,pan->w);
+      i+=pan->w;
+    }
+    pan->cur=0;
+  }
+}
+
 static void esave(void) {
   FILE*fp=open_lump_by_number(scr_id,"SCR","w");
+  reset_panels();
   if(fp) {
     save_screen(fp);
     fclose(fp);
@@ -758,6 +916,15 @@ static void cc_color_step(Uint16 x,Uint16 y,const char*arg) {
   cur_screen.color[y*80+x]=cctmp;
 }
 
+static void cc_deletepanel_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  cctmp=strtol(arg,0,10);
+  if(cctmp>0 && cctmp<=cur_screen.npanels) delete_panel(cctmp);
+}
+
+static void cc_deletepanel_step(Uint16 x,Uint16 y,const char*arg) {
+  if(!cctmp && panelgrid[y*80+x]) delete_panel(panelgrid[y*80+x]);
+}
+
 static void cc_export(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   char buf[75];
   const char*e;
@@ -765,6 +932,7 @@ static void cc_export(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   if(!*arg) return;
   if(*arg=='|') fp=popen(arg+1,"w"); else fp=fopen(arg,"wx");
   if(fp) {
+    reset_panels();
     if(e=save_screen(fp)) alert_text(e);
     if(*arg=='|') pclose(fp); else fclose(fp);
   } else {
@@ -916,6 +1084,8 @@ static void cc_unmark_step(Uint16 x,Uint16 y,const char*arg) {
 static const ColonCommand colon_commands[]={
   {"c",'.',0,cc_color_begin,cc_color_step,0},
   {"color",'.',0,cc_color_begin,cc_color_step,0},
+  {"deletepanel",'.',0,cc_deletepanel_begin,cc_deletepanel_step,0},
+  {"dp",'.',0,cc_deletepanel_begin,cc_deletepanel_step,0},
   {"ex",0,cc_export,0,0,0},
   {"export",0,cc_export,0,0,0},
   {"im",0,cc_import,0,0,0},
@@ -1070,24 +1240,31 @@ static void update_e_screen(void) {
   memset(v_font,viewmode?VF_SYSTEM:0,80*25);
   for(at=x=y=0;at<80*25;at++,x++) {
     if(x==80) x=0,++y;
-    com=cur_screen.command[at];
-    col=cur_screen.color[at];
-    par=cur_screen.parameter[at];
-    switch(viewmode) {
-      case 0:
-        v_char[at]=par;
-        v_color[at]=col;
-        break;
-      case 1:
-        v_char[at]="\xF9\xB1##MiTI!!!!!!!!"[com>>4];
-        v_color[at]=0x07;
-        if(!com) v_color[at]=0x08;
-        if(x==cur_screen.message_x && y==cur_screen.message_y) v_color[at]+=2;
-        if(x==cur_screen.view_x && y==cur_screen.view_y) v_color[at]+=4;
-        if(x>=cur_screen.soft_edge[DIR_W] && x<=cur_screen.soft_edge[DIR_E] && y>=cur_screen.soft_edge[DIR_N] && y<=cur_screen.soft_edge[DIR_S]) v_color[at]|=0x18;
-        if(x>=cur_screen.hard_edge[DIR_W] && x<=cur_screen.hard_edge[DIR_E] && y>=cur_screen.hard_edge[DIR_N] && y<=cur_screen.hard_edge[DIR_S]) v_color[at]|=0x28;
-        if(y==cur_screen.message_y && x>=cur_screen.message_l && x<=cur_screen.message_r) v_color[at]|=0x48;
-        break;
+    if(viewmode<2) {
+      com=cur_screen.command[at];
+      col=cur_screen.color[at];
+      par=cur_screen.parameter[at];
+      switch(viewmode) {
+        case 0:
+          v_char[at]=par;
+          v_color[at]=col;
+          break;
+        case 1:
+          v_char[at]="\xF9\xB1##MiTI!!!!!!!!"[com>>4];
+          v_color[at]=com?0x07:0x08;
+          if(x==cur_screen.message_x && y==cur_screen.message_y) v_color[at]+=2;
+          if(x==cur_screen.view_x && y==cur_screen.view_y) v_color[at]+=4;
+          if(x>=cur_screen.soft_edge[DIR_W] && x<=cur_screen.soft_edge[DIR_E] && y>=cur_screen.soft_edge[DIR_N] && y<=cur_screen.soft_edge[DIR_S]) v_color[at]|=0x18;
+          if(x>=cur_screen.hard_edge[DIR_W] && x<=cur_screen.hard_edge[DIR_E] && y>=cur_screen.hard_edge[DIR_N] && y<=cur_screen.hard_edge[DIR_S]) v_color[at]|=0x28;
+          if(y==cur_screen.message_y && x>=cur_screen.message_l && x<=cur_screen.message_r) v_color[at]|=0x48;
+          break;
+      }
+    } else if(com=panelgrid[at]) {
+      Panel*pan=cur_screen.panels+com-1;
+      if(com==panelgrid[ycur*80+xcur]) v_color[at]=14; else v_color[at]=7;
+      v_char[at]="\x07\xB3\xB3\xBA\xC4\xDA\xBF\xD2\xC4\xC0\xD9\xD0\xCD\xC6\xB5\x23"[(x==pan->x?1:0)+(x==pan->x+pan->w-1?2:0)+(y==pan->y?4:0)+(y==pan->y+pan->h-1?8:0)];
+    } else {
+      v_char[at]=176; v_color[at]=8;
     }
     if(markgrid[(x>>3)+y*10]&(1<<(x&7))) v_color[at]=viewmode?~v_color[at]:config.mark_color?:~v_color[at];
   }
@@ -1119,8 +1296,12 @@ static void estatus(void) {
   draw_text(12,y,buf,0x17,snprintf(buf,80,"<%02X,%02X,%02X>",clip.com,clip.col,clip.par));
   if(numprefix) draw_text(34,y,buf,0x1E,snprintf(buf,80,"%5d",numprefix));
   if(markgrid[(xcur>>3)+ycur*10]&(1<<(xcur&7))) v_char[y*80+39]=7,v_color[y*80+39]=0x1A;
-  v_char[y*80+42]=emode;
-  v_color[y*80+42]=0x1C;
+  v_char[y*80+42]=emode; v_color[y*80+42]=0x1C;
+  v_char[y*80+43]=" vpp"[viewmode]; v_color[y*80+43]=0x14;
+  if(panelgrid[ycur*80+xcur]) {
+    Panel*pan=cur_screen.panels+panelgrid[ycur*80+xcur]-1;
+    draw_text(45,y,buf,0x1A,snprintf(buf,80,"P%02d(%c/%c)",panelgrid[ycur*80+xcur],pan->cur+'0',pan->count+'0'));
+  }
   draw_text(69,y,buf,0x19,snprintf(buf,80,"(%4d,%4d)",xcur,ycur));
   if(emode=='v') {
     draw_text(59,y,buf,0x19,snprintf(buf,80,"%c%04d%c%04d",xcur2>xcur?'-':'+',abs(xcur2-xcur),ycur2>ycur?'-':'+',abs(ycur2-ycur)));
@@ -1210,6 +1391,7 @@ Uint16 edit_screen(Uint16 id) {
       case 0: case 15: no_mode: switch(k) {
         case 0x08: numprefix/=10; break;
         case 0x09: if(emode=(emode?0:15)) place_at(xcur,ycur,clip); break;
+        case 0x10: viewmode^=2; break;
         case 0x11: load_font(0,LOADFONT_RESET); load_palette(0,LOADPAL_RESET); break;
         case 0x16: viewmode^=1; break;
         case 0x1A: xcur=cur_screen.view_x; ycur=cur_screen.view_y; break;
@@ -1219,6 +1401,7 @@ Uint16 edit_screen(Uint16 id) {
         case -SDLK_i: edit_screen_info(); break;
         case -SDLK_l: cur_screen.message_l=xcur; break;
         case -SDLK_m: cur_screen.message_x=xcur; cur_screen.message_y=ycur; break;
+        case -SDLK_p: edit_panel(0); break;
         case -SDLK_r: cur_screen.message_r=xcur; break;
         case -SDLK_v: cur_screen.view_x=xcur; cur_screen.view_y=ycur; break;
         case -SDLK_w: edit_window(); break;
@@ -1258,6 +1441,8 @@ Uint16 edit_screen(Uint16 id) {
         case -SDLK_F2: f_menu(2); break;
         case -SDLK_F3: f_menu(3); break;
         case -SDLK_F4: f_menu(4); break;
+        case '-': cycle_panels(-1); break;
+        case '+': cycle_panels(+1); break;
         case -SDLK_SLASH: case -SDLK_QUESTION: online_help("editscr",0); break;
       } break;
       case 'm': switch(k) {
@@ -1282,6 +1467,7 @@ Uint16 edit_screen(Uint16 id) {
       } break;
       case 'v': switch(k) {
         case -SDLK_h: set_edges(cur_screen.hard_edge); emode=0; break;
+        case -SDLK_p: edit_panel(1); emode=0; break;
         case -SDLK_s: set_edges(cur_screen.soft_edge); emode=0; break;
         case 'a': area_save(0); emode=0; break;
         case 'c': do_colon_command("<:>unmark"); emode=0; break;

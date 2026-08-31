@@ -18,6 +18,7 @@ GAME
   +  There is now a user-defined variable property.
   +  Graphical video mode.
   +  Some additional uses for special option definitions.
+  +  Panels in screen definitions.
   =  Minor bug fixes in special options.
   *  Fix it so that the entire screen is redrawn in the main game state.
 
@@ -27,9 +28,11 @@ SCRIPTS
 ASSEMBLY
   +  Memory cell $B7 to define default background data behind the main
      screen, in case it is defined as transparent.
+  +  Memory cell $B8 is the panel selection bits.
 
 EDITOR
   +  Palette import is possible within the editor.
+  +  Screen panel editor.
   =  Corrections in the display of some menus, so that video modes and the
      font attributes of character cells are reset correctly.
 

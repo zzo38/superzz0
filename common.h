@@ -445,6 +445,12 @@ typedef struct {
 #define NF_BOARD_NAME_EXT 'N'
 
 typedef struct {
+  Uint8*data; // command for first selection, command for second selection, etc; color; parameter
+  Uint16 sel;
+  Uint8 x,y,w,h,cur,count;
+} Panel;
+
+typedef struct {
   Uint8 command[80*25];
   Uint8 color[80*25];
   Uint8 parameter[80*25];
@@ -457,6 +463,8 @@ typedef struct {
   Uint8 border[4];  // character codes for default borders; 0=none
   Uint8 border_color;  // 0=same colour
   VarPropertyList varprop;
+  Uint8 npanels;
+  Panel*panels;
 } Screen;
 
 // Screen:command (high nybble)
@@ -640,6 +648,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_FONT_ANIM 0xB5
 #define MEM_OVERLAY_KEEP_BITS 0xB6
 #define MEM_DEFAULT_BACKGROUND 0xB7
+#define MEM_PANEL_SELECTION 0xB8
 #define MEM_GLOBAL_DELAY 0xC0
 #define MEM_NEW_DYNAMIC_STAT_EVENT 0xC1
 #define MEM_OVERLAYMEM_ADDRESS 0xC2
@@ -844,46 +853,6 @@ void special_option_debug(void);
 void show_help_file(void); // defined in game.c
 
 // === Slices ===
-
-typedef struct Slice Slice;
-
-struct Slice {
-  Uint8 flag,type;
-  SDL_Rect xy;
-  union {
-    struct {
-      // SLICE_OFFSET
-      Slice*slice;
-      Sint16 x,y;
-    } offset;
-    struct {
-      // SLICE_HBOX, SLICE_VBOX
-      Slice**slices;
-      Uint16 count;
-      Sint8 rpad,cpad;
-      Uint8 columns;
-      Uint8 border,borderz,fill,fillz,translucent;
-    } box;
-    struct {
-      // SLICE_SPACE
-      Sint32 natural,stretch,shrink;
-    } space;
-  };
-};
-
-// Slice:type
-#define SLICE_NOTHING 0
-#define SLICE_OFFSET 1
-#define SLICE_HBOX 2
-#define SLICE_VBOX 3
-#define SLICE_SPACE 4
-
-// Slice:flag
-#define SLF_REFLOW 0x02
-#define SLF_NOCLIP 0x04
-#define SLF_UNSEEN 0x08
-#define SLF_IGNORE 0x10
-#define SLF_MANUAL 0x20
 
 void unload_slices(Uint8 level);
 const char*load_slices(FILE*fp,Uint8 level);

@@ -195,7 +195,8 @@ overwrite_stats
 
 pause
   Set to 1 to automatically pause the game when starting; 0 (default) means
-  that the game starts working immediately.
+  that the game starts working immediately. Some worlds will always start
+  in paused mode regardless of this setting.
 
 printer_begin
   Optional; specifies a name of a file with commands that will be sent to

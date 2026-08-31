@@ -608,16 +608,27 @@ instead of blank.
 * bit5 = If set, then message text has character zero added on the left and
 right edge of the text. If clear, then this extra edge is omitted.
 
+* bit6 = Alternate SMZX mode.
+
 The screen data is compressed with the following commands:
 
-* 0-79 = Copy previous cell 1 to 80 times.
+* 0-79 = Copy previous cell 1 to 80 times. If this is the first code, then
+the value of the previous cell is considered to be all zero.
 
-* 80-159 = Copy above cells (i.e. 80 behind) 1 to 80 times.
+* 80-159 = Copy above cells (i.e. 80 behind) 1 to 80 times. If this is the
+first code, then instead sets the panel width to a number 1 to 80, which is
+used later with a panel code, but also sets the distance to copy above.
 
 * 160-239 = Follow by the command byte and colour byte, and then 1 to 80
 more bytes being the parameters for that many cells.
 
-* 240 = (Reserved)
+* 240 = End of a panel definition. The next four bytes are the X
+coordinate (0 to 79), the Y coordinate (in the low 5-bits) and two less
+than the number of selections (in the high 3-bits), and then the 16-bit
+selection source. After this, begins either the normal screen or another
+panel definition. Selection 0 is a part of the normal screen, so it is
+not included in the panel definition, and the height is calculated
+automatically, and the width given explicitly at the beginning.
 
 * 241-255 (except 247) = A single cell. If bit0 is set then the command
 byte follows; if bit1 is set then the colour byte follows; if bit2 is set

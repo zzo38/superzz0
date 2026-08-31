@@ -88,13 +88,15 @@ Stored inventory lists: 65536
 Script size: 65530 bytes
 Stats per board: 255
 Instances per stat: 65535
-Elements: 256
+Elements: 256 (only 239 of these do not have built-in special meanings)
 Appearance mapping: 128
 Tile animation definitions: 4
+Program memory: 65536 cells (16-bits each)
 Characters per font: 256
 Status variables: 16
 Variable properties: 255 per screen and 255 per board
 User structured data lumps: 65536
+Panels per screen: 32
 Maximum lump size: 4 gigabytes
 
 Subroutines will not work if the script size limit is reached.

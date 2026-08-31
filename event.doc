@@ -61,6 +61,9 @@ screen behind it. If this is zero, then the screen definition itself is
 used. This has no effect in text windows, item windows, etc, and is only
 effective for the main game display.
 
+$B8 = The panel selection bits. See the section about panels in document
+help/editscr.hlp for more information.
+
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
 save the delay, bit9 means to save the walk/face/user flags, and bit13

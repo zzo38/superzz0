@@ -12,19 +12,23 @@ Others:
 !mark;Marks
 !-screen;Screen elements
 !info;Screen info
+!pan;Panels
 !colon;Colon commands
 !-editwin;Window info editor
 
 :norm;Normal mode / draw mode
 ESC        Exit
 TAB        Toggle normal/draw mode
+^P         Toggle panel view mode
 ^Q         Reset font/palette
 ^V         Toggle view mode
+^Z         Go to centre of viewport
 0-9        Numeric prefix
 ALT+A      Place from area buffer
 ALT+I      Screen info
 ALT+L      Set message left edge
 ALT+M      Set message center position
+ALT+P      Edit panel
 ALT+R      Set message right edge
 ALT+V      Set viewport center position
 ALT+W      Window info
@@ -51,6 +55,8 @@ u          Unmark all
 v          Block mode
 y          Copy tile at cursor (place with p)
 z          Far movement prefix
+-          Previous panel selection value
++          Next panel selection value
  :         Colon commands
 F1         Menu: Backgrounds, Tiles, Windows
 F2         Menu: Indicators, Bits
@@ -84,9 +90,13 @@ RETURN     Mark selected block and cancel
 a          Store in area buffer; leave block mode
 b          Draw thin border; leave block mode
 B          Draw thick border; leave block mode
+c          Unmark selected block and cancel
+i          Toggle mark in selected block and cancel
 m          Mark selected block and switch to mass mode
+s          Mark selected block and cancel
 ;          Move cursor to opposite corner
 ALT+H      Set hard edges
+ALT+P      Define panel
 ALT+S      Set soft edges
 
 !edge;Edges
@@ -166,6 +176,25 @@ none can be displayed outside of the north/south hard edges. Both soft and
 hard edges affect scrolling like they do for boards, and the view center
 is always one of the item slot positions if possible.
 
+:pan;Panels
+A screen can contain up to thirty-two panels, which are rectangular areas
+that have multiple (2 to 9) definitions of their contents, which are
+selected by the selection criteria of that panel. Panels can be defined at
+any location on the screen and of any size, but cannot overlap. However,
+the total number of cells in a panel, multiplied by the number of choices,
+must be less than 2000.
+
+The selection source can be one of:
+
+þ Special options þ Uses the value of one of the special options (defined
+in the special option menu for this world), according to its info number.
+If the number of choices for this panel is 2, then all nonzero values are
+treated as 1.
+
+þ Panel selection memory þ The value of program memory cell $B8 is used as
+the selection. You can specify the bit position (0 to 15) of the lowest bit
+to use, and the number of bits (1 to 4) to take.
+
 :colon;Colon commands
 These colon commands can be used for various batch operations.
 
@@ -182,6 +211,11 @@ the below listings of the commands.
 color/c
   Set the colour of cells. This can either be the current colour or a
   colour specified as a hexadecimal colour code.
+
+deletepanel/dp
+  Deletes the panel at the cursor (or the appropriate cells specified by
+  the prefix, if any), or the specified (1-based) panel number. (Note that
+  existing panels may be renumbered after deleting.)
 
 export/ex
   Export the current screen layout to a file. If the file name starts with

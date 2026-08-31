@@ -861,6 +861,7 @@ static void resize_board(void) {
 }
 
 static void set_board_editor_screen(void) {
+  int i;
   memset(cur_screen.command,SC_BOARD+5,80*25);
   memset(cur_screen.color,0x01,80*25);
   memset(cur_screen.parameter,177,80*25);
@@ -872,6 +873,10 @@ static void set_board_editor_screen(void) {
   cur_screen.soft_edge[DIR_N]=cur_screen.hard_edge[DIR_N]=0;
   cur_screen.soft_edge[DIR_E]=cur_screen.hard_edge[DIR_E]=79;
   cur_screen.soft_edge[DIR_S]=cur_screen.hard_edge[DIR_S]=24;
+  for(i=0;i<cur_screen.npanels;i++) free(cur_screen.panels[i].data);
+  free(cur_screen.panels);
+  cur_screen.panels=0;
+  cur_screen.npanels=0;
 }
 
 static void esave(void) {
