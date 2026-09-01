@@ -499,6 +499,7 @@ static void cycle_panels(Sint8 dir) {
 
 static void edit_panel(char adding) {
   char buf[40];
+  char ch[2]={};
   Panel pan={};
   int ss=0;
   int sn=0;
@@ -528,6 +529,10 @@ static void edit_panel(char adding) {
       ss=0; sn=pan.sel;
     } else if(pan.sel<0x8100) {
       ss=1; sn=pan.sel&15; sm=((pan.sel>>4)&3)+1;
+    } else if(pan.sel<0x8200) {
+      ss=2; *ch="ABCDEFGHSTUVWXYZ"[pan.sel&15];
+    } else if(pan.sel<0x8300) {
+      ss=3; sn=pan.sel&15; sm=((pan.sel>>4)&3)+1;
     } else {
       alert_text("Invalid parameters; will be reset");
       ss=sn=sm=0;
@@ -535,7 +540,7 @@ static void edit_panel(char adding) {
   }
   win_form(adding?"Add panel":"Edit panel") {
     if(adding) {
-      win_numeric('N',"Number of selections: ",pan.count,2,9);
+      win_numeric(':',"Number of selections: ",pan.count,2,9);
     } else {
       snprintf(buf,40,"Number of selections: %c",pan.count+'0');
       win_heading(buf);
@@ -544,14 +549,19 @@ static void edit_panel(char adding) {
     win_heading("Selection source:");
     win_option('o',"Special options",ss,0) win_refresh();
     win_option('m',"Panel selection memory",ss,1) win_refresh();
+    win_option('v',"Status variables",ss,2) win_refresh();
+    win_option('B',"Board flags",ss,3) win_refresh();
     win_blank();
     switch(ss) {
       case 0:
         win_numeric('I',"Info number: ",sn,0,32767);
         break;
-      case 1:
+      case 1: case 3:
         win_numeric('i',"Bit position: ",sn,0,15);
         win_numeric('t',"How many bits: ",sm,1,4);
+        break;
+      case 2:
+        win_text_restrict('i',"Status variable: ",ch);
         break;
     }
     win_blank();
@@ -561,7 +571,8 @@ static void edit_panel(char adding) {
       } else {
         if(pan.count>=2 && pan.count<=9) switch(ss) {
           case 0: if(!(sn&~0x7FFF)) goto ok; break;
-          case 1: if(sn>=0 && sn<=15 && sm>=1 && sm<=4) goto ok; break;
+          case 1: case 3: if(sn>=0 && sn<=15 && sm>=1 && sm<=4) goto ok; break;
+          case 2: if(*ch>='A' && *ch<='Z' && (*ch<='H' || *ch>='S')) goto ok; break;
         }
         alert_text("Invalid parameters");
       }
@@ -572,6 +583,8 @@ static void edit_panel(char adding) {
   switch(ss) {
     case 0: pan.sel=sn; break;
     case 1: pan.sel=sn+((sm-1)<<4)+0x8000; break;
+    case 2: pan.sel=*ch-(*ch>'H'?'S'-8:'A')+0x8100; break;
+    case 3: pan.sel=sn+((sm-1)<<4)+0x8200; break;
   }
   if(!adding) {
     cur_screen.panels[z-1]=pan;

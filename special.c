@@ -93,6 +93,7 @@ static Uint8 draw_digit(Uint16 n,Uint8 p) {
 static void draw_sc(const WindowInfo*wind,Uint16 flag,Uint16 ln,Uint16 lc,Uint16 cs,Uint8 ok,Uint8 wc) {
   Uint8 cmd,col,chr;
   int i;
+  update_panels();
   for(i=0;i<80*25;i++) {
     cmd=cur_screen.command[i]; col=cur_screen.color[i]; chr=cur_screen.parameter[i];
     switch(cmd) {

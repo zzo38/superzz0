@@ -995,10 +995,36 @@ static void display_item_element_cell(Uint16 i,Uint8 col,Uint8 inv,Uint16 sl) {
   if(elem_def[d.element].attrib&A_UNDER_BGCOLOR) v_color[i]=(v_color[i]&0x0F)|(col&0xF0);
 }
 
+void update_panels(void) {
+  Panel*pan;
+  Uint16 s;
+  Uint8 np,c,v;
+  int y;
+  for(np=0;np<cur_screen.npanels;np++) {
+    pan=cur_screen.panels+np;
+    c=pan->count;
+    switch(s=pan->sel) {
+      case 0x0000 ... 0x7FFF: if(s<nspecopt) v=specopt[s].value<c?specopt[s].value:c-1; else v=0; break;
+      case 0x8000 ... 0x803F: v=(memory[MEM_PANEL_SELECTION]>>(s&15))&((2<<((s>>4)&3))-1); if(v>=c) v=c-1; break;
+      case 0x8100 ... 0x813F: v=status_vars[s&15]<c?status_vars[s&15]:c-1; break;
+      case 0x8200 ... 0x823F: v=(board_info.flag>>(s&15))&((2<<((s>>4)&3))-1); if(v>=c) v=c-1; break;
+      default: v=0;
+    }
+    if(v==pan->cur) continue;
+    pan->cur=v;
+    for(y=0;y<pan->h;y++) {
+      memcpy(cur_screen.command+(y+pan->y)*80+pan->x,pan->data+y*pan->w+v*pan->w*pan->h,pan->w);
+      memcpy(cur_screen.color+(y+pan->y)*80+pan->x,pan->data+y*pan->w+(v+pan->count)*pan->w*pan->h,pan->w);
+      memcpy(cur_screen.parameter+(y+pan->y)*80+pan->x,pan->data+y*pan->w+(v+2*pan->count)*pan->w*pan->h,pan->w);
+    }
+  }
+}
+
 void update_screen(void) {
   int i;
   Uint32 v,x,y;
   Uint8 cmd,col,chr;
+  if(cur_screen.npanels) update_panels();
   memset(v_font,cur_screen.flag&SF_ALT_MODE?VF_ALTERNATE:0,80*25);
   for(i=0;i<80*25;i++) {
     cmd=cur_screen.command[i];
@@ -2144,6 +2170,7 @@ static void update_text_window(const WindowInfo*wind) {
   Uint8 cmd,col,chr;
   int linkline=-1;
   int linktext=-1;
+  if(cur_screen.npanels) update_panels();
   for(i=0;i<80*25;i++) {
     cmd=cur_screen.command[i];
     col=cur_screen.color[i];
@@ -2559,6 +2586,7 @@ static inline void update_item_window(const ItemMenuInfo*inf) {
   Uint8 rf=0;
   Uint8 rn=0;
   Uint8 on=0;
+  if(cur_screen.npanels) update_panels();
   if(!cur_screen.hard_edge[DIR_N]) inn=1;
   if(tcursor<tnlines && !(inf->list[tcursor].ext&0x8000)) {
     if(m=inv->item[inf->list[tcursor].slot].item) desc=itemnames+itemdefs[m-1].desc;

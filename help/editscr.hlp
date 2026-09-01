@@ -189,11 +189,20 @@ The selection source can be one of:
 þ Special options þ Uses the value of one of the special options (defined
 in the special option menu for this world), according to its info number.
 If the number of choices for this panel is 2, then all nonzero values are
-treated as 1.
+treated as 1. This does not work for variable special options, although it
+does work if the value is specified explicitly by the user or if the value
+is initialized automatically without being variable.
 
 þ Panel selection memory þ The value of program memory cell $B8 is used as
 the selection. You can specify the bit position (0 to 15) of the lowest bit
 to use, and the number of bits (1 to 4) to take.
+
+þ Status variables þ One of the sixteen status variables (A to H or S to Z).
+If the value is greater than the number of choices, the highest is used.
+
+þ Board flags þ Works like described for panel selection memory but uses
+board flags instead. The lowest four bits are the board user flags, but
+the other flags can also be used.
 
 :colon;Colon commands
 These colon commands can be used for various batch operations.
