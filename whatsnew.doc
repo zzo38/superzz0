@@ -20,7 +20,7 @@ GAME
   +  Some additional uses for special option definitions.
   +  Panels in screen definitions.
   =  Minor bug fixes in special options.
-  *  Fix it so that the entire screen is redrawn in the main game state.
+  =  Fix it so that the entire screen is redrawn in the main game state.
 
 SCRIPTS
   +  #BACKDROP command to display backdrops.

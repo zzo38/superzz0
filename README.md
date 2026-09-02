@@ -20,3 +20,5 @@ Contributing
 ------------
 
 You can make contributions if you wish to do so, including reviews, games being made with it, bug reports, feature requests, patches, questions, etc.
+
+It is forbidden to contribute the output from LLM/generative-AI to this repository and to the communications (including the issue tracker, NNTP, IRC, etc). It is also forbidden to blindly accept the results from LLM/generative-AI for the purpose of making contributions to this project. Other uses are not forbidden, but are discouraged. (If there is some circumstance which is unclear, then you should ask about it, please.)
