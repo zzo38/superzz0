@@ -1,0 +1,109 @@
+In graphical mode, the text layer is displayed in the background, unless a
+backdrop picture is displayed instead. All other things displayed in the
+graphical mode are slices, which are made using a slice tree, which is
+described by this document.
+
+Each pixel of the screen has a colour and a Z-index. The Z-index is a
+8-bit number, and when displaying slices on the screen, the Z-index is used
+to determine the priority if there is more than one in the same place. The
+higher Z-index has higher priority. If the numbers are equal, then the
+existing pixel takes precedence if the Z-index is odd, but the new pixel
+value takes precedence if the Z-index is even.
+
+The root slice normally takes up the entire 640x350 screen, and will
+usually contain other slices, so it should be a type that can contain
+other slices, but may be of any type. Some types of slices are able to
+contain other slices, as described below.
+
+Each slice has a type, size, optional ID, and any combination of flags:
+
+* NUMBER: Means that this slice has a ID number.
+
+* NOCLIP: Causes the clipping to be ignored for this slice, setting it to
+the entire screen (the root slice always does this).
+
+* UNSEEN: The slice is not displayed on the screen (and cannot be used for
+graphical collisions). It is still relevant for measuring how much space it
+takes up, etc.
+
+* IGNORE: Ignore this slice for most purposes, including measurement,
+deciding positioning, etc.
+
+* MANUAL: The metrics are determined manually instead of automatically.
+
+Three more flags are specific to the type of slice, which are called EXTRA1
+and EXTRA2 and EXTRA3. Their meanings are described in the below sections.
+
+Some types of slices are "modifier slices". These slices always contain
+one other slice, and modifies that slice when it is loaded; the modifier
+slice itself does not exist at run time.
+
+
+=== ID slice [0] ===
+
+This is a modifier slice which gives a 16-bit ID number to another slice.
+ID numbers 0 to 3 have built-in uses:
+
+* 0 = The root slice.
+
+* 1 = A number temporarily assigned to a slice that doesn't have a number.
+
+* 2 = (Reserved)
+
+* 3 = (Reserved)
+
+The ASN.1 format is two fields, the first being the ID number (which is a
+integer) and the second being the slice being modified.
+
+
+=== Offset slice [1] ===
+
+This slice contains another slice, as well as X and Y offsets (which can be
+positive, negative, or zero). The slice is displayed at the specified
+offset relative to where it should naturally be displayed.
+
+The ASN.1 format of this slice is: the X offset, the Y offset, and then the
+slice that it contains.
+
+
+=== Box slice [2] ===
+
+This slice contains zero or more other slices in order, and displays them
+next to each other. You can specify the direction it starts and extends in.
+
+The ASN.1 format of this slice is as follows:
+
+* Enumerated specifying the direction: 0 (top to bottom), 1 (bottom to
+top), 2 (left to right), 3 (right to left).
+
+* The border colour and Z-index, which is application type 0.
+
+* The fill colour and Z-index, which is application type 0, and it can
+include translucency.
+
+* Boolean which is true to show lines between items or false otherwise.
+It may be omitted, in which case it is false. (This is EXTRA2 flag.)
+
+* The margin, which is a signed 8-bit integer.
+
+* Boolean which is true to clip children or false to not clip children.
+(This is EXTRA1 flag.)
+
+* Boolean which is true to try to stretch the non-space nodes so that
+they will fit equally, or false to use the normal size of non-space nodes
+and then resize the box to fit instead. (This is EXTRA3 flag.)
+
+* A sequence of the slices that it contains.
+
+
+=== Space slice [3] ===
+
+This slice is only meaningful inside of a box slice. It is a space with a
+variable size, with the direction of the box that contains it. The size
+is specified as the natural size, as well as how much it is allowed to
+stretch and how much it is allowed to shrink compared with the natural
+size. If the total natural size is too small then any stretchable spaces
+are stretched to fit, and if too big then shrinkable spaces will shrink.
+
+The ASN.1 format is three integers, being the natural size, the stretch,
+and the shrink.

@@ -856,9 +856,11 @@ void show_help_file(void); // defined in game.c
 // === Slices ===
 
 void unload_slices(Uint8 level);
-const char*load_slices(FILE*fp,Uint8 level);
-const char*load_screen_slices(Uint8 level);
+void load_slices(FILE*fp,Uint8 level);
+void load_screen_slices(Uint8 level);
 void save_slices(FILE*fp,Uint8 level);
+void render_slices(void);
+Sint32 control_slices(Uint16 id,Uint8 op,Uint16 addr,Sint32 level,Uint8 misc);
 
 // === File access (Hamster archives) ===
 

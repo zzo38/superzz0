@@ -1239,7 +1239,7 @@ void redisplay(void) {
       }
     graphics:
       pbuffer=scrn->pixels+(config.show_status?4*r+4:0);
-      //TODO: draw slices
+      render_slices();
       break;
     default: v_mode&=VIDEO_80COLUMNS;
   }
