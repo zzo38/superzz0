@@ -1137,6 +1137,15 @@ numbers are treated as unsigned.
    bit14 = Read quantity from cursor instead of first operand
    bit15 = Read from cursor instead of second operand
 
+[0BB SLIC]
+  Control slices; see slices.doc for more information.
+
+[0BC SLI0]
+  Same as SLIC but always uses slice ID 0.
+
+[0BD SLI1]
+  Same as SLIC but always uses slice ID 1.
+
 [0C0 XYZ]
   Check if the X and Y coordinates are in a specified zone. The second
   operand specifies which zone to check; the condition flag will be true

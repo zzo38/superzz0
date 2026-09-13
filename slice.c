@@ -62,8 +62,8 @@ typedef struct {
   void(*free)(Slice*);
   Sint32(*xmeasure)(Slice*,Sint32);
   Sint32(*ymeasure)(Slice*,Sint32);
-  void(*render)(Slice*,const SDL_Rect*clip,Sint16 x,Sint16 y);
-  Sint32(*control)(Slice*,Uint8 op,Uint16 addr,Sint32 in);
+  void(*render)(Slice*,Sint16 x,Sint16 y,const SDL_Rect*clip);
+  Sint32(*control)(Slice*,Uint8 op,Sint32 in);
 } SliceType;
 
 // SliceType:kind
@@ -84,6 +84,7 @@ static void save_one_slice(ASN1_Encoder*enc,const Slice*s);
 static void free_slice(Slice*s);
 static Sint32 xmeasure_slice(Slice*s,Sint32 in);
 static Sint32 ymeasure_slice(Slice*s,Sint32 in);
+static void render_one_slice(Slice*s,Sint16 x,Sint16 y,const SDL_Rect*clip);
 
 // This macro is used in slice loading functions if there is an error loading the slice
 #define SliceError(...) do{ fprintf(stderr,"Slice loading error: " __VA_ARGS__); fputc('\n',stderr); return 0; }while(0)
@@ -99,6 +100,7 @@ static int load_z_and_color(const ASN1_Value*v,Uint8*z,Uint8*c,Uint8*t) {
   if(v->length) *z=v->data[0];
   if(v->length>1 && c) *c=v->data[1];
   if(v->length>2 && t) *t=v->data[2];
+  if(c && *c && *c<0x30) *c|=0x30;
   return ASN1_OK;
 }
 
@@ -118,6 +120,9 @@ static void save_z_and_color(ASN1_Encoder*enc,const Uint8*z,const Uint8*c,const 
 }
 
 static void assign_slice_id(Slice*s,Uint16 id) {
+  if(id>0x7FFF) errx(1,"Improper slice ID");
+  if((s->flag&SLF_NUMBER) && s->id<=maxid && byid) byid[s->id]=0;
+  if(id<=maxid && byid[id]) byid[id]->flag&=~SLF_NUMBER;
   s->flag|=SLF_NUMBER;
   s->id=id;
   if(maxid<id || !byid) {
@@ -134,6 +139,7 @@ static Slice*load_IDNUMBER(const ASN1_Value*v0) {
   Slice*s;
   if(asn1_first_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id)) return 0;
   if(asn1_next_of(&v1,v0)) return 0;
+  if(s->flag&SLF_NUMBER) SliceError("Slice already has ID number");
   if(s=load_one_slice(&v1)) assign_slice_id(s,id);
   return s;
 }
@@ -167,11 +173,15 @@ static void free_OFFSET(Slice*s) {
 }
 
 static Sint32 xmeasure_OFFSET(Slice*s,Sint32 in) {
-  return xmeasure_slice(s->offset.slice,in);
+  return s->offset.slice->width=xmeasure_slice(s->offset.slice,in);
 }
 
 static Sint32 ymeasure_OFFSET(Slice*s,Sint32 in) {
-  return ymeasure_slice(s->offset.slice,in);
+  return s->offset.slice->height=ymeasure_slice(s->offset.slice,in);
+}
+
+static void render_OFFSET(Slice*s,Sint16 x,Sint16 y,const SDL_Rect*clip) {
+  render_one_slice(s->offset.slice,x+s->offset.x,y+s->offset.y,clip);
 }
 
 static Slice*load_BOX(const ASN1_Value*v0) {
@@ -191,6 +201,8 @@ static Slice*load_BOX(const ASN1_Value*v0) {
   }
   if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) SliceError("");
   if(v1.data[0]) s->flag|=SLF_EXTRA1;
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) SliceError("");
+  if(v1.data[0]) s->flag|=SLF_EXTRA3;
   if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_SEQUENCE || !v1.constructed) SliceError("");
   if(!v1.length) return s;
   s->box.count=asn1_count(&v1);
@@ -213,15 +225,198 @@ static void save_BOX(ASN1_Encoder*enc,const Slice*s) {
   if(s->flag&SLF_EXTRA2) asn1_encode_boolean(enc,1);
   asn1_encode_integer(enc,s->box.mar);
   asn1_encode_boolean(enc,s->flag&SLF_EXTRA1);
+  asn1_encode_boolean(enc,s->flag&SLF_EXTRA3);
   asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
     for(n=0;n<s->box.count;n++) save_one_slice(enc,s->box.slices[n]);
   asn1_end(enc);
 }
 
 static Sint32 xmeasure_BOX(Slice*s,Sint32 in) {
+  // This works like ymeasure_BOX but switch around the use of horizontal and vertical
+  // Ensure any changes are also made the corresponding changes in the other function
+  Slice*t;
+  int n;
+  if(s->box.dir&2) {
+    // Vertical
+    Sint32 x;
+    Sint32 y=0;
+    for(n=0;n<s->box.count;n++) {
+      t=s->box.slices[n];
+      if(!(t->flag&SLF_IGNORE)) {
+        x=xmeasure_slice(t,in-2*s->box.mar);
+        if(y<x) y=x;
+      }
+    }
+    for(n=0;n<s->box.count;n++) s->box.slices[n]->width=y;
+    return y+2*s->box.mar;
+  } else {
+    // Horizontal
+    Sint32 x,y;
+    Sint32 na=2*s->box.mar;
+    Sint32 st=0;
+    Sint32 sh=0;
+    if(!s->box.count) return (s->flag&SLF_EXTRA3?in:0);
+    if((s->flag&SLF_EXTRA2) && s->box.mar>0) na+=s->box.mar*(s->box.count-1);
+    if(s->flag&SLF_EXTRA3) {
+      for(n=x=y=0;n<s->box.count;n++) {
+        t=s->box.slices[n];
+        if(!(t->flag&SLF_IGNORE)) {
+          if(t->type==SLICE_SPACE) y+=t->space.natural; else x++;
+        }
+      }
+      y+=2*s->box.mar;
+      if((s->flag&SLF_EXTRA2) && s->box.mar>0) y+=s->box.mar*(s->box.count-1);
+      y=(in-y)/x;
+    } else {
+      y=in-2*s->box.mar;
+    }
+    for(n=0;n<s->box.count;n++) {
+      t=s->box.slices[n];
+      if(!(t->flag&SLF_IGNORE)) {
+        if(t->type==SLICE_SPACE) {
+          na+=t->space.natural;
+          st+=t->space.stretch;
+          sh+=t->space.shrink;
+          t->width=t->space.natural;
+        } else {
+          x=xmeasure_slice(t,y);
+          t->width=x;
+          na+=x;
+        }
+      }
+    }
+    if(na<in && st>0) {
+      for(n=0;n<s->box.count;n++) {
+        t=s->box.slices[n];
+        if(t->type==SLICE_SPACE && t->space.stretch) t->width+=(t->space.stretch*(in-na))/st;
+      }
+    } else if(na>in && sh>0) {
+      for(n=0;n<s->box.count;n++) {
+        t=s->box.slices[n];
+        if(t->type==SLICE_SPACE && t->space.shrink) t->width-=(t->space.shrink*(na-in))/sh;
+      }
+    } else if(s->flag&SLF_EXTRA3) {
+      for(n=0;n<s->box.count;n++) {
+        t=s->box.slices[n];
+        if(t->type!=SLICE_SPACE && !(t->flag&SLF_IGNORE)) t->width=y;
+      }
+    } else {
+      return na;
+    }
+    return in;
+  }
 }
 
 static Sint32 ymeasure_BOX(Slice*s,Sint32 in) {
+  // This works like xmeasure_BOX but switch around the use of horizontal and vertical
+  // Ensure any changes are also made the corresponding changes in the other function
+  Slice*t;
+  int n;
+  if(s->box.dir&2) {
+    // Vertical
+    Sint32 x,y;
+    Sint32 na=2*s->box.mar;
+    Sint32 st=0;
+    Sint32 sh=0;
+    if(!s->box.count) return (s->flag&SLF_EXTRA3?in:0);
+    if((s->flag&SLF_EXTRA2) && s->box.mar>0) na+=s->box.mar*(s->box.count-1);
+    if(s->flag&SLF_EXTRA3) {
+      for(n=x=y=0;n<s->box.count;n++) {
+        t=s->box.slices[n];
+        if(!(t->flag&SLF_IGNORE)) {
+          if(t->type==SLICE_SPACE) y+=t->space.natural; else x++;
+        }
+      }
+      y+=2*s->box.mar;
+      if((s->flag&SLF_EXTRA2) && s->box.mar>0) y+=s->box.mar*(s->box.count-1);
+      y=(in-y)/x;
+    } else {
+      y=in-2*s->box.mar;
+    }
+    for(n=0;n<s->box.count;n++) {
+      t=s->box.slices[n];
+      if(!(t->flag&SLF_IGNORE)) {
+        if(t->type==SLICE_SPACE) {
+          na+=t->space.natural;
+          st+=t->space.stretch;
+          sh+=t->space.shrink;
+          t->height=t->space.natural;
+        } else {
+          x=ymeasure_slice(t,y);
+          t->height=x;
+          na+=x;
+        }
+      }
+    }
+    if(na<in && st>0) {
+      for(n=0;n<s->box.count;n++) {
+        t=s->box.slices[n];
+        if(t->type==SLICE_SPACE && t->space.stretch) t->height+=(t->space.stretch*(in-na))/st;
+      }
+    } else if(na>in && sh>0) {
+      for(n=0;n<s->box.count;n++) {
+        t=s->box.slices[n];
+        if(t->type==SLICE_SPACE && t->space.shrink) t->height-=(t->space.shrink*(na-in))/sh;
+      }
+    } else if(s->flag&SLF_EXTRA3) {
+      for(n=0;n<s->box.count;n++) {
+        t=s->box.slices[n];
+        if(t->type!=SLICE_SPACE && !(t->flag&SLF_IGNORE)) t->height=y;
+      }
+    } else {
+      return na;
+    }
+    return in;
+  } else {
+    // Horizontal
+    Sint32 x;
+    Sint32 y=0;
+    for(n=0;n<s->box.count;n++) {
+      t=s->box.slices[n];
+      if(!(t->flag&SLF_IGNORE)) {
+        x=ymeasure_slice(t,in-2*s->box.mar);
+        if(y<x) y=x;
+      }
+    }
+    for(n=0;n<s->box.count;n++) s->box.slices[n]->height=y;
+    return y+2*s->box.mar;
+  }
+}
+
+static void render_BOX(Slice*s,Sint16 x,Sint16 y,const SDL_Rect*clip) {
+  Slice*t;
+  SDL_Rect r={.x=x,.y=y,.w=s->width,.h=s->height};
+  int n;
+  Sint16 m=(s->flag&SLF_EXTRA2?s->box.mar:0);
+  if(s->box.border || s->box.fill) g_draw_box(clip,&r,s->box.border,s->box.borderz,s->box.fill,s->box.fillz,s->box.translucent);
+  if(s->flag&SLF_EXTRA1) {
+    if(g_clip(clip,&r,&r)) return;
+  } else {
+    r=*clip;
+  }
+  x+=(s->box.dir==RightToLeft?s->width+m-s->box.mar:s->box.mar);
+  y+=(s->box.dir==BottomToTop?s->height+m-s->box.mar:s->box.mar);
+  for(n=0;n<s->box.count;n++) {
+    t=s->box.slices[n];
+    switch(s->box.dir) {
+      case TopToBottom:
+        render_one_slice(t,x,y,&r);
+        y+=t->height+m;
+        break;
+      case BottomToTop:
+        y-=t->height+m;
+        render_one_slice(t,x,y,&r);
+        break;
+      case LeftToRight:
+        render_one_slice(t,x,y,&r);
+        x+=t->width+m;
+        break;
+      case RightToLeft:
+        x-=t->width+m;
+        render_one_slice(t,x,y,&r);
+        break;
+    }
+  }
 }
 
 static void free_BOX(Slice*s) {
@@ -253,17 +448,19 @@ static Slice*load_SAVESTATE(const ASN1_Value*v0) {
   if(asn1_first_of(&v1,v0)) SliceError("");
   s=load_one_slice(&v1);
   if(!s) return 0;
+  if(s->flag&SLF_NUMBER) SliceError("Improper save state");
   if(asn1_next_of(&v1,v0) || asn1_decode_number(&v1,ASN1_AUTO,&s->id)) SliceError("");
   if(asn1_next_of(&v1,v0) || asn1_decode_number(&v1,ASN1_AUTO,&s->width)) SliceError("");
   if(asn1_next_of(&v1,v0) || v1.length!=1) SliceError("");
+  if(v1.data[0]&SLF_NUMBER) assign_slice_id(s,s->id);
   s->flag=v1.data[0];
   return s;
 }
 
 static const SliceType slicetype[NUMSLICETYPES]={
   [SLICE_IDNUMBER]={.kind=SLK_MODIFIER,.load=load_IDNUMBER},
-  [SLICE_OFFSET]={.kind=SLK_NORMAL,.load=load_OFFSET,.save=save_OFFSET,.free=free_OFFSET,.xmeasure=xmeasure_OFFSET,.ymeasure=ymeasure_OFFSET},
-  [SLICE_BOX]={.kind=SLK_NORMAL,.load=load_BOX,.save=save_BOX,.free=free_BOX,.xmeasure=xmeasure_BOX,.ymeasure=ymeasure_BOX},
+  [SLICE_OFFSET]={.kind=SLK_NORMAL,.load=load_OFFSET,.save=save_OFFSET,.free=free_OFFSET,.xmeasure=xmeasure_OFFSET,.ymeasure=ymeasure_OFFSET,.render=render_OFFSET},
+  [SLICE_BOX]={.kind=SLK_NORMAL,.load=load_BOX,.save=save_BOX,.free=free_BOX,.xmeasure=xmeasure_BOX,.ymeasure=ymeasure_BOX,.render=render_BOX},
   [SLICE_SPACE]={.kind=SLK_NORMAL,.load=load_SPACE,.save=save_SPACE},
   [SLICE_SAVESTATE]={.kind=SLK_MODIFIER,.load=load_SAVESTATE},
 };
@@ -271,7 +468,7 @@ static const SliceType slicetype[NUMSLICETYPES]={
 static Slice*load_one_slice(const ASN1_Value*v0) {
   const SliceType*t;
   Slice*s;
-  if(v0->class!=ASN1_APPLICATION || !v0->constructed || v0->type>=NUMSLICETYPES) SliceError("Incorrect ASN.1 tag when trying to determine the slice type (found %d%c)",(int)v0->type,"UACP"[v0->class&3]);
+  if(v0->class!=ASN1_CONTEXT_SPECIFIC || !v0->constructed || v0->type>=NUMSLICETYPES) SliceError("Incorrect ASN.1 tag when trying to determine the slice type (found %d%c)",(int)v0->type,"UACP"[v0->class&3]);
   t=slicetype+v0->type;
   if(t->kind==SLK_INVALID || !t->load) SliceError("Trying to load a slice of an unloadable type");
   s=t->load(v0);
@@ -332,6 +529,7 @@ void load_screen_slices(Uint8 level) {
   if(!fp) return;
   load_slices(fp,level);
   fclose(fp);
+  control_slices(0,0x02,0,0);
 }
 
 void save_slices(FILE*fp,Uint8 level) {
@@ -341,17 +539,20 @@ void save_slices(FILE*fp,Uint8 level) {
   asn1_finish_encoder(enc);
 }
 
-void render_slices(void) {
-  // Only to be called by the redisplay function in display.c
-  static const SDL_Rect r={.w=640,.h=350};
-  int n;
-  for(n=0;n<3;n++) {
-    
+static const SDL_Rect fullrect={.w=640,.h=350};
+
+static void render_one_slice(Slice*s,Sint16 x,Sint16 y,const SDL_Rect*clip) {
+  const SliceType*t;
+  if(!(s->flag&SLF_UNSEEN)) {
+    t=slicetype+s->type;
+    if(t->render) t->render(s,x,y,s->flag&SLF_NOCLIP?&fullrect:clip);
   }
 }
 
-Sint32 control_slices(Uint16 id,Uint8 op,Uint16 addr,Sint32 level,Uint8 misc) {
-  
+void render_slices(void) {
+  // Only to be called by the redisplay function in display.c
+  int n;
+  for(n=0;n<3;n++) if(root[n]) render_one_slice(root[n],0,0,&fullrect);
 }
 
 static Sint32 xmeasure_slice(Slice*s,Sint32 in) {
@@ -370,5 +571,38 @@ static Sint32 ymeasure_slice(Slice*s,Sint32 in) {
   } else {
     return t->ymeasure(s,in);
   }
+}
+
+Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc) {
+  Slice*s;
+  if(id>maxid || !byid[id]) return value;
+  s=byid[id];
+  switch(op) {
+    case 0x00: case 0x01:
+      if(!(s->flag&SLF_NUMBER)) assign_slice_id(s,1);
+      memory[MEM_PRIMARY_SLICE]=s->id;
+      break;
+    case 0x02:
+      xmeasure_slice(s,s->width);
+      ymeasure_slice(s,s->height);
+      break;
+    case 0x03: code0x03:
+      s->width=xmeasure_slice(s,s->width);
+      s->height=ymeasure_slice(s,s->height);
+      break;
+    case 0x04:
+      if(s->flag&SLF_MANUAL) {
+        s->flag&=~SLF_MANUAL;
+        xmeasure_slice(s,s->width);
+        ymeasure_slice(s,s->height);
+        s->flag|=SLF_MANUAL;
+      } else {
+        goto code0x03;
+      }
+      break;
+    default:
+      if(slicetype[s->type].control) value=slicetype[s->type].control(s,op,value);
+  }
+  return value;
 }
 

@@ -694,6 +694,7 @@ static void warp_to_board(Uint16 b,char m) {
     if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
     fclose(fp);
     work_varproperties(&cur_screen.varprop);
+    load_screen_slices(0);
   }
   // Initial scrolling
   if((cur_screen.flag&SF_NO_SCROLL) || !maxstat || !stats->count) {
@@ -2398,6 +2399,7 @@ static char show_text_window(Uint32 xyn,char help) {
     }
     v_status[1]=232;
     work_varproperties(&cur_screen.varprop);
+    load_screen_slices(2);
     open:
     if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
     for(;;) {
@@ -2537,6 +2539,7 @@ static char show_text_window(Uint32 xyn,char help) {
     }
     v_status[1]=32;
     if(help!=2) set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:playstate==PLAYSTATE_NORMAL?config.speed:0);
+    unload_slices(2);
     fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
     if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
     fclose(fp);
@@ -2848,6 +2851,7 @@ static Uint16 show_item_window(Uint32 opt) {
     fclose(fp);
   }
   work_varproperties(&cur_screen.varprop);
+  load_screen_slices(1);
   v_status[1]='I';
   if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
   // Load names and slots
@@ -2957,6 +2961,7 @@ static Uint16 show_item_window(Uint32 opt) {
                 }
                 for(inf.ncol=j=1;j<79;j++) if(wind.command[j]=='Z') ++inf.ncol;
                 work_varproperties(&cur_screen.varprop);
+                load_screen_slices(1);
                 break;
             }
             if(i<-99) goto rekey; else continue;
@@ -3028,6 +3033,7 @@ static Uint16 show_item_window(Uint32 opt) {
   if(condflag && tcursor<tnlines) k=list[tcursor].slot; else k=condflag=0;
   free(names); free(list);
   v_status[1]=32;
+  unload_slices(1);
   set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:playstate==PLAYSTATE_NORMAL?config.speed:0);
   fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
   if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
@@ -6480,6 +6486,9 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         goto store;
       case OP_SIU: so=statxy_index_at(convxy(so,x,y),1,b_under); condflag=(so?1:0); goto store;
       case OP_SIXY: if((rs=get_statxy(so)) && (so=convxy(0,rs->x,rs->y)+1)) condflag=1; else condflag=so=0; goto store;
+      case OP_SLI0: regs[fo]=control_slices(0,so,regs[fo],so>>8); break;
+      case OP_SLI1: regs[fo]=control_slices(1,so,regs[fo],so>>8); break;
+      case OP_SLIC: regs[fo]=control_slices(memory[so&0x100?MEM_SECONDARY_SLICE:MEM_PRIMARY_SLICE],so,regs[fo],so>>8); break;
       case OP_SMOV: general_move(0,regs[fo],x,y,(so&0xF8)+0x8804+(so&7)*0x1100,(so&0xFF00)+1,0,0); break;
       case OP_SPIN: do_spin(x,y,fo,so); break;
       case OP_SPOK: memory[so&0xFFFF]=fo; break;

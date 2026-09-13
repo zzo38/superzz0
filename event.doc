@@ -28,6 +28,10 @@ A bit which is set indicates the presence of such an item. If you set or
 clear these bits by yourself then it will affect whether or not the item
 can be given (even if you already have that item).
 
+$AE = Primary slice ID to operate with SLIC.
+
+$AF = Secondary slice ID to operate with SLIC.
+
 $B0 = Window keyboard event (see below).
 
 $B1 = A value which can be read by music programs in .BGM lumps. This can

@@ -216,6 +216,7 @@ static void show1menu(const ASN1_Value*v0) {
     } else {
       wind=(WindowInfo){};
     }
+    load_screen_slices(1);
   }
   v0=vpag+page;
   draw:
@@ -305,6 +306,7 @@ static void show1option(const ASN1_Value*v0) {
   } else {
     wind=(WindowInfo){};
   }
+  load_screen_slices(2);
   if(asn1_next_of(&v1,v0) || v1.class!=ASN1_CONTEXT_SPECIFIC || v1.type>1) goto err;
   if(typ=v1.type) {
     if(!asn1_first_of(&v2,&v1)) do {
@@ -390,6 +392,7 @@ static void show1option(const ASN1_Value*v0) {
       if(!typ) {
         if(op->value<mini) op->value=mini; else if(op->value>maxi) op->value=maxi;
       }
+      unload_slices(2);
       return;
     case SDLK_TAB: if(op->flag&SPECF_LOCKED) break; else op->flag&=~SPECF_VARIABLE; if(typ) cur=(cur+1)%ncho; break;
     case SDLK_UP: if(op->flag&SPECF_LOCKED) break; else op->flag&=~SPECF_VARIABLE; if(typ && cur) --cur; else if(!typ && op->value<maxi) ++op->value; break;
@@ -494,6 +497,7 @@ void special_option_menu(void) {
     if(!enc) err(1,"Allocation failed");
     save_fontpal_state(enc);
     do1menu(&root);
+    unload_slices(1);
     board_info.screen=scrb;
     asn1_free(&root);
     v_mode=mode;

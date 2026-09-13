@@ -641,6 +641,8 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_NAME_ITEM_EVENT 0xA4
 #define MEM_ITEM_SCREEN 0xA5
 #define MEM_ITEM_EXCLUSIVE_BITS 0xA6
+#define MEM_PRIMARY_SLICE 0xAE
+#define MEM_SECONDARY_SLICE 0xAF
 #define MEM_WINDOW_KEY_EVENT 0xB0
 #define MEM_MUSIC_EXTRA 0xB1
 #define MEM_CALL_STACK 0xB2
@@ -860,7 +862,11 @@ void load_slices(FILE*fp,Uint8 level);
 void load_screen_slices(Uint8 level);
 void save_slices(FILE*fp,Uint8 level);
 void render_slices(void);
-Sint32 control_slices(Uint16 id,Uint8 op,Uint16 addr,Sint32 level,Uint8 misc);
+Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc);
+
+int g_clip(const SDL_Rect*in0,const SDL_Rect*in1,SDL_Rect*out);
+void g_draw_line(Uint16 x,Uint16 y,Uint16 n,Uint32 a,Uint32 b,Uint8 c,Uint8 z);
+void g_draw_box(const SDL_Rect*clip,const SDL_Rect*rect,Uint8 bc,Uint8 bz,Uint8 fc,Uint8 fz,Uint8 translucent);
 
 // === File access (Hamster archives) ===
 

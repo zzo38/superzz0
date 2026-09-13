@@ -15,6 +15,17 @@ usually contain other slices, so it should be a type that can contain
 other slices, but may be of any type. Some types of slices are able to
 contain other slices, as described below.
 
+There are three "levels" of slices, and there can be a root slice in each
+level. The levels of slices are as follows:
+
+* Level 0 is used for the main game. This is used for the screen which is
+specified by the board info.
+
+* Level 1 is used for item windows and for the special option menu.
+
+* Level 2 is used for text windows, custom windows, and submenus of the
+special option menu.
+
 Each slice has a type, size, optional ID, and any combination of flags:
 
 * NUMBER: Means that this slice has a ID number.
@@ -37,6 +48,33 @@ and EXTRA2 and EXTRA3. Their meanings are described in the below sections.
 Some types of slices are "modifier slices". These slices always contain
 one other slice, and modifies that slice when it is loaded; the modifier
 slice itself does not exist at run time.
+
+
+=== General controls ===
+
+The bits of the second operand of SLIC have the meanings:
+
+* bit7-bit0 = One of the hexadecimal codes listed below.
+
+* bit8 = Tells whether to use the primary or secondary slice ID. Uses the
+primary if this bit is clear or secondary if this bit is set.
+
+[00] Assign the slice ID to the primary slice ID. If this slice does not
+have a ID number, then it is assigned ID 1.
+
+[01] Assign the slice ID to the secondary slice ID. If this slice does not
+have a ID number, then it is assigned ID 1.
+
+[02] Recalculate the metrics of slices. This one does not set the size
+of the slice which is referenced by this operation, but will affect the
+sizes of the slices that it contains (if any).
+
+[03] Recalculate the metrics of slices, like 0x01, but it does set the
+size of the slice.
+
+[04] If the slice has the MANUAL flag, then it works like code 0x02 but
+the MANUAL flag is temporarily cleared so that it will work. If the slice
+does not have the MANUAL flag then it works like 0x03.
 
 
 === ID slice [0] ===
@@ -81,7 +119,7 @@ top), 2 (left to right), 3 (right to left).
 * The fill colour and Z-index, which is application type 0, and it can
 include translucency.
 
-* Boolean which is true to show lines between items or false otherwise.
+* Boolean which is true to add spacing between items or false otherwise.
 It may be omitted, in which case it is false. (This is EXTRA2 flag.)
 
 * The margin, which is a signed 8-bit integer.
@@ -107,3 +145,4 @@ are stretched to fit, and if too big then shrinkable spaces will shrink.
 
 The ASN.1 format is three integers, being the natural size, the stretch,
 and the shrink.
+
