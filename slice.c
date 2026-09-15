@@ -42,6 +42,7 @@ enum {
   SLICE_BOX=2,
   SLICE_SPACE=3,
   SLICE_SAVESTATE=4,
+  SLICE_MANUAL=5,
   NUMSLICETYPES
 };
 
@@ -62,7 +63,7 @@ typedef struct {
   void(*free)(Slice*);
   Sint32(*xmeasure)(Slice*,Sint32);
   Sint32(*ymeasure)(Slice*,Sint32);
-  void(*render)(Slice*,Sint16 x,Sint16 y,const SDL_Rect*clip);
+  void(*render)(Slice*,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip);
   Sint32(*control)(Slice*,Uint8 op,Sint32 in);
 } SliceType;
 
@@ -84,7 +85,7 @@ static void save_one_slice(ASN1_Encoder*enc,const Slice*s);
 static void free_slice(Slice*s);
 static Sint32 xmeasure_slice(Slice*s,Sint32 in);
 static Sint32 ymeasure_slice(Slice*s,Sint32 in);
-static void render_one_slice(Slice*s,Sint16 x,Sint16 y,const SDL_Rect*clip);
+static void render_one_slice(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip);
 
 // This macro is used in slice loading functions if there is an error loading the slice
 #define SliceError(...) do{ fprintf(stderr,"Slice loading error: " __VA_ARGS__); fputc('\n',stderr); return 0; }while(0)
@@ -99,7 +100,7 @@ static int load_z_and_color(const ASN1_Value*v,Uint8*z,Uint8*c,Uint8*t) {
   if(!c && !v->length) return ASN1_IMPROPER_VALUE;
   if(v->length) *z=v->data[0];
   if(v->length>1 && c) *c=v->data[1];
-  if(v->length>2 && t) *t=v->data[2];
+  if(v->length>2 && t && v->data[2]) *t=1;
   if(c && *c && *c<0x30) *c|=0x30;
   return ASN1_OK;
 }
@@ -122,7 +123,7 @@ static void save_z_and_color(ASN1_Encoder*enc,const Uint8*z,const Uint8*c,const 
 static void assign_slice_id(Slice*s,Uint16 id) {
   if(id>0x7FFF) errx(1,"Improper slice ID");
   if((s->flag&SLF_NUMBER) && s->id<=maxid && byid) byid[s->id]=0;
-  if(id<=maxid && byid[id]) byid[id]->flag&=~SLF_NUMBER;
+  if(byid && id<=maxid && byid[id]) byid[id]->flag&=~SLF_NUMBER;
   s->flag|=SLF_NUMBER;
   s->id=id;
   if(maxid<id || !byid) {
@@ -173,15 +174,15 @@ static void free_OFFSET(Slice*s) {
 }
 
 static Sint32 xmeasure_OFFSET(Slice*s,Sint32 in) {
-  return s->offset.slice->width=xmeasure_slice(s->offset.slice,in);
+  return xmeasure_slice(s->offset.slice,in);
 }
 
 static Sint32 ymeasure_OFFSET(Slice*s,Sint32 in) {
-  return s->offset.slice->height=ymeasure_slice(s->offset.slice,in);
+  return ymeasure_slice(s->offset.slice,in);
 }
 
-static void render_OFFSET(Slice*s,Sint16 x,Sint16 y,const SDL_Rect*clip) {
-  render_one_slice(s->offset.slice,x+s->offset.x,y+s->offset.y,clip);
+static void render_OFFSET(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip) {
+  render_one_slice(s->offset.slice,x+s->offset.x,y+s->offset.y,w,h,clip);
 }
 
 static Slice*load_BOX(const ASN1_Value*v0) {
@@ -193,12 +194,12 @@ static Slice*load_BOX(const ASN1_Value*v0) {
   s->box.dir=v1.data[0];
   if(asn1_next_of(&v1,v0) || load_z_and_color(&v1,&s->box.borderz,&s->box.border,0)) SliceError("Improper color/Z-index");
   if(asn1_next_of(&v1,v0) || load_z_and_color(&v1,&s->box.fillz,&s->box.fill,&s->box.translucent)) SliceError("Improper color/Z-index");
-  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->box.mar)) SliceError("Improper number");
   if(asn1_next_of(&v1,v0)) SliceError("");
   if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_BOOLEAN && v1.length==1) {
     if(v1.data[0]) s->flag|=SLF_EXTRA2;
     if(asn1_next_of(&v1,v0)) SliceError("");
   }
+  if(v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->box.mar)) SliceError("Improper number");
   if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) SliceError("");
   if(v1.data[0]) s->flag|=SLF_EXTRA1;
   if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) SliceError("");
@@ -383,9 +384,9 @@ static Sint32 ymeasure_BOX(Slice*s,Sint32 in) {
   }
 }
 
-static void render_BOX(Slice*s,Sint16 x,Sint16 y,const SDL_Rect*clip) {
+static void render_BOX(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip) {
   Slice*t;
-  SDL_Rect r={.x=x,.y=y,.w=s->width,.h=s->height};
+  SDL_Rect r={.x=x,.y=y,.w=w,.h=h};
   int n;
   Sint16 m=(s->flag&SLF_EXTRA2?s->box.mar:0);
   if(s->box.border || s->box.fill) g_draw_box(clip,&r,s->box.border,s->box.borderz,s->box.fill,s->box.fillz,s->box.translucent);
@@ -400,20 +401,20 @@ static void render_BOX(Slice*s,Sint16 x,Sint16 y,const SDL_Rect*clip) {
     t=s->box.slices[n];
     switch(s->box.dir) {
       case TopToBottom:
-        render_one_slice(t,x,y,&r);
+        render_one_slice(t,x,y,w,t->height,&r);
         y+=t->height+m;
         break;
       case BottomToTop:
         y-=t->height+m;
-        render_one_slice(t,x,y,&r);
+        render_one_slice(t,x,y,w,t->height,&r);
         break;
       case LeftToRight:
-        render_one_slice(t,x,y,&r);
+        render_one_slice(t,x,y,t->width,h,&r);
         x+=t->width+m;
         break;
       case RightToLeft:
         x-=t->width+m;
-        render_one_slice(t,x,y,&r);
+        render_one_slice(t,x,y,t->width,h,&r);
         break;
     }
   }
@@ -457,12 +458,27 @@ static Slice*load_SAVESTATE(const ASN1_Value*v0) {
   return s;
 }
 
+static Slice*load_MANUAL(const ASN1_Value*v0) {
+  Sint16 w,h;
+  ASN1_Value v1;
+  Slice*s;
+  if(asn1_first_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&w)) SliceError("Error loading MANUAL slice");
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&h)) SliceError("Error loading MANUAL slice");
+  s=load_one_slice(&v1);
+  if(!s) SliceError("Error loading MANUAL slice");
+  s->flag|=SLF_MANUAL;
+  s->width=w;
+  s->height=h;
+  return s;
+}
+
 static const SliceType slicetype[NUMSLICETYPES]={
   [SLICE_IDNUMBER]={.kind=SLK_MODIFIER,.load=load_IDNUMBER},
   [SLICE_OFFSET]={.kind=SLK_NORMAL,.load=load_OFFSET,.save=save_OFFSET,.free=free_OFFSET,.xmeasure=xmeasure_OFFSET,.ymeasure=ymeasure_OFFSET,.render=render_OFFSET},
   [SLICE_BOX]={.kind=SLK_NORMAL,.load=load_BOX,.save=save_BOX,.free=free_BOX,.xmeasure=xmeasure_BOX,.ymeasure=ymeasure_BOX,.render=render_BOX},
   [SLICE_SPACE]={.kind=SLK_NORMAL,.load=load_SPACE,.save=save_SPACE},
   [SLICE_SAVESTATE]={.kind=SLK_MODIFIER,.load=load_SAVESTATE},
+  [SLICE_MANUAL]={.kind=SLK_MODIFIER,.load=load_MANUAL},
 };
 
 static Slice*load_one_slice(const ASN1_Value*v0) {
@@ -541,36 +557,28 @@ void save_slices(FILE*fp,Uint8 level) {
 
 static const SDL_Rect fullrect={.w=640,.h=350};
 
-static void render_one_slice(Slice*s,Sint16 x,Sint16 y,const SDL_Rect*clip) {
+static void render_one_slice(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip) {
   const SliceType*t;
   if(!(s->flag&SLF_UNSEEN)) {
     t=slicetype+s->type;
-    if(t->render) t->render(s,x,y,s->flag&SLF_NOCLIP?&fullrect:clip);
+    if(t->render) t->render(s,x,y,s->flag&SLF_MANUAL?s->width:w,s->flag&SLF_MANUAL?s->height:h,s->flag&SLF_NOCLIP?&fullrect:clip);
   }
 }
 
 void render_slices(void) {
   // Only to be called by the redisplay function in display.c
   int n;
-  for(n=0;n<3;n++) if(root[n]) render_one_slice(root[n],0,0,&fullrect);
+  for(n=0;n<3;n++) if(root[n]) render_one_slice(root[n],0,0,640,350,&fullrect);
 }
 
 static Sint32 xmeasure_slice(Slice*s,Sint32 in) {
-  const SliceType*t;
-  if((s->flag&SLF_MANUAL) || ((t=slicetype+s->type) && !t->xmeasure)) {
-    return s->width;
-  } else {
-    return t->xmeasure(s,in);
-  }
+  const SliceType*t=slicetype+s->type;
+  return t->xmeasure?t->xmeasure(s,s->flag&SLF_MANUAL?s->width:in):s->width;
 }
 
 static Sint32 ymeasure_slice(Slice*s,Sint32 in) {
-  const SliceType*t;
-  if((s->flag&SLF_MANUAL) || ((t=slicetype+s->type) && !t->ymeasure)) {
-    return s->height;
-  } else {
-    return t->ymeasure(s,in);
-  }
+  const SliceType*t=slicetype+s->type;
+  return t->ymeasure?t->ymeasure(s,s->flag&SLF_MANUAL?s->height:in):s->height;
 }
 
 Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc) {

@@ -73,8 +73,8 @@ sizes of the slices that it contains (if any).
 size of the slice.
 
 [04] If the slice has the MANUAL flag, then it works like code 0x02 but
-the MANUAL flag is temporarily cleared so that it will work. If the slice
-does not have the MANUAL flag then it works like 0x03.
+the MANUAL flag is temporarily cleared. If the slice does not have the
+MANUAL flag then it works like 0x03.
 
 
 === ID slice [0] ===
@@ -145,4 +145,13 @@ are stretched to fit, and if too big then shrinkable spaces will shrink.
 
 The ASN.1 format is three integers, being the natural size, the stretch,
 and the shrink.
+
+
+=== Manual slice [5] ===
+
+This is a modifier slice which sets the MANUAL flag of a slice and sets
+the manual width and height.
+
+The ASN.1 format is two integers being the width and height, and then the
+slice which is being modified.
 

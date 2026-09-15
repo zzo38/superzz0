@@ -1054,7 +1054,7 @@ void g_draw_box(const SDL_Rect*clip,const SDL_Rect*rect,Uint8 bc,Uint8 bz,Uint8 
   Uint8*q;
   SDL_Rect r;
   int x,y;
-  if(g_clip(clip,rect,&r)) return;
+  if(g_clip(clip,rect,&r) || !r.w || !r.h) return;
   if(bc) {
     if(r.x==rect->x) g_draw_line(r.x,r.y,r.h,scrn->pitch,640,bc,bz);
     if(r.x+r.w==rect->x+rect->w) g_draw_line(r.x+r.w-1,r.y,r.h,scrn->pitch,640,bc,bz);
@@ -1181,12 +1181,12 @@ void redisplay(void) {
       for(z=y=0;y<25;y++,z+=80) {
         for(a=0;a<14;a++) {
           for(x=0;x<40;x++) {
-            if(v_font[z+x]&VF_SYSTEM) {
-              c=pcfont[14*v_char[z+x]+a];
-              for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=15&(v_color[z+x]>>(c&128?0:4)),c<<=1;
-            } else {
-              if(font) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
-              for(b=0;b<8;b++) p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=(15&(v_color[z+x]>>(c&128?0:4)))|v_colormask,c<<=1;
+            if(font && !(v_font[z+x]&VF_SYSTEM)) c=font[14*v_char[z+x]+a]; else c=pcfont[14*v_char[z+x]+a];
+            d=(v_font[z+x]&VF_SYSTEM)?0:0x30;
+            for(b=0;b<8;b++) {
+              p[b+b+(x<<4)]=p[b+b+(x<<4)+1]=(15&(v_color[z+x]>>(c&128?0:4)))|d;
+              q[b+b+(x<<4)]=q[b+b+(x<<4)+1]=(v_font[z+x]&VF_FRONT)?255:c&128?8:(v_color[z+x]&0xF0?4:0);
+              c<<=1;
             }
           }
           p+=r;
