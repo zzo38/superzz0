@@ -306,6 +306,15 @@ character 255. The high bit of each byte corresponds to the left pixel.
 This lump must be exactly 3584 bytes long, otherwise it is an error.
 
 
+=== *.EGS ===
+
+Each screen may optionally have a slice tree associated with it; this lump
+contains the root slice (and any other slices it contains) associated with
+the screen with the same number.
+
+See slices.doc for details.
+
+
 === *.FNT ===
 
 The advanced font format, which uses DER format. This advanced format can
@@ -775,6 +784,12 @@ the CURRENT.BRD lump), then additional data follows after the stats, which
 is stat index numbers stored in the board grid. They are in order by the
 under layer, main layer, over layer. There is one byte per tile, but if it
 is zero then a 16-bit number of how many more zeros follow.
+
+
+=== CURRENT.EGS ===
+
+Same as the *.EGS format; used only in save game files, which contains the
+current state of slice level 0.
 
 
 === DYNASTR ===

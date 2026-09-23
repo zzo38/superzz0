@@ -153,5 +153,128 @@ This is a modifier slice which sets the MANUAL flag of a slice and sets
 the manual width and height.
 
 The ASN.1 format is two integers being the width and height, and then the
-slice which is being modified.
+slice which is being modified. The two numbers may be omitted in which case
+the width and height are left unchanged (usually because something else is
+setting them instead; if not, then their initial values will be zero).
+
+
+=== Ignore slice [6] ===
+
+This modifier slice sets the IGNORE flag of the modified slice.
+
+
+=== Unseen slice [7] ===
+
+This modifier slice sets the UNSEEN flag of the modified slice.
+
+
+=== No-clip slice [8] ===
+
+This modifier slice sets the NOCLIP flag of the modified slice.
+
+
+=== Meter slice [9] ===
+
+...
+
+
+=== Text slice [10] ===
+
+Displays text. You can specify the font and colour to use, as well as the
+outline/background style, and the spacing.
+
+The possible outline/background styles are:
+
+* None: There is no outline or background. (This is not a separate code,
+but is the case when the background colour is set to zero.)
+
+* Solid: Displays a solid background behind each character, with the full
+size of the character cell. (This does not include padding, nor is it
+possible to use translucent backgrounds, or borders; if you want any of
+that then you should put it into a box slice.)
+
+* Outline 1: Displays an outline, around horizontally and vertically
+adjacent pixels of the character raster that are set.
+
+* Outline 2: Displays an outline, around horizontally and vertically and
+diagonally adjacent pixels of the character raster that are set.
+
+The ASN.1 format is:
+
+* Implicit typed sequence specifying the source of the text to be displayed
+according to the list below.
+
+* Horizontal padding (integer).
+
+* Vertical padding (integer).
+
+* Tracking (integer).
+
+* Enumerated specifying the alignment: 0 (left), 1 (centre), 2 (right).
+("Left" actually means that the text starts at one end, regardless of the
+text direction. For left-to-right, this means it starts at the left, but
+other text directions are not implemented yet.)
+
+* Application type 0 specifying the text colour and Z-index.
+
+* Enumerated specifying the font to use, which is 0 for the primary font
+and 4 for the built-in PC font (others are not implemented yet).
+
+* Application type 0 specifying the background colour and Z-index.
+
+* Enumerated specifying the background style: 0 (solid), 1 (outline 1),
+2 (outline 2).
+
+* Boolean which is the EXTRA3 flag, and is true if it should avoid
+measuring the text when measuring the size of the slice, or false if it
+should measure the text. (This is separate from MANUAL, although you might
+want it to also be MANUAL in addition to EXTRA3.)
+
+The sources of the text to be displayed can be:
+
+* Type 0 = Literal text. Contains a PC string, and an optional integer
+being the maximum length (if omitted, then it is the same length as the
+original text).
+
+* Type 1 = Dynamic string. Contains one integer being the dynamic string
+number from 1 to 255, or 0 to display nothing.
+
+* Type 2 = Message line text. Does not have any fields.
+
+* Type 3 = Read from the text screen. There are two fields, both are
+integers; the first is the screen position (0 to 1999) and the second is
+the maximum length of the text (1 to 80).
+
+* Type 4 = The name of the current board. Does not have any fields.
+
+Controls specific to this slice are:
+
+[40] Read the dynamic string number or the text screen position.
+
+[50] Set the dynamic string number or the text screen position.
+
+
+=== Picture slice [11] ===
+
+...
+
+
+=== Origin picture slice [12] ===
+
+This slice is like the picture slice but its size for the purpose of of
+measurement is always zero, even though the displayed picture might be
+bigger than size zero, and that the origin of the picture is moved to the
+position of this slice, instead of ignoring it like slice type 11 does.
+
+...
+
+
+=== Board grid slice [13] ===
+
+...
+
+
+=== Mini map slice [14] ===
+
+...
 

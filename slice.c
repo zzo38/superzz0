@@ -28,7 +28,15 @@ struct Slice {
       // SLICE_SPACE
       Sint16 natural,stretch,shrink;
     } space;
+    struct {
+      // SLICE_TEXT
+      DrawText draw;
+      Sint8 xpad,ypad;
+      Uint8 major;
+      Uint16 minor,len,maxlen;
+    } text;
   };
+  Uint8 data[0];
 };
 
 static Slice**byid;
@@ -43,6 +51,15 @@ enum {
   SLICE_SPACE=3,
   SLICE_SAVESTATE=4,
   SLICE_MANUAL=5,
+  SLICE_IGNORE=6,
+  SLICE_UNSEEN=7,
+  SLICE_NOCLIP=8,
+  SLICE_METER=9,
+  SLICE_TEXT=10,
+  SLICE_PICTURE=11,
+  SLICE_ORIGINPICTURE=12,
+  SLICE_BOARDGRID=13,
+  SLICE_MINIMAP=14,
   NUMSLICETYPES
 };
 
@@ -248,7 +265,7 @@ static Sint32 xmeasure_BOX(Slice*s,Sint32 in) {
         if(y<x) y=x;
       }
     }
-    for(n=0;n<s->box.count;n++) s->box.slices[n]->width=y;
+    for(n=0;n<s->box.count;n++) if(!(s->box.slices[n]->flag&SLF_MANUAL)) s->box.slices[n]->width=y;
     return y+2*s->box.mar;
   } else {
     // Horizontal
@@ -262,7 +279,7 @@ static Sint32 xmeasure_BOX(Slice*s,Sint32 in) {
       for(n=x=y=0;n<s->box.count;n++) {
         t=s->box.slices[n];
         if(!(t->flag&SLF_IGNORE)) {
-          if(t->type==SLICE_SPACE) y+=t->space.natural; else x++;
+          if(t->type==SLICE_SPACE) y+=t->space.natural; else if(t->flag&SLF_MANUAL) y+=t->width; else x++;
         }
       }
       y+=2*s->box.mar;
@@ -278,10 +295,10 @@ static Sint32 xmeasure_BOX(Slice*s,Sint32 in) {
           na+=t->space.natural;
           st+=t->space.stretch;
           sh+=t->space.shrink;
-          t->width=t->space.natural;
+          if(!(t->flag&SLF_MANUAL)) t->width=t->space.natural;
         } else {
           x=xmeasure_slice(t,y);
-          t->width=x;
+          if(t->flag&SLF_MANUAL) x=t->width; else t->width=x;
           na+=x;
         }
       }
@@ -289,17 +306,17 @@ static Sint32 xmeasure_BOX(Slice*s,Sint32 in) {
     if(na<in && st>0) {
       for(n=0;n<s->box.count;n++) {
         t=s->box.slices[n];
-        if(t->type==SLICE_SPACE && t->space.stretch) t->width+=(t->space.stretch*(in-na))/st;
+        if(t->type==SLICE_SPACE && t->space.stretch && !(t->flag&SLF_MANUAL)) t->width+=(t->space.stretch*(in-na))/st;
       }
     } else if(na>in && sh>0) {
       for(n=0;n<s->box.count;n++) {
         t=s->box.slices[n];
-        if(t->type==SLICE_SPACE && t->space.shrink) t->width-=(t->space.shrink*(na-in))/sh;
+        if(t->type==SLICE_SPACE && t->space.shrink && !(t->flag&SLF_MANUAL)) t->width-=(t->space.shrink*(na-in))/sh;
       }
     } else if(s->flag&SLF_EXTRA3) {
       for(n=0;n<s->box.count;n++) {
         t=s->box.slices[n];
-        if(t->type!=SLICE_SPACE && !(t->flag&SLF_IGNORE)) t->width=y;
+        if(t->type!=SLICE_SPACE && !(t->flag&(SLF_IGNORE|SLF_MANUAL))) t->width=y;
       }
     } else {
       return na;
@@ -325,7 +342,7 @@ static Sint32 ymeasure_BOX(Slice*s,Sint32 in) {
       for(n=x=y=0;n<s->box.count;n++) {
         t=s->box.slices[n];
         if(!(t->flag&SLF_IGNORE)) {
-          if(t->type==SLICE_SPACE) y+=t->space.natural; else x++;
+          if(t->type==SLICE_SPACE) y+=t->space.natural; else if(t->flag&SLF_MANUAL) y+=t->height; else x++;
         }
       }
       y+=2*s->box.mar;
@@ -341,10 +358,10 @@ static Sint32 ymeasure_BOX(Slice*s,Sint32 in) {
           na+=t->space.natural;
           st+=t->space.stretch;
           sh+=t->space.shrink;
-          t->height=t->space.natural;
+          if(!(t->flag&SLF_MANUAL)) t->height=t->space.natural;
         } else {
           x=ymeasure_slice(t,y);
-          t->height=x;
+          if(t->flag&SLF_MANUAL) x=t->height; else t->height=x;
           na+=x;
         }
       }
@@ -352,17 +369,17 @@ static Sint32 ymeasure_BOX(Slice*s,Sint32 in) {
     if(na<in && st>0) {
       for(n=0;n<s->box.count;n++) {
         t=s->box.slices[n];
-        if(t->type==SLICE_SPACE && t->space.stretch) t->height+=(t->space.stretch*(in-na))/st;
+        if(t->type==SLICE_SPACE && t->space.stretch && !(t->flag&SLF_MANUAL)) t->height+=(t->space.stretch*(in-na))/st;
       }
     } else if(na>in && sh>0) {
       for(n=0;n<s->box.count;n++) {
         t=s->box.slices[n];
-        if(t->type==SLICE_SPACE && t->space.shrink) t->height-=(t->space.shrink*(na-in))/sh;
+        if(t->type==SLICE_SPACE && t->space.shrink && !(t->flag&SLF_MANUAL)) t->height-=(t->space.shrink*(na-in))/sh;
       }
     } else if(s->flag&SLF_EXTRA3) {
       for(n=0;n<s->box.count;n++) {
         t=s->box.slices[n];
-        if(t->type!=SLICE_SPACE && !(t->flag&SLF_IGNORE)) t->height=y;
+        if(t->type!=SLICE_SPACE && !(t->flag&(SLF_IGNORE|SLF_MANUAL))) t->height=y;
       }
     } else {
       return na;
@@ -379,7 +396,7 @@ static Sint32 ymeasure_BOX(Slice*s,Sint32 in) {
         if(y<x) y=x;
       }
     }
-    for(n=0;n<s->box.count;n++) s->box.slices[n]->height=y;
+    for(n=0;n<s->box.count;n++) if(!(s->box.slices[n]->flag&SLF_MANUAL)) s->box.slices[n]->height=y;
     return y+2*s->box.mar;
   }
 }
@@ -397,6 +414,7 @@ static void render_BOX(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rec
   }
   x+=(s->box.dir==RightToLeft?s->width+m-s->box.mar:s->box.mar);
   y+=(s->box.dir==BottomToTop?s->height+m-s->box.mar:s->box.mar);
+  w-=2*s->box.mar; h-=2*s->box.mar;
   for(n=0;n<s->box.count;n++) {
     t=s->box.slices[n];
     switch(s->box.dir) {
@@ -462,14 +480,162 @@ static Slice*load_MANUAL(const ASN1_Value*v0) {
   Sint16 w,h;
   ASN1_Value v1;
   Slice*s;
-  if(asn1_first_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&w)) SliceError("Error loading MANUAL slice");
-  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&h)) SliceError("Error loading MANUAL slice");
+  if(asn1_first_of(&v1,v0)) SliceError("Error loading MANUAL slice");
+  if(v1.class!=ASN1_CONTEXT_SPECIFIC) {
+    if(v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&w)) SliceError("Error loading MANUAL slice");
+    if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&h)) SliceError("Error loading MANUAL slice");
+    if(asn1_next_of(&v1,v0)) SliceError("Error loading MANUAL slice");
+  }
   s=load_one_slice(&v1);
   if(!s) SliceError("Error loading MANUAL slice");
   s->flag|=SLF_MANUAL;
   s->width=w;
   s->height=h;
   return s;
+}
+
+static Slice*load_IGNORE(const ASN1_Value*v0) {
+  ASN1_Value v1;
+  Slice*s;
+  if(asn1_first_of(&v1,v0) || !(s=load_one_slice(&v1))) SliceError("Error loading modifier slice");
+  s->flag|=0x200>>v0->type;
+  return s;
+}
+
+static Slice*load_TEXT(const ASN1_Value*v0) {
+  ASN1_Value v1,v2,v3;
+  Slice*s;
+  Uint16 x;
+  if(asn1_first_of(&v1,v0) || v1.class!=ASN1_CONTEXT_SPECIFIC || !v1.constructed) SliceError("");
+  if(v1.type) {
+    s=calloc(1,sizeof(Slice));
+    if(!s) err(1,"Allocation failed");
+    s->text.major=v1.type;
+    switch(v1.type) {
+      case 1:
+        if(asn1_first_of(&v2,&v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.minor)) SliceError("");
+        break;
+      case 2: case 4:
+        // Nothing to do in this case
+        break;
+      case 3:
+        if(asn1_first_of(&v2,&v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.minor)) SliceError("");
+        if(asn1_next_of(&v2,&v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.len)) SliceError("");
+        break;
+      default: SliceError("");
+    }
+  } else {
+    if(asn1_first_of(&v2,&v1) || v2.class || v2.type!=ASN1_PC_STRING || v2.length>32768) SliceError("");
+    v3=v2;
+    if(asn1_next_of(&v2,&v1)) {
+      s=calloc(1,sizeof(Slice)+v3.length+1);
+      if(!s) err(1,"Allocation failed");
+      s->text.len=s->text.maxlen=v3.length;
+    } else {
+      if(v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&x) || x<v2.length || x>32768 || !x) SliceError("");
+      s=calloc(1,sizeof(Slice)+x+1);
+      if(!s) err(1,"Allocation failed");
+      s->text.len=v3.length;
+      s->text.maxlen=x;
+    }
+    memcpy(s->data,v3.data,v3.length);
+  }
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.xpad)) SliceError("");
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.ypad)) SliceError("");
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.draw.tracking)) SliceError("");
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_ENUMERATED || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.draw.align) || s->text.draw.align>2) SliceError("");
+  if(asn1_next_of(&v1,v0) || load_z_and_color(&v1,&s->text.draw.textz,&s->text.draw.text,0)) SliceError("");
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_ENUMERATED || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.draw.font) || s->text.draw.font>4) SliceError("");
+  if(asn1_next_of(&v1,v0) || load_z_and_color(&v1,&s->text.draw.backz,&s->text.draw.back,0)) SliceError("");
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_ENUMERATED || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.draw.style)) SliceError("");
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) SliceError("");
+  if(v1.data[0]) s->flag|=SLF_EXTRA3;
+  return s;
+}
+
+static void save_TEXT(ASN1_Encoder*enc,const Slice*s) {
+  asn1_construct(enc,ASN1_CONTEXT_SPECIFIC,s->text.major,0);
+    switch(s->text.major) {
+      case 0:
+        asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_PC_STRING,s->data,s->text.len);
+        if(s->text.len!=s->text.maxlen) asn1_encode_integer(enc,s->text.maxlen);
+        break;
+      case 1:
+        asn1_encode_integer(enc,s->text.minor);
+        break;
+      case 3:
+        asn1_encode_integer(enc,s->text.minor);
+        asn1_encode_integer(enc,s->text.len);
+        break;
+    }
+  asn1_end(enc);
+  asn1_encode_integer(enc,s->text.xpad);
+  asn1_encode_integer(enc,s->text.ypad);
+  asn1_encode_integer(enc,s->text.draw.tracking);
+  asn1_implicit(enc,ASN1_UNIVERSAL,ASN1_ENUMERATED); asn1_encode_integer(enc,s->text.draw.align);
+  save_z_and_color(enc,&s->text.draw.textz,&s->text.draw.text,0);
+  asn1_implicit(enc,ASN1_UNIVERSAL,ASN1_ENUMERATED); asn1_encode_integer(enc,s->text.draw.font);
+  save_z_and_color(enc,&s->text.draw.backz,&s->text.draw.back,0);
+  asn1_implicit(enc,ASN1_UNIVERSAL,ASN1_ENUMERATED); asn1_encode_integer(enc,s->text.draw.style);
+  asn1_encode_boolean(enc,s->flag&SLF_EXTRA3);
+}
+
+static void decide_text(Slice*s,const Uint8**text,Uint16*len) {
+  int i,j;
+  switch(s->text.major) {
+    case 0: *text=s->data; *len=s->text.len; break;
+    case 1:
+      if(s->text.minor<1 || s->text.minor>ndynastr) goto empty;
+      *text=dynastr[s->text.minor-1].text; *len=dynastr[s->text.minor-1].len;
+      break;
+    case 2: *text=vtextbuf; *len=nvtextbuf; break;
+    case 3:
+      j=s->text.minor;
+      *text=v_char+j;
+      for(i=0;i<s->text.len && i+j<2000 && v_char[i+j] && !(v_font[i+j]&VF_SYSTEM);i++);
+      *len=i;
+      break;
+    case 4:
+      if(cur_board_id>maxboard) goto empty;
+      *text=boardnames[cur_board_id];
+      *len=strlen(*text);
+      break;
+    default: empty: *text=""; *len=0;
+  }
+}
+
+static Sint32 xmeasure_TEXT(Slice*s,Sint32 in) {
+  // TODO: Fix to handle multiline text (and automatic line breaking) later
+  const Uint8*text;
+  Uint16 len;
+  decide_text(s,&text,&len);
+  return s->flag&SLF_EXTRA3?in:(2*s->text.xpad+g_measure_text(&s->text.draw,text,len,0));
+}
+
+static Sint32 ymeasure_TEXT(Slice*s,Sint32 in) {
+  // TODO: Fix to handle multiline text later
+  return s->flag&SLF_EXTRA3?in:(2*s->text.ypad+g_measure_text(&s->text.draw,"",0,1));
+}
+
+static void render_TEXT(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip) {
+  SDL_Rect r={.x=x+s->text.xpad,.y=y+s->text.ypad,.w=w-2*s->text.xpad,.h=h-2*s->text.ypad};
+  const Uint8*text;
+  Uint16 len;
+  decide_text(s,&text,&len);
+  g_draw_text(clip,&r,&s->text.draw,text,len);
+}
+
+static Sint32 control_TEXT(Slice*s,Uint8 op,Sint32 in) {
+  switch(op) {
+    case 0x40:
+      if(s->text.major==1 || s->text.major==3) return s->text.minor;
+      break;
+    case 0x50:
+      if(s->text.major==1) s->text.minor=in;
+      if(s->text.major==3 && in>=0 && in<2000) s->text.minor=in;
+      break;
+  }
+  return in;
 }
 
 static const SliceType slicetype[NUMSLICETYPES]={
@@ -479,6 +645,10 @@ static const SliceType slicetype[NUMSLICETYPES]={
   [SLICE_SPACE]={.kind=SLK_NORMAL,.load=load_SPACE,.save=save_SPACE},
   [SLICE_SAVESTATE]={.kind=SLK_MODIFIER,.load=load_SAVESTATE},
   [SLICE_MANUAL]={.kind=SLK_MODIFIER,.load=load_MANUAL},
+  [SLICE_IGNORE]={.kind=SLK_MODIFIER,.load=load_IGNORE},
+  [SLICE_UNSEEN]={.kind=SLK_MODIFIER,.load=load_IGNORE},
+  [SLICE_NOCLIP]={.kind=SLK_MODIFIER,.load=load_IGNORE},
+  [SLICE_TEXT]={.kind=SLK_NORMAL,.load=load_TEXT,.save=save_TEXT,.xmeasure=xmeasure_TEXT,.ymeasure=ymeasure_TEXT,.render=render_TEXT,.control=control_TEXT},
 };
 
 static Slice*load_one_slice(const ASN1_Value*v0) {
@@ -571,13 +741,37 @@ void render_slices(void) {
   for(n=0;n<3;n++) if(root[n]) render_one_slice(root[n],0,0,640,350,&fullrect);
 }
 
+static Uint8 testlevel=0;
+
 static Sint32 xmeasure_slice(Slice*s,Sint32 in) {
   const SliceType*t=slicetype+s->type;
+  if(config.test_mode&1) {
+    Sint32 x;
+    printf("%*sT%d ",testlevel,"",s->type);
+    if(s->flag&SLF_NUMBER) printf("#%d ",s->id);
+    printf("xmeasure_slice(%p,%ld)\n",s,(long)in);
+    ++testlevel;
+    x=t->xmeasure?t->xmeasure(s,s->flag&SLF_MANUAL?s->width:in):s->width;
+    --testlevel;
+    printf("%*s= %ld\n",testlevel,"",(long)x);
+    return x;
+  }
   return t->xmeasure?t->xmeasure(s,s->flag&SLF_MANUAL?s->width:in):s->width;
 }
 
 static Sint32 ymeasure_slice(Slice*s,Sint32 in) {
   const SliceType*t=slicetype+s->type;
+  if(config.test_mode&1) {
+    Sint32 x;
+    printf("%*sT%d ",testlevel,"",s->type);
+    if(s->flag&SLF_NUMBER) printf("#%d ",s->id);
+    printf("ymeasure_slice(%p,%ld)\n",s,(long)in);
+    ++testlevel;
+    x=t->ymeasure?t->ymeasure(s,s->flag&SLF_MANUAL?s->height:in):s->height;
+    --testlevel;
+    printf("%*s= %ld\n",testlevel,"",(long)x);
+    return x;
+  }
   return t->ymeasure?t->ymeasure(s,s->flag&SLF_MANUAL?s->height:in):s->height;
 }
 

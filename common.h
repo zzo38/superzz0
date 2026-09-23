@@ -864,9 +864,15 @@ void save_slices(FILE*fp,Uint8 level);
 void render_slices(void);
 Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc);
 
+typedef struct {
+  Sint8 tracking;
+  Uint8 font,style,align,back,backz,text,textz;
+} DrawText;
+
 int g_clip(const SDL_Rect*in0,const SDL_Rect*in1,SDL_Rect*out);
-void g_draw_line(Uint16 x,Uint16 y,Uint16 n,Uint32 a,Uint32 b,Uint8 c,Uint8 z);
 void g_draw_box(const SDL_Rect*clip,const SDL_Rect*rect,Uint8 bc,Uint8 bz,Uint8 fc,Uint8 fz,Uint8 translucent);
+void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,const Uint8*text,Uint16 length);
+Uint16 g_measure_text(const DrawText*info,const Uint8*text,Uint16 length,Uint8 xy /* 0=x 1=y */);
 
 // === File access (Hamster archives) ===
 

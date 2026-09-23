@@ -7005,6 +7005,21 @@ static void debug_menu(void) {
       if(*buf) vm=strtol(buf,0,16);
       break;
     }
+    win_command('e',"Slice control...") {
+      Uint8 a=0;
+      Uint16 b=0;
+      Uint32 c=0;
+      win_form("Slice control") {
+        win_numeric('I',"ID: ",b,0,0x7FFF);
+        win_numeric('O',"Operator: ",a,0,0xFF);
+        win_numeric('V',"Value: ",c,0,0xFFFFFFFFUL);
+        win_command('x',"Execute") {
+          c=control_slices(b,a,c,0);
+          win_refresh();
+        }
+        win_command_esc(0,"Done") break;
+      }
+    }
     win_command('d',"Make debug log...") {
       Uint8 a=0;
       Uint32 b=0;

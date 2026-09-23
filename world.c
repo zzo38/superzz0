@@ -1525,13 +1525,6 @@ const char*randomize_itemdefs(Uint8 rev) {
   Uint32 n,s;
   Uint8 d[16];
   FILE*f;
-  if(config.test_mode) {
-    setbuf(stdout,0);
-    putchar(rev+'0'); putchar(' ');
-    f=popen("sha1sum","w");
-    fwrite(itemdefs,sizeof(ItemDef),nitemdefs,f);
-    pclose(f);
-  }
   if(nitemdefs<2) return 0;
   f=open_lump("ITEMRAND","r");
   if(!f) return 0;
@@ -1542,12 +1535,6 @@ const char*randomize_itemdefs(Uint8 rev) {
     e=itemrand1(d,rev,key);
   }
   fclose(f);
-  if(config.test_mode) {
-    putchar('+'); putchar(' ');
-    f=popen("sha1sum","w");
-    fwrite(itemdefs,sizeof(ItemDef),nitemdefs,f);
-    pclose(f);
-  }
   return e;
 }
 

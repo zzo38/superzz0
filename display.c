@@ -1037,7 +1037,7 @@ int g_clip(const SDL_Rect*in0,const SDL_Rect*in1,SDL_Rect*out) {
   return 0;
 }
 
-void g_draw_line(Uint16 x,Uint16 y,Uint16 n,Uint32 a,Uint32 b,Uint8 c,Uint8 z) {
+static void g_draw_line(Uint16 x,Uint16 y,Uint16 n,Uint32 a,Uint32 b,Uint8 c,Uint8 z) {
   Uint8*p;
   Uint8*q;
   p=pbuffer+scrn->pitch*y+x;
@@ -1079,8 +1079,12 @@ void g_draw_picture() {
   //TODO
 }
 
-void g_draw_text() {
+void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,const Uint8*text,Uint16 len) {
   //TODO
+}
+
+Uint16 g_measure_text(const DrawText*info,const Uint8*text,Uint16 length,Uint8 xy /* 0=x 1=y */) {
+  return xy?14:length?(info->tracking*(length-1)+8):0;
 }
 
 void redisplay(void) {
