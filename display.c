@@ -1437,6 +1437,7 @@ int next_event(void) {
     case SDL_KEYDOWN:
       if(event.key.keysym.sym>=300 && event.key.keysym.sym<=314) break;
       if(event.key.keysym.sym==SDLK_KP_ENTER) event.key.keysym.sym=SDLK_RETURN;
+      event.key.keysym.mod&=config.mask_keys;
       if(config.text_input==2 && (event.key.keysym.mod&KMOD_ALT) && event.key.keysym.sym>=256 && event.key.keysym.sym<266) {
         altk=10*altk+event.key.keysym.sym-256;
         break;

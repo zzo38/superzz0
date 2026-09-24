@@ -160,6 +160,18 @@ mark_color
   Colour of marked tiles in the board editor. Zero means to just use the
   inverse colour.
 
+mask_keys
+  Causes some modifier keys to be ignored by the handling of Super ZZ Zero;
+  SDL or the operating system might still handle them. One of the uses of
+  this is in case you are using a keyboard layout where one of the ALT keys
+  is required for entering some ASCII characters when using the built-in
+  keyboard handling of SDL (although some operating systems might not need
+  it); it is probably not necessary to use this configuration option in
+  other circumstances but you might have a use for it. This value is a AND
+  mask which will be applied to the keyboard modifier codes; see the
+  definition of "SDLMod" in /usr/include/SDL/SDL_keysym.h for details. The
+  default value is 0xFFFF (meaning nothing is masked out).
+
 menu_x
   The initial position of the F1 menu in the game.
 

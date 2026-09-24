@@ -36,6 +36,11 @@ EDITOR
   =  Corrections in the display of some menus, so that video modes and the
      font attributes of character cells are reset correctly.
 
+OTHERS
+  +  Configuration option "mask_keys" to mask out some modifier keys (in
+     case one ALT key is needed for entering some ASCII characters on some
+     keyboard layouts; see the bug reports about AltGr in MegaZeux).
+
 
 === Version 0.8.0 (2026-07-15) ===
 

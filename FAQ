@@ -14,6 +14,7 @@ FREQUENTLY ASKED QUESTIONS -- SUPER ZZ ZERO
    [1.2] There is an error with linking due to the unavailability of the
      function "XGetKeyboardMapping" or "XKeycodeToKeysym".
    [1.3] It does not work on Mac OS?
+   [1.4] The keyboard layout prevents some characters from being entered?
 
  [2] HOW TO MAKE SPECIFIC THINGS
    [2.1] How to make keys like MegaZeux?
@@ -146,6 +147,24 @@ functions that are relevant for that system. For example, with Mac OS, you
 might implement such things as: UTI, menu bar, AppleScript, etc.
 
 
+[1.4] The keyboard layout prevents some characters from being entered?
+
+Some keyboard layouts require the use of modifier keys such as AltGr or
+Compose to enter ASCII characters, or do not include them at all. This
+might make it not possible to enter some characters, or make it too
+difficult to do so, or cause interference with other key combinations.
+
+In order to avoid such problems, you might try setting the configuration
+options called "mask_keys" and/or "text_input"; see config.doc for details.
+Note that if you set text_input=2 then you can use ALT with the number pad
+to enter any PC character, including ASCII characters.
+
+(In future, a ISO 646 mode might be added as another alternative; but
+unfortunately I think SDL does not support ISO 646, meaning that a custom
+implementation would be required, using the facilities of the operating
+system to support ISO 646 if available and possible.)
+
+
 ===
 
 [2] HOW TO MAKE SPECIFIC THINGS
@@ -191,11 +210,14 @@ example of how the key might be implemented can be:
 
 [2.2] How to add wave sound effects?
 
-Currently this cannot be done using the editor; you will have to use an
-external program to convert it. The source code respository includes the
-programs "wavconvert" and "vocconvert" in the "misc" directory for
-converting existing soud files from the Microsoft .WAV format or the
-Creative Voice format into the format used by Super ZZ Zero.
+The editor is currently limited to loading the format used by Super ZZ Zero
+or for converting raw PCM files; you can use external programs if you want
+to convert other file formats. (This might be fixed later.)
+
+The source code respository includes the programs "wavconvert" and
+"vocconvert" in the "misc" directory for converting existing soud files
+from the Microsoft .WAV format or the Creative Voice format into the format
+used by Super ZZ Zero.
 
 Note that some files are not compatible; specifically, only mono files
 will work (stereo does not work) and it must be 8-bit or 16-bit PCM, or
