@@ -1079,12 +1079,63 @@ void g_draw_picture() {
   //TODO
 }
 
-void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,const Uint8*text,Uint16 len) {
-  //TODO
+Uint16 g_measure_text(const DrawText*info,const Uint8*text,Uint16 length,Uint8 xy /* 0=x 1=y */) {
+  return xy?14:length?(info->tracking*(length-1)+8*length):0;
 }
 
-Uint16 g_measure_text(const DrawText*info,const Uint8*text,Uint16 length,Uint8 xy /* 0=x 1=y */) {
-  return xy?14:length?(info->tracking*(length-1)+8):0;
+void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,const Uint8*text,Uint16 len) {
+  // Assumes that the clip rectangle cannot be outside of the 640x350 screen area.
+  const Uint8*f0;
+  const Uint8*f;
+  Uint8 c,g,j;
+  Uint8*p;
+  Uint8*p0=pbuffer;
+  Uint8*z;
+  Uint8*z0=zbuffer;
+  Uint16 h=scrn->pitch;
+  Uint16 k;
+  Sint32 x0=rect->x;
+  Sint32 y0=rect->y;
+  Sint32 x,xc,yc,xm,ym;
+  if(!info->back && !info->text) return;
+  if(info->font==4 || (!info->font && !font)) f0=pcfont; else if(!info->font) f0=font; else return;
+  if(info->align) {
+    Uint16 m=g_measure_text(info,text,len,0);
+    x0+=(rect->w-m)>>(info->align&1);
+  }
+  if(info->style) x0--,y0--;
+  if(x0>=640 || y0>=350) return;
+  p0+=h*y0+x0;
+  z0+=640*y0+x0;
+  xc=clip->x-x0;
+  yc=clip->y-y0;
+  xm=xc+clip->w;
+  ym=yc+clip->h;
+  if(xc<0) xc=0;
+  if(yc<0) yc=0;
+  x=0;
+  switch(info->style) {
+    case 0:
+      if(ym>14) ym=14;
+      for(k=0;k<len;k++) {
+        f=f0+14*text[k];
+        p=p0+x; z=z0+x;
+        for(j=yc;j<ym;j++) {
+          c=f[j];
+          for(g=0;g<8 && x+g<xm;g++) {
+            if(c&128) {
+              if(info->text && z[g]<(info->textz|1)) z[g]=info->textz,p[g]=info->text;
+            } else {
+              if(info->back && z[g]<(info->backz|1)) z[g]=info->backz,p[g]=info->back;
+            }
+            c<<=1;
+          }
+          p+=h; z+=640;
+        }
+        x+=info->tracking+8;
+      }
+      break;
+  }
 }
 
 void redisplay(void) {

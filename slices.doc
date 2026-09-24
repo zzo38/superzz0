@@ -69,7 +69,7 @@ have a ID number, then it is assigned ID 1.
 of the slice which is referenced by this operation, but will affect the
 sizes of the slices that it contains (if any).
 
-[03] Recalculate the metrics of slices, like 0x01, but it does set the
+[03] Recalculate the metrics of slices, like 0x02, but it does set the
 size of the slice.
 
 [04] If the slice has the MANUAL flag, then it works like code 0x02 but

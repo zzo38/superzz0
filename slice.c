@@ -254,7 +254,7 @@ static Sint32 xmeasure_BOX(Slice*s,Sint32 in) {
   // Ensure any changes are also made the corresponding changes in the other function
   Slice*t;
   int n;
-  if(s->box.dir&2) {
+  if(s->box.dir<2) {
     // Vertical
     Sint32 x;
     Sint32 y=0;
@@ -330,7 +330,7 @@ static Sint32 ymeasure_BOX(Slice*s,Sint32 in) {
   // Ensure any changes are also made the corresponding changes in the other function
   Slice*t;
   int n;
-  if(s->box.dir&2) {
+  if(s->box.dir<2) {
     // Vertical
     Sint32 x,y;
     Sint32 na=2*s->box.mar;
@@ -706,7 +706,7 @@ void load_slices(FILE*fp,Uint8 level) {
   assign_slice_id(root[level],0);
   if(!root[level]->width && !root[level]->height) {
     root[level]->width=640;
-    root[level]->height=480;
+    root[level]->height=350;
   }
 }
 
