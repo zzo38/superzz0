@@ -6,6 +6,7 @@ exit
 #include "common.h"
 #include "opcodes.h"
 #include <math.h>
+#include <malloc.h>
 #include <time.h>
 
 ElementDef elem_def[256];
@@ -6772,6 +6773,7 @@ static int system_menu(void) {
     case SDLK_RIGHT: case SDLK_KP6: if(x<37) x+=3; goto redraw0;
     case SDLK_KP_MINUS: case SDLK_MINUS: if(vol>327) vol-=327; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
     case SDLK_KP_PLUS: case SDLK_PLUS: case SDLK_EQUALS: if(vol<32400) vol+=327; audio_set_volume(vol,mu); audio_set_sfx("@0ZCX"); break;
+    case SDLK_0: if(event.key.keysym.mod&KMOD_CTRL) malloc_stats(); break;
     case SDLK_m:
       *buf=0;
       ask_text("Message time?",buf,5);
