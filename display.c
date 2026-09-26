@@ -1084,7 +1084,6 @@ Uint16 g_measure_text(const DrawText*info,const Uint8*text,Uint16 length,Uint8 x
 }
 
 void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,const Uint8*text,Uint16 len) {
-  // Assumes that the clip rectangle cannot be outside of the 640x350 screen area.
   const Uint8*f0;
   const Uint8*f;
   Uint8 c,g,j;
@@ -1123,10 +1122,12 @@ void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,con
         for(j=yc;j<ym;j++) {
           c=f[j];
           for(g=0;g<8 && x+g<xm;g++) {
-            if(c&128) {
-              if(info->text && z[g]<(info->textz|1)) z[g]=info->textz,p[g]=info->text;
-            } else {
-              if(info->back && z[g]<(info->backz|1)) z[g]=info->backz,p[g]=info->back;
+            if(x+g>=xc) {
+              if(c&128) {
+                if(info->text && z[g]<(info->textz|1)) z[g]=info->textz,p[g]=info->text;
+              } else {
+                if(info->back && z[g]<(info->backz|1)) z[g]=info->backz,p[g]=info->back;
+              }
             }
             c<<=1;
           }

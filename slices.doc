@@ -57,7 +57,8 @@ The bits of the second operand of SLIC have the meanings:
 * bit7-bit0 = One of the hexadecimal codes listed below.
 
 * bit8 = Tells whether to use the primary or secondary slice ID. Uses the
-primary if this bit is clear or secondary if this bit is set.
+primary if this bit is clear or secondary if this bit is set. (This is only
+meaningful for direct control by SLIC, and not for SLI0, SLI1, etc.)
 
 [00] Assign the slice ID to the primary slice ID. If this slice does not
 have a ID number, then it is assigned ID 1.
@@ -75,6 +76,34 @@ size of the slice.
 [04] If the slice has the MANUAL flag, then it works like code 0x02 but
 the MANUAL flag is temporarily cleared. If the slice does not have the
 MANUAL flag then it works like 0x03.
+
+[20] Read the width.
+
+[21] Read the height.
+
+[22] Read the type of the slice.
+
+[23] Read all of the flags of the slice at once.
+
+[24] Read the ID number of the slice. If it does not have a ID number, then
+the value will be unchanged.
+
+[28-2F] Read one of the flags; the result is 1 if the flag is set or 0 if
+the flag is not set. The order of the flags is as follows:
+  28 NUMBER
+  29 NOCLIP
+  2A UNSEEN
+  2B IGNORE
+  2C MANUAL
+  2D EXTRA1
+  2E EXTRA2
+  2F EXTRA3
+
+[30] Set the width.
+
+[31] Set the height.
+
+[33] Set all of the flags of the slice at once, except the NUMBER flag.
 
 
 === ID slice [0] ===
@@ -225,10 +254,11 @@ and 4 for the built-in PC font (others are not implemented yet).
 * Enumerated specifying the background style: 0 (solid), 1 (outline 1),
 2 (outline 2).
 
-* Boolean which is the EXTRA3 flag, and is true if it should avoid
-measuring the text when measuring the size of the slice, or false if it
-should measure the text. (This is separate from MANUAL, although you might
-want it to also be MANUAL in addition to EXTRA3.)
+* Bit string which must have exactly two bits, and controls if it should
+avoid measuring the text when measuring the size of the slice. The first
+bit is for vertical measurement (the EXTRA3 flag), and the second bit is
+for horizontal measurement (the EXTRA2 flag). (This is separate from the
+MANUAL flag.)
 
 The sources of the text to be displayed can be:
 

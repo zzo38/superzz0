@@ -42,6 +42,7 @@ struct Slice {
 static Slice**byid;
 static Uint16 maxid;
 static Slice*root[3];
+static Slice*chained;
 
 // Slice:type
 enum {
@@ -72,6 +73,10 @@ enum {
 #define SLF_EXTRA1 0x20
 #define SLF_EXTRA2 0x40
 #define SLF_EXTRA3 0x80
+
+// control_slice:misc
+#define SLM_SECONDARY 0x01
+#define SLM_CHAIN 0x02
 
 typedef struct {
   Uint8 kind;
@@ -548,12 +553,13 @@ static Slice*load_TEXT(const ASN1_Value*v0) {
   if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_ENUMERATED || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.draw.font) || s->text.draw.font>4) SliceError("");
   if(asn1_next_of(&v1,v0) || load_z_and_color(&v1,&s->text.draw.backz,&s->text.draw.back,0)) SliceError("");
   if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_ENUMERATED || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.draw.style)) SliceError("");
-  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) SliceError("");
-  if(v1.data[0]) s->flag|=SLF_EXTRA3;
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_BIT_STRING || v1.length!=2 || v1.data[0]!=6) SliceError("");
+  s->flag|=v1.data[1]&0xC0;
   return s;
 }
 
 static void save_TEXT(ASN1_Encoder*enc,const Slice*s) {
+  Uint8 b[2];
   asn1_construct(enc,ASN1_CONTEXT_SPECIFIC,s->text.major,0);
     switch(s->text.major) {
       case 0:
@@ -577,7 +583,8 @@ static void save_TEXT(ASN1_Encoder*enc,const Slice*s) {
   asn1_implicit(enc,ASN1_UNIVERSAL,ASN1_ENUMERATED); asn1_encode_integer(enc,s->text.draw.font);
   save_z_and_color(enc,&s->text.draw.backz,&s->text.draw.back,0);
   asn1_implicit(enc,ASN1_UNIVERSAL,ASN1_ENUMERATED); asn1_encode_integer(enc,s->text.draw.style);
-  asn1_encode_boolean(enc,s->flag&SLF_EXTRA3);
+  b[0]=6; b[1]=s->flag&0xC0;
+  asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_BIT_STRING,b,2);
 }
 
 static void decide_text(Slice*s,const Uint8**text,Uint16*len) {
@@ -609,7 +616,7 @@ static Sint32 xmeasure_TEXT(Slice*s,Sint32 in) {
   const Uint8*text;
   Uint16 len;
   decide_text(s,&text,&len);
-  return s->flag&SLF_EXTRA3?in:(2*s->text.xpad+g_measure_text(&s->text.draw,text,len,0));
+  return s->flag&SLF_EXTRA2?in:(2*s->text.xpad+g_measure_text(&s->text.draw,text,len,0));
 }
 
 static Sint32 ymeasure_TEXT(Slice*s,Sint32 in) {
@@ -802,6 +809,15 @@ Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc) {
         goto code0x03;
       }
       break;
+    case 0x20: value=s->width; break;
+    case 0x21: value=s->height; break;
+    case 0x22: value=s->type; break;
+    case 0x23: value=s->flag; break;
+    case 0x24: if(s->flag&SLF_NUMBER) value=s->id; break;
+    case 0x28 ... 0x2F: value=(s->flag&(1<<(op&7))?1:0); break;
+    case 0x30: s->width=value; break;
+    case 0x31: s->height=value; break;
+    case 0x33: s->flag=(s->flag&SLF_NUMBER)|(value&~SLF_NUMBER); break;
     default:
       if(slicetype[s->type].control) value=slicetype[s->type].control(s,op,value);
   }
