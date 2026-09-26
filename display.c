@@ -1079,6 +1079,20 @@ void g_draw_picture() {
   //TODO
 }
 
+static inline void g_draw_bits(Uint8*p,Uint8*z,Sint32 xc,Sint32 xm,Uint8 n,Uint16 b0,Uint16 b1,Uint16 m0,Uint16 m1,Uint8 c0,Uint8 c1,Uint8 z0,Uint8 z1) {
+  int i;
+  for(i=0;i<n && i<xm;i++) {
+    if(i>=xc) {
+      if(b0&m0) {
+        if(c0 && z[i]<(z0|1)) z[i]=z0,p[i]=c0;
+      } else if(b1&m1) {
+        if(c1 && z[i]<(z1|1)) z[i]=z1,p[i]=c1;
+      }
+    }
+    b0<<=1; b1<<=1;
+  }
+}
+
 Uint16 g_measure_text(const DrawText*info,const Uint8*text,Uint16 length,Uint8 xy /* 0=x 1=y */) {
   return xy?14:length?(info->tracking*(length-1)+8*length):0;
 }
@@ -1086,7 +1100,7 @@ Uint16 g_measure_text(const DrawText*info,const Uint8*text,Uint16 length,Uint8 x
 void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,const Uint8*text,Uint16 len) {
   const Uint8*f0;
   const Uint8*f;
-  Uint8 c,g,j;
+  Uint8 c,g;
   Uint8*p;
   Uint8*p0=pbuffer;
   Uint8*z;
@@ -1095,7 +1109,7 @@ void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,con
   Uint16 k;
   Sint32 x0=rect->x;
   Sint32 y0=rect->y;
-  Sint32 x,xc,yc,xm,ym;
+  Sint32 j,x,xc,yc,xm,ym;
   if(!info->back && !info->text) return;
   if(info->font==4 || (!info->font && !font)) f0=pcfont; else if(!info->font) f0=font; else return;
   if(info->align) {
@@ -1104,14 +1118,14 @@ void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,con
   }
   if(info->style) x0--,y0--;
   if(x0>=640 || y0>=350) return;
-  p0+=h*y0+x0;
-  z0+=640*y0+x0;
   xc=clip->x-x0;
   yc=clip->y-y0;
   xm=xc+clip->w;
   ym=yc+clip->h;
   if(xc<0) xc=0;
   if(yc<0) yc=0;
+  p0+=h*(y0+yc)+x0;
+  z0+=640*(y0+yc)+x0;
   x=0;
   switch(info->style) {
     case 0:
@@ -1132,6 +1146,42 @@ void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,con
             c<<=1;
           }
           p+=h; z+=640;
+        }
+        x+=info->tracking+8;
+      }
+      break;
+    case 1:
+      for(k=0;k<len;k++) {
+        f=f0+14*text[k];
+        p=p0+x; z=z0+x;
+        if(!yc) {
+          g_draw_bits(p,z,xc-x,xm-x,10,0,*f,0,0x100,info->text,info->back,info->textz,info->backz);
+          p+=h; z+=640;
+        }
+        for(j=yc?:1;j<ym && j<15;j++) {
+          g_draw_bits(p,z,xc-x,xm-x,10,f[j-1],f[j-1]|(f[j-1]<<1)|(f[j-1]<<2)|(j==14?0:f[j]<<1)|(j==1?0:f[j-2]<<1),0x100,0x200,info->text,info->back,info->textz,info->backz);
+          p+=h; z+=640;
+        }
+        if(ym>14) {
+          g_draw_bits(p,z,xc-x,xm-x,10,0,f[13],0,0x100,info->text,info->back,info->textz,info->backz);
+        }
+        x+=info->tracking+8;
+      }
+      break;
+    case 2:
+      for(k=0;k<len;k++) {
+        f=f0+14*text[k];
+        p=p0+x; z=z0+x;
+        if(!yc) {
+          g_draw_bits(p,z,xc-x,xm-x,10,0,*f,0,0x380,info->text,info->back,info->textz,info->backz);
+          p+=h; z+=640;
+        }
+        for(j=yc?:1;j<ym && j<15;j++) {
+          g_draw_bits(p,z,xc-x,xm-x,10,f[j-1],f[j-1]|(j==14?0:f[j])|(j==1?0:f[j-2]),0x100,0x380,info->text,info->back,info->textz,info->backz);
+          p+=h; z+=640;
+        }
+        if(ym>14) {
+          g_draw_bits(p,z,xc-x,xm-x,10,0,f[13],0,0x380,info->text,info->back,info->textz,info->backz);
         }
         x+=info->tracking+8;
       }
