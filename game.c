@@ -3329,8 +3329,9 @@ static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
       if(c=='1') w=s->misc1; else if(c=='2') w=s->misc2; else if(c=='3') w=s->misc3; else goto badexp;
       ++*ip;
     } else if(c=='P' || c=='p') {
-      ++*ip;
-      if(xy->x<board_info.width && xy->y<board_info.height && (w=xy->layer&3)) w=(w==1?b_under:w==2?b_main:b_over)[xy->y*board_info.width+xy->x].param;
+      c=s->text[++*ip];
+      if(c=='P' || c=='p') ++*ip,w=(stats->count?(stats->xy->x>xy->x?1:-1)*(stats->xy->x-xy->x)+(stats->xy->y>xy->y?1:-1)*(stats->xy->y-xy->y):0);
+      else if(xy->x<board_info.width && xy->y<board_info.height && (w=xy->layer&3)) w=(w==1?b_under:w==2?b_main:b_over)[xy->y*board_info.width+xy->x].param;
     } else if(c=='@') {
       for(c=0;c<maxstat;c++) if(stats[c].text && match_name(stats[c].text,s->text+*ip+1)) {
         for(i=0;i<stats[c].count;i++) if(stats[c].xy[i].layer&3) w++;
@@ -3369,6 +3370,7 @@ static Sint32 parse_number(Stat*s,StatXY*xy,Uint16*ip) {
       case '>': if(w<32) v>>=w; else v=(v<0?-1:0); break;
       case '?': if(v!=w) v+=dice(w+1-v); break;
       case 'd': case 'D': c=v; v=0; while(c-->0) v+=dice(w)+1; break;
+      case '_': v=(v>w?v-w:w-v); break;
       default: goto badexp;
     }
     op=s->text[*ip];

@@ -24,6 +24,8 @@ GAME
 
 SCRIPTS
   +  #BACKDROP command to display backdrops.
+  +  Absolute subtraction operator.
+  +  Expression (PP) for Manhattan distance to player.
 
 ASSEMBLY
   +  Memory cell $B7 to define default background data behind the main
