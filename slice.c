@@ -496,6 +496,7 @@ static Slice*load_SAVESTATE(const ASN1_Value*v0) {
   if(s->flag&SLF_NUMBER) SliceError("Improper save state");
   if(asn1_next_of(&v1,v0) || asn1_decode_number(&v1,ASN1_AUTO,&s->id)) SliceError("");
   if(asn1_next_of(&v1,v0) || asn1_decode_number(&v1,ASN1_AUTO,&s->width)) SliceError("");
+  if(asn1_next_of(&v1,v0) || asn1_decode_number(&v1,ASN1_AUTO,&s->height)) SliceError("");
   if(asn1_next_of(&v1,v0) || v1.length!=1) SliceError("");
   if(v1.data[0]&SLF_NUMBER) assign_slice_id(s,s->id);
   s->flag=v1.data[0];
@@ -728,6 +729,16 @@ void load_slices(FILE*fp,Uint8 level) {
   unload_slices(level&3);
   if(!fp) return;
   if(asn1_read_item(fp,&v,0)) errx(1,"Error loading slices at level %d",level);
+  if(level==128) {
+    ASN1_Value u;
+    unload_slices(3);
+    if(asn1_first_of(&u,&v)) errx(1,"Error loading SAVSLICE.DER");
+    if(u.class && !(root[0]=load_one_slice(&u))) errx(1,"Error loading slices at level 0");
+    if(asn1_next_of(&u,&v)) errx(1,"Error loading SAVSLICE.DER");
+    if(u.class && !(root[3]=load_one_slice(&u))) errx(1,"Error loading slices at level 3");
+    asn1_free(&v);
+    return;
+  }
   root[level&3]=load_one_slice(&v);
   asn1_free(&v);
   if(!root[level&3]) errx(1,"Error loading slices at level %d",level);
@@ -751,7 +762,14 @@ void load_screen_slices(Uint8 level) {
 void save_slices(FILE*fp,Uint8 level) {
   ASN1_Encoder*enc=asn1_create_encoder(fp);
   if(!enc) err(1,"Allocation failed");
-  save_one_slice(enc,root[level]);
+  if(level==128) {
+    asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+      save_one_slice(enc,root[0]);
+      save_one_slice(enc,root[3]);
+    asn1_end(enc);
+  } else {
+    save_one_slice(enc,root[level]);
+  }
   asn1_finish_encoder(enc);
 }
 

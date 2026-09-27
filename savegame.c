@@ -306,6 +306,7 @@ int ask_save_file(char issave) {
 static void discard_unused_lumps(void) {
   // Some lumps are only used in save games, so discard them from memory after saving/restoring.
   revert_lump("SAVE.DER");
+  revert_lump("SAVSLICE.DER");
   revert_lump("CURRENT.BRD");
   revert_lump("MEMORY");
   revert_lump("GLOBAL");
@@ -443,6 +444,11 @@ void save_state(void) {
     m[1]=i+'0';
     save_inventory(fp=open_lump(m,"w"),inventory+i);
     if(fp) fclose(fp);
+  }
+  //  SAVSLICE.DER
+  if(fp=open_lump("SAVSLICE.DER","w")) {
+    save_slices(fp,128);
+    fclose(fp);
   }
   //
   fp=fopen(savename,"w");
@@ -680,6 +686,13 @@ void load_state(void) {
     buf[1]=i+'0';
     if(load_inventory(fp=open_lump(buf,"r"),inventory+i)) errx(1,"Invalid data in save game file");
     if(fp) fclose(fp);
+  }
+  //  SAVSLICE.DER
+  unload_slices(0);
+  unload_slices(3);
+  if(fp=open_lump("SAVSLICE.DER","r")) {
+    load_slices(fp,128);
+    fclose(fp);
   }
   // Finished
   discard_unused_lumps();

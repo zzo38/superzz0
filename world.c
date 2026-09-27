@@ -480,6 +480,10 @@ const char*init_world(void) {
       if(e) return e;
     }
   }
+  // "SAVSLICE.DER"
+  unload_slices(0);
+  unload_slices(3);
+  if(open_lump("SAVSLICE.DER","r")) errx(1,"This world file contains a SAVSLICE.DER lump but is not supposed to");
   // done
   return 0;
 }
