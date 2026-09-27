@@ -41,7 +41,7 @@ struct Slice {
 
 static Slice**byid;
 static Uint16 maxid;
-static Slice*root[3];
+static Slice*root[4];
 static Slice*chained;
 
 // Slice:type
@@ -77,6 +77,7 @@ enum {
 // control_slice:misc
 #define SLM_SECONDARY 0x01
 #define SLM_CHAIN 0x02
+#define SLM_ROOT 0x04
 
 typedef struct {
   Uint8 kind;
@@ -163,6 +164,7 @@ static Slice*load_IDNUMBER(const ASN1_Value*v0) {
   if(asn1_first_of(&v1,v0) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&id)) return 0;
   if(asn1_next_of(&v1,v0)) return 0;
   if(s->flag&SLF_NUMBER) SliceError("Slice already has ID number");
+  if(!id) SliceError("Cannot reassign slice ID zero");
   if(s=load_one_slice(&v1)) assign_slice_id(s,id);
   return s;
 }
@@ -207,6 +209,17 @@ static void render_OFFSET(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_
   render_one_slice(s->offset.slice,x+s->offset.x,y+s->offset.y,w,h,clip);
 }
 
+static Sint32 control_OFFSET(Slice*s,Uint8 op,Sint32 in) {
+  switch(op) {
+    case 0x10: chained=s->offset.slice; break;
+    case 0x60: in=s->offset.x; break;
+    case 0x61: in=s->offset.y; break;
+    case 0x70: s->offset.x=in; break;
+    case 0x71: s->offset.y=in; break;
+  }
+  return in;
+}
+
 static Slice*load_BOX(const ASN1_Value*v0) {
   ASN1_Value v1,v2;
   int n;
@@ -229,7 +242,7 @@ static Slice*load_BOX(const ASN1_Value*v0) {
   if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_SEQUENCE || !v1.constructed) SliceError("");
   if(!v1.length) return s;
   s->box.count=asn1_count(&v1);
-  if(!s->box.count) SliceError("");
+  if(!s->box.count || s->box.count>0x7FFF) SliceError("Improper number of slices contained in BOX");
   s->box.slices=calloc(s->box.count,sizeof(Slice*));
   if(!s->box.slices) err(1,"Allocation failed");
   for(n=0;n<s->box.count;n++) {
@@ -449,6 +462,14 @@ static void free_BOX(Slice*s) {
   free(s->box.slices);
 }
 
+static Sint32 control_BOX(Slice*s,Uint8 op,Sint32 in) {
+  switch(op) {
+    case 0x10: if(in>=0 && in<s->box.count) chained=s->box.slices[in]; break;
+    case 0x11: in=s->box.count; break;
+  }
+  return in;
+}
+
 static Slice*load_SPACE(const ASN1_Value*v0) {
   Slice*s;
   ASN1_Value v1;
@@ -647,8 +668,8 @@ static Sint32 control_TEXT(Slice*s,Uint8 op,Sint32 in) {
 
 static const SliceType slicetype[NUMSLICETYPES]={
   [SLICE_IDNUMBER]={.kind=SLK_MODIFIER,.load=load_IDNUMBER},
-  [SLICE_OFFSET]={.kind=SLK_NORMAL,.load=load_OFFSET,.save=save_OFFSET,.free=free_OFFSET,.xmeasure=xmeasure_OFFSET,.ymeasure=ymeasure_OFFSET,.render=render_OFFSET},
-  [SLICE_BOX]={.kind=SLK_NORMAL,.load=load_BOX,.save=save_BOX,.free=free_BOX,.xmeasure=xmeasure_BOX,.ymeasure=ymeasure_BOX,.render=render_BOX},
+  [SLICE_OFFSET]={.kind=SLK_NORMAL,.load=load_OFFSET,.save=save_OFFSET,.free=free_OFFSET,.xmeasure=xmeasure_OFFSET,.ymeasure=ymeasure_OFFSET,.render=render_OFFSET,.control=control_OFFSET},
+  [SLICE_BOX]={.kind=SLK_NORMAL,.load=load_BOX,.save=save_BOX,.free=free_BOX,.xmeasure=xmeasure_BOX,.ymeasure=ymeasure_BOX,.render=render_BOX,.control=control_BOX},
   [SLICE_SPACE]={.kind=SLK_NORMAL,.load=load_SPACE,.save=save_SPACE},
   [SLICE_SAVESTATE]={.kind=SLK_MODIFIER,.load=load_SAVESTATE},
   [SLICE_MANUAL]={.kind=SLK_MODIFIER,.load=load_MANUAL},
@@ -691,24 +712,26 @@ static void free_slice(Slice*s) {
   if(root[0]==s) root[0]=0;
   if(root[1]==s) root[1]=0;
   if(root[2]==s) root[2]=0;
+  if(root[3]==s) root[3]=0;
   if(s->flag&SLF_NUMBER) byid[s->id]=0;
   if(slicetype[s->type].free) slicetype[s->type].free(s);
   free(s);
 }
 
 void unload_slices(Uint8 level) {
-  if(level<3) free_slice(root[level]);
+  if(level<4) free_slice(root[level]);
   //TODO: restore ID numbers from previous level if applicable
 }
 
 void load_slices(FILE*fp,Uint8 level) {
   ASN1_Value v={};
-  unload_slices(level);
+  unload_slices(level&3);
   if(!fp) return;
   if(asn1_read_item(fp,&v,0)) errx(1,"Error loading slices at level %d",level);
-  root[level]=load_one_slice(&v);
+  root[level&3]=load_one_slice(&v);
   asn1_free(&v);
-  if(!root[level]) errx(1,"Error loading slices at level %d",level);
+  if(!root[level&3]) errx(1,"Error loading slices at level %d",level);
+  if(level&4) return;
   if((root[level]->flag&SLF_NUMBER) && root[level]->id) errx(1,"Root slice has incorrect ID number (expected 0; found %d)",root[level]->id);
   assign_slice_id(root[level],0);
   if(!root[level]->width && !root[level]->height) {
@@ -784,8 +807,24 @@ static Sint32 ymeasure_slice(Slice*s,Sint32 in) {
 
 Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc) {
   Slice*s;
-  if(id>maxid || !byid[id]) return value;
-  s=byid[id];
+  if(misc&SLM_CHAIN) {
+    Sint32 v;
+    chained=0;
+    v=control_slices(id,op,value&0xFFFF,misc&~SLM_CHAIN);
+    s=chained;
+    if(!s) return 0;
+    chained=0;
+    op=value>>16;
+    misc=(value>>24)&~SLM_CHAIN;
+    value=v;
+  } else if(misc&SLM_ROOT) {
+    if(misc&SLM_SECONDARY) id+=2;
+    s=root[id&3];
+    if(!s) return value;
+  } else {
+    if(id>maxid || !byid[id]) return value;
+    s=byid[id];
+  }
   switch(op) {
     case 0x00: case 0x01:
       if(!(s->flag&SLF_NUMBER)) assign_slice_id(s,1);
@@ -818,6 +857,10 @@ Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc) {
     case 0x30: s->width=value; break;
     case 0x31: s->height=value; break;
     case 0x33: s->flag=(s->flag&SLF_NUMBER)|(value&~SLF_NUMBER); break;
+    case 0x34:
+      if(!value || ((s->flag&SLF_NUMBER) && !s->id)) break;
+      assign_slice_id(s,value);
+      break;
     default:
       if(slicetype[s->type].control) value=slicetype[s->type].control(s,op,value);
   }

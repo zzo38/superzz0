@@ -15,7 +15,7 @@ usually contain other slices, so it should be a type that can contain
 other slices, but may be of any type. Some types of slices are able to
 contain other slices, as described below.
 
-There are three "levels" of slices, and there can be a root slice in each
+There are four "levels" of slices, and there can be a root slice in each
 level. The levels of slices are as follows:
 
 * Level 0 is used for the main game. This is used for the screen which is
@@ -25,6 +25,9 @@ specified by the board info.
 
 * Level 2 is used for text windows, custom windows, and submenus of the
 special option menu.
+
+* Level 3 is not rendered, and is used temporarily for holding a slice that
+is created at run time.
 
 Each slice has a type, size, optional ID, and any combination of flags:
 
@@ -59,6 +62,19 @@ The bits of the second operand of SLIC have the meanings:
 * bit8 = Tells whether to use the primary or secondary slice ID. Uses the
 primary if this bit is clear or secondary if this bit is set. (This is only
 meaningful for direct control by SLIC, and not for SLI0, SLI1, etc.)
+
+* bit9 = Enables chaining. Some slice controls can be used with chaining,
+in which case it returns another slice, and then it will use another slice
+control on that other slice, with the return value as the input value to
+the chained operation. In this case, the "value" parameter (first operand)
+has another meaning, which is that only the low 16-bits are the value, and
+the high 16-bits will have the meanings that the low 16-bits of the second
+operand of SLIC will normally have.
+
+* bit10 = Causes it to work on a root slice of a specified level, instead
+of the slice ID number. Where the ID number comes from, instead the low
+2-bits will be used as the level to work on. If this bit is set and bit8
+is also set, then it will add 2 to the level number.
 
 [00] Assign the slice ID to the primary slice ID. If this slice does not
 have a ID number, then it is assigned ID 1.
@@ -105,19 +121,30 @@ the flag is not set. The order of the flags is as follows:
 
 [33] Set all of the flags of the slice at once, except the NUMBER flag.
 
+[34] Assign a ID number to the slice; only the low 16-bits of the value
+will be used. You cannot change the ID number of the root slice, and you
+cannot set any other slice to ID number zero; in such a case, nothing will
+happen. If another slice has the same ID number, then the slice that had
+that number will no longer have a ID number.
+
 
 === ID slice [0] ===
 
 This is a modifier slice which gives a 16-bit ID number to another slice.
 ID numbers 0 to 3 have built-in uses:
 
-* 0 = The root slice.
+* 0 = The root slice. (This slice number is automatically assigned and
+cannot be reassigned.)
 
 * 1 = A number temporarily assigned to a slice that doesn't have a number.
 
 * 2 = (Reserved)
 
 * 3 = (Reserved)
+
+Other ID numbers can be used for your own use. Slice ID numbers should be
+unique (so that two slices on the same screen do not have the same ID
+number), but not all slices need to have ID numbers.
 
 The ASN.1 format is two fields, the first being the ID number (which is a
 integer) and the second being the slice being modified.
@@ -131,6 +158,18 @@ offset relative to where it should naturally be displayed.
 
 The ASN.1 format of this slice is: the X offset, the Y offset, and then the
 slice that it contains.
+
+Controls specific to this slice are:
+
+[10] Chain to the slice it contains.
+
+[60] Read the X offset.
+
+[61] Read the Y offset.
+
+[70] Write the X offset.
+
+[71] Write the Y offset.
 
 
 === Box slice [2] ===
@@ -161,6 +200,12 @@ they will fit equally, or false to use the normal size of non-space nodes
 and then resize the box to fit instead. (This is EXTRA3 flag.)
 
 * A sequence of the slices that it contains.
+
+Controls specific to this slice are:
+
+[10] Chain to a contained slice given a zero-based index number.
+
+[11] Tell how many slices it contains.
 
 
 === Space slice [3] ===
