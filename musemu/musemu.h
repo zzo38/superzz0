@@ -11,6 +11,7 @@ typedef struct MUSEMU {
   void(*load)(void*object,uint32_t addr,const uint8_t*data,size_t size);
   void(*send)(void*object,const uint8_t*data,size_t size);
   void*(*extension)(void*userdata,const uint8_t*oid,size_t oidlen);
+  uint16_t flag;
 } MUSEMU;
 
 typedef struct MUSEMUinf {
@@ -22,5 +23,10 @@ typedef int(*MUSEMUcb)(void*cbarg,const MUSEMUinf*inf,const MUSEMU*impl);
 
 #define MUSEMU_STEREO 0x0001
 #define MUSEMU_DEBUG 0x0002
+#define MUSEMU_SINGLE_THREAD 0x0004
+#define MUSEMU_EXTERNAL_OUT 0x0010
+#define MUSEMU_EXTERNAL_TIME 0x0020
+#define MUSEMU_FIX_VOLUME 0x0040
+#define MUSEMU_HARD_REAL_TIME 0x0080
 
 const char*musemu_main(uint16_t flag,const char*arg,MUSEMUcb callback,void*cbarg);

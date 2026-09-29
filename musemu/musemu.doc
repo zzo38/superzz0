@@ -34,7 +34,7 @@ text in some cases, such as if dlopen is called with the same file name
 multiple times. Plugins are not required to support this use, although in
 some cases it may be useful e.g. if OIDs can be specified in argument text.
 
-The flags are:
+The flags are for musemu_main are:
 
 * MUSEMU_STEREO = Set if the audio output will be stereo, or clear if it
 is mono.
@@ -43,8 +43,23 @@ is mono.
 case there is an error, or sometimes for other reasons. The argument text
 may contain switches that overrides this.
 
+* MUSEMU_SINGLE_THREAD = Set if it is guaranteed to call all of the
+functions in the same thread that the musemu_main function is called in.
+
+* MUSEMU_EXTERNAL_OUT = Means that the host does not expect to receive
+audio data from the plugin.
+
+* MUSEMU_FIX_VOLUME = Means that the host will always specify the same
+value (usually 1.0) as the values of the ampl and (if stereo) ampr
+arguments of the render function, and the render function is allowed to
+ignore the value of that argument and treat it as 1.0 instead.
+
+(You can usually safely ignore most of these flags, but it is possible
+that some implementations might care about some of them.)
+
 The MUSEMUinf structure contains the OID in binary format, and its size
-in bytes. This must be a absolute OID.
+in bytes. This must be a absolute OID (and does not include the type and
+length header; it is only the OID itself).
 
 The MUSEMU structure contains:
 
@@ -92,6 +107,9 @@ argument is the userdata in this structure, and the other arguments specify
 which extension, and it returns some kind of pointer relating to that
 extension, or null if that extension is not available.
 
+* flag = The flags that are appropriate for this implementation. See the
+below list of flags. These flags might be ignored by some programs.
+
 All of the above functions are required (they cannot be null), with the
 exception of the "extension" function (which may be null), although it is
 not required for any of the functions to do anything.
@@ -124,3 +142,28 @@ If the implementation uses real sound cards, then render might do nothing
 other than timing synchronization, and create and destroy might only keep
 a counter for the maximum number of instances.
 
+The flags in the MUSEMU structure are:
+
+* MUSEMU_STEREO = Set if this uses stereo output or clear for mono output.
+If this is not the same as the mono/stereo flag given to musemu_main, then
+it is implementation-dependent whether the render function is called with
+the mono or stereo format.
+
+* MUSEMU_EXTERNAL_OUT = Indicates that it does not produce audio data as
+output, and instead will sent to something external, such as a real OPL3
+sound card, or an external MIDI synthesizer, or a file, etc.
+
+* MUSEMU_EXTERNAL_TIME = Means that external timing is used, so that the
+render function should be called at the correct rate and that it should
+not be subject to significant latency. (It is unspecified what happens if
+this criteria is not met.)
+
+* MUSEMU_FIX_VOLUME = The volume is fixed and cannot be changed (except
+possibly by something external to the program). (This can be used if it
+controls a sound card that lacks a volume control.)
+
+* MUSEMU_HARD_REAL_TIME = The meaning of this flag is like the LADSPA flag
+called LADSPA_PROPERTY_HARD_RT_CAPABLE. See ladspa.h for details.
+
+(Super ZZ Zero does not use these flags at all, but it is possible that
+some other programs might have a use for some of them.)
