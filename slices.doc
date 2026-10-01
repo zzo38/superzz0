@@ -76,6 +76,12 @@ of the slice ID number. Where the ID number comes from, instead the low
 2-bits will be used as the level to work on. If this bit is set and bit8
 is also set, then it will add 2 to the level number.
 
+* bit12 = This bit is used by some controls as an additional input.
+
+* bit13 = Causes it to use zero as the input instead of the specified
+value, and the output value is added to the original input value to make
+the new output value.
+
 [00] Assign the slice ID to the primary slice ID. If this slice does not
 have a ID number, then it is assigned ID 1.
 
@@ -92,6 +98,16 @@ size of the slice.
 [04] If the slice has the MANUAL flag, then it works like code 0x02 but
 the MANUAL flag is temporarily cleared. If the slice does not have the
 MANUAL flag then it works like 0x03.
+
+[05] Destroy a slice. This normally only works when specifying the level
+and not when specifying the ID.
+
+[06] Recalculate the horizontal size; this does not set the size of the
+slice but still calls the measurement function, using the input value as
+the intended size from its container and the output value will then be
+the size which is measured.
+
+[07] Like 0x06 but vertical instead of horizontal.
 
 [20] Read the width.
 
@@ -126,6 +142,13 @@ will be used. You cannot change the ID number of the root slice, and you
 cannot set any other slice to ID number zero; in such a case, nothing will
 happen. If another slice has the same ID number, then the slice that had
 that number will no longer have a ID number.
+
+[38] If bit12 is set or if this is a root slice of any level, then there
+is no effect; otherwise, clears the NUMBER flag and removes the ID number.
+
+[39-3F] If bit12 is set, then sets the corresponding flag; if bit12 is
+clear, then clears the corresponding flag. (The flags are the same as those
+for controls 0x29 to 0x2F.)
 
 
 === ID slice [0] ===
@@ -162,6 +185,8 @@ slice that it contains.
 Controls specific to this slice are:
 
 [10] Chain to the slice it contains.
+
+[14-15] Forwarded to the slice it contains.
 
 [60] Read the X offset.
 
@@ -206,6 +231,28 @@ Controls specific to this slice are:
 [10] Chain to a contained slice given a zero-based index number.
 
 [11] Tell how many slices it contains.
+
+[14] Set the border Z-index and fill Z-index, and then call control 0x14
+of each slice that it contains.
+
+[15] Relatively set the border Z-index and fill Z-index, and then call
+control 0x15 of each slice that it contains.
+
+[44] Read the border colour.
+
+[45] Read the border Z-index.
+
+[46] Read the fill colour.
+
+[47] Read the fill Z-index.
+
+[54] Set the border colour.
+
+[55] Set the border Z-index.
+
+[56] Set the fill colour.
+
+[57] Set the fill Z-index.
 
 
 === Space slice [3] ===
@@ -324,9 +371,35 @@ the maximum length of the text (1 to 80).
 
 Controls specific to this slice are:
 
+[14] Set the text Z-index and outline Z-index.
+
+[15] Relatively set the text Z-index and outline Z-index.
+
 [40] Read the dynamic string number or the text screen position.
 
+[41] Read the text into the text buffer. This only works if it contains
+literal text and only if the length is not greater than eighty.
+
+[44] Read the text colour.
+
+[45] Read the text Z-index.
+
+[46] Read the outline or background colour.
+
+[47] Read the outline or background Z-index.
+
 [50] Set the dynamic string number or the text screen position.
+
+[51] Copy the text buffer to the slice. This only works if it contains
+literal text, and may be truncated to the maximum length.
+
+[54] Set the text colour.
+
+[55] Set the text Z-index.
+
+[56] Set the outline or background colour.
+
+[57] Set the outline or background Z-index.
 
 
 === Picture slice [11] ===
@@ -346,10 +419,138 @@ position of this slice, instead of ignoring it like slice type 11 does.
 
 === Board grid slice [13] ===
 
+This slice displays the contents of one or more layers of the current board
+grid, using a loaded picture set.
+
+Do not confuse the board grid slice with the grid slice; they are different
+and have different uses than each other.
+
 ...
 
 
 === Mini map slice [14] ===
 
 ...
+
+
+=== Grid slice [15] ===
+
+Do not confuse the grid slice with the board grid slice; they are different
+and have different uses than each other.
+
+...
+
+
+=== Conditional load slice [16] ===
+
+...
+
+
+=== Switch slice [17] ===
+
+...
+
+
+=== Area slice [18] ===
+
+...
+
+
+=== Effect slice [19] ===
+
+This slice is used for making special effects on the screen, based on what
+is already on the screen, at the same or a different position.
+
+The ASN.1 format is:
+
+* Input coordinates, which is a implicit type sequence, which is type 0 for
+the current coordinates, type 1 for relative to the current coordinates,
+and type 2 for absolute; type 0 contains nothing but type 1 and 2 contain
+two integers being the X and Y offsets.
+
+* Output coordinates, in the same format as the input coordinates.
+
+* Boolean which is true to limit the effect to the width and height of this
+slice, or false to use the entire clipping rectangle. This is EXTRA1 flag.
+(If this is false and NOCLIP is true, then the entire screen is affected.)
+
+* Octet string specifying the effect parameters (see below).
+
+* Optionally another octet string specifying effect parameters; if it is
+present then the effect alternates between them for each pixel.
+
+The format of the effect parameters is:
+
+* Minimum Z-index at the input coordinates to allow the effect.
+
+* One more than maximum Z-index at input coordinates to allow the effect.
+
+* Minimum Z-index at the output coordinates to allow the effect.
+
+* One more than maximum Z-index at output coordinates to allow the effect.
+
+* Specifies how the new Z-index is relative to: 0 means absolute, 1 means
+add the value at the input coordinates, 2 means add the value at the output
+coordinates, 3 means add both. These are added to the next byte value and
+then modulo 256.
+
+* The Z-index adjustment value.
+
+* The AND mask for the colour at the input coordinates.
+
+* The AND mask for the colour at the output coordinates.
+
+* The XOR mask for the colour.
+
+Controls specific to this slice are:
+
+[60] Read the output X offset.
+
+[61] Read the output Y offset.
+
+[62] Read the input X offset.
+
+[63] Read the input Y offset.
+
+[70] Write the output X offset.
+
+[71] Write the output Y offset.
+
+[72] Write the input X offset.
+
+[73] Write the input Y offset.
+
+The EXTRA2 and EXTRA3 flags will be set if the input coordinates and if
+the output coordinates are relative.
+
+
+=== Layered slice [20] ===
+
+...
+
+
+=== Isolation slice [21] ===
+
+This slice contains one other slice, and it will isolate some of the
+functions of slices from outer slices.
+
+You can enable or disable measuring inner slices. If enabled, then although
+it will be measured, the result is ignored.
+
+The ASN.1 format is:
+
+* The slice that it contains.
+
+* Two integers being the width and height of the inner slice. You can
+optionally omit both, but cannot omit only one of them.
+
+* Optional boolean, which is true to disable measuring the inner slice
+when the outer slice is measured, or false to enable measuring. The default
+value is true. This is the EXTRA1 flag.
+
+Controls specific to this slice are:
+
+[10] Chain to the slice it contains.
+
+(Controls 0x14 and 0x15 are ignored; they are not forwarded.)
 

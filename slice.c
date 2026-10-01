@@ -5,6 +5,7 @@ exit
 
 #include "common.h"
 
+#define EffectSliceDataSize 9
 typedef struct Slice Slice;
 
 struct Slice {
@@ -35,6 +36,14 @@ struct Slice {
       Uint8 major;
       Uint16 minor,len,maxlen;
     } text;
+    struct {
+      // SLICE_EFFECT
+      Sint16 xi,yi,xo,yo;
+    } effect;
+    struct {
+      // SLICE_ISOLATION
+      Slice*slice;
+    } isolation;
   };
   Uint8 data[0];
 };
@@ -61,6 +70,13 @@ enum {
   SLICE_ORIGINPICTURE=12,
   SLICE_BOARDGRID=13,
   SLICE_MINIMAP=14,
+  SLICE_GRID=15,
+  SLICE_CONDITIONALLOAD=16,
+  SLICE_SWITCH=17,
+  SLICE_AREA=18,
+  SLICE_EFFECT=19,
+  SLICE_LAYERED=20,
+  SLICE_ISOLATION=21,
   NUMSLICETYPES
 };
 
@@ -78,6 +94,9 @@ enum {
 #define SLM_SECONDARY 0x01
 #define SLM_CHAIN 0x02
 #define SLM_ROOT 0x04
+#define SLM_PROGRAM 0x08
+#define SLM_MISCFLAG 0x10
+#define SLM_ADDVALUE 0x20
 
 typedef struct {
   Uint8 kind;
@@ -212,6 +231,7 @@ static void render_OFFSET(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_
 static Sint32 control_OFFSET(Slice*s,Uint8 op,Sint32 in) {
   switch(op) {
     case 0x10: chained=s->offset.slice; break;
+    case 0x14: case 0x15: if(slicetype[s->offset.slice->type].control) return slicetype[s->offset.slice->type].control(s->offset.slice,op,in); break;
     case 0x60: in=s->offset.x; break;
     case 0x61: in=s->offset.y; break;
     case 0x70: s->offset.x=in; break;
@@ -463,9 +483,26 @@ static void free_BOX(Slice*s) {
 }
 
 static Sint32 control_BOX(Slice*s,Uint8 op,Sint32 in) {
+  int x;
   switch(op) {
     case 0x10: if(in>=0 && in<s->box.count) chained=s->box.slices[in]; break;
     case 0x11: in=s->box.count; break;
+    case 0x14:
+      s->box.borderz=s->box.fillz=in;
+      for(x=0;x<s->box.count;x++) if(slicetype[s->box.slices[x]->type].control) slicetype[s->box.slices[x]->type].control(s->box.slices[x],0x14,in);
+      break;
+    case 0x15:
+      s->box.borderz+=in; s->box.fillz+=in;
+      for(x=0;x<s->box.count;x++) if(slicetype[s->box.slices[x]->type].control) slicetype[s->box.slices[x]->type].control(s->box.slices[x],0x15,in);
+      break;
+    case 0x44: return s->box.border;
+    case 0x45: return s->box.borderz;
+    case 0x46: return s->box.fill;
+    case 0x47: return s->box.fillz;
+    case 0x54: s->box.border=in; if(s->box.border<0x30) s->box.border=0; break;
+    case 0x55: s->box.borderz=in; break;
+    case 0x56: s->box.fill=in; if(s->box.fill<0x30) s->box.fill=0; break;
+    case 0x57: s->box.fillz=in; break;
   }
   return in;
 }
@@ -656,14 +693,142 @@ static void render_TEXT(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Re
 
 static Sint32 control_TEXT(Slice*s,Uint8 op,Sint32 in) {
   switch(op) {
+    case 0x14: s->text.draw.textz=s->text.draw.backz=in; break;
+    case 0x15: s->text.draw.textz+=in; s->text.draw.backz+=in; break;
     case 0x40:
       if(s->text.major==1 || s->text.major==3) return s->text.minor;
       break;
+    case 0x41:
+      if(s->text.major==0 && s->text.len<=80) {
+        memcpy(textbuf,s->data,s->text.len);
+        ntextbuf=s->text.len;
+        textbuf[ntextbuf]=0;
+      }
+      break;
+    case 0x44: return s->text.draw.text;
+    case 0x45: return s->text.draw.textz;
+    case 0x46: return s->text.draw.back;
+    case 0x47: return s->text.draw.backz;
     case 0x50:
       if(s->text.major==1) s->text.minor=in;
       if(s->text.major==3 && in>=0 && in<2000) s->text.minor=in;
       break;
+    case 0x54: s->text.draw.text=in&0xFF; if(s->text.draw.text<0x30) s->text.draw.text=0; break;
+    case 0x55: s->text.draw.textz=in&0xFF; break;
+    case 0x56: s->text.draw.back=in&0xFF; if(s->text.draw.back<0x30) s->text.draw.back=0; break;
+    case 0x57: s->text.draw.backz=in&0xFF; break;
   }
+  return in;
+}
+
+static int load_EFFECT_xy(const ASN1_Value*v1,Sint16*px,Sint16*py,Uint8*pf,Uint8 vf) {
+  ASN1_Value v2;
+  if(!v1->constructed || v1->class!=ASN1_CONTEXT_SPECIFIC) return 1;
+  switch(v1->type) {
+    case 0: *pf|=vf; break;
+    case 1:
+      *pf|=vf;
+      if(asn1_first_of(&v2,v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,px)) return 1;
+      if(asn1_next_of(&v2,v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,py)) return 1;
+      break;
+    case 2:
+      *pf&=~vf;
+      if(asn1_first_of(&v2,v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,px)) return 1;
+      if(asn1_next_of(&v2,v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,py)) return 1;
+      break;
+    default: return 1;
+  }
+  return 0;
+}
+
+static Slice*load_EFFECT(const ASN1_Value*v0) {
+  ASN1_Value v1;
+  Slice*s=calloc(1,sizeof(Slice)+EffectSliceDataSize*2);
+  if(!s) err(1,"Allocation failed");
+  if(asn1_first_of(&v1,v0) || load_EFFECT_xy(&v1,&s->effect.xi,&s->effect.yi,&s->flag,SLF_EXTRA2)) SliceError("Input XY offset");
+  if(asn1_next_of(&v1,v0) || load_EFFECT_xy(&v1,&s->effect.xo,&s->effect.yo,&s->flag,SLF_EXTRA3)) SliceError("Output XY offset");
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) SliceError("");
+  if(v1.data[0]) s->flag|=SLF_EXTRA1;
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_OCTET_STRING || v1.length>EffectSliceDataSize) SliceError("Effect data");
+  memcpy(s->data,v1.data,v1.length);
+  if(asn1_next_of(&v1,v0)) {
+    memcpy(s->data+EffectSliceDataSize,s->data,EffectSliceDataSize);
+  } else {
+    if(v1.class || v1.type!=ASN1_OCTET_STRING || v1.length>EffectSliceDataSize) SliceError("");
+    memcpy(s->data+EffectSliceDataSize,v1.data,v1.length);
+  }
+  return s;
+}
+
+static void save_EFFECT_xy(ASN1_Encoder*enc,Sint16 x,Sint16 y,Uint8 f) {
+  if(f && !x && !y) {
+    asn1_construct(enc,ASN1_CONTEXT_SPECIFIC,0,0);
+    asn1_end(enc);
+  } else {
+    asn1_construct(enc,ASN1_CONTEXT_SPECIFIC,f?1:2,0);
+      asn1_encode_integer(enc,x);
+      asn1_encode_integer(enc,y);
+    asn1_end(enc);
+  }
+}
+
+static void save_EFFECT(ASN1_Encoder*enc,const Slice*s) {
+  save_EFFECT_xy(enc,s->effect.xi,s->effect.yi,s->flag&SLF_EXTRA2);
+  save_EFFECT_xy(enc,s->effect.xo,s->effect.yo,s->flag&SLF_EXTRA3);
+  asn1_encode_boolean(enc,s->flag&SLF_EXTRA1);
+  asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,s->data,EffectSliceDataSize);
+  if(memcmp(s->data,s->data+EffectSliceDataSize,EffectSliceDataSize)) asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,s->data+EffectSliceDataSize,EffectSliceDataSize);
+}
+
+static void render_EFFECT(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip) {
+  const SDL_Rect r={.x=x+s->effect.xo,.y=y+s->effect.yo,.w=w,.h=h};
+  g_draw_effect(clip,s->flag&SLF_EXTRA1?&r:clip,s->effect.xi-s->effect.xo,s->effect.yi-s->effect.yo,s->data,s->data+EffectSliceDataSize);
+}
+
+static Slice*load_ISOLATION(const ASN1_Value*v0) {
+  ASN1_Value v1;
+  Slice*s=calloc(1,sizeof(Slice));
+  if(!s) err(1,"Allocation failed");
+  if(asn1_first_of(&v1,v0)) SliceError("");
+  s->isolation.slice=load_one_slice(&v1);
+  if(!s->isolation.slice) SliceError("");
+  s->flag|=SLF_EXTRA1;
+  if(asn1_next_of(&v1,v0)) return s;
+  if(v1.class!=ASN1_UNIVERSAL) SliceError("");
+  if(v1.type==ASN1_INTEGER) {
+    if(asn1_decode_number(&v1,ASN1_INTEGER,&s->isolation.slice->width)) SliceError("");
+    if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->isolation.slice->height)) SliceError("");
+    if(asn1_next_of(&v1,v0)) return s;
+    if(v1.class!=ASN1_UNIVERSAL) SliceError("");
+  }
+  if(v1.type==ASN1_BOOLEAN && v1.length==1 && !v1.data[0]) s->flag&=~SLF_EXTRA1;
+  return s;
+}
+
+static void save_ISOLATION(ASN1_Encoder*enc,const Slice*s) {
+  save_one_slice(enc,s->isolation.slice);
+}
+
+static void free_ISOLATION(Slice*s) {
+  free_slice(s->isolation.slice);
+}
+
+static Sint32 xmeasure_ISOLATION(Slice*s,Sint32 in) {
+  if(s->flag&SLF_EXTRA1) xmeasure_slice(s->isolation.slice,in);
+  return in;
+}
+
+static Sint32 ymeasure_ISOLATION(Slice*s,Sint32 in) {
+  if(s->flag&SLF_EXTRA1) ymeasure_slice(s->isolation.slice,in);
+  return in;
+}
+
+static void render_ISOLATION(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip) {
+  render_one_slice(s->isolation.slice,x,y,w,h,clip);
+}
+
+static Sint32 control_ISOLATION(Slice*s,Uint8 op,Sint32 in) {
+  if(op==0x10) chained=s->isolation.slice;
   return in;
 }
 
@@ -678,6 +843,8 @@ static const SliceType slicetype[NUMSLICETYPES]={
   [SLICE_UNSEEN]={.kind=SLK_MODIFIER,.load=load_IGNORE},
   [SLICE_NOCLIP]={.kind=SLK_MODIFIER,.load=load_IGNORE},
   [SLICE_TEXT]={.kind=SLK_NORMAL,.load=load_TEXT,.save=save_TEXT,.xmeasure=xmeasure_TEXT,.ymeasure=ymeasure_TEXT,.render=render_TEXT,.control=control_TEXT},
+  [SLICE_EFFECT]={.kind=SLK_NORMAL,.load=load_EFFECT,.save=save_EFFECT,.render=render_EFFECT},
+  [SLICE_ISOLATION]={.kind=SLK_NORMAL,.load=load_ISOLATION,.save=save_ISOLATION,.free=free_ISOLATION,.xmeasure=xmeasure_ISOLATION,.ymeasure=ymeasure_ISOLATION,.render=render_ISOLATION,.control=control_ISOLATION},
 };
 
 static Slice*load_one_slice(const ASN1_Value*v0) {
@@ -833,7 +1000,7 @@ Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc) {
     if(!s) return 0;
     chained=0;
     op=value>>16;
-    misc=(value>>24)&~SLM_CHAIN;
+    misc=(value>>24)&~(SLM_CHAIN|SLM_ROOT);
     value=v;
   } else if(misc&SLM_ROOT) {
     if(misc&SLM_SECONDARY) id+=2;
@@ -843,6 +1010,7 @@ Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc) {
     if(id>maxid || !byid[id]) return value;
     s=byid[id];
   }
+  if(misc&SLM_ADDVALUE) return value+control_slices(id,op,0,misc&~SLM_ADDVALUE);
   switch(op) {
     case 0x00: case 0x01:
       if(!(s->flag&SLF_NUMBER)) assign_slice_id(s,1);
@@ -866,6 +1034,9 @@ Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc) {
         goto code0x03;
       }
       break;
+    case 0x05: if(misc&SLM_ROOT) free_slice(s); else goto defa; break;
+    case 0x06: value=xmeasure_slice(s,value); break;
+    case 0x07: value=ymeasure_slice(s,value); break;
     case 0x20: value=s->width; break;
     case 0x21: value=s->height; break;
     case 0x22: value=s->type; break;
@@ -879,7 +1050,13 @@ Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc) {
       if(!value || ((s->flag&SLF_NUMBER) && !s->id)) break;
       assign_slice_id(s,value);
       break;
-    default:
+    case 0x38:
+      if((misc&SLM_MISCFLAG) || !s->id || !(s->flag&SLF_NUMBER)) break;
+      if(s->id<=maxid && byid) byid[s->id]=0;
+      s->flag&=~SLF_NUMBER;
+      break;
+    case 0x39 ... 0x3F: if(misc&SLM_MISCFLAG) s->flag|=1<<(op&7); else s->flag&=~(1<<(op&7)); break;
+    default: defa:
       if(slicetype[s->type].control) value=slicetype[s->type].control(s,op,value);
   }
   return value;

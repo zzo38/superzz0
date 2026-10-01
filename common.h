@@ -873,6 +873,7 @@ int g_clip(const SDL_Rect*in0,const SDL_Rect*in1,SDL_Rect*out);
 void g_draw_box(const SDL_Rect*clip,const SDL_Rect*rect,Uint8 bc,Uint8 bz,Uint8 fc,Uint8 fz,Uint8 translucent);
 void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,const Uint8*text,Uint16 length);
 Uint16 g_measure_text(const DrawText*info,const Uint8*text,Uint16 length,Uint8 xy /* 0=x 1=y */);
+void g_draw_effect(const SDL_Rect*clip,const SDL_Rect*rect,Sint32 xd,Sint32 yd,const Uint8*d0,const Uint8*d1);
 
 // === File access (Hamster archives) ===
 

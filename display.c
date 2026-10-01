@@ -1189,6 +1189,56 @@ void g_draw_text(const SDL_Rect*clip,const SDL_Rect*rect,const DrawText*info,con
   }
 }
 
+static inline void g_draw_effect_at_point(Uint8*p,Uint8*z,Uint8 pp,Uint8 zz,const Uint8*d) {
+  if(zz>=d[0] && zz<d[1] && *z>=d[2] && *z<d[3]) {
+    Uint8 c=((pp&d[6])|(*p&d[7]))^d[8];
+    *p=c|(c<0x30?0x30:0);
+    *z=d[5]+(d[4]&1?zz:0)+(d[4]&2?*z:0);
+  }
+}
+
+void g_draw_effect(const SDL_Rect*clip,const SDL_Rect*rect,Sint32 xd,Sint32 yd,const Uint8*d0,const Uint8*d1) {
+  SDL_Rect r,rr;
+  const Uint8*const d[2]={d0,d1};
+  Uint16 h=scrn->pitch;
+  Uint8*p;
+  Uint8*z;
+  Sint32 x,y,pd,zd;
+  if(g_clip(clip,rect,&r) || xd<=-640 || xd>=640 || yd<=-350 || yd>=350) return;
+  rr=(SDL_Rect){.x=xd<0?-xd:0,.y=yd<0?-yd:0,.w=640-(xd>0?xd:-xd),.h=350-(yd>0?yd:-yd)};
+  if(g_clip(&r,&rr,&r)) return;
+  pd=h*yd+xd; zd=640*yd+xd;
+  if(xd<0 && yd<0) {
+    p=pbuffer+h*(r.y+r.h-1)+r.x+r.w-1;
+    z=zbuffer+640*(r.y+r.h-1)+r.x+r.w-1;
+    for(y=0;y<r.h;y++) {
+      for(x=0;x<r.w;x++) g_draw_effect_at_point(p-x,z-x,p[pd-x],z[zd-x],d[(x^y)&1]);
+      p-=h; z-=640;
+    }
+  } else if(xd<0) {
+    p=pbuffer+h*r.y+r.x+r.w-1;
+    z=zbuffer+640*r.y+r.x+r.w-1;
+    for(y=0;y<r.h;y++) {
+      for(x=0;x<r.w;x++) g_draw_effect_at_point(p-x,z-x,p[pd-x],z[zd-x],d[(x^y)&1]);
+      p+=h; z+=640;
+    }
+  } else if(yd<0) {
+    p=pbuffer+h*(r.y+r.h-1)+r.x;
+    z=zbuffer+640*(r.y+r.h-1)+r.x;
+    for(y=0;y<r.h;y++) {
+      for(x=0;x<r.w;x++) g_draw_effect_at_point(p+x,z+x,p[pd+x],z[zd+x],d[(x^y)&1]);
+      p-=h; z-=640;
+    }
+  } else {
+    p=pbuffer+h*r.y+r.x;
+    z=zbuffer+640*r.y+r.x;
+    for(y=0;y<r.h;y++) {
+      for(x=0;x<r.w;x++) g_draw_effect_at_point(p+x,z+x,p[pd+x],z[zd+x],d[(x^y)&1]);
+      p+=h; z+=640;
+    }
+  }
+}
+
 void redisplay(void) {
   Uint8*p;
   Uint8*q;
