@@ -3500,12 +3500,15 @@ int run_editor(void) {
     }
     win_command('I',"Items/inventory...") edit_items_inventory();
     win_command('.',"More...") {
+      Uint8 gm=0;
       load_general_der();
       start_mode^=0x0001;
+      for(n=0;n<n_general_oids;n++) if(general_oids[n].type==ASN1_RELATIVE_OID && general_oids[n].class!=REMOVED && general_oids[n].length==2 && !memcmp(general_oids[n].data,"\x04\x01",2)) gm=3;
       win_form("Editor") {
         win_help("edit","more");
         win_boolean('p',"Auto pause",start_mode,0x0001);
         win_boolean('4',"40 columns",start_mode,0x0002);
+        win_boolean('g',"Use graphical mode",gm,1);
         win_command('J',"Joystick configuration...") edit_joystick();
         win_command('D',"Default setting override...") edit_default_setting_override();
         win_command('S',"Special option menu...") edit_special_option_menu();
@@ -3522,6 +3525,8 @@ int run_editor(void) {
         win_command_esc(0,"Go back") break;
       }
       start_mode^=0x0001;
+      if(gm==1) add_general_oid(MANDATORY,ASN1_RELATIVE_OID,"\x04\x01",2);
+      if(gm==2) add_general_oid(REMOVED,ASN1_RELATIVE_OID,"\x04\x01",2);
       save_general_der();
       unload_general_der();
     }

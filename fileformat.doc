@@ -857,9 +857,18 @@ Super ZZ Zero, it will use this version number to enable such emulation.
 * ...4.0.(height) means that the world uses custom fonts and/or palettes.
 The (height) must be fourteen; other numbers are not currently supported.
 
+* ...4.1 means to use graphical mode. This will cause the graphical mode
+to be initially enabled, but it can be changed by variable property lists.
+
+* ...4.2 means that the world uses SMZX mode. (This does not automatically
+enable SMZX mode, though.)
+
 * ...4.3.0 means that a non-release version is expected, and ...4.3.1 means
 that a release version is expected. Published world files normally should
 not use non-release versions since the behaviour might not be stable.
+
+* ...4.4 means that the world uses the video colour mask with values other
+than the default value.
 
 All of the further fields are optional. Each one is a implicit typed
 sequence with context-specific class; the type number indicates the

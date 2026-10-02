@@ -31,7 +31,13 @@ static int check_feature(const ASN1_Value*v) {
     return 0;
   }
   if(v->type==ASN1_RELATIVE_OID && v->length==3 && !memcmp(v->data,"\x04\x00\x0E",3)) return 0;
+  if(v->type==ASN1_RELATIVE_OID && v->length==2 && !memcmp(v->data,"\x04\x01",2)) {
+    if(!editor) v_mode|=VIDEO_EGS;
+    return 0;
+  }
+  if(v->type==ASN1_RELATIVE_OID && v->length==2 && !memcmp(v->data,"\x04\x02",3)) return 0;
   if(v->type==ASN1_RELATIVE_OID && v->length==3 && !memcmp(v->data,"\x04\x03",2) && v->data[2]==version_is_release) return 0;
+  if(v->type==ASN1_RELATIVE_OID && v->length==2 && !memcmp(v->data,"\x04\x04",3)) return 0;
   return -1;
 }
 
@@ -184,6 +190,7 @@ const char*init_world(void) {
   int i,j;
   Uint32 u,v;
   FILE*fp;
+  v_mode=VIDEO_80COLUMNS;
   // "!SZ0"
   if(config.version_check) {
     fp=open_lump("!SZ0","r");
