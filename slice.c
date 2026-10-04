@@ -8,6 +8,11 @@ exit
 #define EffectSliceDataSize 9
 typedef struct Slice Slice;
 
+typedef struct {
+  Sint16 x,y;
+  Slice*slice;
+} AreaXY;
+
 struct Slice {
   Uint8 flag,type;
   Sint16 width,height;
@@ -19,7 +24,7 @@ struct Slice {
       Sint16 x,y;
     } offset;
     struct {
-      // SLICE_BOX
+      // SLICE_BOX, SLICE_LAYERED
       Slice**slices;
       Uint16 count;
       Sint8 mar;
@@ -36,6 +41,11 @@ struct Slice {
       Uint8 major;
       Uint16 minor,len,maxlen;
     } text;
+    struct {
+      // SLICE_AREA
+      AreaXY*xy;
+      Uint16 count;
+    } area;
     struct {
       // SLICE_EFFECT
       Sint16 xi,yi,xo,yo;
@@ -262,7 +272,7 @@ static Slice*load_BOX(const ASN1_Value*v0) {
   if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_SEQUENCE || !v1.constructed) SliceError("");
   if(!v1.length) return s;
   s->box.count=asn1_count(&v1);
-  if(!s->box.count || s->box.count>0x7FFF) SliceError("Improper number of slices contained in BOX");
+  if(!s->box.count || s->box.count>0x7FFF) SliceError("Improper number of slices");
   s->box.slices=calloc(s->box.count,sizeof(Slice*));
   if(!s->box.slices) err(1,"Allocation failed");
   for(n=0;n<s->box.count;n++) {
@@ -721,6 +731,92 @@ static Sint32 control_TEXT(Slice*s,Uint8 op,Sint32 in) {
   return in;
 }
 
+static Slice*load_AREA(const ASN1_Value*v0) {
+  ASN1_Value v1,v2,v3;
+  int n;
+  Slice*s=calloc(1,sizeof(Slice));
+  if(!s) err(1,"Allocation failed");
+  if(asn1_first_of(&v1,v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) SliceError("");
+  if(v1.data[0]) s->flag|=SLF_EXTRA1;
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) SliceError("");
+  if(v1.data[0]) s->flag|=SLF_EXTRA2;
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_SEQUENCE) SliceError("");
+  if(!v1.length) return s;
+  s->area.count=asn1_count(&v1);
+  if(!s->area.count || s->area.count>0x7FFF) SliceError("");
+  s->area.xy=calloc(1,sizeof(AreaXY));
+  for(n=0;n<s->area.count;n++) {
+    if(n?asn1_next_of(&v2,&v1):asn1_first_of(&v2,&v1)) SliceError("");
+    if(v2.class || v2.type!=ASN1_SEQUENCE) SliceError("");
+    if(asn1_first_of(&v3,&v2) || v3.class || v3.type!=ASN1_INTEGER || asn1_decode_number(&v3,ASN1_INTEGER,&s->area.xy[n].x)) SliceError("");
+    if(asn1_next_of(&v3,&v2) || v3.class || v3.type!=ASN1_INTEGER || asn1_decode_number(&v3,ASN1_INTEGER,&s->area.xy[n].y)) SliceError("");
+    if(asn1_next_of(&v3,&v2) || !(s->area.xy[n].slice=load_one_slice(&v3))) SliceError("Error loading slice contained in AREA");
+  }
+  return s;
+}
+
+static void save_AREA(ASN1_Encoder*enc,const Slice*s) {
+  int n;
+  asn1_encode_boolean(enc,s->flag&SLF_EXTRA1);
+  asn1_encode_boolean(enc,s->flag&SLF_EXTRA2);
+  for(n=0;n<s->area.count;n++) {
+    asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+      asn1_encode_integer(enc,s->area.xy[n].x);
+      asn1_encode_integer(enc,s->area.xy[n].y);
+      save_one_slice(enc,s->area.xy[n].slice);
+    asn1_end(enc);
+  }
+}
+
+static void free_AREA(Slice*s) {
+  int n;
+  for(n=0;n<s->area.count;n++) free_slice(s->area.xy[n].slice);
+  free(s->area.xy);
+}
+
+static Sint32 xmeasure_AREA(Slice*s,Sint32 in) {
+  int n;
+  for(n=0;n<s->area.count;n++) xmeasure_slice(s->area.xy[n].slice,in);
+  return in;
+}
+
+static Sint32 ymeasure_AREA(Slice*s,Sint32 in) {
+  int n;
+  for(n=0;n<s->area.count;n++) ymeasure_slice(s->area.xy[n].slice,in);
+  return in;
+}
+
+static void render_AREA(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip) {
+  AreaXY*t;
+  int n;
+  SDL_Rect r={.x=x,.y=y,.w=w,.h=h};
+  if(s->flag&SLF_EXTRA1) {
+    if(g_clip(clip,&r,&r)) return;
+  } else {
+    r=*clip;
+  }
+  if(s->flag&SLF_EXTRA2) x=y=0;
+  for(n=0;n<s->area.count;n++) {
+    t=s->area.xy+n;
+    render_one_slice(t->slice,t->x+x,t->y+y,t->slice->width,t->slice->height,&r);
+  }
+}
+
+static Sint32 control_AREA(Slice*s,Uint8 op,Sint32 in) {
+  int x;
+  switch(op) {
+    case 0x10: if(in>=0 && in<s->area.count) chained=s->area.xy[in].slice; break;
+    case 0x11: in=s->area.count; break;
+    case 0x14:
+      for(x=0;x<s->area.count;x++) if(slicetype[s->area.xy[x].slice->type].control) slicetype[s->area.xy[x].slice->type].control(s->area.xy[x].slice,0x14,in);
+      break;
+    case 0x15:
+      for(x=0;x<s->area.count;x++) if(slicetype[s->area.xy[x].slice->type].control) slicetype[s->area.xy[x].slice->type].control(s->area.xy[x].slice,0x15,in);
+      break;
+  }
+  return in;
+}
+
 static int load_EFFECT_xy(const ASN1_Value*v1,Sint16*px,Sint16*py,Uint8*pf,Uint8 vf) {
   ASN1_Value v2;
   if(!v1->constructed || v1->class!=ASN1_CONTEXT_SPECIFIC) return 1;
@@ -785,6 +881,90 @@ static void render_EFFECT(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_
   g_draw_effect(clip,s->flag&SLF_EXTRA1?&r:clip,s->effect.xi-s->effect.xo,s->effect.yi-s->effect.yo,s->data,s->data+EffectSliceDataSize);
 }
 
+static Slice*load_LAYERED(const ASN1_Value*v0) {
+  ASN1_Value v1,v2;
+  int n;
+  Slice*s=calloc(1,sizeof(Slice));
+  if(!s) err(1,"Allocation failed");
+  if(asn1_first_of(&v1,v0) || v1.class || v1.type!=ASN1_BOOLEAN || v1.length!=1) SliceError("");
+  if(v1.data[0]) s->flag|=SLF_EXTRA1;
+  if(asn1_next_of(&v1,v0) || v1.class || v1.type!=ASN1_SEQUENCE) SliceError("");
+  if(!v1.length) return s;
+  s->box.count=asn1_count(&v1);
+  if(!s->box.count || s->box.count>0x7FFF) SliceError("Improper number of slices");
+  s->box.slices=calloc(s->box.count,sizeof(Slice*));
+  if(!s->box.slices) err(1,"Allocation failed");
+  for(n=0;n<s->box.count;n++) {
+    if(n?asn1_next_of(&v2,&v1):asn1_first_of(&v2,&v1)) SliceError("Cannot find slice in LAYERED");
+    if(!(s->box.slices[n]=load_one_slice(&v2))) SliceError("Error loading slice contained in LAYERED");
+  }
+  return s;
+}
+
+static void save_LAYERED(ASN1_Encoder*enc,const Slice*s) {
+  int n;
+  asn1_encode_boolean(enc,s->flag&SLF_EXTRA1);
+  asn1_construct(enc,ASN1_UNIVERSAL,ASN1_SEQUENCE,0);
+    for(n=0;n<s->box.count;n++) save_one_slice(enc,s->box.slices[n]);
+  asn1_end(enc);
+}
+
+static Sint32 xmeasure_LAYERED(Slice*s,Sint32 in) {
+  Sint32 o=0;
+  Sint32 x;
+  Slice*t;
+  int n;
+  for(n=0;n<s->box.count;n++) {
+    t=s->box.slices[n];
+    if(!(t->flag&SLF_IGNORE)) {
+      x=xmeasure_slice(t,in);
+      if(o>x) o=x;
+    }
+  }
+  return o;
+}
+
+static Sint32 ymeasure_LAYERED(Slice*s,Sint32 in) {
+  Sint32 o=0;
+  Sint32 x;
+  Slice*t;
+  int n;
+  for(n=0;n<s->box.count;n++) {
+    t=s->box.slices[n];
+    if(!(t->flag&SLF_IGNORE)) {
+      x=ymeasure_slice(t,in);
+      if(o>x) o=x;
+    }
+  }
+  return o;
+}
+
+static void render_LAYERED(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip) {
+  SDL_Rect r={.x=x,.y=y,.w=w,.h=h};
+  int n;
+  if(s->flag&SLF_EXTRA1) {
+    if(g_clip(clip,&r,&r)) return;
+  } else {
+    r=*clip;
+  }
+  for(n=0;n<s->box.count;n++) render_one_slice(s->box.slices[n],x,y,w,h,&r);
+}
+
+static Sint32 control_LAYERED(Slice*s,Uint8 op,Sint32 in) {
+  int x;
+  switch(op) {
+    case 0x10: if(in>=0 && in<s->box.count) chained=s->box.slices[in]; break;
+    case 0x11: in=s->box.count; break;
+    case 0x14:
+      for(x=0;x<s->box.count;x++) if(slicetype[s->box.slices[x]->type].control) slicetype[s->box.slices[x]->type].control(s->box.slices[x],0x14,in);
+      break;
+    case 0x15:
+      for(x=0;x<s->box.count;x++) if(slicetype[s->box.slices[x]->type].control) slicetype[s->box.slices[x]->type].control(s->box.slices[x],0x15,in);
+      break;
+  }
+  return in;
+}
+
 static Slice*load_ISOLATION(const ASN1_Value*v0) {
   ASN1_Value v1;
   Slice*s=calloc(1,sizeof(Slice));
@@ -843,7 +1023,9 @@ static const SliceType slicetype[NUMSLICETYPES]={
   [SLICE_UNSEEN]={.kind=SLK_MODIFIER,.load=load_IGNORE},
   [SLICE_NOCLIP]={.kind=SLK_MODIFIER,.load=load_IGNORE},
   [SLICE_TEXT]={.kind=SLK_NORMAL,.load=load_TEXT,.save=save_TEXT,.xmeasure=xmeasure_TEXT,.ymeasure=ymeasure_TEXT,.render=render_TEXT,.control=control_TEXT},
+  [SLICE_AREA]={.kind=SLK_NORMAL,.load=load_AREA,.save=save_AREA,.free=free_AREA,.xmeasure=xmeasure_AREA,.ymeasure=ymeasure_AREA,.render=render_AREA,.control=control_AREA},
   [SLICE_EFFECT]={.kind=SLK_NORMAL,.load=load_EFFECT,.save=save_EFFECT,.render=render_EFFECT},
+  [SLICE_LAYERED]={.kind=SLK_NORMAL,.load=load_LAYERED,.save=save_LAYERED,.free=free_BOX,.xmeasure=xmeasure_LAYERED,.ymeasure=ymeasure_LAYERED,.render=render_LAYERED,.control=control_LAYERED},
   [SLICE_ISOLATION]={.kind=SLK_NORMAL,.load=load_ISOLATION,.save=save_ISOLATION,.free=free_ISOLATION,.xmeasure=xmeasure_ISOLATION,.ymeasure=ymeasure_ISOLATION,.render=render_ISOLATION,.control=control_ISOLATION},
 };
 

@@ -453,7 +453,26 @@ and have different uses than each other.
 
 === Area slice [18] ===
 
-...
+This slice displays its contents at coordinates that are freely specified
+for each slice it contains. These coordinates may be relative or absolute.
+
+The ASN.1 format is:
+
+* Boolean (the EXTRA1 flag) which is true to clip the contents.
+
+* Boolean (the EXTRA2 flag) which is true for absolute coordinates or false
+for relative to the area slice.
+
+* Sequence of records, each of which is a sequence with three fields: the
+X coordinate, the Y coordinate, and the slice.
+
+Controls specific to this slice are:
+
+[10] Chain to a contained slice given a zero-based index number.
+
+[11] Tell how many slices it contains.
+
+[14-15] Forwarded to all of the slices that it contains.
 
 
 === Effect slice [19] ===
@@ -526,7 +545,22 @@ the output coordinates are relative.
 
 === Layered slice [20] ===
 
-...
+This slice contains several other slices, which are all displayed at the
+same place (rather than a box slice which places them next to each other).
+
+The ASN.1 format is:
+
+* Boolean (EXTRA1 flag) which is true to clip the contents.
+
+* Sequence of the slices that it contains.
+
+Controls specific to this slice are:
+
+[10] Chain to a contained slice given a zero-based index number.
+
+[11] Tell how many slices it contains.
+
+[14-15] Forwarded to all of the slices that it contains.
 
 
 === Isolation slice [21] ===

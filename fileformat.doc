@@ -831,6 +831,19 @@ be AP_PARAM and the minor code will be zero. Otherwise, whichever code is
 not set will be zero (if it is the major code, zero is AP_FIXED).
 
 
+=== EXTEDIT.DER ===
+
+This is not used by the reference implementation of Super ZZ Zero, but may
+be used by external editors and/or enhanced editors, and contains things
+which are specific to that implementation of the editor. It is not intended
+to be used for anything that affects the game play; it is only for storing
+editor settings and other things relating to editing.
+
+The format is a key/value list (normally there is only one key/value pair
+but it is allowed to have more than one), where the key is a OID and the
+value can be anything appropriate according to the OID.
+
+
 === GENERAL.DER ===
 
 This lump is optional, and is only needed if any of the features specified
