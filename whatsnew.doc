@@ -27,6 +27,8 @@ SCRIPTS
   +  #CHANGEINZONE like #CHANGE but limited to one zone.
   +  Absolute subtraction operator.
   +  Expression (PP) for Manhattan distance to player.
+  +  #SEND can use a numeric expression in parentheses within the label
+     name in order to replace it with the decimal number.
 
 ASSEMBLY
   +  Memory cell $B7 to define default background data behind the main

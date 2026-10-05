@@ -358,7 +358,9 @@ are not allowed in this case.
 #SEND [name:]label
   Go to the specified label, if it exists. If a name is specified, then
   affects all stats matching that name; in this case, it will not send
-  to anything which is locked.
+  to anything which is locked. It is possible for the name or label to
+  include a numeric expression in parentheses, which will be replaced by
+  the decimal value of the expression.
 
 #SENDALL label
   Like "#SEND name" but sends to everything that isn't locked.

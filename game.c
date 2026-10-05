@@ -4209,6 +4209,13 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
         send:
         *buf='*';
         for(v=1;v<126 && ip<s->length && s->text[ip]>=0x20;v++) {
+          if(v<100 && s->text[ip]==40) {
+            u=parse_number(s,xy,&ip);
+            if(condflag) {
+              v+=snprintf(buf+v,125-v,"%ld",(long)u);
+              continue;
+            }
+          }
           buf[v]=s->text[ip++];
           if(buf[v]==':') *buf=0;
         }
