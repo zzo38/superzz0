@@ -4037,6 +4037,15 @@ static void script_do_change(const ScriptKind*sk,const ScriptKind*sk1) {
   }
 }
 
+static void script_do_change_in_zone(const ScriptKind*sk,const ScriptKind*sk1,Uint8 zone) {
+  Uint32 at;
+  Uint32 m=board_info.width*board_info.height;
+  for(at=0;at<m;at++) if(in_zone(at%board_info.width,at/board_info.width,zone)) {
+    if(match_script_kind(at,1,sk)) change_to_script_kind(at%board_info.width,at/board_info.width,1,sk1);
+    if(match_script_kind(at,2,sk)) change_to_script_kind(at%board_info.width,at/board_info.width,2,sk1);
+  }
+}
+
 static inline void dieitem(Uint16 m,Uint16 n) {
   StatXY xy=stats[m-1].xy[n];
   StatXY yx;
@@ -4272,6 +4281,10 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
             if(!strcmp(buf,"CHANGE")) {
               if(!parse_kind(s,xy,&ip,&sk,0) || !parse_kind(s,xy,&ip,&sk1,1)) {script_error(m,xy,"Improper #CHANGE"); return;}
               script_do_change(&sk,&sk1);
+            } else if(!strcmp(buf,"CHANGEINZONE")) {
+              u=parse_number(s,xy,&ip);
+              if(!parse_kind(s,xy,&ip,&sk,0) || !parse_kind(s,xy,&ip,&sk1,1)) {script_error(m,xy,"Improper #CHANGE"); return;}
+              script_do_change_in_zone(&sk,&sk1,u);
             } else if(!strcmp(buf,"CLEAR")) {
               script_set_flag(s,xy,&ip,0);
             } else if(!strcmp(buf,"CLEARALL")) {

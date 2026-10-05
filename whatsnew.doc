@@ -24,6 +24,7 @@ GAME
 
 SCRIPTS
   +  #BACKDROP command to display backdrops.
+  +  #CHANGEINZONE like #CHANGE but limited to one zone.
   +  Absolute subtraction operator.
   +  Expression (PP) for Manhattan distance to player.
 

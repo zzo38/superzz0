@@ -166,6 +166,9 @@ are not allowed in this case.
   Changes all tiles that match the first kind to the second kind. Affects
   the main layer and the under layer.
 
+#CHANGEINZONE number kind kind
+  Like #CHANGE but only within the specified zone.
+
 #CLEAR flag
   Clear a flag.
 
