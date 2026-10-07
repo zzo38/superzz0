@@ -79,17 +79,6 @@ static Uint8 spec_possible(const ASN1_Value*oids,Uint16 nv,const Uint16*val,Spec
   return 1;
 }
 
-static Uint8 draw_digit(Uint16 n,Uint8 p) {
-  const NumericFormat*f=num_format+(p>>4);
-  n/=f->div;
-  p&=15;
-  while(p--) n/=10;
-  if(!n) return f->lead;
-  if(f->code==NF_DECIMAL) return (n%10)+'0';
-  if(f->code==NF_COMMA) return f->mark;
-  return 0;
-}
-
 static void draw_sc(const WindowInfo*wind,Uint16 flag,Uint16 ln,Uint16 lc,Uint16 cs,Uint8 ok,Uint8 wc) {
   Uint8 cmd,col,chr;
   int i;
@@ -105,14 +94,14 @@ static void draw_sc(const WindowInfo*wind,Uint16 flag,Uint16 ln,Uint16 lc,Uint16
       case SC_NUMERIC ... SC_NUMERIC_SPECIAL+14: case SC_IND_CURSOR: num:
         v_font[i]=VF_FRONT;
         v_color[i]=col;
-        if(cmd==SC_SPEC_TEXT_LINE_NUMBER) v_char[i]=draw_digit(ln,chr);
-        else if(cmd==SC_SPEC_TEXT_LINE_COUNT) v_char[i]=draw_digit(lc,chr);
+        if(cmd==SC_SPEC_TEXT_LINE_NUMBER) v_char[i]=digit_of(ln,chr);
+        else if(cmd==SC_SPEC_TEXT_LINE_COUNT) v_char[i]=digit_of(lc,chr);
         else v_char[i]=0;
         break;
       case SC_SPEC_CONTEXT_SPECIFIC:
         if(!ok) goto num;
         v_font[i]=VF_FRONT;
-        v_char[i]=draw_digit(cs,chr);
+        v_char[i]=digit_of(cs,chr);
         v_color[i]=wc?:col;
         break;
       case SC_TEXT ... SC_TEXT+15:
@@ -150,7 +139,7 @@ static void draw_menu_field(const ASN1_Value*v0,int at,int len,const WindowInfo*
       if(specopt[n].flag&SPECF_VARIABLE) x=spec_auto_value(specopt[n].key);
       for(b=at;b<end;b++) {
         if(cur_screen.command[b]==SC_SPEC_CONTEXT_SPECIFIC) {
-          v_char[b]=draw_digit(x,cur_screen.parameter[b]);
+          v_char[b]=digit_of(x,cur_screen.parameter[b]);
           if(c) v_color[b]=c;
         }
       }

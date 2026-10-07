@@ -542,6 +542,7 @@ const char*load_screen(FILE*fp);
 const char*save_screen(FILE*fp);
 void update_screen(void);
 void update_panels(void);
+Uint8 digit_of(Uint32 n,Uint8 f);
 
 // === Screen windows ===
 

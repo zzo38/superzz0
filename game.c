@@ -734,7 +734,7 @@ static void display_message_text(void) {
   }
 }
 
-static Uint8 digit_of(Uint32 n,Uint8 f) {
+Uint8 digit_of(Uint32 n,Uint8 f) {
   static const Uint8 roman1[10]={0,1,2,3,2,1,2,3,4,1};
   static const Uint8 roman2[40]={
     0,0,0,0,

@@ -94,8 +94,6 @@ The only numbers used in a numeric option screen are:
 þ Line count þ The maximum value
 þ Context-specific þ The current value
 
-The only numeric formats that are available are decimal and commas.
-
 The number keys, as well as up/down arrows, and plus/minus, backspace,
 delete, can be used to adjust the value, followed by return or escape.
 
@@ -112,8 +110,6 @@ numeric options, the title can be displayed in the message area if present.
 The valid screen elements are: backgrounds, text windows, cursor indicator,
 and numbers as follows: line number, line count, and context-specific (the
 value of the selected option).
-
-The only numeric formats that are available are decimal and commas.
 
 The selected item colour is also used for the currently selected value, and
 the fixed item colour is used if this option is currently locked.
