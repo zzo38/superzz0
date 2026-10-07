@@ -150,7 +150,7 @@ numbers are treated as unsigned.
 [026 VBC]
   Clears a bit in a bit array. The second operand is the address of the bit
   array; the first selects the bit, where 0 to 15 is the first cell (where
-  0 means the low bit), 16 to 31 for the second sell (i.e. add 1 to the
+  0 means the low bit), 16 to 31 for the second cell (i.e. add 1 to the
   address), etc.
 
 [027 VBS]
@@ -176,7 +176,6 @@ numbers are treated as unsigned.
   B = Board/screen info
   C = Text buffer
   D = Status variables
-  E = Memory management
   F = Stats
   G = Inventory
 

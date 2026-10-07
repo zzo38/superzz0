@@ -100,7 +100,7 @@ the MANUAL flag is temporarily cleared. If the slice does not have the
 MANUAL flag then it works like 0x03.
 
 [05] Destroy a slice. This normally only works when specifying the level
-and not when specifying the ID.
+and not when specifying the ID, and cannot be used during rendering.
 
 [06] Recalculate the horizontal size; this does not set the size of the
 slice but still calls the measurement function, using the input value as
@@ -296,7 +296,66 @@ This modifier slice sets the NOCLIP flag of the modified slice.
 
 === Meter slice [9] ===
 
-...
+This slice is used to display a box of a variable size depending on the
+value. It can contain up to one other slice, which may optionally be
+repeated as many times as will fit. (The inner slice is always clipped.)
+
+The ASN.1 format is:
+
+* Enumerated specifying the direction: 0 (top to bottom), 1 (bottom to
+top), 2 (left to right), 3 (right to left).
+
+* The border colour and Z-index, which is application type 0.
+
+* The fill colour and Z-index, which is application type 0, and it can
+include translucency.
+
+* The slice it contains, or null if it does not contain any.
+
+* Boolean (the EXTRA1 flag) which is true to repeat or false to not repeat.
+This may be omitted (it is false by default) if it doesn't contain a slice.
+
+* The expected size (in the direction that it extends), which is a integer.
+If it is null then it will use the size of its container, or the manual
+size if it is set.
+
+* A rational number specifying the scale factor of the meter. If this
+number is 1/1 then the value will be the number of pixels.
+
+* Specification of the source of the value. This is one of the formats
+listed below.
+
+The formats of the source of the value can be:
+
+* Explicit type 0 integer = The literal value directly.
+
+* Explicit type 1 enumerated = A status variable, from 0 (A) to 15 (Z).
+
+Controls specific to this slice are:
+
+[10] Chain to a the contained slice (if any).
+
+[14] Set the border Z-index and fill Z-index, and then call control 0x14
+of each slice that it contains.
+
+[15] Relatively set the border Z-index and fill Z-index, and then call
+control 0x15 of each slice that it contains.
+
+[44] Read the border colour.
+
+[45] Read the border Z-index.
+
+[46] Read the fill colour.
+
+[47] Read the fill Z-index.
+
+[54] Set the border colour.
+
+[55] Set the border Z-index.
+
+[56] Set the fill colour.
+
+[57] Set the fill Z-index.
 
 
 === Text slice [10] ===

@@ -140,9 +140,6 @@ static void debug_log(Uint8 fo,Sint32 so,Sint32 w,Sint32 x,Sint32 y,Sint32 z,Uin
     case 3: // Status variables
       for(i=0;i<16;i++) fprintf(f," %c=%ld",i+(i&8?'S'-8:'A'),(long)status_vars[i]);
       break;
-    case 4: // Memory management
-      fputs("(Not implemented)",f);
-      break;
     case 5: // Stats
       for(i=0;i<maxstat;i++) fprintf(f,"\n %d: count=%d xy=%p length=%d text=%p speed=%d",i+1,stats[i].count,stats[i].xy,stats[i].length,stats[i].text,stats[i].speed);
       break;

@@ -13,6 +13,11 @@ typedef struct {
   Slice*slice;
 } AreaXY;
 
+typedef struct {
+  Sint32 minor;
+  Uint8 major;
+} NumSource;
+
 struct Slice {
   Uint8 flag,type;
   Sint16 width,height;
@@ -35,8 +40,16 @@ struct Slice {
       Sint16 natural,stretch,shrink;
     } space;
     struct {
+      // SLICE_METER
+      Slice*slice;
+      NumSource value;
+      Uint8 border,borderz,fill,fillz,translucent,dir;
+      Uint16 size,numerator,denominator;
+    } meter;
+    struct {
       // SLICE_TEXT
       DrawText draw;
+      NumSource value;
       Sint8 xpad,ypad;
       Uint8 major;
       Uint16 minor,len,maxlen;
@@ -62,6 +75,7 @@ static Slice**byid;
 static Uint16 maxid;
 static Slice*root[4];
 static Slice*chained;
+static char rendering;
 
 // Slice:type
 enum {
@@ -107,6 +121,10 @@ enum {
 #define SLM_PROGRAM 0x08
 #define SLM_MISCFLAG 0x10
 #define SLM_ADDVALUE 0x20
+
+// NumSource:major
+#define NUMS_DIRECT 0
+#define NUMS_STATUSVAR 1
 
 typedef struct {
   Uint8 kind;
@@ -169,6 +187,46 @@ static void save_z_and_color(ASN1_Encoder*enc,const Uint8*z,const Uint8*c,const 
     asn1_primitive(enc,ASN1_APPLICATION,0,h,2);
   } else {
     asn1_primitive(enc,ASN1_APPLICATION,0,z,1);
+  }
+}
+
+static int load_numsource(const ASN1_Value*v,NumSource*u) {
+  ASN1_Value v1;
+  if(v->class!=ASN1_CONTEXT_SPECIFIC) return ASN1_IMPROPER_TYPE;
+  switch(v->type) {
+    case 0:
+      u->major=NUMS_DIRECT;
+      if(asn1_first_of(&v1,v) || v1.class || v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&u->minor)) return ASN1_IMPROPER_VALUE;
+      break;
+    case 1:
+      u->major=NUMS_STATUSVAR;
+      if(asn1_first_of(&v1,v) || v1.class || v1.type!=ASN1_ENUMERATED || v1.length!=1 || (v1.data[0]&~15)) return ASN1_IMPROPER_VALUE;
+      u->minor=v1.data[0];
+      break;
+    default: fprintf(stderr,"Slice loading error: Improper numeric source type %d\n",v->type); return ASN1_IMPROPER_TYPE;
+  }
+  return ASN1_OK;
+}
+
+static void save_numsource(ASN1_Encoder*enc,const NumSource*u) {
+  switch(u->major) {
+    case NUMS_DIRECT:
+      asn1_explicit(enc,ASN1_CONTEXT_SPECIFIC,0);
+      asn1_encode_integer(enc,u->minor);
+      break;
+    case NUMS_STATUSVAR:
+      asn1_explicit(enc,ASN1_CONTEXT_SPECIFIC,1);
+      asn1_implicit(enc,ASN1_UNIVERSAL,ASN1_ENUMERATED);
+      asn1_encode_integer(enc,u->minor);
+      break;
+  }
+}
+
+static Sint32 decide_numvalue(const NumSource*u) {
+  switch(u->major) {
+    case NUMS_DIRECT: return u->minor;
+    case NUMS_STATUSVAR: return status_vars[u->minor&15];
+    default: return 0; // this should not happen
   }
 }
 
@@ -574,6 +632,128 @@ static Slice*load_IGNORE(const ASN1_Value*v0) {
   if(asn1_first_of(&v1,v0) || !(s=load_one_slice(&v1))) SliceError("Error loading modifier slice");
   s->flag|=0x200>>v0->type;
   return s;
+}
+
+static Slice*load_METER(const ASN1_Value*v0) {
+  ASN1_Value v1,v2;
+  Slice*s;
+  if(asn1_first_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_ENUMERATED || v1.length!=1 || v1.data[0]>3) SliceError("");
+  s=calloc(1,sizeof(Slice));
+  if(!s) err(1,"Allocation failed");
+  s->meter.dir=v1.data[0];
+  if(asn1_next_of(&v1,v0) || load_z_and_color(&v1,&s->meter.borderz,&s->meter.border,0)) SliceError("Improper color/Z-index");
+  if(asn1_next_of(&v1,v0) || load_z_and_color(&v1,&s->meter.fillz,&s->meter.fill,&s->meter.translucent)) SliceError("Improper color/Z-index");
+  if(asn1_next_of(&v1,v0)) SliceError("");
+  if(v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_NULL) {
+    if(!(s->meter.slice=load_one_slice(&v1))) SliceError("");
+  }
+  if(asn1_next_of(&v1,v0)) SliceError("");
+  if(v1.class==ASN1_UNIVERSAL && v1.type==ASN1_BOOLEAN && v1.length==1) {
+    if(v1.data[0]) s->flag|=SLF_EXTRA1;
+    if(asn1_next_of(&v1,v0)) SliceError("");
+  }
+  if(v1.class!=ASN1_UNIVERSAL) SliceError("");
+  if(v1.type!=ASN1_NULL && (v1.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->meter.size))) SliceError("");
+  if(asn1_next_of(&v1,v0) || v1.class!=ASN1_UNIVERSAL || v1.type!=ASN1_RATIONAL || !v1.constructed) SliceError("");
+  if(asn1_first_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&s->meter.numerator)) SliceError("");
+  if(asn1_next_of(&v2,&v1) || v2.class!=ASN1_UNIVERSAL || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&s->meter.denominator)) SliceError("");
+  if(!s->meter.denominator) SliceError("Division by zero");
+  if(asn1_next_of(&v1,v0) || load_numsource(&v1,&s->meter.value)) SliceError("");
+  return s;
+}
+
+static void save_METER(ASN1_Encoder*enc,const Slice*s) {
+  asn1_implicit(enc,ASN1_UNIVERSAL,ASN1_ENUMERATED);
+  asn1_encode_integer(enc,s->meter.dir);
+  save_z_and_color(enc,&s->meter.borderz,&s->meter.border,0);
+  save_z_and_color(enc,&s->meter.fillz,&s->meter.fill,&s->meter.translucent);
+  save_one_slice(enc,s->meter.slice);
+  if(s->flag&SLF_EXTRA1) asn1_encode_boolean(enc,1);
+  asn1_encode_integer(enc,s->meter.size);
+  asn1_construct(enc,ASN1_UNIVERSAL,ASN1_RATIONAL,0);
+    asn1_encode_integer(enc,s->meter.numerator);
+    asn1_encode_integer(enc,s->meter.denominator);
+  asn1_end(enc);
+  save_numsource(enc,&s->meter.value);
+}
+
+static void free_METER(Slice*s) {
+  free(s->meter.slice);
+}
+
+static Sint32 xmeasure_METER(Slice*s,Sint32 in) {
+  if(s->meter.slice && !(s->meter.slice->flag&SLF_IGNORE)) {
+    Sint32 x=xmeasure_slice(s->meter.slice,in);
+    if(!(s->meter.slice->flag&SLF_MANUAL)) s->meter.slice->width=x;
+  }
+  return (s->meter.dir<2?(s->meter.size?:in):in);
+}
+
+static Sint32 ymeasure_METER(Slice*s,Sint32 in) {
+  if(s->meter.slice && !(s->meter.slice->flag&SLF_IGNORE)) {
+    Sint32 x=ymeasure_slice(s->meter.slice,in);
+    if(!(s->meter.slice->flag&SLF_MANUAL)) s->meter.slice->height=x;
+  }
+  return (s->meter.dir<2?in:(s->meter.size?:in));
+}
+
+static void render_METER(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const SDL_Rect*clip) {
+  Slice*t=s->meter.slice;
+  Uint8 d=s->meter.dir;
+  Sint32 v=decide_numvalue(&s->meter.value);
+  Sint32 z;
+  SDL_Rect r;
+  z=(v*(Sint64)s->meter.numerator)/s->meter.denominator;
+  if(d<2) {
+    if(d==BottomToTop) y+=h-z;
+    h=z;
+  } else {
+    if(d==RightToLeft) x+=w-z;
+    w=z;
+  }
+  if(w<0 || h<0) return;
+  r=(SDL_Rect){.x=x,.y=y,.w=w,.h=h};
+  if(s->meter.border || s->meter.fill) g_draw_box(clip,&r,s->meter.border,s->meter.borderz,s->meter.fill,s->meter.fillz,s->meter.translucent);
+  if(!t || (t->flag&SLF_UNSEEN) || g_clip(clip,&r,&r)) return;
+  if(w<=0 || h<=0) return;
+  if(s->flag&SLF_EXTRA1) {
+    if(d<2) {
+      while(h>0 && t->height>0) {
+        render_one_slice(t,x,y,w,t->height,&r);
+        y+=t->height; h-=t->height;
+      }
+    } else {
+      while(w>0 && t->width>0) {
+        render_one_slice(t,x,y,t->width,h,&r);
+        x+=t->width; w-=t->width;
+      }
+    }
+  } else {
+    render_one_slice(t,x,y,w,h,&r);
+  }
+}
+
+static Sint32 control_METER(Slice*s,Uint8 op,Sint32 in) {
+  switch(op) {
+    case 0x10: chained=s->meter.slice; break;
+    case 0x14:
+      s->meter.borderz=s->meter.fillz=in;
+      if(s->meter.slice && slicetype[s->meter.slice->type].control) slicetype[s->meter.slice->type].control(s->meter.slice,0x14,in);
+      break;
+    case 0x15:
+      s->meter.borderz+=in; s->meter.fillz+=in;
+      if(s->meter.slice && slicetype[s->meter.slice->type].control) slicetype[s->meter.slice->type].control(s->meter.slice,0x15,in);
+      break;
+    case 0x44: return s->meter.border;
+    case 0x45: return s->meter.borderz;
+    case 0x46: return s->meter.fill;
+    case 0x47: return s->meter.fillz;
+    case 0x54: s->meter.border=in; if(s->meter.border<0x30) s->meter.border=0; break;
+    case 0x55: s->meter.borderz=in; break;
+    case 0x56: s->meter.fill=in; if(s->meter.fill<0x30) s->meter.fill=0; break;
+    case 0x57: s->meter.fillz=in; break;
+  }
+  return in;
 }
 
 static Slice*load_TEXT(const ASN1_Value*v0) {
@@ -1022,6 +1202,7 @@ static const SliceType slicetype[NUMSLICETYPES]={
   [SLICE_IGNORE]={.kind=SLK_MODIFIER,.load=load_IGNORE},
   [SLICE_UNSEEN]={.kind=SLK_MODIFIER,.load=load_IGNORE},
   [SLICE_NOCLIP]={.kind=SLK_MODIFIER,.load=load_IGNORE},
+  [SLICE_METER]={.kind=SLK_NORMAL,.load=load_METER,.save=save_METER,.free=free_METER,.xmeasure=xmeasure_METER,.ymeasure=ymeasure_METER,.render=render_METER,.control=control_METER},
   [SLICE_TEXT]={.kind=SLK_NORMAL,.load=load_TEXT,.save=save_TEXT,.xmeasure=xmeasure_TEXT,.ymeasure=ymeasure_TEXT,.render=render_TEXT,.control=control_TEXT},
   [SLICE_AREA]={.kind=SLK_NORMAL,.load=load_AREA,.save=save_AREA,.free=free_AREA,.xmeasure=xmeasure_AREA,.ymeasure=ymeasure_AREA,.render=render_AREA,.control=control_AREA},
   [SLICE_EFFECT]={.kind=SLK_NORMAL,.load=load_EFFECT,.save=save_EFFECT,.render=render_EFFECT},
@@ -1135,7 +1316,9 @@ static void render_one_slice(Slice*s,Sint16 x,Sint16 y,Sint16 w,Sint16 h,const S
 void render_slices(void) {
   // Only to be called by the redisplay function in display.c
   int n;
+  rendering=1;
   for(n=0;n<3;n++) if(root[n]) render_one_slice(root[n],0,0,640,350,&fullrect);
+  rendering=0;
 }
 
 static Uint8 testlevel=0;
@@ -1216,7 +1399,7 @@ Sint32 control_slices(Uint16 id,Uint8 op,Sint32 value,Uint8 misc) {
         goto code0x03;
       }
       break;
-    case 0x05: if(misc&SLM_ROOT) free_slice(s); else goto defa; break;
+    case 0x05: if((misc&SLM_ROOT) && !rendering) free_slice(s); else goto defa; break;
     case 0x06: value=xmeasure_slice(s,value); break;
     case 0x07: value=ymeasure_slice(s,value); break;
     case 0x20: value=s->width; break;
