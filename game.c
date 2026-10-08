@@ -856,7 +856,7 @@ static inline Uint8 line_class_of(Sint32 bx,Sint32 by,Uint32 xy) {
 static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
   Uint32 xy=by*board_info.width+bx;
   Sint32 q;
-  Uint16 f;
+  Uint16 f,g;
   Uint8 o=0;
   Uint8 z,m,d;
   ElementDef*e;
@@ -886,6 +886,12 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
       if((e->app[0]&0x3F)==AP_UNDER) {
         t=b_under+xy;
         e=elem_def+t->kind;
+      }
+      switch(e->attrib&(A_OVER_COLOR|A_UNDER_COLOR)) {
+        case 0: v_color[at]=b_main[xy].color; break;
+        case A_OVER_COLOR: v_color[at]=b_over[xy].color; break;
+        case A_UNDER_COLOR: v_color[at]=b_under[xy].color; break;
+        case A_OVER_COLOR|A_UNDER_COLOR: v_color[at]=cur_screen.color[at]; break;
       }
       switch(e->app[0]&0x3F) {
         case AP_FIXED: v_char[at]=e->app[1]; break;
@@ -927,6 +933,16 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
           [(f&15)+((e->app[1]&3)<<4)]&3;
           v_char[at]=appearance_mapping[(e->app[1]&0x7C)+z];
           break;
+        case AP_DYNAMIC:
+          if(!editor) {
+            f=memory[e->app[1]+0x100];
+            g=memory[e->app[1]+0x101+(f&t->param&3)];
+            v_color[at]=(v_color[at]&(f>>8))^(g>>8);
+            v_char[at]=(f&8?appearance_mapping[g&127]:g);
+          } else {
+            v_char[at]='?';
+          }
+          break;
         default:
           d=(t->param>>(e->app[0]&7))&~(0xFF<<(((e->app[0]>>3)&3)+1));
           if(e->app[1]&0x80) {
@@ -938,12 +954,6 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
           }
           v_char[at]=appearance_mapping[((e->app[1]&0x7E)+d)&0x7F];
           break;
-      }
-      switch(e->attrib&(A_OVER_COLOR|A_UNDER_COLOR)) {
-        case 0: v_color[at]=b_main[xy].color; break;
-        case A_OVER_COLOR: v_color[at]=b_over[xy].color; break;
-        case A_UNDER_COLOR: v_color[at]=b_under[xy].color; break;
-        case A_OVER_COLOR|A_UNDER_COLOR: v_color[at]=cur_screen.color[at]; break;
       }
     }
     if(v_color[at]<16 && (e->attrib&A_UNDER_BGCOLOR)) v_color[at]|=b_under[xy].color&0xF0;

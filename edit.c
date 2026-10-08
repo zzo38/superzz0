@@ -686,6 +686,7 @@ static void edit_element(Uint8 en) {
         win_option('U',"Under layer",m,AP_UNDER) win_refresh();
         win_option('S',"Screen data",m,AP_SCREEN) win_refresh();
         win_option('d',"Counter-based random",m,AP_CBRANDOM) win_refresh();
+        win_option('q',"Dynamic",m,AP_DYNAMIC) win_refresh();
         win_heading("Character options:");
         switch(m) {
           case AP_FIXED:
@@ -714,6 +715,9 @@ static void edit_element(Uint8 en) {
             win_numeric('n',"Distribution select: ",as,0,3);
             win_numeric('r',"Appearance mapping offset: 4x",ao2,0,31);
             win_boolean('i',"Alternate distribution",e->app[1],0x80);
+            break;
+          case AP_DYNAMIC:
+            win_numeric('r',"Address: ",e->app[1],0,255);
             break;
           case 0x20:
             win_numeric('h',"Parameter shift: ",bs,0,7);

@@ -142,6 +142,11 @@ distributions, where 0 is uniform and higher numbers are less uniform.
 The alternate distribution additionally alters the distribution according
 to the tile coordinates, which also makes it less uniform.
 
+Dynamic: The appearance is based on data in program memory, at the specified
+address plus $0100. This allows the appearance to be changed at run time, as
+well as some effects that take more than one byte to specify.
+!dyn;Dynamic appearance
+
 See also:
 !-appmap;Appearance mapping
 !-anima;Animations
@@ -178,3 +183,26 @@ events of this element is not meaningful.)
 
 255: Some functions that use element numbers will use element 255 as the
 default if no other element is specified.
+
+:dyn;Dynamic appearance
+The dynamic appearance memory starts at address $0100, and the element
+definition points to a cell from $0100 to $01FF which contains:
+
+þ bit2-bit0 þ These bits are bitwise AND by the parameter of the tile,
+and the result is added to the address and then add 1 more to find the
+address of the second memory cell.
+
+þ bit3 þ Set if the low 7-bits of the second cell are the appearance
+mapping code instead of the character code.
+
+þ bit7-bit4 þ Reserved and should be clear.
+
+þ bit15-bit8 þ AND mask for colour code. If all bits are set, and the bits
+of the colour code in the second cell are clear, then the colour will be
+unchanged from the default colour set in the editor.
+
+The second cell has the character code in the low 8-bits and the colour
+code in the high 8-bits. This colour code is a XOR mask to be combined
+with the AND mask mentioned above, to change the colour. The "background
+of under layer" applies after this colour, if it is selected.
+

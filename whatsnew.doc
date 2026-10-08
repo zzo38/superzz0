@@ -21,6 +21,7 @@ GAME
   +  Panels in screen definitions.
   +  The special option menu can now use any numeric formats, and is not
      limited to only decimal and commas.
+  +  Dynamic element appearance codes.
   =  Minor bug fixes in special options.
   =  Fix it so that the entire screen is redrawn in the main game state.
 

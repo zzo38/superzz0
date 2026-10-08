@@ -253,6 +253,7 @@ typedef struct {
 #define AP_LINES 0x08 // Line joining; low nybble of app[1] is which line classes, high nybble is appearance_mapping offset, high bit=edge join
 #define AP_ANIMATE 0x09 // Animation without using tile parameter
 #define AP_CBRANDOM 0x0A // Counter-based random
+#define AP_DYNAMIC 0x0B // Dynamic (using program memory); address is (app[1]+0x100)
 
 // If bit5 of app[0] is set then it has a different meaning.
 //  app[0] bit2-bit0 = Shift amount of tile parameter
