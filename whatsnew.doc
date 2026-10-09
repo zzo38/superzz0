@@ -24,6 +24,7 @@ GAME
   +  Dynamic element appearance codes.
   =  Minor bug fixes in special options.
   =  Fix it so that the entire screen is redrawn in the main game state.
+  =  Using parameter-based appearance code for items works correctly now.
 
 SCRIPTS
   +  #BACKDROP command to display backdrops.

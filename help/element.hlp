@@ -190,7 +190,8 @@ definition points to a cell from $0100 to $01FF which contains:
 
 þ bit2-bit0 þ These bits are bitwise AND by the parameter of the tile,
 and the result is added to the address and then add 1 more to find the
-address of the second memory cell.
+address of the second memory cell. If this is a item element, then this
+uses the item slot flags instead of the parameter.
 
 þ bit3 þ Set if the low 7-bits of the second cell are the appearance
 mapping code instead of the character code.

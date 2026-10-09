@@ -936,7 +936,7 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
         case AP_DYNAMIC:
           if(!editor) {
             f=memory[e->app[1]+0x100];
-            g=memory[e->app[1]+0x101+(f&t->param&3)];
+            g=memory[e->app[1]+0x101+(f&t->param&7)];
             v_color[at]=(v_color[at]&(f>>8))^(g>>8);
             v_char[at]=(f&8?appearance_mapping[g&127]:g);
           } else {
@@ -989,18 +989,25 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
 static void display_item_element_cell(Uint16 i,Uint8 col,Uint8 inv,Uint16 sl) {
   ItemSlot s;
   ItemDef d;
+  Uint16 f,g;
   if(inventory[inv].count<=sl) s=(ItemSlot){}; else s=inventory[inv].item[sl];
   if(s.item && s.item<=nitemdefs) d=itemdefs[s.item-1]; else d=(ItemDef){.element=244,.color=col};
+  v_color[i]=elem_def[d.element].attrib&(A_OVER_COLOR|A_UNDER_COLOR)?col:d.color;
   switch(elem_def[d.element].app[0]&0x3F) {
     case AP_FIXED: v_char[i]=elem_def[d.element].app[1]; break;
-    case AP_PARAM: v_char[i]=d.parameter; break;
+    case AP_PARAM: v_char[i]=elem_def[d.element].app[1]+d.parameter; break;
     case AP_UNDER: v_char[i]=elem_def[d.element].app[1]; break;
     case AP_MISC1: v_char[i]=s.ext1?:elem_def[d.element].app[1]; break;
     case AP_MISC2: v_char[i]=s.ext2?:elem_def[d.element].app[1]; break;
     case AP_MISC3: v_char[i]=d.ext3?:elem_def[d.element].app[1]; break;
+    case AP_DYNAMIC:
+      f=memory[elem_def[d.element].app[1]+0x100];
+      g=memory[elem_def[d.element].app[1]+0x101+(f&s.flag&7)];
+      v_color[i]=(v_color[i]&(f>>8))^(g>>8);
+      v_char[i]=(f&8?appearance_mapping[g&127]:g);
+      break;
     case 0x20 ... 0x3F: v_char[i]=appearance_mapping[((elem_def[d.element].app[1]&0x7E)+((d.parameter>>(elem_def[d.element].app[0]&7))&((2<<((elem_def[d.element].app[0]>>3)&3))-1)))&0x7F]; break;
   }
-  v_color[i]=elem_def[d.element].attrib&(A_OVER_COLOR|A_UNDER_COLOR)?col:d.color;
   if(elem_def[d.element].attrib&A_UNDER_BGCOLOR) v_color[i]=(v_color[i]&0x0F)|(col&0xF0);
 }
 
