@@ -776,6 +776,16 @@ static Slice*load_TEXT(const ASN1_Value*v0) {
         if(asn1_first_of(&v2,&v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.minor)) SliceError("");
         if(asn1_next_of(&v2,&v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v1,ASN1_INTEGER,&s->text.len)) SliceError("");
         break;
+      case 5:
+        if(asn1_first_of(&v2,&v1) || v2.class || v2.type!=ASN1_INTEGER || asn1_decode_number(&v2,ASN1_INTEGER,&x) || !x || x>253) SliceError("");
+        s->text.maxlen=x;
+        if(asn1_next_of(&v2,&v1) || v2.class || v2.type!=ASN1_OCTET_STRING || !v2.length || v2.length>253) SliceError("");
+        s->text.minor=v2.length;
+        s=realloc(s,sizeof(Slice)+s->text.maxlen+s->text.minor+2);
+        if(!s) err(1,"Allocation failed");
+        memcpy(s->data+s->text.maxlen+1,v2.data,v2.length);
+        if(asn1_next_of(&v2,&v1) || load_numsource(&v2,&s->text.value)) SliceError("");
+        break;
       default: SliceError("");
     }
   } else {
@@ -822,6 +832,11 @@ static void save_TEXT(ASN1_Encoder*enc,const Slice*s) {
         asn1_encode_integer(enc,s->text.minor);
         asn1_encode_integer(enc,s->text.len);
         break;
+      case 5:
+        asn1_encode_integer(enc,s->text.maxlen);
+        asn1_primitive(enc,ASN1_UNIVERSAL,ASN1_OCTET_STRING,s->data+s->text.maxlen+1,s->text.minor);
+        save_numsource(enc,&s->text.value);
+        break;
     }
   asn1_end(enc);
   asn1_encode_integer(enc,s->text.xpad);
@@ -837,7 +852,8 @@ static void save_TEXT(ASN1_Encoder*enc,const Slice*s) {
 }
 
 static void decide_text(Slice*s,const Uint8**text,Uint16*len) {
-  int i,j;
+  Sint16 g,h,i,j,k;
+  Sint32 v;
   switch(s->text.major) {
     case 0: *text=s->data; *len=s->text.len; break;
     case 1:
@@ -855,6 +871,52 @@ static void decide_text(Slice*s,const Uint8**text,Uint16*len) {
       if(cur_board_id>maxboard) goto empty;
       *text=boardnames[cur_board_id];
       *len=strlen(*text);
+      break;
+    case 5:
+      *text=s->data;
+      v=decide_numvalue(&s->text.value);
+      i=s->text.maxlen+1;
+      j=0;
+      k=i+s->text.minor;
+      while(i<k && j<s->text.maxlen) switch(s->data[i]) {
+        case 0x00: goto done;
+        case 0x01:
+          h=s->data[++i];
+          if(!h || h>=0x30) s->text.draw.text=h;
+          i++;
+          break;
+        case 0x10 ... 0x1F:
+          h=s->data[i++]-0x0F;
+          if(i+h>k || j+h>s->text.maxlen) goto done;
+          memcpy(s->data+j,s->data+i,h);
+          i+=h; j+=h;
+          break;
+        case 0x20 ... 0x2F: v+=s->data[i++]-0x1F; break;
+        case 0x30 ... 0x3F: v-=s->data[i++]-0x2F; break;
+        case 0x40 ... 0x4F:
+          h=s->data[i++]-0x3F; g=s->data[i++];
+          while(h-- && j<s->text.maxlen) s->data[j++]=digit_of(v,g++);
+          break;
+        case 0x50 ... 0x5F:
+          h=s->data[i++]-0x4F; g=s->data[i++];
+          while(h-- && j<s->text.maxlen) s->data[j++]=digit_of(v,g--);
+          break;
+        case 0x60 ... 0x6F:
+          h=s->data[i++]-0x5F; g=s->data[i++];
+          while(h-- && j<s->text.maxlen) if(s->data[j]=digit_of(v,g++)) j++;
+          break;
+        case 0x70 ... 0x7F:
+          h=s->data[i++]-0x6F; g=s->data[i++];
+          while(h-- && j<s->text.maxlen) if(s->data[j]=digit_of(v,g--)) j++;
+          break;
+        case 0x80 ... 0x9F: i+=s->data[i]-0x7E; break;
+        case 0xA0 ... 0xBF: if(v<0) i+=s->data[i]-0x9E; else i++; break;
+        case 0xC0 ... 0xDF: if(!v) i+=s->data[i]-0xBE; else i++; break;
+        case 0xE0 ... 0xFF: if(v>0) i+=s->data[i]-0xDE; else i++; break;
+        default: i++;
+      }
+      done:
+      if(j<=s->text.maxlen) s->data[*len=j]=0; else *len=0;
       break;
     default: empty: *text=""; *len=0;
   }

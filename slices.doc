@@ -428,6 +428,44 @@ the maximum length of the text (1 to 80).
 
 * Type 4 = The name of the current board. Does not have any fields.
 
+* Type 5 = Display the value of a number. The first field is a integer
+being the maximum length of the text. The second field is a octet string
+specifying how the number is formatted. The third field specifies the
+source of the value (in the same format as for a meter slice).
+
+The commands in the specification of formatting the number are:
+
+* 0x00 = Stop.
+
+* 0x01 = The next byte is the colour of the text. (This will affect all of
+the text and not only starting from this position.)
+
+* 0x10 to 0x1F = The next 1 to 16 bytes are literal characters to enter
+into the text.
+
+* 0x20 to 0x2F = Add 1 to 16 to the value.
+
+* 0x30 to 0x3F = Subtract 1 to 16 from the value.
+
+* 0x40 to 0x4F = The next byte is the numeric format to use, with the
+numeric format number in the high nybble and the digit position in the
+low nybble. This will enter from 1 to 16 digits, with increasing digit
+positions, and will retain nulls.
+
+* 0x50 to 0x5F = Same as 0x4_ but decreasing instead of increasing.
+
+* 0x60 to 0x6F = Same as 0x4_ but nulls are removed instead of retained.
+
+* 0x70 to 0x7F = Same as 0x5_ but nulls are removed instead of retained.
+
+* 0x80 to 0x9F = Unconditional skip 1 to 32 bytes.
+
+* 0xA0 to 0xBF = Skip 1 to 32 bytes if negative.
+
+* 0xC0 to 0xDF = Skip 1 to 32 bytes if zero.
+
+* 0xE0 to 0xFF = Skip 1 to 32 bytes if positive.
+
 Controls specific to this slice are:
 
 [14] Set the text Z-index and outline Z-index.
