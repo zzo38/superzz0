@@ -1101,6 +1101,10 @@ static Sint32 xmeasure_LAYERED(Slice*s,Sint32 in) {
       if(o>x) o=x;
     }
   }
+  for(n=0;n<s->box.count;n++) {
+    t=s->box.slices[n];
+    if(!(t->flag&(SLF_IGNORE|SLF_MANUAL))) t->width=o;
+  }
   return o;
 }
 
@@ -1115,6 +1119,10 @@ static Sint32 ymeasure_LAYERED(Slice*s,Sint32 in) {
       x=ymeasure_slice(t,in);
       if(o>x) o=x;
     }
+  }
+  for(n=0;n<s->box.count;n++) {
+    t=s->box.slices[n];
+    if(!(t->flag&(SLF_IGNORE|SLF_MANUAL))) t->height=o;
   }
   return o;
 }
