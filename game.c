@@ -936,9 +936,9 @@ static Uint8 draw_tile(Sint32 bx,Sint32 by,Uint16 at,Uint8 h) {
         case AP_DYNAMIC:
           if(!editor) {
             f=memory[e->app[1]+0x100];
-            g=memory[e->app[1]+0x101+(f&t->param&7)];
+            g=memory[e->app[1]+0x101+(f&t->param&0x1F)];
             v_color[at]=(v_color[at]&(f>>8))^(g>>8);
-            v_char[at]=(f&8?appearance_mapping[g&127]:g);
+            v_char[at]=(f&0x80?appearance_mapping[g&127]:g);
           } else {
             v_char[at]='?';
           }
@@ -1002,9 +1002,9 @@ static void display_item_element_cell(Uint16 i,Uint8 col,Uint8 inv,Uint16 sl) {
     case AP_MISC3: v_char[i]=d.ext3?:elem_def[d.element].app[1]; break;
     case AP_DYNAMIC:
       f=memory[elem_def[d.element].app[1]+0x100];
-      g=memory[elem_def[d.element].app[1]+0x101+(f&s.flag&7)];
+      g=memory[elem_def[d.element].app[1]+0x101+(f&s.flag&0x1F)];
       v_color[i]=(v_color[i]&(f>>8))^(g>>8);
-      v_char[i]=(f&8?appearance_mapping[g&127]:g);
+      v_char[i]=(f&0x80?appearance_mapping[g&127]:g);
       break;
     case 0x20 ... 0x3F: v_char[i]=appearance_mapping[((elem_def[d.element].app[1]&0x7E)+((d.parameter>>(elem_def[d.element].app[0]&7))&((2<<((elem_def[d.element].app[0]>>3)&3))-1)))&0x7F]; break;
   }
