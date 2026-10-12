@@ -1675,6 +1675,15 @@ static void cc_import(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   }
 }
 
+static void cc_kind_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  if(*arg) cctmp=strtol(arg,0,16); else cctmp=clip.kind;
+}
+
+static void cc_kind_step(Uint16 x,Uint16 y,const char*arg) {
+  Uint32 at=y*board_info.width+x;
+  b_main[at].kind=cctmp;
+}
+
 static void cc_mark_step(Uint16 x,Uint16 y,const char*arg) {
   set_mark(x,y,3);
 }
@@ -1780,6 +1789,15 @@ static void cc_overcolor_step(Uint16 x,Uint16 y,const char*arg) {
 
 static void cc_overdelete_step(Uint16 x,Uint16 y,const char*arg) {
   over_delete_at(x,y);
+}
+
+static void cc_overkind_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  if(*arg) cctmp=strtol(arg,0,16); else cctmp=overclip.kind;
+}
+
+static void cc_overkind_step(Uint16 x,Uint16 y,const char*arg) {
+  Uint32 at=y*board_info.width+x;
+  b_over[at].kind=cctmp;
 }
 
 static void cc_overplace_step(Uint16 x,Uint16 y,const char*arg) {
@@ -1930,6 +1948,8 @@ static const ColonCommand colon_commands[]={
   {"hflip",'%',cc_hflip,0,0,0},
   {"im",0,cc_import,0,0,0},
   {"import",0,cc_import,0,0,0},
+  {"k",'.',0,cc_kind_begin,cc_kind_step,0},
+  {"kind",'.',0,cc_kind_begin,cc_kind_step,0},
   {"m",'.',0,0,cc_mark_step,0},
   {"mark",'.',0,0,cc_mark_step,0},
   {"markonly",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
@@ -1939,9 +1959,11 @@ static const ColonCommand colon_commands[]={
   {"oc",'.',0,cc_overcolor_begin,cc_overcolor_step,0},
   {"od",'.',0,0,cc_overdelete_step,0},
   {"ohflip",'%',cc_ohflip,0,0,0},
+  {"ok",'.',0,cc_overkind_begin,cc_overkind_step,0},
   {"op",'.',0,0,cc_overplace_step,0},
   {"overcolor",'.',0,cc_overcolor_begin,cc_overcolor_step,0},
   {"overdelete",'.',0,0,cc_overdelete_step,0},
+  {"overkind",'.',0,cc_overkind_begin,cc_overkind_step,0},
   {"overplace",'.',0,0,cc_overplace_step,0},
   {"ovflip",'%',cc_ovflip,0,0,0},
   {"p",'.',0,cc_place_begin,cc_place_step,0},
@@ -3525,6 +3547,8 @@ Uint16 edit_board(Uint16 id) {
         case 'Q': do_colon_command("&write"); emode=0; break;
         case 'r': do_colon_command("&/Q place"); goto unmark;
         case 'R': do_colon_command("&/Q place"); emode=0; break;
+        case 'x': do_colon_command("&kind"); goto unmark;
+        case 'X': do_colon_command("&kind"); emode=0; break;
         case 'h': case -SDLK_LEFT: mass_move(-(numprefix?:1),0,copy_cell); cursor_move(-1,0); break;
         case 'j': case -SDLK_DOWN: mass_move(0,numprefix?:1,copy_cell); cursor_move(0,1); break;
         case 'k': case -SDLK_UP: mass_move(0,-(numprefix?:1),copy_cell); cursor_move(0,-1); break;
@@ -3721,6 +3745,8 @@ Uint16 edit_board(Uint16 id) {
         case 'D': do_colon_command("&overdelete"); emode=0; break;
         case 'p': do_colon_command("&overplace"); goto unmark1;
         case 'P': do_colon_command("&overplace"); emode=0; break;
+        case 'x': do_colon_command("&overkind"); goto unmark;
+        case 'X': do_colon_command("&overkind"); emode=0; break;
         case 'h': case -SDLK_LEFT: mass_move(-(numprefix?:1),0,over_copy_cell); cursor_move(-1,0); break;
         case 'j': case -SDLK_DOWN: mass_move(0,numprefix?:1,over_copy_cell); cursor_move(0,1); break;
         case 'k': case -SDLK_UP: mass_move(0,-(numprefix?:1),over_copy_cell); cursor_move(0,-1); break;

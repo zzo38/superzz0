@@ -969,6 +969,14 @@ static void cc_import(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
   }
 }
 
+static void cc_kind_begin(Uint16 x0,Uint16 y0,Uint16 x1,Uint16 y1,const char*arg) {
+  if(*arg) cctmp=strtol(arg,0,16); else cctmp=clip.com;
+}
+
+static void cc_kind_step(Uint16 x,Uint16 y,const char*arg) {
+  cur_screen.command[y*80+x]=cctmp;
+}
+
 static void cc_mark_step(Uint16 x,Uint16 y,const char*arg) {
   set_mark(x,y,3);
 }
@@ -1103,6 +1111,8 @@ static const ColonCommand colon_commands[]={
   {"export",0,cc_export,0,0,0},
   {"im",0,cc_import,0,0,0},
   {"import",0,cc_import,0,0,0},
+  {"k",'.',0,cc_kind_begin,cc_kind_step,0},
+  {"kind",'.',0,cc_kind_begin,cc_kind_step,0},
   {"m",'.',0,0,cc_mark_step,0},
   {"mark",'.',0,0,cc_mark_step,0},
   {"markonly",'.',0,cc_markonly_begin,cc_markonly_step,cc_markonly_end},
@@ -1465,6 +1475,8 @@ Uint16 edit_screen(Uint16 id) {
         case 'C': do_colon_command("&color"); emode=0; break;
         case 'p': do_colon_command("&place"); goto unmark;
         case 'P': do_colon_command("&place"); emode=0; break;
+        case 'x': do_colon_command("&kind"); goto unmark;
+        case 'X': do_colon_command("&kind"); emode=0; break;
         case 'h': case -SDLK_LEFT: mass_move(-1); cursor_move(-1,0); break;
         case 'j': case -SDLK_DOWN: mass_move(80); cursor_move(0,1); break;
         case 'k': case -SDLK_UP: mass_move(-80); cursor_move(0,-1); break;

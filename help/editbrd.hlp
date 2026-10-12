@@ -128,6 +128,7 @@ fø         Place floor
 pø         Place
 qø         Write tile in main layer
 rø         Place random from current and tile queue
+xø         Set kind
 
 "Place floor" will place in the main layer if it is empty, but otherwise
 will place in the under layer. Existing floors will be unaffected.

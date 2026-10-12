@@ -42,6 +42,8 @@ ASSEMBLY
 EDITOR
   +  Palette import is possible within the editor.
   +  Screen panel editor.
+  +  In board editor you can mass set kind.
+  +  In screen editor you can mass set command.
   =  Corrections in the display of some menus, so that video modes and the
      font attributes of character cells are reset correctly.
 

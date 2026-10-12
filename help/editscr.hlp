@@ -73,6 +73,8 @@ c          Set colour of all marked (discard marks)
 C          Set colour of all marked (keep marks)
 p          Place at all marked (discard marks)
 P          Place at all marked (keep marks)
+x          Set command of all marked (discard marks)
+X          Set command of all marked (keep marks)
 h j k l    Paint copies of marked cells (arrows can also be used)
 
 :text;Text mode
@@ -233,6 +235,9 @@ export/ex
 import/im
   Import the current screen layout from a file. If the file name starts with
   | then it is instead a pipe from an external shell command.
+
+kind/k
+  Like "place" but only sets the command, not the colour and parameter.
 
 mark/m
   Marks cells.
