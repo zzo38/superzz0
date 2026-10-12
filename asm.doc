@@ -71,7 +71,7 @@ The kinds of extension operands are:
 * % = Add together the source and value. The value can be -256 to +255.
 
 * %B = Extract bits from the source. The value is a 8-bit number, where
-the high nybble is the lowest bit to extract and the low nybble is the
+the low nybble is the lowest bit to extract and the high nybble is the
 number of bits to extract; the value is unsigned shifted right.
 
 * %BRD = The current board ID. Source and value are not used.
