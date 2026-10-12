@@ -1108,6 +1108,7 @@ void update_screen(void) {
         v=status_vars[(cmd-SC_BITS_0_LO)>>5];
         v_char[i]=(v&(1UL<<(cmd&0x1F))?chr:32);
         break;
+      default: v_color[i]=v_char[i]=0;
     }
   }
 }
