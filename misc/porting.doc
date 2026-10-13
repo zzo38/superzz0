@@ -570,3 +570,25 @@ Additionally, the settings specified by the [Special] division are specific
 to each game that uses them (not all of them do), although the specific
 game itself will include a menu for changing these settings, if applicable.
 
+Super ZZ Zero does not currently have a way to distinguish between speech
+sounds and other sounds, although ScummVM expects it to.
+
+The global keyboard commands of ScummVM do not interfere with those of
+Super ZZ Zero (outside of the editor and Super ZZ Zero debugger), so this
+part is not a problem. However, the working of game-specific keyboard
+settings does not work much well with Super ZZ Zero, although you might be
+able to map them to joystick emulation (but the names do not necessarily
+match those of ScummVM, if so).
+
+Super ZZ Zero has its own implementation of random numbers but this can be
+changed without breaking compatibility (except for the item randomization,
+which must be persistent across save games). The ScummVM setting for the
+random number seed would be compatible with it regardless of which random
+number implementation is used, though.
+
+Discord integration is something that I do not ever intend to add into
+Super ZZ Zero, although if Super ZZ Zero is added into ScummVM then it
+would be possible to use the Discord integration in ScummVM.
+
+For sounds, it would be possible to support optional external sound files,
+which can be used in place of the .BGM and .SND lumps if available.

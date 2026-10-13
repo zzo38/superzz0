@@ -1410,6 +1410,11 @@ numbers are treated as unsigned.
   The first argument is only written to if the subroutine that is called
   returns nonzero, in which case that stops the iteration.
 
+[119 RUD]
+  Read a field of a user-defined variable property, where the J register
+  specifies which one (use PROP to find it). The second operand is the
+  one-based field number; if it is valid, it is written to first operand.
+
 [120 GIVE]
   The first operand tells which status variable to access, where A-H are
   the first eight and S-Z are the last eight. Adds the second operand to

@@ -6453,6 +6453,13 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
       case OP_ROB: if(status_vars[fo]>so) status_vars[fo]-=so,condflag=1; else status_vars[fo]=0,condflag=0; break;
       case OP_RSH: regs[fo]=(so&~31?(regs[fo]<0?-1:0):regs[fo]>>so); break;
       case OP_RSUB: regs[fo]=so-regs[fo]; break;
+      case OP_RUD:
+        t=memory[MEM_ARG_J]; so--;
+        if(so>=0 && t>0 && t<=board_info.varprop.count && (board_info.varprop.item[t-1].type&14)/2>so) {
+          so=board_info.varprop.item[t-1].data[so+so]|(board_info.varprop.item[t-1].data[so+so+1]<<8);
+          goto store;
+        }
+        break;
       case OP_RUN: run_script(regs[fo]&0xFFFF,(regs[fo]>>16)&0xFFFF,so); break;
       case OP_SCAN: so=scan_board(regs[fo],so&0xFF,x,y); if(!so) break; if(regs[fo]) regs[fo]=so; else goto unpack0; break;
       case OP_SCFR:

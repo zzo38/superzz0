@@ -38,6 +38,7 @@ ASSEMBLY
   +  Memory cell $B7 to define default background data behind the main
      screen, in case it is defined as transparent.
   +  Memory cell $B8 is the panel selection bits.
+  +  RUD to read values of a user-defined variable property.
   =  Fix a documentation error about the %B operand specifier.
 
 EDITOR
