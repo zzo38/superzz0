@@ -7223,6 +7223,14 @@ int run_game(void) {
       if(ka=='2') kd=DIR_S; else if(ka=='4') kd=DIR_W; else if(ka=='6') kd=DIR_E; else if(ka=='8') kd=DIR_N;
     }
     run_program(memory[MEM_KEY_EVENT],ka,kd==DIR_E?1:kd==DIR_W?-1:0,kd==DIR_S?1:kd==DIR_N?-1:0,kd);
+    if(memory[MEM_WARP_CALL] && (memory[MEM_CONTROL]&CONTROL_WARP_AFTER_KEY) && !memory[MEM_NEW_DYNAMIC_STAT_EVENT]) {
+      while(a=memory[MEM_WARP_CALL]) {
+        memory[MEM_WARP_CALL]=0;
+        b=cur_board_id;
+        warp_to_board(memory[MEM_WARP_TO],0);
+        if(run_program(a,b,(memory[MEM_WARP_X_HI]<<16)|memory[MEM_WARP_X_LO],(memory[MEM_WARP_Y_HI]<<16)|memory[MEM_WARP_Y_LO],(memory[MEM_WARP_Z_HI]<<16)|memory[MEM_WARP_Z_LO])) goto gameloop;
+      }
+    }
   } else if(autofire) {
     ka=autofire; kd=autofire_dir; goto sendkey;
   }

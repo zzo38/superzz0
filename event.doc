@@ -153,7 +153,9 @@ need to touch these by yourself, but you might have a use for them.)
 
 $E5 = The subroutine to call after a warp occurs. If this is nonzero then
 a warp will occur before the next turn; it is automatically reset to zero
-before calling the subroutine. The return value is ignored.
+before calling the subroutine. The return value is normally ignored, unless
+the warp is the result of a keyboard event, in which case a nonzero return
+value will cause the rest of the turn to be skipped.
 
 $E6 to $EB = The WARP instruction saves the values of the XYZ registers
 here so that the warp subroutine will receive these values.
@@ -222,6 +224,9 @@ $0200 = Uses the sensor field of the stat instance data of stats in the
 overlay to remember what it was standing on, instead of using the data at
 address $C9. (It still uses $C9 for moving stuff other than stats.)
 
+$0400 = Enables warps immediately after a keyboard event. See the below
+section about order of execution.
+
 
 === Order of execution ===
 
@@ -245,6 +250,11 @@ immediately if the game is paused.
 game world (see $00E0 below for the list of these keys). This is skipped
 if no key is pushed or if the INSERT key is pushed. Saving and restoring
 the game is handled at this step, when applicable.
+
+* If the key event resulted in a pending warp, but not a new dynamic stat,
+and bit10 of the control flags is set, then execute the pending warp, the
+same as the first step above, as many times as is necessary, before
+continuing with the next step.
 
 * If the dynamic stat event is set, add a new dynamic stat (which is given
 a new number if there are no vacant dynamic stat numbers available) and
