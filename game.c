@@ -4192,11 +4192,10 @@ static int append_escaped(char*buf,int len,Stat*s,StatXY*xy,Uint16 ip) {
 static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   // m=stat number, n=XY index, u=(<0 if imply #, =0 if restart, >0 if normal)
   char buf[128];
-  Stat*s=stats+m-1;
-  StatXY*xy=s->xy+n;
+  Stat*s;
+  StatXY*xy;
   StatXY*xy2;
-  Uint16 ip=xy->instptr;
-  Uint16 bip;
+  Uint16 ip,bip;
   Uint8 c,v;
   Uint8 esc=0;
   Uint8 stop=0;
@@ -4204,6 +4203,11 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   Sint32 y;
   int i,j;
   ScriptKind sk,sk1;
+  if(m>maxstat) return;
+  s=stats+m-1;
+  if(n>=s->count) return;
+  xy=s->xy+n;
+  ip=xy->instptr;
   if(!u) xy->instptr=ip=0;
   if(!s->text) return;
   if(ip>=s->length) {
