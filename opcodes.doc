@@ -1234,7 +1234,13 @@ numbers are treated as unsigned.
   value is copied into the extra value of that record.
 
 [0EE CWIN]
-  (TODO)
+  This instruction is used for working with special windows. The first
+  operand tells the specific operationg to perform, and the meaning of the
+  second operand depends on that. See the section about custom windows in
+  event.doc and screen.hlp for more details.
+   A = start a custom window
+   B = operations within a custom window
+   C = wait for input and then jump to second operand
 
 [0EF ASN1]
   Operations with ASN.1. See event.doc for details.

@@ -373,6 +373,8 @@ typedef struct {
 #define BF_SAVE_NOT_SENSOR 0x0200
 #define BF_MAIN_ALT_MODE 0x0400
 #define BF_OVER_ALT_MODE 0x0800
+#define BF_WRAP_NS 0x1000  // (not implemented yet)
+#define BF_WRAP_EW 0x2000  // (not implemented yet)
 
 // Overlay kind bits (the low nybble has user-defined meanings)
 #define OVER_SOLID 0x10  // affects movement of stats in overlay

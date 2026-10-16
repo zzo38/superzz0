@@ -3059,6 +3059,158 @@ static Uint16 show_item_window(Uint32 opt) {
   return k;
 }
 
+static void update_custom_window(void) {
+  // For now this is mostly like the main screen with a few differences.
+  // More things may be added later (such as SC_TEXT and SC_SPEC_CONTEXT_SPECIFIC and other uses of SC_ITEM)
+  int i;
+  Uint32 v,x,y;
+  Uint8 cmd,col,chr;
+  if(cur_screen.npanels) update_panels();
+  for(i=0;i<80*25;i++) {
+    cmd=cur_screen.command[i];
+    col=cur_screen.color[i];
+    chr=cur_screen.parameter[i];
+    if(cmd) v_font[i]=(cur_screen.flag&SF_ALT_MODE?VF_ALTERNATE:0);
+    switch(cmd&0xF0) {
+      case SC_BACKGROUND:
+        if(cmd&1) v_char[i]=chr;
+        if(cmd&2) v_color[i]=col;
+        break;
+      case SC_BOARD:
+        draw_tile((i%80)+scroll_x,(i/80)+scroll_y,i,cmd&0x0F);
+        break;
+      case SC_NUMERIC:
+        v_char[i]=digit_of(status_vars[cmd&15],chr);
+        v_color[i]=col;
+        break;
+      case SC_NUMERIC_SPECIAL:
+        switch(cmd) {
+          case SC_SPEC_PLAYER_X: v=stats->count?stats->xy->x:0; break;
+          case SC_SPEC_PLAYER_Y: v=stats->count?stats->xy->y:0; break;
+          case SC_SPEC_CAMERA_X: v=scroll_x-cur_screen.view_x; break;
+          case SC_SPEC_CAMERA_Y: v=scroll_y-cur_screen.view_y; break;
+          case SC_SPEC_CURRENT_BOARD: v=cur_board_id; break;
+          case SC_SPEC_EXIT_E: v=board_info.exits[DIR_E]; break;
+          case SC_SPEC_EXIT_N: v=board_info.exits[DIR_N]; break;
+          case SC_SPEC_EXIT_W: v=board_info.exits[DIR_W]; break;
+          case SC_SPEC_EXIT_S: v=board_info.exits[DIR_S]; break;
+          case SC_SPEC_WIDTH: v=board_info.width; break;
+          case SC_SPEC_HEIGHT: v=board_info.height; break;
+          case SC_SPEC_USERDATA: v=board_info.userdata; break;
+          default: v=0; // not applicable in this context
+        }
+        v_char[i]=digit_of(v,chr);
+        v_color[i]=col;
+        break;
+      case SC_MEMORY:
+        v_char[i]=memory[(col<<8)|chr];
+        v_color[i]=memory[(col<<8)|chr]>>8;
+        break;
+      case SC_INDICATOR:
+        v_color[i]=col;
+        x=i%80; y=i/80;
+        switch(cmd) {
+          case SC_IND_USERDATA: v_char[i]=board_info.userdata?chr:0; break;
+          case SC_IND_CURSOR: v_char[i]=(stats->count && (x+scroll_x==stats->xy->x || y+scroll_y==stats->xy->y))?chr:0; break;
+          case SC_IND_SCROLL_Y: v_char[i]=((y<cur_screen.view_y)?(scroll_y>cur_screen.hard_edge[DIR_N]):(scroll_y+board_info.height<cur_screen.hard_edge[DIR_S]))?chr:0; break;
+          case SC_IND_SCROLL_X: v_char[i]=((x<cur_screen.view_x)?(scroll_x>cur_screen.hard_edge[DIR_W]):(scroll_x+board_info.width<cur_screen.hard_edge[DIR_E]))?chr:0; break;
+          case SC_IND_EXIT_E: v_char[i]=board_info.exits[DIR_E]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_E]:0; break;
+          case SC_IND_EXIT_N: v_char[i]=board_info.exits[DIR_N]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_N]:0; break;
+          case SC_IND_EXIT_W: v_char[i]=board_info.exits[DIR_W]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_W]:0; break;
+          case SC_IND_EXIT_S: v_char[i]=board_info.exits[DIR_S]?chr:cur_screen.flag&SF_EXIT_BORDER?cur_screen.border[DIR_S]:0; break;
+          case SC_IND_USER0: v_char[i]=board_info.flag&BF_USER0?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[0]:0; break;
+          case SC_IND_USER1: v_char[i]=board_info.flag&BF_USER1?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[1]:0; break;
+          case SC_IND_USER2: v_char[i]=board_info.flag&BF_USER2?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[2]:0; break;
+          case SC_IND_USER3: v_char[i]=board_info.flag&BF_USER3?chr:cur_screen.flag&SF_USER_BORDER?cur_screen.border[3]:0; break;
+        }
+        break;
+      case SC_ITEM:
+        if(cmd==SC_ITEM_ELEMENT) display_item_element_cell(i,col,chr>>5,chr&0x1F);
+        break;
+      case SC_BITS_0_LO ... SC_BITS_3_HI:
+        v_color[i]=col;
+        v=status_vars[(cmd-SC_BITS_0_LO)>>5];
+        v_char[i]=(v&(1UL<<(cmd&0x1F))?chr:32);
+        break;
+    }
+  }
+}
+
+static void show_custom_window(Uint16 addr) {
+  Sint32 rs[4]={regs[0],regs[1],regs[2],regs[3]};
+  Sint32 k;
+  FILE*fp;
+  const char*e;
+  set_timer(0);
+  if(v_status[1] && v_status[1]!=32) errx(1,"Cannot show multiple non-main screens");
+  if(addr>0xFFFE || addr+(memory[addr]&0xFF)>0xFFFE || !(memory[addr]&0xFF)) errx(1,"Invalid custom window");
+  fp=open_lump_by_number(cur_screen_id=memory[addr+1],"SCR","r");
+  if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
+  fclose(fp);
+  work_varproperties(&cur_screen.varprop);
+  load_screen_slices(2);
+  v_status[1]=240;
+  if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
+  update_custom_window();
+  redisplay();
+  memory[MEM_RETURNED_PC]=addr+(memory[addr]&0xFF);
+  while(memory[MEM_RETURNED_PC]>=0x100 && (k=run_program(memory[MEM_RETURNED_PC],0,0,0,0))) switch(k&0xFF) {
+    case 0xFF: goto stop;
+  }
+  stop:
+  if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
+  memcpy(regs,rs,4*sizeof(Sint32));
+  v_status[1]=32;
+  unload_slices(2);
+  set_timer(playstate==PLAYSTATE_FAST?config.speed_fast:playstate==PLAYSTATE_NORMAL?config.speed:0);
+  fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
+  if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
+  fclose(fp);
+  work_varproperties(&cur_screen.varprop);
+  work_varproperties(&board_info.varprop);
+}
+
+static Sint32 custom_window_op(Uint16 op,Sint32 v) {
+  // If the result is positive then it is treated as the instruction address
+  Sint32 k=0;
+  int c;
+  switch(op&0xFF) {
+    case 0x00: /* do nothing */ break;
+    default: errx(1,"Improper custom window operation ($%04X)",op);
+  }
+  if(op&0x100) update_custom_window();
+  if(op&0x200) {
+    for(;;) {
+      redisplay();
+      if(!next_event()) errx(0,"No events available.");
+      if(event.type==SDL_JOYBUTTONDOWN || event.type==SDL_JOYBUTTONUP) {
+        c=do_joystick(JL_CUSTOM_WINDOW);
+        if(c=='Z'+0x100) return -2;
+        if(c<8 || c>126) c=0;
+      }
+      if(event.type!=SDL_KEYDOWN) continue;
+      switch(event.key.keysym.sym) {
+        case SDLK_ESCAPE: return -2;
+        case SDLK_UP: c=(event.key.keysym.mod&KMOD_SHIFT)?30:24; break;
+        case SDLK_DOWN: c=(event.key.keysym.mod&KMOD_SHIFT)?31:25; break;
+        case SDLK_LEFT: c=(event.key.keysym.mod&KMOD_SHIFT)?17:27; break;
+        case SDLK_RIGHT: c=(event.key.keysym.mod&KMOD_SHIFT)?16:26; break;
+        case SDLK_F2: c=audio_get_volume(); audio_set_volume(c&0xFFFF,(c>>16)^1); soundon=(audio_get_volume()<0x10000?1:0); audio_set_sfx("@0ZCX"); break;
+        case SDLK_F10: exit(0); return -2;
+        default:
+          c=event.key.keysym.unicode;
+          if(c==27) return -2;
+          if((c<32 || c>126) && !(c==8 || c==9 || c==13)) c=0;
+      }
+      if(c) {
+        regs[0]=c;
+        break;
+      }
+    }
+  }
+  return k;
+}
+
 static char script_go(Uint16 m,Uint16 n,Stat*s,StatXY*xy,Uint8 dir) {
   switch(dir) {
     case 'i': case 'I': return 1;
@@ -5898,6 +6050,14 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         memory[MEM_COROUTINE_V_Z_HI]=z>>16; memory[MEM_COROUTINE_V_Z_LO]=z;
         goto store;
       case OP_COUN: regs[fo]=do_change(0,regs[fo],so); break;
+      case OP_CWIN:
+        if(fo && v_status[1]!=240) break;
+        switch(fo) {
+          case 0: show_custom_window(so); break;
+          case 1: so=custom_window_op(so,(so&0x10000?w:0)+(so&0x20000?x:0)+(so&0x40000?y:0)+(so&0x80000?z:0)+(so>>20)); if(so>0) goto jump; break;
+          case 2: if(custom_window_op(0x200,0)==-2) return 0; else goto jump; break;
+        }
+        break;
       case OP_CWOE: t=regs[fo]&0xFF; cwoe: t=(elem_def[t].attrib); if(t&A_FLOOR) condflag=((1<<(t&15))&so)?1:0; else condflag=0; break;
       case OP_CWOT: if((t=convxy(regs[fo],x,y))!=-1) { t=b_main[t].kind; goto cwoe; } else condflag=0; break;
       case OP_DCL: condflag=(--regs[fo]<so?1:0); break;

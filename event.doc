@@ -860,3 +860,51 @@ $3E (s) = Append a substring of the first register; A specifies the start
 offset (zero-based) and B specifies the length. If they are out of range,
 they are changed to numbers that are in range.
 
+
+=== Custom windows ===
+
+When you start a custom window, use CWIN A, where the second operand is
+the address of a custom window structure as follows: The first cell has
+the number of further cells (must be at least 1) in the low 8-bits, and
+then the rest of the fields are:
+
+* 1 = The screen number to use.
+
+It then calls a subroutine starting immediately after the structure, with
+the initial values of W,X,Y,Z all set to zero. Within this subroutine, you
+can use CWIN to do some operations, and you can also return from that
+subroutine to do some other operations (some of which will cause it to
+continue, and others cause it to stop).
+
+The custom window operations with first operand B will have the second
+operand with the bits:
+
+* bit7-bit0 = Operation code number; see list below.
+
+* bit8 = Update the screen from the screen definition.
+
+* bit9 = Wait for input. The result is written to the A register. If the
+escape key is pushed then the value of the A register is unchanged.
+
+* bit19-bit16 = Specifies registers to use as the input value, where bit16
+means W, bit17 means X, bit18 means Y, bit19 means Z. If you specify more
+than one then they are added together.
+
+* bit31-bit20 = Adds to the input value.
+
+The operation code numbers are:
+
+* $00 = No operation.
+
+CWIN C is like CWIN B,$200 but if the escape key is pushed then it will
+work like LET S,0 as well, otherwise it is like GOTO with the second
+operand of that CWIN instruction.
+
+The return values from the custom window subroutine have the low 8-bits
+specifying one of the operations:
+
+* $00 = Stop and return to whatever called CWIN A. The values of the
+A,B,C,D registers from before it was called will be restored.
+
+* $FF = Same as $00.
+
