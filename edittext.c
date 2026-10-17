@@ -212,6 +212,7 @@ static void do_read_file(Uint16 yc) {
 }
 
 static Uint8*text_editor_1(Uint8*text) {
+  Uint8 vcm=v_colormask;
   char buf[42];
   Line*li;
   Uint8 prefix,askch;
@@ -219,6 +220,7 @@ static Uint8*text_editor_1(Uint8*text) {
   Uint16 xc,yc,scrol;
   Uint8*p;
   Uint8*q;
+  v_colormask=0;
   restart:
   if(!(p=text)) {
     p=text=strdup("");
@@ -239,6 +241,7 @@ static Uint8*text_editor_1(Uint8*text) {
   }
   xc=yc=scrol=prefix=askch=0;
   display:
+  memset(v_font,VF_FRONT|VF_SYSTEM,80*24);
   memset(v_color,0x00,80*24);
   memset(v_color+80*24,0x33,80);
   if(scrol>=nlines) scrol=nlines-1;
@@ -255,6 +258,7 @@ static Uint8*text_editor_1(Uint8*text) {
     j=i*80;
     if(li->len) {
       draw_text(0,i,p=li->ptr,0x07,li->len>80?80:li->len);
+      if(!config.text_editor_font) memset(v_font+j,VF_FRONT,li->len>80?80:li->len);
       if(*p=='@' || *p=='/' || *p=='#' || *p=='?' || *p==':' || *p=='\'' || *p=='$' || *p=='!' || *p=='&') {
         v_color[j]=0x0A;
         if(*p=='@' && !i && !scrol) {
@@ -265,7 +269,7 @@ static Uint8*text_editor_1(Uint8*text) {
         }
       }
     }
-    if(li->len<80) v_color[li->len+j]=0x03,v_char[li->len+j]=0x11;
+    if(li->len<80) v_color[li->len+j]=0x03,v_char[li->len+j]=0x11,v_font[li->len+j]=VF_FRONT|VF_SYSTEM;
   }
   loop:
   if(yc>=nlines || yc<scrol || yc>scrol+23) goto display;
@@ -274,6 +278,7 @@ static Uint8*text_editor_1(Uint8*text) {
   memset(v_color+j,0,80);
   if(li->len) {
     draw_text(0,i,p=li->ptr,0x07,li->len>80?80:li->len);
+    if(!config.text_editor_font) memset(v_font+j,VF_FRONT,li->len>80?80:li->len);
     if(*p=='@' || *p=='/' || *p=='#' || *p=='?' || *p==':' || *p=='\'' || *p=='$' || *p=='!' || *p=='&') {
       v_color[j]=0x0A;
       if(*p=='@' && !i && !scrol) {
@@ -284,7 +289,7 @@ static Uint8*text_editor_1(Uint8*text) {
       }
     }
   }
-  if(li->len<80) v_color[li->len+j]=0x03,v_char[li->len+j]=0x11;
+  if(li->len<80) v_color[li->len+j]=0x03,v_char[li->len+j]=0x11,v_font[li->len+j]=VF_FRONT|VF_SYSTEM;
   if(xc>lines[yc].len) xc=lines[yc].len;
   draw_text(55,24,buf,0x30,snprintf(buf,11,"[%05d]",nchars));
   v_color[63+24*80]=v_color[64+24*80]=0x30;
@@ -342,6 +347,7 @@ static Uint8*text_editor_1(Uint8*text) {
     case_CTRL('T'): del_word(xc,yc); break;
     case_CTRL('U'): if(xc && xc<lines[yc].len) memmove(lines[yc].ptr,lines[yc].ptr+xc,lines[yc].len-xc); lines[yc].len-=xc; xc=0; break;
     case_CTRL('V'): case -SDLK_INSERT: config.text_editor_insert^=1; break;
+    case -SDLK_v: config.text_editor_font^=1; goto display;
     case_CTRL('W'): if(scrol) --scrol; if(yc>scrol+23) --yc; goto display;
     case -SDLK_w: case -SDLK_F3: xc=copy_above(xc,yc); break;
     case_CTRL('X'): case -SDLK_DOWN: if(yc<nlines) ++yc; break;
@@ -376,6 +382,7 @@ static Uint8*text_editor_1(Uint8*text) {
   xc=q-lines[yc=i].ptr;
   goto display;
   exit:
+  v_colormask=vcm;
   v_ycur=127;
   if(nchars<=1) {
     for(i=0;i<nlines;i++) if(lines[i].own) free(lines[i].ptr);

@@ -294,6 +294,11 @@ text_editor_command
   temporary file. If this is not defined, then the internal text editor
   will be used instead.
 
+text_editor_font
+  Defines which font to use in the text editor. Set to 1 to use the system
+  font or 0 to use the game world font. This can be toggled at run time by
+  pushing ALT+V in the text editor.
+
 text_editor_insert
   Controls the initial insert/overwrite mode in the text editor (not
   meaningful if text_editor_command is set). Set to 1 for insert mode

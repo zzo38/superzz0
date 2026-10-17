@@ -56,6 +56,7 @@ OTHERS
   +  Configuration option "mask_keys" to mask out some modifier keys (in
      case one ALT key is needed for entering some ASCII characters on some
      keyboard layouts; see the bug reports about AltGr in MegaZeux).
+  +  Configuration option "text_editor_font" to select text editor font.
 
 
 === Version 0.8.0 (2026-07-15) ===

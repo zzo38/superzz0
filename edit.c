@@ -576,12 +576,15 @@ static void element_list_callback(Uint16 n,int y,void*uz) {
   if(e->app[0]&0x20) {
     v_color[80*y+22]=0x08;
     v_char[80*y+22]='M';
+    v_font[80*y+22]=VF_FRONT|VF_SYSTEM;
   } else if(e->app[0]&0x0F) {
     v_color[80*y+22]=0x08;
-    v_char[80*y+22]="FPOUS123LAC?????"[e->app[0]&0x0F];
+    v_char[80*y+22]="FPOUS123LACD????"[e->app[0]&0x0F];
+    v_font[80*y+22]=VF_FRONT|VF_SYSTEM;
   } else {
     v_color[80*y+22]=0x0F;
     v_char[80*y+22]=e->app[1];
+    v_font[80*y+22]=VF_FRONT;
   }
   snprintf(buf,2,"%X",e->attrib&15);
   draw_text(24,y,buf,0x20,1);
@@ -751,6 +754,7 @@ static char edit_appearance_mapping(void) {
   int n=0;
   char buf[6];
   draw:
+  memset(v_font,VF_SYSTEM|VF_FRONT,80*25);
   memset(v_char,32,80*25);
   memset(v_color+80,0x07,80*24);
   memset(v_color,0x30,80);
@@ -766,6 +770,7 @@ static char edit_appearance_mapping(void) {
     v_color[(i>>4)*9+(i&15)*80+161]=(n==i?0x0E:0x08);
     v_char[(i>>4)*9+(i&15)*80+166]=appearance_mapping[i];
     v_color[(i>>4)*9+(i&15)*80+166]=(n==i?0x2F:0x1F);
+    v_font[(i>>4)*9+(i&15)*80+166]=VF_FRONT;
   }
   redisplay();
   for(;;) {
