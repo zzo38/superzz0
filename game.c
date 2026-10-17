@@ -4355,7 +4355,7 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   Sint32 y;
   int i,j;
   ScriptKind sk,sk1;
-  if(m>maxstat) return;
+  if(m>maxstat || !m) return;
   s=stats+m-1;
   if(n>=s->count) return;
   xy=s->xy+n;
