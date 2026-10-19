@@ -389,6 +389,10 @@ are not allowed in this case.
   enough, but if the command is specified then it will not take any items
   if there isn't at least as much as you requested.
 
+#TELEPORT number number
+  Teleport this object to the specified coordinates. It must be a tile
+  that is not solid, but doesn't care about the class.
+
 #TRY dir [command]
   Try to move in the direction; if it cannot go, then it will execute the
   specified command (or do nothing).

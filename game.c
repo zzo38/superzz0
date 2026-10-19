@@ -4744,6 +4744,11 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
                   take_item(u,0xFFFFFFFFULL,5);
                 }
               }
+            } else if(!strcmp(buf,"TELEPORT") && !(s->mode&STAT_INDEPENDENT)) {
+              u=parse_number(s,xy,&ip);
+              y=parse_number(s,xy,&ip);
+              general_move(0,(n<<16)+m,xy->x,xy->y,0x0085,0xFFFF,u,y);
+              if(condflag) stop=1;
             } else if(!strcmp(buf,"TRY")) {
               i=parse_direction(s,xy,&ip);
               if(i!=-1 && condflag) {
