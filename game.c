@@ -4362,11 +4362,11 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   ip=xy->instptr;
   if(!u) xy->instptr=ip=0;
   if(!s->text) return;
+  begin:
   if(ip>=s->length) {
     xy->instptr=0xFFFF;
     return;
   }
-  begin:
   if(u<0) while(s->text[ip]==' ') ++ip;
   switch(c=s->text[bip=ip]) {
     case 0: goto stop;
@@ -6820,7 +6820,7 @@ static Sint32 run_program(Uint16 pc,Sint32 w,Sint32 x,Sint32 y,Sint32 z) {
         memory[MEM_WARP_Z_HI]=z>>16; memory[MEM_WARP_Z_LO]=z;
         break;
       case OP_WEEK: regs[fo]=(memory[so&0xFFFF]<<16)|memory[(so+1)&0xFFFF]; break;
-      case OP_WOKE: memory[so&0xFFFF]=so>>16; memory[(so+1)&0xFFFF]=so; break;
+      case OP_WOKE: memory[so&0xFFFF]=regs[fo]>>16; memory[(so+1)&0xFFFF]=regs[fo]; break;
       case OP_XOR: regs[fo]^=so; break;
       case OP_XORN: regs[fo]^=~so; break;
       case OP_XYZ:

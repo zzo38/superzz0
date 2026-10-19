@@ -562,6 +562,9 @@ The return value uses the bits:
   bit3 = Unconditionally stop immediately.
   bit4 = Go back to the beginning of the current line.
 
+Setting bit1 also causes it to reload the instruction pointer if you
+have changed it (but not if bit2 or bit4 is also set).
+
 
 === Element events ===
 
