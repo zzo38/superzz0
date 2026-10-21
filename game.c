@@ -3733,7 +3733,7 @@ static void change_to_script_kind(Uint32 x,Uint32 y,Uint8 lay,const ScriptKind*s
     }
     b_main[at].color=(zc&sk->cmask)|sk->color;
     b_main[at].kind=sk->kind;
-    b_main[at].param=(zc&sk->pmask)|sk->param;
+    b_main[at].param=(zp&sk->pmask)|sk->param;
     b_main[at].stat=sk->stat;
   } else if(lay==1) {
     // Under
@@ -3747,7 +3747,7 @@ static void change_to_script_kind(Uint32 x,Uint32 y,Uint8 lay,const ScriptKind*s
     }
     b_under[at].color=(zc&sk->cmask)|sk->color;
     b_under[at].kind=sk->kind;
-    b_under[at].param=(zc&sk->pmask)|sk->param;
+    b_under[at].param=(zp&sk->pmask)|sk->param;
     b_under[at].stat=sk->stat;
   } else if(lay==3) {
     // Over; #BECOME, #CHANGE, #PUT, etc should not be used
@@ -3772,7 +3772,7 @@ static void put_script_kind(Uint32 x,Uint32 y,const ScriptKind*sk) {
   }
   b_main[at].color=(zc&sk->cmask)|sk->color;
   b_main[at].kind=sk->kind;
-  b_main[at].param=(zc&sk->pmask)|sk->param;
+  b_main[at].param=(zp&sk->pmask)|sk->param;
   b_main[at].stat=sk->stat;
 }
 

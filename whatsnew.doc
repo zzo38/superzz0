@@ -36,7 +36,7 @@ SCRIPTS
   +  Expression (PP) for Manhattan distance to player.
   +  #SEND can use a numeric expression in parentheses within the label
      name in order to replace it with the decimal number.
-  =  WOKE works correctly now.
+  =  Make the parameter mask for #CHANGE, #BECOME, etc work correctly.
 
 ASSEMBLY
   +  Memory cell $B7 to define default background data behind the main
@@ -45,6 +45,7 @@ ASSEMBLY
   +  RUD to read values of a user-defined variable property.
   +  Control flag to control timing of warps after keyboard events.
   =  Fix a documentation error about the %B operand specifier.
+  =  WOKE works correctly now.
 
 EDITOR
   +  Palette import is possible within the editor.
