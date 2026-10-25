@@ -1850,6 +1850,7 @@ static int match_name(const char*v,const char*name) {
 static Sint32 find_label(Stat*s,const char*label) {
   const char*v=(char*)s->text;
   int n;
+  if(!v) return -1;
   if(*v!=':') v=strstr(v,"\n:"),v+=(v?1:0);
   while(v) {
     if(n=match_label(v,label)) return (v-(const char*)s->text)+n;
@@ -1861,6 +1862,7 @@ static Sint32 find_label(Stat*s,const char*label) {
 static Sint32 find_unzapped_label(Stat*s,const char*label) {
   const char*v=(char*)s->text;
   int n;
+  if(!v) return -1;
   if(*label=='!') {
     if(*v!='!') v=strstr(v,"\n!"),v+=(v?1:0);
     while(v) {
@@ -1880,6 +1882,7 @@ static Sint32 find_unzapped_label(Stat*s,const char*label) {
 static Sint32 find_zapped_label(Stat*s,const char*label) {
   const char*v=(char*)s->text;
   int n;
+  if(!v) return -1;
   if(*label=='!') {
     if(*v!='&') v=strstr(v,"\n&"),v+=(v?1:0);
     while(v) {
