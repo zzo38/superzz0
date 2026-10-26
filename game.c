@@ -2417,7 +2417,7 @@ static char show_text_window(Uint32 xyn,char help) {
       tscroll=0;
     }
     v_status[1]=232;
-    work_varproperties(&cur_screen.varprop);
+    memory[MEM_SCREEN_RESTORE_SET]=~work_varproperties_ext(&cur_screen.varprop,0);
     load_screen_slices(2);
     open:
     if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
@@ -2562,8 +2562,8 @@ static char show_text_window(Uint32 xyn,char help) {
     fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
     if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
     fclose(fp);
-    work_varproperties(&cur_screen.varprop);
-    if(help!=2) work_varproperties(&board_info.varprop);
+    work_varproperties_ext(&cur_screen.varprop,memory[MEM_SCREEN_RESTORE_SET]);
+    if(help!=2) work_varproperties_ext(&board_info.varprop,memory[MEM_SCREEN_RESTORE_SET]^0x8000);
     if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
   }
   free(textfile_text);
@@ -2869,7 +2869,7 @@ static Uint16 show_item_window(Uint32 opt) {
     if(e=load_window(fp,&wind)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
     fclose(fp);
   }
-  work_varproperties(&cur_screen.varprop);
+  memory[MEM_SCREEN_RESTORE_SET]=~work_varproperties_ext(&cur_screen.varprop,0);
   load_screen_slices(1);
   v_status[1]='I';
   if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
@@ -2971,6 +2971,7 @@ static Uint16 show_item_window(Uint32 opt) {
               case 50: free(names); free(list); names=0; list=0; snames=0; slist=0; iname=1; goto load;
               case 51: for(j=0;j<tnlines;j++) if(list[j].slot==memory[MEM_ARG_J] && !(list[j].ext&0x8000)) tcursor=j; break;
               case 52:
+                unload_slices(1);
                 if(!(fp=open_lump_by_number(cur_screen_id=memory[MEM_ARG_J],"SCR","r"))) err(1,"Cannot open %04X.SCR",cur_screen_id);
                 if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
                 fclose(fp);
@@ -2979,7 +2980,7 @@ static Uint16 show_item_window(Uint32 opt) {
                   fclose(fp);
                 }
                 for(inf.ncol=j=1;j<79;j++) if(wind.command[j]=='Z') ++inf.ncol;
-                work_varproperties(&cur_screen.varprop);
+                memory[MEM_SCREEN_RESTORE_SET]&=~work_varproperties_ext(&cur_screen.varprop,0);
                 load_screen_slices(1);
                 break;
             }
@@ -3057,8 +3058,8 @@ static Uint16 show_item_window(Uint32 opt) {
   fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
   if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
   fclose(fp);
-  work_varproperties(&cur_screen.varprop);
-  work_varproperties(&board_info.varprop);
+  work_varproperties_ext(&cur_screen.varprop,memory[MEM_SCREEN_RESTORE_SET]);
+  work_varproperties_ext(&board_info.varprop,memory[MEM_SCREEN_RESTORE_SET]^0x8000);
   return k;
 }
 
@@ -3150,7 +3151,7 @@ static void show_custom_window(Uint16 addr) {
   fp=open_lump_by_number(cur_screen_id=memory[addr+1],"SCR","r");
   if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
   fclose(fp);
-  work_varproperties(&cur_screen.varprop);
+  memory[MEM_SCREEN_RESTORE_SET]=~work_varproperties_ext(&cur_screen.varprop,0);
   load_screen_slices(2);
   v_status[1]=240;
   if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
@@ -3169,8 +3170,8 @@ static void show_custom_window(Uint16 addr) {
   fp=open_lump_by_number(cur_screen_id=board_info.screen,"SCR","r");
   if(!fp || load_screen(fp)) errx(1,"Error restoring screen");
   fclose(fp);
-  work_varproperties(&cur_screen.varprop);
-  work_varproperties(&board_info.varprop);
+  work_varproperties_ext(&cur_screen.varprop,memory[MEM_SCREEN_RESTORE_SET]);
+  work_varproperties_ext(&board_info.varprop,memory[MEM_SCREEN_RESTORE_SET]^0x8000);
 }
 
 static Sint32 custom_window_op(Uint16 op,Sint32 v) {
@@ -4367,8 +4368,8 @@ static void run_script(Uint16 m,Uint16 n,Sint32 u) {
   if(!s->text) return;
   begin:
   if(ip>=s->length) {
-    xy->instptr=0xFFFF;
-    return;
+    ip=0xFFFF;
+    goto stop;
   }
   if(u<0) while(s->text[ip]==' ') ++ip;
   switch(c=s->text[bip=ip]) {

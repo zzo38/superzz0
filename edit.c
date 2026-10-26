@@ -121,6 +121,7 @@ void edit_varprop(VarPropertyList*vp) {
         case 0x50 ... 0x5E: draw_text(1,i+2,"User-defined",7,-1); break;
         case 0x60: draw_text(1,i+2,"Cancel backdrop",7,-1); break;
         case 0x61 ... 0x68: draw_text(1,i+2,text,7,snprintf(text,80,"Backdrop: %*.*s",j&15,j&15,vp->item[k].data)); break;
+        case 0x72: draw_text(1,i+2,"Restore set",7,-1); break;
         default: draw_text(1,i+2,"???",12,3);
       }
     } else if(k==vp->count) {
@@ -176,6 +177,7 @@ void edit_varprop(VarPropertyList*vp) {
           case 0x50 ... 0x5E: i=10; x=(vp->item[cur].type&14)>>1; break;
           case 0x60: i=12; break;
           case 0x61 ... 0x68: i=11; snprintf(name,9,"%s",vp->item[cur].data); break;
+          case 0x72: i=13; x=vp->item[cur].data[0]|(vp->item[cur].data[1]<<8); break;
           default: i=0;
         }
         win_form("Variable Property Edit") {
@@ -190,6 +192,7 @@ void edit_varprop(VarPropertyList*vp) {
           win_option('a',"Cancel music",i,6) win_refresh();
           win_option('k',"Backdrop",i,11) win_refresh();
           win_option('l',"Cancel backdrop",i,12) win_refresh();
+          win_option('R',"Restore set",i,13) win_refresh();
           win_option('d',"User-defined",i,10) win_refresh();
           win_option('O',"Once",i,4) win_refresh();
           win_blank();
@@ -267,6 +270,14 @@ void edit_varprop(VarPropertyList*vp) {
               }
             }
           }
+          if(i==13) {
+            win_boolean('1',"1: Video mode",x,0x0001);
+            win_boolean('2',"2: Scroll",x,0x0002);
+            win_boolean('3',"3: ",x,0x0004);
+            win_boolean('4',"4: ",x,0x0008);
+            win_boolean('5',"5: ",x,0x0010);
+            win_boolean('6',"6: ",x,0x0020);
+          }
           win_blank();
           win_command_esc(0,"Done") break;
         }
@@ -300,6 +311,10 @@ void edit_varprop(VarPropertyList*vp) {
             vp->item[cur].type=0x60+snprintf(vp->item[cur].data,9,"%s",name);
             break;
           case 12: vp->item[cur].type=0x60; break;
+          case 13:
+            vp->item[cur].type=0x72;
+            vp->item[cur].data[0]=x; vp->item[cur].data[1]=x>>8;
+            break;
         }
         goto draw0;
       case SDLK_ESCAPE: return;

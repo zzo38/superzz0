@@ -302,7 +302,8 @@ typedef struct VarPropertyList {
   Uint8 count;
 } VarPropertyList;
 
-void work_varproperties(VarPropertyList*vp);
+Uint16 work_varproperties_ext(VarPropertyList*vp,Uint16 flag);
+#define work_varproperties(xxx) work_varproperties_ext(xxx,0)
 
 // === Board/stats ===
 
@@ -656,6 +657,7 @@ const char*load_window(FILE*fp,WindowInfo*wind);
 #define MEM_OVERLAY_KEEP_BITS 0xB6
 #define MEM_DEFAULT_BACKGROUND 0xB7
 #define MEM_PANEL_SELECTION 0xB8
+#define MEM_SCREEN_RESTORE_SET 0xB9
 #define MEM_GLOBAL_DELAY 0xC0
 #define MEM_NEW_DYNAMIC_STAT_EVENT 0xC1
 #define MEM_OVERLAYMEM_ADDRESS 0xC2

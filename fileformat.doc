@@ -141,6 +141,9 @@ if applicable), will be the lump name excluding the .BGM suffix.
 * 0x61 to 0x68 = Load backdrop; the data is the lump name excluding the
 .ROP suffix.
 
+* 0x72 = Controls which screen/board variable properties are restored when
+this screen is canceled.
+
 Each stat (the first stat number is stat 1) is as follows:
 
 * Flag (8-bits; only present if bit9 of encoding flags is set)

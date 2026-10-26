@@ -427,6 +427,7 @@ static Sint32 do1menu(const ASN1_Value*v0) {
       v_status[1]=0;
       a=memory[MEM_TEXT_SCREEN];
       b=memory[MEM_WINDOW_KEY_EVENT];
+      c=memory[MEM_SCREEN_RESTORE_SET];
       memory[MEM_WINDOW_KEY_EVENT]=0;
       ntextbuf=0;
       board_info.screen=cur_screen_id;
@@ -437,6 +438,7 @@ static Sint32 do1menu(const ASN1_Value*v0) {
       v_status[1]=21;
       memory[MEM_TEXT_SCREEN]=a;
       memory[MEM_WINDOW_KEY_EVENT]=b;
+      memory[MEM_SCREEN_RESTORE_SET]=c;
       break;
     case SPECT_GOTOPAGE:
       if(!asn1_first_of(&v1,v0) && v1.class==ASN1_UNIVERSAL && v1.type==ASN1_INTEGER && !asn1_decode_number(&v1,ASN1_AUTO,&a)) return a;

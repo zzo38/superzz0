@@ -23,6 +23,8 @@ GAME
      limited to only decimal and commas.
   +  Dynamic element appearance codes.
   +  Custom windows.
+  +  Restore set for when a screen is restored after displaying a text
+     window, item window, or custom window.
   =  Minor bug fixes in special options.
   =  Fix it so that the entire screen is redrawn in the main game state.
   =  Using parameter-based appearance code for items works correctly now.

@@ -1324,7 +1324,8 @@ const char*load_window(FILE*fp,WindowInfo*wind) {
   return 0;
 }
 
-void work_varproperties(VarPropertyList*vp) {
+Uint16 work_varproperties_ext(VarPropertyList*vp,Uint16 f) {
+  Uint16 r=0x0000;
   int i,j;
   VarProperty*p;
   for(i=0;i<vp->count;i++) switch((p=vp->item+i)->type) {
@@ -1337,34 +1338,47 @@ void work_varproperties(VarPropertyList*vp) {
       }
       break;
     case 0x01: case 0x02:
+      if(f&0x0001) break;
       j=(editor?VIDEO_SMZX|VIDEO_FLASHY:VIDEO_SMZX|VIDEO_80COLUMNS|VIDEO_FLASHY|VIDEO_EGS|VIDEO_MONO);
       v_mode=(v_mode&~j)|(p->data[0]&j);
       v_colormask=(p->type==0x01?(v_mode&VIDEO_SMZX?0x80:0x30):(p->data[1]<0x30?0x30:p->data[1]));
+      r|=0x0001;
       break;
     case 0x04:
+      if(f&0x0002) break;
       if(!editor) {
         scroll_x=(p->data[0]|(p->data[1]<<8))-cur_screen.view_x;
         scroll_y=(p->data[2]|(p->data[3]<<8))-cur_screen.view_y;
       }
+      r|=0x0002;
       break;
     case 0x11 ... 0x18:
+      if(f&0x0004) break;
       p->data[p->type&15]=0;
       load_font(p->data,LOADFONT_BASE);
+      r|=0x0004;
       break;
     case 0x1F:
+      if(f&0x0004) break;
       if(font) memcpy(font+p->data[0]*14,p->data+1,14);
+      r|=0x0004;
       break;
     case 0x21 ... 0x28:
+      if(f&0x0008) break;
       p->data[p->type&15]=0;
       load_palette(p->data,LOADPAL_BASE);
+      r|=0x0008;
       break;
     case 0x32 ... 0x3F:
       /* Do nothing; this case is handled by a separate function */
       break;
     case 0x40:
+      if(f&0x0010) break;
       if(!editor) audio_set_music(0,0);
+      r|=0x0010;
       break;
     case 0x42 ... 0x4B:
+      if(f&0x0010) break;
       p->data[p->type&15]=0;
       if(!editor) {
         int s=(p->data[0]&0x3F);
@@ -1372,17 +1386,24 @@ void work_varproperties(VarPropertyList*vp) {
         if(s==0x3F) k=3,s=p->data[1]|(p->data[2]<<8);
         if(!*music_name || (p->data[0]>>6)==3 || ((p->data[0]&0xC0) && (((p->data[0]&0x80) && s!=music_song) || strcmp(music_name,p->data+k)))) audio_set_music(p->data+k,s);
       }
+      r|=0x0010;
       break;
     case 0x50 ... 0x5E:
       /* No effect */
       break;
     case 0x60 ... 0x6E:
+      if(f&0x0020) break;
       p->data[p->type&15]=0;
       if(!editor) set_backdrop(p->data,1);
+      r|=0x0020;
+      break;
+    case 0x72:
+      r=p->data[0]|(p->data[1]<<8);
       break;
     default:
       if(!editor) errx(1,"Improper variable property list");
   }
+  return r;
 }
 
 const char*load_inventory(FILE*fp,Inventory*inv) {

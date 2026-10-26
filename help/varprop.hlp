@@ -44,6 +44,12 @@ with the PROP instruction (property types 0x50 to 0x5E). The value of this
 variable property can be up to seven unsigned 16-bit numbers. This is only
 meaningful for boards and not for screens.
 
+þ Restore set: This is only meaningful in screens, and should be the last
+variable property if it is present. It controls which variable properties
+of the previously set screen and board will be restored after the screen
+containing this variable property is canceled. If it is not present, then
+it will determine this automatically from the other variable properties.
+
 þ Once: The previous variable property only applies once. This is only
 meaningful for boards, and only if it persists; if the board does not
 persist then it will not remember that it had already been done once.
