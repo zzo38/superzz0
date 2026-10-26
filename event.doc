@@ -73,6 +73,9 @@ list when a window is displayed (other than the special option menu). This
 can be changed while the window is displayed in order to affect what will
 be restored when it is finished. See below section.
 
+$BA = This specifies which variable properties of screens and boards are
+ignored when switching to another board or screen.
+
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
 save the delay, bit9 means to save the walk/face/user flags, and bit13
@@ -234,6 +237,9 @@ section about order of execution.
 
 
 === Screen restore set flags ===
+
+These flags are used in cell $B9 and $BA. In either case, setting any of
+these bits will suppress variable properties using those bits.
 
 $0001 = Video mode
 

@@ -423,6 +423,10 @@ numbers are treated as unsigned.
    F = Find (low-high byte type range; J=in/out prop. index; K=out type)
    G = Put text and advance type (-1=use TEXT buffer; K=out type)
    H = Read from board (J=in prop. index; K=out type)
+  For subcommand E, add 4 to use the K register to specify which variable
+  propeties should be ignored (in the same format as memory cell $BA), and
+  then the K register is set to which ones have already been set (you can
+  then use the bitwise complement to set a new ignore set if wanted).
 
 [050 SEND]
   If the first operand is the stat XY list number (same as for LOCK, PSD),

@@ -691,7 +691,7 @@ static void warp_to_board(Uint16 b,char m) {
     if(!fp) err(1,"Cannot open %04X.SCR",cur_screen_id);
     if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
     fclose(fp);
-    work_varproperties(&cur_screen.varprop);
+    work_varproperties_ext(&cur_screen.varprop,memory[MEM_IGNORE_VARPROP]);
     load_screen_slices(0);
   }
   // Initial scrolling
@@ -707,7 +707,7 @@ static void warp_to_board(Uint16 b,char m) {
     if(scroll_y<-(Sint32)cur_screen.hard_edge[DIR_N]) scroll_y=cur_screen.hard_edge[DIR_N];
      else if(scroll_y>=board_info.height-(Sint32)cur_screen.hard_edge[DIR_S]) scroll_y=board_info.height-cur_screen.hard_edge[DIR_S]-1;
   }
-  work_varproperties(&board_info.varprop);
+  work_varproperties_ext(&board_info.varprop,memory[MEM_IGNORE_VARPROP]);
 }
 
 static void display_message_text(void) {
@@ -2417,7 +2417,7 @@ static char show_text_window(Uint32 xyn,char help) {
       tscroll=0;
     }
     v_status[1]=232;
-    memory[MEM_SCREEN_RESTORE_SET]=~work_varproperties_ext(&cur_screen.varprop,0);
+    memory[MEM_SCREEN_RESTORE_SET]=memory[MEM_IGNORE_VARPROP]|~work_varproperties_ext(&cur_screen.varprop,memory[MEM_IGNORE_VARPROP]);
     load_screen_slices(2);
     open:
     if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
@@ -2869,7 +2869,7 @@ static Uint16 show_item_window(Uint32 opt) {
     if(e=load_window(fp,&wind)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
     fclose(fp);
   }
-  memory[MEM_SCREEN_RESTORE_SET]=~work_varproperties_ext(&cur_screen.varprop,0);
+  memory[MEM_SCREEN_RESTORE_SET]=memory[MEM_IGNORE_VARPROP]|~work_varproperties_ext(&cur_screen.varprop,memory[MEM_IGNORE_VARPROP]);
   load_screen_slices(1);
   v_status[1]='I';
   if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
@@ -2980,7 +2980,7 @@ static Uint16 show_item_window(Uint32 opt) {
                   fclose(fp);
                 }
                 for(inf.ncol=j=1;j<79;j++) if(wind.command[j]=='Z') ++inf.ncol;
-                memory[MEM_SCREEN_RESTORE_SET]&=~work_varproperties_ext(&cur_screen.varprop,0);
+                memory[MEM_SCREEN_RESTORE_SET]&=~work_varproperties_ext(&cur_screen.varprop,memory[MEM_IGNORE_VARPROP]);
                 load_screen_slices(1);
                 break;
             }
@@ -3151,7 +3151,7 @@ static void show_custom_window(Uint16 addr) {
   fp=open_lump_by_number(cur_screen_id=memory[addr+1],"SCR","r");
   if(e=load_screen(fp)) errx(1,"Error loading screen #%d: %s",cur_screen_id,e);
   fclose(fp);
-  memory[MEM_SCREEN_RESTORE_SET]=~work_varproperties_ext(&cur_screen.varprop,0);
+  memory[MEM_SCREEN_RESTORE_SET]=memory[MEM_IGNORE_VARPROP]|~work_varproperties_ext(&cur_screen.varprop,memory[MEM_IGNORE_VARPROP]);
   load_screen_slices(2);
   v_status[1]=240;
   if(memory[MEM_CONTROL]&CONTROL_WIN_STOP_KEY_REPEAT) stop_key_repeat();
@@ -5190,6 +5190,13 @@ static void do_varproperty_op(Uint8 fo,Sint32 so) {
         work_varproperties(&board_info.varprop);
       } else if(so==2) {
         work_varproperties(&cur_screen.varprop);
+      } else if(so==4) {
+        memset(pvarproperty.data+(pvarproperty.type&15),0,15&~pvarproperty.type);
+        if(pvarproperty.type) memory[MEM_ARG_K]=work_varproperties_ext(&vp,k);
+      } else if(so==5) {
+        memory[MEM_ARG_K]=work_varproperties_ext(&board_info.varprop,k);
+      } else if(so==6) {
+        memory[MEM_ARG_K]=work_varproperties_ext(&cur_screen.varprop,k);
       }
       break;
     case 5:

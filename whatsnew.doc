@@ -47,6 +47,7 @@ ASSEMBLY
      screen, in case it is defined as transparent.
   +  Memory cell $B8 is the panel selection bits.
   +  Memory cell $B9 for the screen restore set.
+  +  Memory cell $BA to ignore some variable properties.
   +  RUD to read values of a user-defined variable property.
   +  Control flag to control timing of warps after keyboard events.
   =  Fix a documentation error about the %B operand specifier.
