@@ -273,10 +273,10 @@ void edit_varprop(VarPropertyList*vp) {
           if(i==13) {
             win_boolean('1',"1: Video mode",x,0x0001);
             win_boolean('2',"2: Scroll",x,0x0002);
-            win_boolean('3',"3: ",x,0x0004);
-            win_boolean('4',"4: ",x,0x0008);
-            win_boolean('5',"5: ",x,0x0010);
-            win_boolean('6',"6: ",x,0x0020);
+            win_boolean('3',"3: Font",x,0x0004);
+            win_boolean('4',"4: Palette",x,0x0008);
+            win_boolean('5',"5: Music",x,0x0010);
+            win_boolean('6',"6: Backdrop",x,0x0020);
           }
           win_blank();
           win_command_esc(0,"Done") break;

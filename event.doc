@@ -71,7 +71,7 @@ help/editscr.hlp for more information.
 $B9 = This is used for storing the restore set in the variable property
 list when a window is displayed (other than the special option menu). This
 can be changed while the window is displayed in order to affect what will
-be restored when it is finished.
+be restored when it is finished. See below section.
 
 $C0 = Saves the delay and flags for the global script. The low 8-bits are
 the delay number and the high 8-bits are flags, except for: bit8 means to
@@ -231,6 +231,21 @@ address $C9. (It still uses $C9 for moving stuff other than stats.)
 
 $0400 = Enables warps immediately after a keyboard event. See the below
 section about order of execution.
+
+
+=== Screen restore set flags ===
+
+$0001 = Video mode
+
+$0002 = Scroll position
+
+$0004 = Font
+
+$0008 = Palette
+
+$0010 = Music
+
+$0020 = Backdrop
 
 
 === Order of execution ===

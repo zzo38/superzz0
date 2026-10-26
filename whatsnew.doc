@@ -24,7 +24,9 @@ GAME
   +  Dynamic element appearance codes.
   +  Custom windows.
   +  Restore set for when a screen is restored after displaying a text
-     window, item window, or custom window.
+     window, item window, or custom window, to restore some things that
+     are changed by variable properties (fonts, palette, music, etc).
+     This is a potential incompatibility from previous behaviour.
   =  Minor bug fixes in special options.
   =  Fix it so that the entire screen is redrawn in the main game state.
   =  Using parameter-based appearance code for items works correctly now.
@@ -44,6 +46,7 @@ ASSEMBLY
   +  Memory cell $B7 to define default background data behind the main
      screen, in case it is defined as transparent.
   +  Memory cell $B8 is the panel selection bits.
+  +  Memory cell $B9 for the screen restore set.
   +  RUD to read values of a user-defined variable property.
   +  Control flag to control timing of warps after keyboard events.
   =  Fix a documentation error about the %B operand specifier.
