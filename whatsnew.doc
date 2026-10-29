@@ -67,6 +67,8 @@ OTHERS
      case one ALT key is needed for entering some ASCII characters on some
      keyboard layouts; see the bug reports about AltGr in MegaZeux).
   +  Configuration option "text_editor_font" to select text editor font.
+  *  Default values of some configuration is changed so that audio will
+     work by default. (They can still be disabled if wanted.)
 
 
 === Version 0.8.0 (2026-07-15) ===
