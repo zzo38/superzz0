@@ -1,9 +1,12 @@
 
 === Command-line switches ===
 
-It requires two arguments, being the input file name and the output file
-name; you can write - in place of the output file name for stdout, but
-the input file is required to be seekable.
+It requires one argument, being the input file name. The input file is
+required to be seekable.
+
+It normally writes to stdout, and should be piped into "superzz0 -ea"
+and the world file name; this world file must already exist (use "superzz0
+-ew" or "superzz0 -et" to create it).
 
 -d
   Emit debugging information.
@@ -11,9 +14,19 @@ the input file is required to be seekable.
 -e
   Emit editor information in addition to the usual data.
 
+-o*
+  Write to a specified file instead of stdout. It is an error if this file
+  already exists.
+
+-O*
+  Like -o but allow overwriting an existing file.
+
 -w
   Read the world file with the same name as the input file, but with the
   suffix changed from ".asm" to ".sz0" or ".ASM" to ".SZ0".
+
+-W*
+  Like -w but you can specify the name of the world file explicitly.
 
 -v
   Verbose output (to stderr).

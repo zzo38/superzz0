@@ -97,6 +97,7 @@ static const char**ed_strings;
 static int ed_nstrings;
 static Uint32 ed_tstrings;
 static Uint16 ed_mem[0x10000];
+static const char*worldname;
 
 static Name*add_name(const char*name,Sint32 value,char kind) {
   name=strdup(name);
@@ -751,23 +752,28 @@ static void begin_lump(const char*name,Uint32 len) {
 }
 
 static void read_world_file(const char*nam0) {
-  char*nam=strdup(nam0);
+  char*nam=0;
   char buf[17]="_";
   FILE*f;
   int i,j,c;
   Uint32 z;
-  if(!nam) err(1,"Allocation failed");
-  i=strlen(nam);
-  if(i<4 || nam[i-4]!='.') {
-    errx(1,"Cannot determine name of world file");
-  } else if(nam[i-3]=='a' && nam[i-2]=='s' && nam[i-1]=='m') {
-    nam[i-3]='s'; nam[i-2]='z'; nam[i-1]='0';
-  } else if(nam[i-3]=='A' && nam[i-2]=='S' && nam[i-1]=='M') {
-    nam[i-3]='S'; nam[i-2]='Z'; nam[i-1]='0';
+  if(worldname) {
+    f=fopen(worldname,"r");
   } else {
-    errx(1,"Cannot determine name of world file");
+    nam=strdup(nam0);
+    if(!nam) err(1,"Allocation failed");
+    i=strlen(nam);
+    if(i<4 || nam[i-4]!='.') {
+      errx(1,"Cannot determine name of world file");
+    } else if(nam[i-3]=='a' && nam[i-2]=='s' && nam[i-1]=='m') {
+      nam[i-3]='s'; nam[i-2]='z'; nam[i-1]='0';
+    } else if(nam[i-3]=='A' && nam[i-2]=='S' && nam[i-1]=='M') {
+      nam[i-3]='S'; nam[i-2]='Z'; nam[i-1]='0';
+    } else {
+      errx(1,"Cannot determine name of world file");
+    }
+    f=fopen(nam,"r");
   }
-  f=fopen(nam,"r");
   if(!f) err(1,"Cannot open world file '%s'",nam);
   free(nam);
   for(i=0;;) {
@@ -807,7 +813,7 @@ static void read_world_file(const char*nam0) {
 
 static void do_output(void) {
   int i;
-  if(*outname=='-' && !outname[1]) outfile=stdout; else outfile=fopen(outname,"w");
+  if(!outname) outfile=stdout; else outfile=fopen(outname,option&0x0010?"w":"wx");
   if(!outfile) err(1,"Cannot open output file");
   if(addr_end<256 || addr_end>0x10000) errx(1,"Output size exceeds maximum");
   begin_lump("MEMORY",addr_end<<1);
@@ -880,14 +886,17 @@ static void do_output(void) {
 
 int main(int argc,char**argv) {
   int i;
-  while((i=getopt(argc,argv,"+devw"))>0) switch(i) {
+  while((i=getopt(argc,argv,"+O:W:deo:vw"))>0) switch(i) {
+    case 'O': option|=0x0010; outname=optarg; break;
+    case 'W': option|=0x0002; worldname=optarg; break;
     case 'd': option|=0x0001; break;
     case 'e': option|=0x0004; break;
+    case 'o': outname=optarg; break;
     case 'v': option|=0x0008; break;
     case 'w': option|=0x0002; break;
     default: return 1;
   }
-  if(optind+2!=argc) errx(1,"Wrong number of arguments");
+  if(optind+1!=argc) errx(1,"Wrong number of arguments");
   find_string("",1);
   if(option&0x0004) {
     exchange_strings();
@@ -895,7 +904,6 @@ int main(int argc,char**argv) {
   }
   infile=fopen(argv[optind],"r");
   if(!infile) err(1,"Cannot open input file");
-  outname=argv[optind+1];
   mem[0xEE]=mem[0xEF]=0xFFFF; // scroll rate
   mem[0xE3]=0xFFFF; // light
   if(option&0x0002) read_world_file(argv[optind]);

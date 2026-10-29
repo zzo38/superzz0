@@ -1,4 +1,5 @@
 ; A simple chat program to demonstrate the usage of config.external.
+; (This is an experimental feature, which is disabled by default, and might be changed or removed in future.)
 
 	; Control flags
 	TA $CB,$000F

@@ -52,6 +52,7 @@ ASSEMBLY
   +  Control flag to control timing of warps after keyboard events.
   =  Fix a documentation error about the %B operand specifier.
   =  WOKE works correctly now.
+  *  Format of command-line arguments for assembler are changed.
 
 EDITOR
   +  Palette import is possible within the editor.
